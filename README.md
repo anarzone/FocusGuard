@@ -17,6 +17,16 @@ Privacy-first: all data lives on your Mac. No network calls.
 - **Privacy controls** — per-app window-title opt-out, configurable retention (30 days → keep all), JSON / CSV export, one-click delete-all
 - **Distribution-ready** — hardened runtime on, signed with Apple Development cert, Apple Events entitlement declared
 
+## Install
+
+```sh
+brew install --cask anarzone/focusguard/focusguard
+```
+
+That's it. Click 🛡 FG in the menu bar to start. To upgrade later: `brew upgrade --cask anarzone/focusguard/focusguard`. To remove (with all data): `brew uninstall --cask --zap focusguard`.
+
+## Build from source
+
 ## Requirements
 
 - macOS 14 (Sonoma) or later
