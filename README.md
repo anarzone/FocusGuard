@@ -20,10 +20,10 @@ Privacy-first: all data lives on your Mac. No network calls.
 ## Install
 
 ```sh
-brew install --cask anarzone/focusguard/focusguard
+brew install --cask anarzone/tap/focusguard
 ```
 
-That's it. Click 🛡 FG in the menu bar to start. Upgrade with `brew upgrade --cask anarzone/focusguard/focusguard`. Remove with all data via `brew uninstall --cask --zap focusguard`.
+That's it. Click 🛡 FG in the menu bar to start. Upgrade with `brew upgrade --cask anarzone/tap/focusguard`. Remove with all data via `brew uninstall --cask --zap focusguard`.
 
 ## Build from source
 

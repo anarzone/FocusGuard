@@ -78,16 +78,16 @@ gh release create "$TAG" "$ZIP" \
     --notes "FocusGuard $TAG
 
 \`\`\`sh
-brew upgrade --cask anarzone/focusguard/focusguard
+brew upgrade --cask anarzone/tap/focusguard
 \`\`\`
 
-(or first-time: \`brew install --cask anarzone/focusguard/focusguard\`)"
+(or first-time: \`brew install --cask anarzone/tap/focusguard\`)"
 
 # ----- update tap -----
-TAP_DIR="${TAP_DIR:-$HOME/Projects/Own/homebrew-focusguard}"
+TAP_DIR="${TAP_DIR:-$HOME/Projects/Own/homebrew-tap}"
 if [ ! -d "$TAP_DIR" ]; then
     echo "==> Cloning tap into $TAP_DIR…"
-    git clone "git@github.com:anarzone/homebrew-focusguard.git" "$TAP_DIR"
+    git clone "git@github.com:anarzone/homebrew-tap.git" "$TAP_DIR"
 fi
 
 CASK="$TAP_DIR/Casks/focusguard.rb"
@@ -108,4 +108,4 @@ echo "Released $TAG"
 echo "    Cask SHA: $SHA"
 echo ""
 echo "Test the install:"
-echo "    brew upgrade --cask anarzone/focusguard/focusguard"
+echo "    brew upgrade --cask anarzone/tap/focusguard"
