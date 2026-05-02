@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- We are NOT sandboxed: tracking other apps' window titles + reading
+         browser tab URLs via AppleScript both require running outside the
+         App Sandbox. -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+
+    <!-- Hardened runtime entitlements: needed once we flip ENABLE_HARDENED_RUNTIME.
+         JIT and unsigned-executable-memory left off — we don't need them. -->
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <false/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <false/>
+
+    <!-- Apple Events: we send AppleScript to browsers to read the active tab URL. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+</dict>
+</plist>

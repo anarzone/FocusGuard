@@ -1,0 +1,61 @@
+name: FocusGuard
+options:
+  bundleIdPrefix: com.anar
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: "JVK43S5CGA"     # Anar Haqverdiyev Personal Team
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+    ENABLE_HARDENED_RUNTIME: YES       # required for notarization
+    CODE_SIGN_ENTITLEMENTS: FocusGuard/Resources/FocusGuard.entitlements
+    SWIFT_STRICT_CONCURRENCY: minimal  # tighten to 'complete' once codebase is stable
+
+targets:
+  FocusGuard:
+    type: application
+    platform: macOS
+    sources:
+      - path: FocusGuard
+    info:
+      path: FocusGuard/Resources/Info.plist
+      properties:
+        CFBundleName: FocusGuard
+        CFBundleDisplayName: FocusGuard
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundlePackageType: APPL
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true                # menu bar app, no Dock icon
+        NSHumanReadableCopyright: ""
+        NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions."
+        NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard
+        PRODUCT_NAME: FocusGuard
+        GENERATE_INFOPLIST_FILE: NO
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  FocusGuardTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: FocusGuardTests
+    dependencies:
+      - target: FocusGuard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.tests
+        GENERATE_INFOPLIST_FILE: YES
