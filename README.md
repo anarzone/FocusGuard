@@ -23,48 +23,34 @@ Privacy-first: all data lives on your Mac. No network calls.
 brew install --cask anarzone/focusguard/focusguard
 ```
 
-That's it. Click 🛡 FG in the menu bar to start. To upgrade later: `brew upgrade --cask anarzone/focusguard/focusguard`. To remove (with all data): `brew uninstall --cask --zap focusguard`.
+That's it. Click 🛡 FG in the menu bar to start. Upgrade with `brew upgrade --cask anarzone/focusguard/focusguard`. Remove with all data via `brew uninstall --cask --zap focusguard`.
 
 ## Build from source
 
-## Requirements
-
-- macOS 14 (Sonoma) or later
-- Xcode 16 or later
-- [xcodegen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
-
-## Build
+Requires macOS 14+, Xcode 16+, and [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
 ```sh
 xcodegen generate
-open FocusGuard.xcodeproj
+open FocusGuard.xcodeproj   # then ⌘R
 ```
 
-⌘R to run. The app launches as a menu-bar item — no Dock icon (it sets `LSUIElement`). On first launch the popover walks you through three permissions (Notifications, Accessibility, Screen Recording) and one Apple Events grant per browser the first time you switch to it.
-
-## Build from CLI
+Or build & install in one shot:
 
 ```sh
-xcodegen generate
-xcodebuild \
-    -project FocusGuard.xcodeproj \
-    -scheme FocusGuard \
-    -configuration Debug \
-    -destination 'platform=macOS' \
-    -allowProvisioningUpdates \
-    build
+./scripts/install.sh
 ```
 
-## Tests
-
-22 unit tests across `Classifier`, `EscalationEngine`, and `ReportBuilder`:
+Run the 22 unit tests:
 
 ```sh
-xcodebuild \
-    -project FocusGuard.xcodeproj \
-    -scheme FocusGuard \
-    -destination 'platform=macOS' \
-    test
+xcodebuild -project FocusGuard.xcodeproj -scheme FocusGuard \
+           -destination 'platform=macOS' test
+```
+
+Cut a new release (builds, tags, pushes, updates the Homebrew tap):
+
+```sh
+./scripts/release.sh 0.2.0
 ```
 
 ## Architecture
