@@ -211,16 +211,61 @@ def render(size: int) -> Image.Image:
     return base
 
 
+ICNS_PATH = os.path.join(
+    os.path.dirname(__file__), "..",
+    "FocusGuard/Resources/AppIcon.icns"
+)
+
+
+def build_icns(master: Image.Image) -> None:
+    """
+    Write a complete .icns directly via Apple's `iconutil` from a temp iconset.
+    Why: the asset-catalog compiler dropped chunks ic08/09/10/14 in our build,
+    leaving Quick Look + Finder without large-size renditions. iconutil produces
+    a properly-formed icns with every chunk; macOS's IconServices is happy.
+    """
+    import subprocess, tempfile
+
+    iconset_sizes = [
+        (16,   "icon_16x16.png"),
+        (32,   "icon_16x16@2x.png"),
+        (32,   "icon_32x32.png"),
+        (64,   "icon_32x32@2x.png"),
+        (128,  "icon_128x128.png"),
+        (256,  "icon_128x128@2x.png"),
+        (256,  "icon_256x256.png"),
+        (512,  "icon_256x256@2x.png"),
+        (512,  "icon_512x512.png"),
+        (1024, "icon_512x512@2x.png"),
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        iconset_dir = os.path.join(tmp, "AppIcon.iconset")
+        os.makedirs(iconset_dir)
+        for size, name in iconset_sizes:
+            img = master if size == 1024 else master.resize((size, size), Image.LANCZOS)
+            img.save(os.path.join(iconset_dir, name))
+        os.makedirs(os.path.dirname(ICNS_PATH), exist_ok=True)
+        subprocess.run(
+            ["iconutil", "-c", "icns", iconset_dir, "-o", ICNS_PATH],
+            check=True
+        )
+    print(f"Wrote complete icns to {ICNS_PATH}")
+
+
 def main():
     print("Rendering 1024 master…")
     master = render(1024)
 
+    # Asset catalog PNGs (kept for Xcode compatibility / future tooling).
     seen = {}
     for size, name in SIZES:
         if size not in seen:
             seen[size] = master if size == 1024 else master.resize((size, size), Image.LANCZOS)
         seen[size].save(os.path.join(ASSET_DIR, name))
-    print(f"Wrote {len(SIZES)} icon files to {ASSET_DIR}")
+    print(f"Wrote {len(SIZES)} asset-catalog PNGs to {ASSET_DIR}")
+
+    # Authoritative .icns — this is what gets baked into the .app bundle.
+    build_icns(master)
 
 
 if __name__ == "__main__":
