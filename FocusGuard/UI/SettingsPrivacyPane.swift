@@ -132,7 +132,7 @@ struct SettingsPrivacyPane: View {
 
     private func optOutRow(_ entry: TitleOptOut) -> some View {
         HStack(spacing: 10) {
-            AppGlyph(kind: AppGlyph.kind(forBundleId: entry.bundleIdentifier), size: 24)
+            AppGlyph(kind: AppGlyph.kind(forBundleId: entry.bundleIdentifier), bundleId: entry.bundleIdentifier, size: 24)
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.bundleIdentifier)
                     .font(.system(size: 12).monospacedDigit())

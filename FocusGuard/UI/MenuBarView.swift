@@ -533,6 +533,7 @@ struct NowCard: View {
             if let snapshot {
                 AppGlyph(
                     kind: AppGlyph.kind(forBundleId: snapshot.bundleIdentifier, name: snapshot.appName),
+                    bundleId: snapshot.bundleIdentifier,
                     size: 36
                 )
                 VStack(alignment: .leading, spacing: 1) {

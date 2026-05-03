@@ -360,7 +360,7 @@ struct ReportsView: View {
             }
             .frame(width: 12)
 
-            AppGlyph(kind: entry.kind, size: 28)
+            AppGlyph(kind: entry.kind, bundleId: entry.bundleId, size: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.name).font(.system(size: 13))
                 Text(canExpand ? "\(entry.tabs.count) site\(entry.tabs.count == 1 ? "" : "s")" : entry.bundleId)

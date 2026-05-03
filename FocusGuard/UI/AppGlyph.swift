@@ -1,9 +1,10 @@
 import SwiftUI
+import AppKit
 
 /// Brand-style app icon tile used in the popover Now-card and reports
-/// distraction list. Not pixel-perfect official logos — these are
-/// recognizable simplifications drawn with SwiftUI primitives so we
-/// don't ship third-party trademarks.
+/// distraction list. Prefers the real macOS app icon when we can resolve
+/// the bundle id; falls back to a SwiftUI-drawn tile for known brands or
+/// a plain generic tile otherwise.
 enum AppGlyphKind: String {
     case shield, focusguard
     case mail, slack, twitter, youtube, reddit, notion, github, safari, chrome
@@ -11,13 +12,48 @@ enum AppGlyphKind: String {
     case generic
 }
 
+/// Resolves a real NSImage for an installed app. Cached so repeated lookups
+/// (e.g. one per row of the Apps list, redrawn on every popover tick) stay
+/// cheap. Workspace lookup is on-disk so the cache is essential.
+enum AppIconLoader {
+    private static var cache: [String: NSImage?] = [:]
+
+    static func icon(forBundleId bundleId: String) -> NSImage? {
+        if let cached = cache[bundleId] { return cached }
+        let ws = NSWorkspace.shared
+        let image: NSImage? = {
+            guard let url = ws.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
+            let img = ws.icon(forFile: url.path)
+            // NSWorkspace returns a small placeholder if it doesn't recognize
+            // the file — sanity-check that we got a real icon.
+            return img.size.width > 0 ? img : nil
+        }()
+        cache[bundleId] = image
+        return image
+    }
+}
+
 struct AppGlyph: View {
     let kind: AppGlyphKind
+    /// When set, we try to render the real macOS icon for this bundle id
+    /// before falling back to the SwiftUI-drawn tile.
+    var bundleId: String?
     var size: CGFloat = 36
 
     private var radius: CGFloat { size <= 24 ? 6 : 8 }
 
     var body: some View {
+        if let bundleId, let nsImage = AppIconLoader.icon(forBundleId: bundleId) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: size, height: size)
+        } else {
+            tile
+        }
+    }
+
+    private var tile: some View {
         ZStack {
             background
             foreground
