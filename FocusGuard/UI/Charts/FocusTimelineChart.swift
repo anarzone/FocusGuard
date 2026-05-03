@@ -28,11 +28,26 @@ struct FocusTimelineChart: View {
 
     // MARK: - Bucketing
 
-    /// Aim for ~50 bars across the chart so they're wide enough to read.
-    private var bucketMinutes: Int {
-        let target = max(1, series.count / 50)
-        let snaps = [1, 5, 10, 15, 30, 60, 120, 240, 480, 720, 1440]
-        return snaps.first(where: { $0 >= target }) ?? snaps.last!
+    /// Snap to natural units so bars are easy to reason about: 1 hour for a
+    /// single day, 6h / 12h for multi-day, 1 day for a month+.
+    var bucketMinutes: Int {
+        let total = series.count
+        if total <= 60 * 36       { return 60 }          // ≤ 1.5 days → 1h
+        if total <= 60 * 24 * 7   { return 60 * 6 }      // ≤ 1 week  → 6h
+        if total <= 60 * 24 * 14  { return 60 * 12 }     // ≤ 2 weeks → 12h
+        return 60 * 24                                    // month+    → 1 day
+    }
+
+    /// Human-readable bucket size, e.g. "1-hour buckets". Surfaced so the
+    /// containing view can show it as a caption.
+    var bucketLabel: String {
+        switch bucketMinutes {
+        case 60:        return "1-hour buckets"
+        case 60 * 6:    return "6-hour buckets"
+        case 60 * 12:   return "12-hour buckets"
+        case 60 * 24:   return "1-day buckets"
+        default:        return "\(bucketMinutes)-min buckets"
+        }
     }
 
     private var stacks: [Stack] {

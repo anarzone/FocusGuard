@@ -233,20 +233,22 @@ struct ReportsView: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
+                let chart = FocusTimelineChart(series: timeline)
                 HStack(spacing: 14) {
                     legendItem(color: Theme.focus, label: "Focus")
                     legendItem(color: Theme.neutral, label: "Neutral")
                     legendItem(color: Theme.distraction, label: "Distraction")
                     Spacer()
-                    Text("1-minute resolution")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                    if !timeline.isEmpty {
+                        Text(chart.bucketLabel)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
                 if timeline.isEmpty {
                     emptyTimeline
                 } else {
-                    FocusTimelineChart(series: timeline)
-                        .frame(height: 160)
+                    chart.frame(height: 180)
                 }
             }
             .padding(16)
