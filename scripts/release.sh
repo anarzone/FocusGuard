@@ -58,6 +58,22 @@ xcodebuild \
 APP="build/release/Build/Products/Release/FocusGuard.app"
 [ -d "$APP" ] || { echo "Build did not produce $APP" >&2; exit 1; }
 
+# Bundle the authoritative iconutil-built icns + re-sign with the real
+# Apple Development cert so TCC grants persist across installs. See
+# install.sh for the full rationale.
+SOURCE_ICNS="FocusGuard/Resources/AppIcon.icns"
+if [ -f "$SOURCE_ICNS" ]; then
+    cp "$SOURCE_ICNS" "$APP/Contents/Resources/AppIcon.icns"
+    IDENTITY_HASH=$(security find-identity -v -p codesigning \
+        | grep "Apple Development:" | head -1 | awk '{print $2}')
+    [ -n "$IDENTITY_HASH" ] || { echo "no Apple Development cert found" >&2; exit 1; }
+    echo "==> Re-signing with $IDENTITY_HASH…"
+    codesign --force --sign "$IDENTITY_HASH" \
+        --options runtime \
+        --entitlements FocusGuard/Resources/FocusGuard.entitlements \
+        "$APP"
+fi
+
 mkdir -p build
 ZIP="build/$ZIP_NAME"
 rm -f "$ZIP"
