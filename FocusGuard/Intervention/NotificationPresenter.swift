@@ -41,6 +41,20 @@ class NotificationPresenter: DistractionNotifier {
         center.add(request) { _ in }
     }
 
+    /// Shown when the PatternDetector spots repeated visits to the same
+    /// distraction host while no session is active.
+    func presentDriftPrompt(host: String) {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "Drifting?"
+        content.body = "You've been on \(host) a few times in the last 10 min — start a focus session?"
+        content.sound = nil
+        content.interruptionLevel = .active
+        content.categoryIdentifier = "driftPrompt"
+        let request = UNNotificationRequest(identifier: "driftPrompt-\(host)", content: content, trigger: nil)
+        center.add(request) { _ in }
+    }
+
     /// End-of-day wrap-up. Fired once per day after 9pm local time when the
     /// user's been inactive long enough that we're comfortable saying the day
     /// is "done".

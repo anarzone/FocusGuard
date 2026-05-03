@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftData
 
@@ -15,6 +16,7 @@ final class AppState {
     let notificationPresenter: NotificationPresenter
     let escalationEngine: EscalationEngine
     let calendarAutostart: CalendarAutostartCoordinator
+    let patternDetector: PatternDetector
 
     init() {
         let schema = Schema([
@@ -50,6 +52,7 @@ final class AppState {
         self.notificationPresenter = presenter
         self.escalationEngine = engine
         self.calendarAutostart = CalendarAutostartCoordinator(sessionManager: manager)
+        self.patternDetector = PatternDetector(presenter: presenter)
 
         // Hydrate engine config from persisted prefs.
         let defaults = UserDefaults.standard
@@ -80,8 +83,10 @@ final class AppState {
                 let inActiveSession = manager?.currentSession != nil
                     && manager?.currentSession?.pausedAt == nil
                 engine?.observe(snapshot: snap, isInSession: inActiveSession)
+                self?.patternDetector.observe(snapshot: snap, isInSession: inActiveSession)
             }
             self?.maybeFireDailySummary()
+            self?.maybeAutoPauseOrResume()
         }
 
         // Session boundaries: reset escalation, send completion notification.
@@ -100,6 +105,7 @@ final class AppState {
         }
 
         tracker.start()
+        setupAutoPauseObservers()
 
         // One-time cleanup of pre-fix idle events (loginwindow / screensaver)
         // that the old tracker counted as activity.
@@ -237,6 +243,80 @@ final class AppState {
         cachedWeeklyAvgFocus = avg
         lastWeeklyAvgFocusAt = .now
         return avg
+    }
+
+    // MARK: - Auto-pause
+
+    /// Set when WE auto-paused — distinguishes from a user-initiated pause so
+    /// we know when it's safe to auto-resume. Cleared on stop / user resume.
+    private var autoPausedAt: Date?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private let autoPauseIdleSeconds: TimeInterval = 300  // 5 min
+
+    private func setupAutoPauseObservers() {
+        let center = NSWorkspace.shared.notificationCenter
+        let lock = center.addObserver(
+            forName: NSWorkspace.screensDidSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.autoPauseIfActive(reason: "screens slept") }
+        }
+        let unlock = center.addObserver(
+            forName: NSWorkspace.screensDidWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.autoResumeIfWePaused() }
+        }
+        let sessionLock = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.autoPauseIfActive(reason: "screen locked") }
+        }
+        let sessionUnlock = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsUnlocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.autoResumeIfWePaused() }
+        }
+        workspaceObservers = [lock, unlock, sessionLock, sessionUnlock]
+    }
+
+    /// Called from the tracker tick — auto-pause when no event has ended in
+    /// `autoPauseIdleSeconds`, auto-resume when activity resumes.
+    func maybeAutoPauseOrResume() {
+        guard let session = sessionManager.currentSession else { return }
+        // Don't touch a user-initiated pause.
+        if session.pausedAt != nil && autoPausedAt == nil { return }
+
+        // Recent activity? Use the tracker's last snapshot timestamp.
+        let lastObserved = tracker.currentSnapshot?.observedAt ?? .distantPast
+        let idle = Date().timeIntervalSince(lastObserved)
+
+        if session.pausedAt == nil, idle >= autoPauseIdleSeconds {
+            autoPauseIfActive(reason: "idle \(Int(idle))s")
+        } else if let _ = session.pausedAt, autoPausedAt != nil, idle < 30 {
+            autoResumeIfWePaused()
+        }
+    }
+
+    private func autoPauseIfActive(reason: String) {
+        guard let session = sessionManager.currentSession,
+              session.pausedAt == nil else { return }
+        sessionManager.pauseSession()
+        autoPausedAt = .now
+    }
+
+    private func autoResumeIfWePaused() {
+        guard autoPausedAt != nil,
+              let session = sessionManager.currentSession,
+              session.pausedAt != nil else { return }
+        sessionManager.resumeSession()
+        autoPausedAt = nil
     }
 
     // MARK: - Streak
