@@ -13,6 +13,8 @@ struct SettingsSessionsPane: View {
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage(SessionDefaultsKey.label)           private var defaultLabel  = "Deep work"
 
+    @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
+
     @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
     @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
 
@@ -26,6 +28,19 @@ struct SettingsSessionsPane: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
+
+                sectionHeader("Daily goal", topPad: 24)
+                groupCard {
+                    row(title: "Daily focus goal",
+                        help: "Drives the progress bar in the popover and the end-of-day summary notification.") {
+                        Stepper(value: $dailyGoalMinutes, in: 30...480, step: 15) {
+                            Text(FocusGoal.format(minutes: dailyGoalMinutes))
+                                .font(.system(size: 13).monospacedDigit())
+                                .frame(width: 70, alignment: .trailing)
+                        }
+                        .labelsHidden()
+                    }
+                }
 
                 sectionHeader("Defaults", topPad: 24)
                 groupCard {

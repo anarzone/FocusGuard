@@ -40,4 +40,27 @@ class NotificationPresenter: DistractionNotifier {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         center.add(request) { _ in }
     }
+
+    /// End-of-day wrap-up. Fired once per day after 9pm local time when the
+    /// user's been inactive long enough that we're comfortable saying the day
+    /// is "done".
+    func presentDailySummary(focusMinutes: Int, goalMinutes: Int) {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        if focusMinutes >= goalMinutes {
+            content.title = "Goal hit"
+            let over = focusMinutes - goalMinutes
+            content.body = over > 0
+                ? "\(FocusGoal.format(minutes: focusMinutes)) of focus today — \(FocusGoal.format(minutes: over)) over your \(FocusGoal.format(minutes: goalMinutes)) goal."
+                : "You hit your \(FocusGoal.format(minutes: goalMinutes)) focus goal today."
+        } else {
+            content.title = "Day's wrap-up"
+            let short = goalMinutes - focusMinutes
+            content.body = "\(FocusGoal.format(minutes: focusMinutes)) of focus today — \(FocusGoal.format(minutes: short)) short of your \(FocusGoal.format(minutes: goalMinutes)) goal."
+        }
+        content.sound = nil
+        content.interruptionLevel = .passive
+        let request = UNNotificationRequest(identifier: "dailySummary", content: content, trigger: nil)
+        center.add(request) { _ in }
+    }
 }

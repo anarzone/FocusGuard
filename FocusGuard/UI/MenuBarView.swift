@@ -177,6 +177,8 @@ struct MenuBarView: View {
                 focusPercentPill(breakdown: breakdown)
             }
 
+            goalProgress(breakdown: breakdown).padding(.top, 8)
+
             weekStrip.padding(.top, 12)
 
             splitBar(breakdown: breakdown).padding(.top, 10)
@@ -193,6 +195,38 @@ struct MenuBarView: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 6))
+    }
+
+    /// Thin progress bar + caption: "3h 12m of 4h goal · 80%". Tints green
+    /// once the user is at or over their goal.
+    private func goalProgress(breakdown: BreakdownSnapshot) -> some View {
+        let goalMin = FocusGoal.dailyMinutes
+        let focusMin = Int(breakdown.focus / 60)
+        let progress = FocusGoal.progress(focusSecondsToday: breakdown.focus)
+        let pct = Int((progress * 100).rounded())
+        let hit = focusMin >= goalMin
+        let tint: Color = hit ? Theme.focus : Theme.focus.opacity(0.7)
+
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text("\(FocusGoal.format(minutes: focusMin)) of \(FocusGoal.format(minutes: goalMin)) goal")
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(pct)%")
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(hit ? Theme.focus : .secondary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(Theme.fill1)
+                    Rectangle().fill(tint)
+                        .frame(width: geo.size.width * CGFloat(progress))
+                }
+            }
+            .frame(height: 4)
+            .clipShape(RoundedRectangle(cornerRadius: 2))
+        }
     }
 
     private func splitBar(breakdown: BreakdownSnapshot) -> some View {

@@ -119,8 +119,40 @@ struct HomeView: View {
             }
             .padding(.top, 4)
 
+            goalProgress(breakdown: breakdown).padding(.top, 10)
             splitBar(breakdown: breakdown).padding(.top, 12)
             weekStrip.padding(.top, 16)
+        }
+    }
+
+    /// Daily focus goal progress bar — same idea as the popover, larger.
+    private func goalProgress(breakdown: BreakdownSnapshot) -> some View {
+        let goalMin = FocusGoal.dailyMinutes
+        let focusMin = Int(breakdown.focus / 60)
+        let progress = FocusGoal.progress(focusSecondsToday: breakdown.focus)
+        let pct = Int((progress * 100).rounded())
+        let hit = focusMin >= goalMin
+        let tint: Color = hit ? Theme.focus : Theme.focus.opacity(0.7)
+
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text("\(FocusGoal.format(minutes: focusMin)) of \(FocusGoal.format(minutes: goalMin)) goal")
+                    .font(.system(size: 12).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(hit ? "✓ goal hit" : "\(pct)%")
+                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(hit ? Theme.focus : .secondary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(Theme.fill1)
+                    Rectangle().fill(tint)
+                        .frame(width: geo.size.width * CGFloat(progress))
+                }
+            }
+            .frame(height: 5)
+            .clipShape(RoundedRectangle(cornerRadius: 2.5))
         }
     }
 

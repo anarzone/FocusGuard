@@ -79,4 +79,16 @@ enum SettingsKeys {
         static let notificationsEnabled = "escalation.notificationsEnabled"
         static let strictMode       = "escalation.strictMode"
     }
+
+    enum Goal {
+        static let dailyFocusMinutes  = "goal.dailyFocusMinutes"
+        static let lastSummaryDayKey  = "goal.lastSummaryDay" // ISO yyyy-MM-dd of last summary
+        static let weekendsCount      = "goal.weekendsCountTowardStreak"
+    }
+}
+
+enum GoalDefaults {
+    static let dailyFocusMinutes = 240          // 4 hours
+    static let summaryHourLocal = 21            // earliest hour we'll fire the summary
+    static let summaryInactivityMinutes = 30    // wait this long after last event
 }
