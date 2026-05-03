@@ -17,6 +17,9 @@ struct ReportsView: View {
     @State private var timeline: [TimelinePoint] = []
     @State private var dailyTotals: [DailyTotal] = []
     @State private var expandedAppIds: Set<UUID> = []
+    @State private var trend: InsightsBuilder.Trend?
+    @State private var peakHour: Int?
+    @State private var topRegression: InsightsBuilder.HostDelta?
 
     private var builder: ReportBuilder { ReportBuilder(context: appState.container.mainContext) }
 
@@ -32,6 +35,7 @@ struct ReportsView: View {
             VStack(alignment: .leading, spacing: 24) {
                 rangePicker
                 heroBand
+                highlightsRow
                 Divider().background(Theme.separator)
                 timelineSection
                 topAppsSection
@@ -139,6 +143,91 @@ struct ReportsView: View {
         topApps = builder.topApps(from: from, to: to, limit: 10)
         timeline = builder.timeline(from: from, to: to)
         dailyTotals = builder.dailyTotals(from: from, to: to)
+
+        let insights = InsightsBuilder(context: appState.container.mainContext)
+        trend = insights.focusTrend(from: from, to: to)
+        peakHour = insights.peakFocusHour()
+        topRegression = insights.topRegression(from: from, to: to)
+    }
+
+    // MARK: - Highlights row
+
+    @ViewBuilder
+    private var highlightsRow: some View {
+        let cards: [AnyView] = [
+            trendCard.map { AnyView($0) },
+            peakHourCard.map { AnyView($0) },
+            regressionCard.map { AnyView($0) }
+        ].compactMap { $0 }
+
+        if !cards.isEmpty {
+            HStack(spacing: 12) {
+                ForEach(0..<cards.count, id: \.self) { i in cards[i] }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var trendCard: HighlightCard? {
+        if let trend, let pct = trend.deltaPercent {
+            let absPct = abs(pct)
+            let sign = pct >= 0 ? "+" : "−"
+            HighlightCard(
+                icon: "chart.line.uptrend.xyaxis",
+                title: "Focus trend",
+                value: "\(sign)\(Int((absPct * 100).rounded()))%",
+                caption: "vs the previous \(prettyRangeLabel) (\(formatHM(trend.priorSeconds)) \u{2192} \(formatHM(trend.currentSeconds)))",
+                direction: pct >= 0.02 ? .up : (pct <= -0.02 ? .down : .neutral)
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var peakHourCard: HighlightCard? {
+        if let h = peakHour {
+            HighlightCard(
+                icon: "sun.max",
+                title: "Peak focus hour",
+                value: hourLabel(h),
+                caption: "Across the last 14 days, you focus most around \(hourLabel(h)).",
+                direction: .neutral
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var regressionCard: HighlightCard? {
+        if let r = topRegression {
+            HighlightCard(
+                icon: "exclamationmark.triangle",
+                title: "Top regression",
+                value: r.host,
+                caption: "+\(formatHM(r.deltaSeconds)) vs the previous \(prettyRangeLabel).",
+                direction: .down
+            )
+        }
+    }
+
+    private var prettyRangeLabel: String {
+        switch range {
+        case .today:       return "day"
+        case .yesterday:   return "day"
+        case .last7Days:   return "week"
+        case .last30Days:  return "month"
+        case .thisWeek:    return "week"
+        case .thisMonth:   return "month"
+        case .custom:      return "period"
+        }
+    }
+
+    private func hourLabel(_ h: Int) -> String {
+        // 9 → "9–10am", 14 → "2–3pm"
+        func ampm(_ x: Int) -> String {
+            let h12 = x % 12 == 0 ? 12 : x % 12
+            let suffix = x < 12 ? "am" : "pm"
+            return "\(h12)\(suffix)"
+        }
+        return "\(ampm(h))–\(ampm((h + 1) % 24))"
     }
 
     // MARK: - Hero band
