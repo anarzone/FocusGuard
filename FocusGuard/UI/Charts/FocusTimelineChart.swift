@@ -23,31 +23,27 @@ struct FocusTimelineChart: View {
         self.series = series
     }
 
-    private struct Bucket: Identifiable {
+    /// Long-format point Apple Charts can stack natively. One row per bucket
+    /// per category; Charts groups by `bucket` (x) and stacks by `category`.
+    private struct Point: Identifiable {
         let id = UUID()
-        /// Bucket start, in minutes since the window's `from`.
-        let startMinute: Int
-        /// Width of the bucket in minutes.
-        let durationMinutes: Int
-        let focus: Double         // seconds
-        let neutral: Double
-        let distraction: Double
-
-        var total: Double { focus + neutral + distraction }
+        let bucket: Int        // minutes since the window's `from`
+        let category: String   // "Focus" | "Neutral" | "Distraction"
+        let seconds: Double
     }
 
-    /// Aim for ~80 bars across the chart so each bar is readable.
-    /// Buckets snap to common readable widths.
+    /// Aim for ~80 bars across the chart so each bar is readable. Snaps to
+    /// common readable widths.
     private var bucketMinutes: Int {
         let target = max(1, series.count / 80)
         let snaps = [1, 2, 5, 10, 15, 30, 60, 120]
         return snaps.first(where: { $0 >= target }) ?? snaps.last!
     }
 
-    private var buckets: [Bucket] {
+    private var points: [Point] {
         guard !series.isEmpty else { return [] }
         let width = bucketMinutes
-        var out: [Bucket] = []
+        var out: [Point] = []
         var i = 0
         while i < series.count {
             let end = min(i + width, series.count)
@@ -58,11 +54,10 @@ struct FocusTimelineChart: View {
                 n += p.neutral * 60
                 d += p.distraction * 60
             }
-            out.append(Bucket(
-                startMinute: i,
-                durationMinutes: end - i,
-                focus: f, neutral: n, distraction: d
-            ))
+            // Skip empty buckets so Charts doesn't allocate space for them.
+            if f > 0 { out.append(Point(bucket: i, category: "Focus", seconds: f)) }
+            if n > 0 { out.append(Point(bucket: i, category: "Neutral", seconds: n)) }
+            if d > 0 { out.append(Point(bucket: i, category: "Distraction", seconds: d)) }
             i = end
         }
         return out
@@ -92,32 +87,17 @@ struct FocusTimelineChart: View {
     }
 
     private var chart: some View {
-        Chart(buckets) { b in
+        Chart(points) { p in
             BarMark(
-                x: .value("Minute", b.startMinute),
-                y: .value("Seconds", b.focus),
-                width: .ratio(0.95)
+                x: .value("Minute", p.bucket),
+                y: .value("Seconds", p.seconds),
+                width: .ratio(0.92)
             )
-            .foregroundStyle(by: .value("Class", "Focus"))
-            .position(by: .value("Class", "Focus"), span: .automatic)
-
-            BarMark(
-                x: .value("Minute", b.startMinute),
-                y: .value("Seconds", b.neutral),
-                width: .ratio(0.95)
-            )
-            .foregroundStyle(by: .value("Class", "Neutral"))
-
-            BarMark(
-                x: .value("Minute", b.startMinute),
-                y: .value("Seconds", b.distraction),
-                width: .ratio(0.95)
-            )
-            .foregroundStyle(by: .value("Class", "Distraction"))
+            .foregroundStyle(by: .value("Class", p.category))
         }
         .chartForegroundStyleScale([
             "Focus":       Theme.focus,
-            "Neutral":     Theme.neutral.opacity(0.5),
+            "Neutral":     Theme.neutral.opacity(0.55),
             "Distraction": Theme.distraction,
         ])
         .chartLegend(.hidden)
