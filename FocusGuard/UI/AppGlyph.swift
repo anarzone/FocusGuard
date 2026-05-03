@@ -38,7 +38,12 @@ struct AppGlyph: View {
     /// When set, we try to render the real macOS icon for this bundle id
     /// before falling back to the SwiftUI-drawn tile.
     var bundleId: String?
+    /// When set and bundleId resolution fails, we try a favicon for this host
+    /// before falling back to the SwiftUI-drawn tile.
+    var host: String?
     var size: CGFloat = 36
+
+    @StateObject private var favicons = FaviconLoader.shared
 
     private var radius: CGFloat { size <= 24 ? 6 : 8 }
 
@@ -48,6 +53,16 @@ struct AppGlyph: View {
                 .resizable()
                 .interpolation(.high)
                 .frame(width: size, height: size)
+        } else if let host, let favicon = favicons.image(for: host) {
+            Image(nsImage: favicon)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
+                )
         } else {
             tile
         }

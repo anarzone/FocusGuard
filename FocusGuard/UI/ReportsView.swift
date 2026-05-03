@@ -117,6 +117,22 @@ struct ReportsView: View {
             .buttonStyle(.plain)
 
             Spacer()
+
+            Button {
+                let (from, to) = resolvedRange
+                DataExporter.export(.csv, container: appState.container, from: from, to: to)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.up")
+                    Text("Export CSV")
+                }
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+            }
+            .buttonStyle(.plain)
+            .help("Export the current range to a CSV file.")
         }
         .padding(4)
         .background(Theme.fill1, in: RoundedRectangle(cornerRadius: 8))
@@ -420,14 +436,35 @@ struct ReportsView: View {
     }
 
     private var emptyAppsCard: some View {
-        HStack {
-            Spacer()
-            Text("No activity yet today.")
-                .font(.system(size: 12))
+        VStack(spacing: 12) {
+            Image(systemName: "chart.bar.doc.horizontal")
+                .font(.system(size: 24))
                 .foregroundStyle(.tertiary)
-            Spacer()
+            Text("No activity in this range")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text("Reports populate as you use your Mac. Start a focus session to see how it shapes up.")
+                .font(.system(size: 11.5))
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 360)
+            Button {
+                appState.sessionManager.startSession(
+                    label: UserDefaults.standard.string(forKey: SessionDefaultsKey.label) ?? "Deep work",
+                    plannedDurationMinutes: max(5, UserDefaults.standard.integer(forKey: SessionDefaultsKey.durationMinutes))
+                )
+            } label: {
+                Text("Start a focus session")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.focus)
+            .disabled(appState.sessionManager.currentSession != nil)
         }
-        .padding(.vertical, 24)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity)
         .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.card)
@@ -651,7 +688,9 @@ struct ReportsView: View {
 
     private func distractionRow(_ d: DistractionEntry) -> some View {
         HStack(spacing: 10) {
-            AppGlyph(kind: d.kind, bundleId: d.bundleId, size: 28)
+            // Favicon takes priority over bundleId for host-grouped rows so
+            // 'youtube.com' shows the YouTube icon, not Chrome.
+            AppGlyph(kind: d.kind, bundleId: d.host == nil ? d.bundleId : nil, host: d.host, size: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(d.name).font(.system(size: 13))
                 Text(d.subtitle).font(.system(size: 11)).foregroundStyle(.secondary)

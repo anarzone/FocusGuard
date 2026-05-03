@@ -12,21 +12,18 @@ enum DataExporter {
     }
 
     @MainActor
-    static func export(_ format: Format, container: ModelContainer) {
+    static func export(_ format: Format, container: ModelContainer, from: Date? = nil, to: Date? = nil) {
         let panel = NSSavePanel()
         panel.title = "Export FocusGuard data"
-        panel.nameFieldStringValue = defaultFilename(for: format)
+        panel.nameFieldStringValue = defaultFilename(for: format, from: from, to: to)
         panel.allowedContentTypes = [format == .json ? .json : .commaSeparatedText]
         panel.canCreateDirectories = true
 
-        // beginSheetModal — non-blocking; the active key window hosts the sheet.
-        // If no key window (popover-only state), fall back to a free-floating
-        // panel via begin().
         let host = NSApp.keyWindow ?? NSApp.mainWindow
         let completion: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
-                writeExport(format: format, container: container, url: url)
+                writeExport(format: format, container: container, url: url, from: from, to: to)
             }
         }
 
@@ -38,15 +35,15 @@ enum DataExporter {
     }
 
     @MainActor
-    private static func writeExport(format: Format, container: ModelContainer, url: URL) {
+    private static func writeExport(format: Format, container: ModelContainer, url: URL, from: Date?, to: Date?) {
         let context = container.mainContext
         do {
             switch format {
             case .json:
-                let data = try buildJSON(context: context)
+                let data = try buildJSON(context: context, from: from, to: to)
                 try data.write(to: url, options: .atomic)
             case .csv:
-                let csv = try buildCSV(context: context)
+                let csv = try buildCSV(context: context, from: from, to: to)
                 try csv.data(using: .utf8)?.write(to: url, options: .atomic)
             }
         } catch {
@@ -60,12 +57,14 @@ enum DataExporter {
 
     // MARK: - Filenames
 
-    private static func defaultFilename(for format: Format) -> String {
+    private static func defaultFilename(for format: Format, from: Date? = nil, to: Date? = nil) -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
-        let date = f.string(from: .now)
         let ext = format == .json ? "json" : "csv"
-        return "focusguard-\(date).\(ext)"
+        if let from, let to {
+            return "focusguard-\(f.string(from: from))-to-\(f.string(from: to)).\(ext)"
+        }
+        return "focusguard-\(f.string(from: .now)).\(ext)"
     }
 
     // MARK: - JSON
@@ -98,9 +97,16 @@ enum DataExporter {
     }
 
     @MainActor
-    private static func buildJSON(context: ModelContext) throws -> Data {
+    private static func buildJSON(context: ModelContext, from: Date? = nil, to: Date? = nil) throws -> Data {
         let sessions = (try? context.fetch(FetchDescriptor<Session>())) ?? []
-        let events   = (try? context.fetch(FetchDescriptor<ActivityEvent>())) ?? []
+        let events: [ActivityEvent] = {
+            if let from, let to {
+                return (try? context.fetch(FetchDescriptor<ActivityEvent>(
+                    predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+                ))) ?? []
+            }
+            return (try? context.fetch(FetchDescriptor<ActivityEvent>())) ?? []
+        }()
 
         let sessionDTOs = sessions.map { s in
             SessionDTO(
@@ -143,8 +149,15 @@ enum DataExporter {
     // MARK: - CSV
 
     @MainActor
-    private static func buildCSV(context: ModelContext) throws -> String {
-        let events = (try? context.fetch(FetchDescriptor<ActivityEvent>())) ?? []
+    private static func buildCSV(context: ModelContext, from: Date? = nil, to: Date? = nil) throws -> String {
+        let events: [ActivityEvent] = {
+            if let from, let to {
+                return (try? context.fetch(FetchDescriptor<ActivityEvent>(
+                    predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+                ))) ?? []
+            }
+            return (try? context.fetch(FetchDescriptor<ActivityEvent>())) ?? []
+        }()
 
         var out = "started_at,ended_at,duration_seconds,bundle_id,app_name,classification,window_title,url,session_id\n"
         let iso = ISO8601DateFormatter()
