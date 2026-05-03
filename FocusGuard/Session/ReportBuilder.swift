@@ -35,6 +35,49 @@ struct ReportBuilder {
         return BreakdownSnapshot(focus: f, neutral: n, distraction: d)
     }
 
+    // MARK: - Per-day totals
+
+    /// One bar per calendar day in the range, oldest first. Used by the
+    /// hero sparkline so it can adapt to whatever range the user picks.
+    func dailyTotals(from: Date, to: Date, calendar: Calendar = .current) -> [DailyTotal] {
+        let descriptor = FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+        )
+        let events = (try? context.fetch(descriptor)) ?? []
+
+        // Build one slot per day, even days with zero activity.
+        let firstDay = calendar.startOfDay(for: from)
+        let lastDay  = calendar.startOfDay(for: to.addingTimeInterval(-1))
+        var days: [Date] = []
+        var cursor = firstDay
+        while cursor <= lastDay {
+            days.append(cursor)
+            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor.addingTimeInterval(86400)
+        }
+
+        var totals: [Date: TimeInterval] = [:]
+        for d in days { totals[d] = 0 }
+
+        for e in events {
+            let s = max(e.startedAt, from)
+            let f = min(e.endedAt, to)
+            guard f > s else { continue }
+            // Split the event across day boundaries so a long midnight-spanning
+            // event doesn't get attributed entirely to its start day.
+            var segStart = s
+            while segStart < f {
+                let dayStart = calendar.startOfDay(for: segStart)
+                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+                let segEnd = min(f, dayEnd)
+                let dur = segEnd.timeIntervalSince(segStart)
+                totals[dayStart, default: 0] += max(0, dur)
+                segStart = segEnd
+            }
+        }
+
+        return days.map { DailyTotal(date: $0, seconds: totals[$0] ?? 0) }
+    }
+
     // MARK: - Per-minute timeline
 
     /// Stacked-area timeline points for the given range, one minute each.
@@ -248,6 +291,12 @@ struct AppUsageEntry: Identifiable, Hashable {
         if h == 0 { return "\(m)m" }
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
+}
+
+struct DailyTotal: Identifiable, Hashable {
+    let id = UUID()
+    let date: Date
+    let seconds: TimeInterval
 }
 
 struct TabUsage: Identifiable, Hashable {

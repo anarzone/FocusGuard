@@ -15,6 +15,7 @@ struct ReportsView: View {
     @State private var distractions: [DistractionEntry] = []
     @State private var topApps: [AppUsageEntry] = []
     @State private var timeline: [TimelinePoint] = []
+    @State private var dailyTotals: [DailyTotal] = []
     @State private var expandedAppIds: Set<UUID> = []
 
     private var builder: ReportBuilder { ReportBuilder(context: appState.container.mainContext) }
@@ -137,6 +138,7 @@ struct ReportsView: View {
         distractions = builder.topDistractions(from: from, to: to, limit: 5)
         topApps = builder.topApps(from: from, to: to, limit: 10)
         timeline = builder.timeline(from: from, to: to)
+        dailyTotals = builder.dailyTotals(from: from, to: to)
     }
 
     // MARK: - Hero band
@@ -208,13 +210,18 @@ struct ReportsView: View {
     // MARK: - Hero right (week chart)
 
     private var heroRight: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("THIS WEEK")
-                .font(.system(size: 11.5, weight: .semibold))
-                .tracking(0.4)
-                .foregroundStyle(.secondary)
-            WeekChart(values: appState.weekTrackedSeconds)
-                .frame(width: 280, height: 80)
+        // Single-day ranges would render as a single bar — useless. Skip the
+        // sparkline entirely in that case.
+        let multiDay = dailyTotals.count >= 2
+        return VStack(alignment: .leading, spacing: 8) {
+            if multiDay {
+                Text("TRACKED PER DAY")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(.secondary)
+                WeekChart(daily: dailyTotals)
+                    .frame(width: 280, height: 80)
+            }
         }
     }
 
