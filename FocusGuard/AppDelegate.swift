@@ -58,7 +58,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Opens (or brings to front) the standalone window with the requested tab.
     /// Created lazily; kept alive after close so reopening is instant.
+    /// Switches the app to `.regular` activation policy so it shows in the
+    /// Dock and Cmd+Tab. Closing the window switches back to `.accessory`,
+    /// which hides the Dock icon — the app stays running in the menu bar.
     func openMainWindow(tab: MainTab = .home) {
+        // Show in Dock + Cmd+Tab while a window is up.
+        NSApp.setActivationPolicy(.regular)
+
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab)
             let hosting = NSHostingController(rootView: view)
@@ -79,6 +85,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = NSSize(width: 880, height: 580)
             window.center()
 
+            // When the user clicks the red traffic light, drop the Dock icon
+            // and go back to accessory mode. The app stays alive through the
+            // menu bar item.
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(mainWindowWillClose(_:)),
+                name: NSWindow.willCloseNotification,
+                object: window
+            )
+
             mainWindow = window
             mainWindowTab = tab
         } else if let existingTab = mainWindowTab, existingTab != tab {
@@ -92,5 +108,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         didShowMainWindow = true
+    }
+
+    @objc private func mainWindowWillClose(_ note: Notification) {
+        // Drop back to accessory: removes Dock icon, app keeps running via
+        // the menu bar item. setActivationPolicy is async-safe to call here.
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 }
