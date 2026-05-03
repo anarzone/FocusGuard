@@ -21,6 +21,7 @@ struct SettingsSessionsPane: View {
     @AppStorage(SettingsKeys.SystemFocus.endName)    private var endShortcutName   = ""
 
     @State private var availableShortcuts: [String] = []
+    @State private var showingStarterPack = false
 
     @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
     @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
@@ -94,11 +95,27 @@ struct SettingsSessionsPane: View {
                         row(title: "On session end", help: shortcutHelp(endShortcutName)) {
                             shortcutPicker(selection: $endShortcutName)
                         }
+                        Rectangle().fill(Theme.separator).frame(height: 0.5)
+                        row(title: "Don't see your shortcut?",
+                            help: "Pick from a starter pack — built-in modes (Work, DND, Reading) plus a Deep Work combo. macOS doesn't allow apps to install Shortcuts silently, so each one takes about 30 seconds to set up the first time.") {
+                            Button("Starter pack…") { showingStarterPack = true }
+                        }
                     }
                 }
                 .task {
                     if let list = await SystemFocusBridge.availableShortcuts() {
                         availableShortcuts = list
+                    }
+                }
+                .sheet(isPresented: $showingStarterPack) {
+                    StarterPackSheet(installed: availableShortcuts) {
+                        // Reload the installed list after the sheet closes —
+                        // user may have added shortcuts.
+                        Task {
+                            if let list = await SystemFocusBridge.availableShortcuts() {
+                                availableShortcuts = list
+                            }
+                        }
                     }
                 }
 
