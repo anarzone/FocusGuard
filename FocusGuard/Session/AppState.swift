@@ -90,8 +90,12 @@ final class AppState {
         }
 
         // Session boundaries: reset escalation, send completion notification.
+        manager.onSessionStarted = {
+            SystemFocusBridge.onSessionStarted()
+        }
         manager.onSessionEnded = { [weak engine, weak self] session in
             engine?.resetForSessionEnd()
+            SystemFocusBridge.onSessionEnded()
             guard let self else { return }
             let breakdown = ReportBuilder(context: context)
                 .breakdown(from: session.startedAt, to: session.endedAt ?? .now)

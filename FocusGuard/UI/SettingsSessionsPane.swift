@@ -16,6 +16,10 @@ struct SettingsSessionsPane: View {
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
 
+    @AppStorage(SettingsKeys.SystemFocus.enabled)    private var systemFocusEnabled = false
+    @AppStorage(SettingsKeys.SystemFocus.startName)  private var startShortcutName = "Start FocusGuard"
+    @AppStorage(SettingsKeys.SystemFocus.endName)    private var endShortcutName   = "End FocusGuard"
+
     @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
     @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
 
@@ -69,6 +73,29 @@ struct SettingsSessionsPane: View {
                         TextField("Deep work", text: $defaultLabel)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 200)
+                    }
+                }
+
+                sectionHeader("System Focus", topPad: 24)
+                groupCard {
+                    row(title: "Run a Shortcut on session start/end",
+                        help: "Create two Shortcuts in the Shortcuts app — one to set a Focus mode (or DND, Slack status, etc.) and one to clear it. We'll trigger them automatically.") {
+                        Toggle("", isOn: $systemFocusEnabled)
+                            .toggleStyle(.switch).labelsHidden()
+                    }
+                    if systemFocusEnabled {
+                        Rectangle().fill(Theme.separator).frame(height: 0.5)
+                        row(title: "Start shortcut name") {
+                            TextField("Start FocusGuard", text: $startShortcutName)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 200)
+                        }
+                        Rectangle().fill(Theme.separator).frame(height: 0.5)
+                        row(title: "End shortcut name") {
+                            TextField("End FocusGuard", text: $endShortcutName)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 200)
+                        }
                     }
                 }
 

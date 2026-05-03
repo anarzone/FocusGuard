@@ -85,6 +85,12 @@ enum SettingsKeys {
         static let lastSummaryDayKey  = "goal.lastSummaryDay" // ISO yyyy-MM-dd of last summary
         static let weekendsCount      = "goal.weekendsCountTowardStreak"
     }
+
+    enum SystemFocus {
+        static let enabled    = "systemFocus.enabled"
+        static let startName  = "systemFocus.startShortcutName"
+        static let endName    = "systemFocus.endShortcutName"
+    }
 }
 
 enum GoalDefaults {
