@@ -87,14 +87,20 @@ struct FocusTimelineChart: View {
     }
 
     private var chart: some View {
+        // Use xStart/xEnd so each bar has a concrete span equal to its bucket
+        // width. With plain `x:` and continuous Int values, Charts auto-picks
+        // a bar width based on the smallest gap and can collapse bars to
+        // sub-pixel widths when there are many buckets.
         Chart(points) { p in
             BarMark(
-                x: .value("Minute", p.bucket),
-                y: .value("Seconds", p.seconds),
-                width: .ratio(0.92)
+                xStart: .value("Start", p.bucket),
+                xEnd:   .value("End",   p.bucket + bucketMinutes),
+                y:      .value("Seconds", p.seconds)
             )
             .foregroundStyle(by: .value("Class", p.category))
+            .cornerRadius(1)
         }
+        .chartXScale(domain: 0...max(1, series.count))
         .chartForegroundStyleScale([
             "Focus":       Theme.focus,
             "Neutral":     Theme.neutral.opacity(0.55),
