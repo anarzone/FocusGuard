@@ -100,6 +100,10 @@ final class AppState {
 
         tracker.start()
 
+        // One-time cleanup of pre-fix idle events (loginwindow / screensaver)
+        // that the old tracker counted as activity.
+        HistoricalCleanup.runIfNeeded(context: context)
+
         // Apply retention policy on launch, then once a day while running.
         RetentionPolicy.prune(context: context)
         Timer.scheduledTimer(withTimeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in

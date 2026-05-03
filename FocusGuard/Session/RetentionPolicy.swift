@@ -4,6 +4,46 @@ import SwiftData
 /// User-configurable data retention. Old `ActivityEvent` and `Session` rows
 /// older than the cutoff are deleted on launch + once a day while the app
 /// is running. Default is 365 days; user can lower in Privacy → Retention.
+/// One-time cleanup of historical data that the v0.1 tracker collected
+/// before we shipped the idle-process skip. We ran for several days
+/// counting `loginwindow` / `ScreenSaver.Engine` time as activity, which
+/// dwarfs real usage when the Mac was locked overnight. Run on launch
+/// once; after that the new tracker prevents the data from being created.
+enum HistoricalCleanup {
+    private static let migrationKey = "historicalCleanup.idleEvents.v1"
+    private static let idleBundleIds = [
+        "com.apple.loginwindow",
+        "com.apple.ScreenSaver.Engine",
+        "com.apple.WindowManager",
+    ]
+
+    @MainActor
+    @discardableResult
+    static func runIfNeeded(context: ModelContext) -> Int {
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return 0 }
+
+        var deleted = 0
+        for bid in idleBundleIds {
+            let pred = #Predicate<ActivityEvent> { $0.bundleIdentifier == bid }
+            let count = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(predicate: pred))
+            if count > 0 {
+                do {
+                    try context.delete(model: ActivityEvent.self, where: pred)
+                    deleted += count
+                } catch {
+                    Persistence.logger.error("idle cleanup failed for \(bid, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+        Persistence.save(context)
+        UserDefaults.standard.set(true, forKey: migrationKey)
+        if deleted > 0 {
+            Persistence.logger.info("historical cleanup removed \(deleted, privacy: .public) idle events")
+        }
+        return deleted
+    }
+}
+
 enum RetentionPolicy {
     /// Days of history to keep. Persisted via UserDefaults; 0 means keep all.
     static var days: Int {

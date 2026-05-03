@@ -23,13 +23,16 @@ struct FocusTimelineChart: View {
         self.series = series
     }
 
-    /// Long-format point Apple Charts can stack natively. One row per bucket
-    /// per category; Charts groups by `bucket` (x) and stacks by `category`.
+    /// Pre-stacked point — yStart/yEnd are computed cumulatively per bucket
+    /// so Charts renders each segment in the correct vertical slice. Without
+    /// explicit yStart/yEnd, BarMarks with xStart/xEnd ranges don't auto-stack
+    /// even when grouped by a categorical color.
     private struct Point: Identifiable {
         let id = UUID()
         let bucket: Int        // minutes since the window's `from`
         let category: String   // "Focus" | "Neutral" | "Distraction"
-        let seconds: Double
+        let yStart: Double
+        let yEnd: Double
     }
 
     /// Aim for ~80 bars across the chart so each bar is readable. Snaps to
@@ -54,10 +57,20 @@ struct FocusTimelineChart: View {
                 n += p.neutral * 60
                 d += p.distraction * 60
             }
-            // Skip empty buckets so Charts doesn't allocate space for them.
-            if f > 0 { out.append(Point(bucket: i, category: "Focus", seconds: f)) }
-            if n > 0 { out.append(Point(bucket: i, category: "Neutral", seconds: n)) }
-            if d > 0 { out.append(Point(bucket: i, category: "Distraction", seconds: d)) }
+            // Build cumulative yStart/yEnd so the three categories actually
+            // stack on top of each other instead of rendering side-by-side.
+            var y: Double = 0
+            if f > 0 {
+                out.append(Point(bucket: i, category: "Focus", yStart: y, yEnd: y + f))
+                y += f
+            }
+            if n > 0 {
+                out.append(Point(bucket: i, category: "Neutral", yStart: y, yEnd: y + n))
+                y += n
+            }
+            if d > 0 {
+                out.append(Point(bucket: i, category: "Distraction", yStart: y, yEnd: y + d))
+            }
             i = end
         }
         return out
@@ -93,9 +106,10 @@ struct FocusTimelineChart: View {
         // sub-pixel widths when there are many buckets.
         Chart(points) { p in
             BarMark(
-                xStart: .value("Start", p.bucket),
-                xEnd:   .value("End",   p.bucket + bucketMinutes),
-                y:      .value("Seconds", p.seconds)
+                xStart: .value("Start",  p.bucket),
+                xEnd:   .value("End",    p.bucket + bucketMinutes),
+                yStart: .value("yStart", p.yStart),
+                yEnd:   .value("yEnd",   p.yEnd)
             )
             .foregroundStyle(by: .value("Class", p.category))
             .cornerRadius(1)
