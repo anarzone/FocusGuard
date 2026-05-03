@@ -46,7 +46,7 @@ enum StarterShortcuts {
                 "Tap the focus name → choose Work",
                 "Tap Until → Off (we'll turn it off when the session ends)",
             ],
-            iCloudURL: nil,
+            iCloudURL: URL(string: "https://www.icloud.com/shortcuts/c91a832d529342beb5046e4596c0cc5c"),
             role: .start
         ),
         StarterShortcut(
