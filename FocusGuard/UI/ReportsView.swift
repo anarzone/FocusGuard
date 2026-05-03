@@ -15,6 +15,7 @@ struct ReportsView: View {
     @State private var distractions: [DistractionEntry] = []
     @State private var topApps: [AppUsageEntry] = []
     @State private var timeline: [TimelinePoint] = []
+    @State private var expandedAppIds: Set<UUID> = []
 
     private var builder: ReportBuilder { ReportBuilder(context: appState.container.mainContext) }
 
@@ -326,6 +327,11 @@ struct ReportsView: View {
         return VStack(spacing: 0) {
             ForEach(topApps) { entry in
                 appRow(entry, maxSeconds: maxSeconds)
+                if expandedAppIds.contains(entry.id) {
+                    ForEach(entry.tabs) { tab in
+                        tabRow(tab, maxSeconds: maxSeconds)
+                    }
+                }
                 if entry.id != topApps.last?.id {
                     Rectangle().fill(Theme.separator).frame(height: 0.5)
                 }
@@ -339,11 +345,25 @@ struct ReportsView: View {
     }
 
     private func appRow(_ entry: AppUsageEntry, maxSeconds: TimeInterval) -> some View {
-        HStack(spacing: 10) {
+        let canExpand = !entry.tabs.isEmpty
+        let isExpanded = expandedAppIds.contains(entry.id)
+        return HStack(spacing: 10) {
+            // Disclosure chevron — only renders if there are child tabs.
+            // Reserved-width slot keeps non-browser rows aligned with browsers.
+            ZStack {
+                if canExpand {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+            }
+            .frame(width: 12)
+
             AppGlyph(kind: entry.kind, size: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.name).font(.system(size: 13))
-                Text(entry.bundleId)
+                Text(canExpand ? "\(entry.tabs.count) site\(entry.tabs.count == 1 ? "" : "s")" : entry.bundleId)
                     .font(.system(size: 11).monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -361,6 +381,40 @@ struct ReportsView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard canExpand else { return }
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if isExpanded { expandedAppIds.remove(entry.id) }
+                else          { expandedAppIds.insert(entry.id) }
+            }
+        }
+    }
+
+    private func tabRow(_ tab: TabUsage, maxSeconds: TimeInterval) -> some View {
+        HStack(spacing: 10) {
+            // Empty chevron slot + indent under the parent's app glyph.
+            Color.clear.frame(width: 12)
+            Color.clear.frame(width: 28)
+            Text(tab.host)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
+            classificationChip(tab.classification)
+            ProgressView(value: tab.seconds / maxSeconds)
+                .progressViewStyle(.linear)
+                .tint(color(for: tab.classification))
+                .frame(width: 80)
+            Text(tab.timeLabel)
+                .font(.system(size: 12).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .trailing)
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 14)
+        .padding(.vertical, 6)
+        .background(Theme.cardBackground.opacity(0.5))
     }
 
     private func classificationChip(_ c: Classification) -> some View {

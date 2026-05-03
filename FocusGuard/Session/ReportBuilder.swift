@@ -109,6 +109,9 @@ struct ReportBuilder {
             var seconds: TimeInterval
             var classification: Classification
             var events: Int
+            // Per-host breakdown — only populated for browser bundles. Maps
+            // host (e.g. "github.com") → (seconds, dominant classification).
+            var hosts: [String: (seconds: TimeInterval, classification: Classification)]
         }
         var groups: [String: Group] = [:]
 
@@ -117,18 +120,32 @@ struct ReportBuilder {
             let dur = max(0, min(e.endedAt, to).timeIntervalSince(max(e.startedAt, from)))
             if dur <= 0 { continue }
 
+            let isBrowser = BrowserTabReader.isBrowser(bundleIdentifier: e.bundleIdentifier)
+            let host = isBrowser
+                ? e.url.flatMap { URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") }
+                : nil
+
             if var existing = groups[key] {
                 existing.seconds += dur
                 existing.events += 1
+                if let h = host {
+                    let prev = existing.hosts[h] ?? (0, e.classification ?? .neutral)
+                    existing.hosts[h] = (prev.seconds + dur, e.classification ?? prev.classification)
+                }
                 groups[key] = existing
             } else {
+                var hosts: [String: (TimeInterval, Classification)] = [:]
+                if let h = host {
+                    hosts[h] = (dur, e.classification ?? .neutral)
+                }
                 groups[key] = Group(
                     kind: AppGlyph.kind(forBundleId: e.bundleIdentifier, name: e.appName),
                     name: e.appName,
                     bundleId: e.bundleIdentifier,
                     seconds: dur,
                     classification: e.classification ?? .neutral,
-                    events: 1
+                    events: 1,
+                    hosts: hosts
                 )
             }
         }
@@ -136,14 +153,18 @@ struct ReportBuilder {
         return groups.values
             .sorted { $0.seconds > $1.seconds }
             .prefix(limit)
-            .map {
-                AppUsageEntry(
-                    kind: $0.kind,
-                    name: $0.name,
-                    bundleId: $0.bundleId,
-                    classification: $0.classification,
-                    seconds: $0.seconds,
-                    events: $0.events
+            .map { g in
+                let tabs = g.hosts
+                    .map { TabUsage(host: $0.key, seconds: $0.value.seconds, classification: $0.value.classification) }
+                    .sorted { $0.seconds > $1.seconds }
+                return AppUsageEntry(
+                    kind: g.kind,
+                    name: g.name,
+                    bundleId: g.bundleId,
+                    classification: g.classification,
+                    seconds: g.seconds,
+                    events: g.events,
+                    tabs: tabs
                 )
             }
     }
@@ -211,8 +232,15 @@ struct AppUsageEntry: Identifiable, Hashable {
     let classification: Classification
     let seconds: TimeInterval
     let events: Int
+    /// For browser bundles, the per-host breakdown of time spent. Sorted
+    /// descending. Empty for non-browsers.
+    let tabs: [TabUsage]
 
     var timeLabel: String {
+        Self.format(seconds: seconds)
+    }
+
+    static func format(seconds: TimeInterval) -> String {
         let total = Int(seconds)
         if total < 60 { return "\(total)s" }
         let h = total / 3600
@@ -220,6 +248,15 @@ struct AppUsageEntry: Identifiable, Hashable {
         if h == 0 { return "\(m)m" }
         return m == 0 ? "\(h)h" : "\(h)h \(m)m"
     }
+}
+
+struct TabUsage: Identifiable, Hashable {
+    let id = UUID()
+    let host: String
+    let seconds: TimeInterval
+    let classification: Classification
+
+    var timeLabel: String { AppUsageEntry.format(seconds: seconds) }
 }
 
 struct DistractionEntry: Identifiable, Hashable {
