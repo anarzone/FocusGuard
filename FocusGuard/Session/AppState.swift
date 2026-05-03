@@ -7,6 +7,7 @@ import SwiftData
 @Observable
 final class AppState {
     let container: ModelContainer
+    let permissions: PermissionsCoordinator
     let optOutCache: TitleOptOutCache
     let classifier: Classifier
     let tracker: ActivityTracker
@@ -41,6 +42,7 @@ final class AppState {
         let presenter = NotificationPresenter()
         let engine = EscalationEngine(presenter: presenter)
 
+        self.permissions = PermissionsCoordinator()
         self.optOutCache = cache
         self.classifier = classifier
         self.tracker = tracker

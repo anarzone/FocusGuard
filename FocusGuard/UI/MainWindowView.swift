@@ -1,14 +1,14 @@
 import SwiftUI
 
 enum MainTab: Hashable {
-    case reports, settings
+    case home, reports, settings
 }
 
 struct MainWindowView: View {
     @Bindable var appState: AppState
     @State private var tab: MainTab
 
-    init(appState: AppState, initialTab: MainTab = .reports) {
+    init(appState: AppState, initialTab: MainTab = .home) {
         self._appState = Bindable(wrappedValue: appState)
         self._tab = State(initialValue: initialTab)
     }
@@ -30,6 +30,8 @@ struct MainWindowView: View {
 
             Group {
                 switch tab {
+                case .home:
+                    HomeView(appState: appState)
                 case .reports:
                     ReportsView(appState: appState)
                 case .settings:
@@ -83,6 +85,7 @@ struct MainWindowToolbar: View {
 
             // Top tabs (NSToolbar pill segmented)
             HStack(spacing: 0) {
+                tabButton(.home, label: "Home")
                 tabButton(.reports, label: "Reports")
                 tabButton(.settings, label: "Settings")
             }
