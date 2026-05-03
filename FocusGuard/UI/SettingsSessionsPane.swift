@@ -14,6 +14,7 @@ struct SettingsSessionsPane: View {
     @AppStorage(SessionDefaultsKey.label)           private var defaultLabel  = "Deep work"
 
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
+    @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
 
     @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
     @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
@@ -39,6 +40,12 @@ struct SettingsSessionsPane: View {
                                 .frame(width: 70, alignment: .trailing)
                         }
                         .labelsHidden()
+                    }
+                    Rectangle().fill(Theme.separator).frame(height: 0.5)
+                    row(title: "Weekends count toward streak",
+                        help: "When off, Saturday and Sunday are skipped during streak calculation so a quiet weekend doesn't break a weekday streak.") {
+                        Toggle("", isOn: $weekendsCount)
+                            .toggleStyle(.switch).labelsHidden()
                     }
                 }
 

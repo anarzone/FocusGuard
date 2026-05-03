@@ -161,6 +161,7 @@ struct MenuBarView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .tracking(0.4)
                     .foregroundStyle(.secondary)
+                streakBadge
                 Spacer()
                 deltaPill
             }
@@ -195,6 +196,22 @@ struct MenuBarView: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 6))
+    }
+
+    /// "🔥 5-day streak" pill. Hidden if streak < 2 to avoid noise on a fresh
+    /// install. Streak is computed from yesterday and earlier — today's
+    /// progress is shown by the goal bar.
+    @ViewBuilder
+    private var streakBadge: some View {
+        let streak = appState.currentStreak
+        if streak >= 2 {
+            Text("🔥 \(streak)-day streak")
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(Theme.focus)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 5))
+        }
     }
 
     /// Thin progress bar + caption: "3h 12m of 4h goal · 80%". Tints green

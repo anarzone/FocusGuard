@@ -39,7 +39,9 @@ struct ReportBuilder {
 
     /// One bar per calendar day in the range, oldest first. Used by the
     /// hero sparkline so it can adapt to whatever range the user picks.
-    func dailyTotals(from: Date, to: Date, calendar: Calendar = .current) -> [DailyTotal] {
+    /// Pass `classification:` to count only events of that type — e.g. the
+    /// streak calculator needs focus-only totals.
+    func dailyTotals(from: Date, to: Date, classification: Classification? = nil, calendar: Calendar = .current) -> [DailyTotal] {
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
         )
@@ -59,6 +61,7 @@ struct ReportBuilder {
         for d in days { totals[d] = 0 }
 
         for e in events {
+            if let classification, (e.classification ?? .neutral) != classification { continue }
             let s = max(e.startedAt, from)
             let f = min(e.endedAt, to)
             guard f > s else { continue }

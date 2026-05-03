@@ -157,11 +157,15 @@ struct ReportsView: View {
         let pct = Int((breakdown.focusPercent * 100).rounded())
 
         return VStack(alignment: .leading, spacing: 0) {
-            Text(heroLabel.uppercased())
-                .font(.system(size: 11.5, weight: .semibold))
-                .tracking(0.4)
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 8)
+            HStack(alignment: .center, spacing: 10) {
+                Text(heroLabel.uppercased())
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .tracking(0.4)
+                    .foregroundStyle(.secondary)
+                streakBadge
+                Spacer()
+            }
+            .padding(.bottom, 8)
 
             HStack(alignment: .lastTextBaseline, spacing: 12) {
                 heroNumber(h, unit: "h", color: Theme.focus)
@@ -198,6 +202,19 @@ struct ReportsView: View {
 
     private var heroLabel: String {
         "\(range.label) · \(range.headingDateString())"
+    }
+
+    @ViewBuilder
+    private var streakBadge: some View {
+        let streak = appState.currentStreak
+        if streak >= 2 {
+            Text("🔥 \(streak)-day streak")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(Theme.focus)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 6))
+        }
     }
 
     private var heroSubtitle: String {

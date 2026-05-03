@@ -239,6 +239,24 @@ final class AppState {
         return avg
     }
 
+    // MARK: - Streak
+
+    private var cachedStreak: Int = 0
+    private var lastStreakAt: Date?
+
+    /// Consecutive days hitting the focus goal, walking back from yesterday.
+    /// Cached for 5 min — popover redraws on every tick, this query touches
+    /// 60 days of events.
+    var currentStreak: Int {
+        if let last = lastStreakAt, Date().timeIntervalSince(last) < 300 {
+            return cachedStreak
+        }
+        let value = StreakCalculator(context: container.mainContext).currentStreak()
+        cachedStreak = value
+        lastStreakAt = .now
+        return value
+    }
+
     // MARK: - Daily summary
 
     /// Fired from the tracker tick. Posts a "day's wrap-up" notification once

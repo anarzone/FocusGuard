@@ -101,6 +101,7 @@ struct HomeView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .tracking(0.4)
                     .foregroundStyle(.secondary)
+                streakBadge
                 Spacer()
                 deltaPill
             }
@@ -122,6 +123,19 @@ struct HomeView: View {
             goalProgress(breakdown: breakdown).padding(.top, 10)
             splitBar(breakdown: breakdown).padding(.top, 12)
             weekStrip.padding(.top, 16)
+        }
+    }
+
+    @ViewBuilder
+    private var streakBadge: some View {
+        let streak = appState.currentStreak
+        if streak >= 2 {
+            Text("🔥 \(streak)-day streak")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(Theme.focus)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 6))
         }
     }
 
