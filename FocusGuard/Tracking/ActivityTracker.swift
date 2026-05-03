@@ -92,9 +92,30 @@ final class ActivityTracker {
         lastSaveAt = .now
     }
 
+    /// System processes that take frontmost focus when the Mac is locked,
+    /// asleep, or showing the screensaver. Counting time on these as
+    /// activity inflates "neutral" for hours of actual idle time.
+    private static let idleProcessBundleIds: Set<String> = [
+        "com.apple.loginwindow",
+        "com.apple.ScreenSaver.Engine",
+        "com.apple.WindowManager",
+    ]
+
     private func tick() {
         guard let app = NSWorkspace.shared.frontmostApplication,
               let bundleId = app.bundleIdentifier else { return }
+
+        // Skip ticks when the Mac is locked / asleep / on screensaver. We
+        // also need to flush any in-flight event so its endedAt doesn't
+        // stretch through the lock period — otherwise a 9-hour overnight
+        // lock looks like 9 hours of activity in the last app you used.
+        if Self.idleProcessBundleIds.contains(bundleId) {
+            if currentEvent != nil {
+                Persistence.save(context)
+                currentEvent = nil
+            }
+            return
+        }
 
         let appName = app.localizedName ?? bundleId
         let title: String? = optOutCache.isOptedOut(bundleId)

@@ -6,6 +6,11 @@ import SwiftData
 struct ReportsView: View {
     @Bindable var appState: AppState
 
+    @State private var range: ReportRange = .today
+    @State private var customFrom: Date = Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now
+    @State private var customTo: Date = .now
+    @State private var showingCustomSheet = false
+
     @State private var breakdown: BreakdownSnapshot = .init(focus: 0, neutral: 0, distraction: 0)
     @State private var distractions: [DistractionEntry] = []
     @State private var topApps: [AppUsageEntry] = []
@@ -13,9 +18,17 @@ struct ReportsView: View {
 
     private var builder: ReportBuilder { ReportBuilder(context: appState.container.mainContext) }
 
+    private var resolvedRange: (from: Date, to: Date) {
+        if case .custom = range {
+            return (customFrom, customTo)
+        }
+        return range.dateRange()
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                rangePicker
                 heroBand
                 Divider().background(Theme.separator)
                 timelineSection
@@ -27,31 +40,102 @@ struct ReportsView: View {
         }
         .task { refresh() }
         .task(id: appState.sessionManager.currentSession?.id) { refresh() }
+        .task(id: rangeKey) { refresh() }
         .task {
             // Live update while window visible. 15s is a sane balance between
-            // responsiveness and SwiftData fetch cost — bumped up from 5s
-            // because each refresh triggers ~3 fetches (breakdown + timeline +
-            // distractions). Session start/stop triggers an immediate refresh
-            // via the .task(id:) above, so the perceived freshness stays high.
+            // responsiveness and SwiftData fetch cost.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 refresh()
             }
         }
+        .sheet(isPresented: $showingCustomSheet) {
+            CustomRangeSheet(from: $customFrom, to: $customTo) {
+                showingCustomSheet = false
+                range = .custom(from: customFrom, to: customTo)
+            }
+        }
+    }
+
+    /// Stable identity for `task(id:)` so it re-fires on range changes.
+    private var rangeKey: String {
+        switch range {
+        case .today: return "today"
+        case .yesterday: return "yesterday"
+        case .last7Days: return "7d"
+        case .last30Days: return "30d"
+        case .thisWeek: return "thisWeek"
+        case .thisMonth: return "thisMonth"
+        case .custom(let from, let to):
+            return "custom-\(from.timeIntervalSince1970)-\(to.timeIntervalSince1970)"
+        }
+    }
+
+    // MARK: - Range picker
+
+    private var rangePicker: some View {
+        HStack(spacing: 8) {
+            ForEach(ReportRange.presets, id: \.self) { preset in
+                Button {
+                    range = preset
+                } label: {
+                    Text(preset.label)
+                        .font(.system(size: 12, weight: range == preset ? .semibold : .regular))
+                        .foregroundStyle(range == preset ? .primary : .secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            range == preset ? Theme.cardBackground : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 6)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                showingCustomSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                    Text(customLabel)
+                        .font(.system(size: 12, weight: isCustomActive ? .semibold : .regular))
+                }
+                .foregroundStyle(isCustomActive ? .primary : .secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    isCustomActive ? Theme.cardBackground : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 6)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+        }
+        .padding(4)
+        .background(Theme.fill1, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var isCustomActive: Bool {
+        if case .custom = range { return true }
+        return false
+    }
+
+    private var customLabel: String {
+        if case .custom(let from, let to) = range {
+            let f = DateFormatter()
+            f.dateFormat = "MMM d"
+            return "\(f.string(from: from)) – \(f.string(from: to))"
+        }
+        return "Custom…"
     }
 
     private func refresh() {
-        let cal = Calendar.current
-        let dayStart = cal.startOfDay(for: .now)
-        breakdown = builder.todayBreakdown()
-        distractions = builder.topDistractions(from: dayStart, to: .now, limit: 5)
-        topApps = builder.topApps(from: dayStart, to: .now, limit: 10)
-        // Use the active session window if any, else today
-        if let session = appState.sessionManager.currentSession {
-            timeline = builder.timeline(from: session.startedAt, to: .now)
-        } else {
-            timeline = builder.timeline(from: dayStart, to: .now)
-        }
+        let (from, to) = resolvedRange
+        breakdown = builder.breakdown(from: from, to: to)
+        distractions = builder.topDistractions(from: from, to: to, limit: 5)
+        topApps = builder.topApps(from: from, to: to, limit: 10)
+        timeline = builder.timeline(from: from, to: to)
     }
 
     // MARK: - Hero band
@@ -110,10 +194,7 @@ struct ReportsView: View {
     }
 
     private var heroLabel: String {
-        if let session = appState.sessionManager.currentSession {
-            return "\(session.label ?? "Active session") · \(formatDate(session.startedAt))"
-        }
-        return "Focus today · \(formatDate(.now))"
+        "\(range.label) · \(range.headingDateString())"
     }
 
     private var heroSubtitle: String {
@@ -184,7 +265,7 @@ struct ReportsView: View {
                 Image(systemName: "chart.bar.xaxis")
                     .font(.system(size: 24))
                     .foregroundStyle(.tertiary)
-                Text("No activity yet today")
+                Text("No activity in this range")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -193,12 +274,7 @@ struct ReportsView: View {
         }
     }
 
-    private var timelineRangeLabel: String {
-        if let session = appState.sessionManager.currentSession {
-            return "Active session"
-        }
-        return "Today"
-    }
+    private var timelineRangeLabel: String { range.label }
 
     private func legendItem(color: Color, label: String) -> some View {
         HStack(spacing: 5) {
@@ -214,7 +290,7 @@ struct ReportsView: View {
 
     private var topAppsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("APPS TODAY")
+            Text("APPS")
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(0.4)
                 .foregroundStyle(.secondary)
@@ -356,7 +432,7 @@ struct ReportsView: View {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(Theme.focus)
-                Text("No distractions today")
+                Text("No distractions in this range")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
