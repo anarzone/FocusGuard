@@ -32,13 +32,49 @@ enum SystemFocusBridge {
     static func onSessionStarted() { run(named: startShortcutName) }
     static func onSessionEnded()   { run(named: endShortcutName) }
 
+    /// Invokes the named Shortcut via the `shortcuts` CLI. We use the CLI
+    /// instead of the `shortcuts://` URL scheme because the URL scheme pops a
+    /// modal alert when the shortcut doesn't exist — a hostile UX for users
+    /// who haven't created the shortcut yet. The CLI fails silently to stderr
+    /// which we ignore.
     private static func run(named name: String) {
         guard enabled, !name.isEmpty else { return }
-        let allowed = CharacterSet.urlQueryAllowed
-        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: allowed),
-              let url = URL(string: "shortcuts://run-shortcut?name=\(encoded)") else {
-            return
+        Task.detached(priority: .utility) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
+            process.arguments = ["run", name]
+            // Discard output so a missing shortcut doesn't surface anywhere.
+            process.standardOutput = Pipe()
+            process.standardError = Pipe()
+            try? process.run()
         }
-        NSWorkspace.shared.open(url)
+    }
+
+    /// Returns the list of shortcut names the user has installed, sorted.
+    /// Used by the Settings pane to validate the configured names and offer
+    /// a picker. nil if the CLI fails.
+    static func availableShortcuts() async -> [String]? {
+        await Task.detached(priority: .utility) { () -> [String]? in
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
+            process.arguments = ["list"]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
+                let text = String(data: data, encoding: .utf8) ?? ""
+                let names = text
+                    .split(separator: "\n")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty }
+                    .sorted()
+                return names
+            } catch {
+                return nil
+            }
+        }.value
     }
 }

@@ -17,8 +17,10 @@ struct SettingsSessionsPane: View {
     @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
 
     @AppStorage(SettingsKeys.SystemFocus.enabled)    private var systemFocusEnabled = false
-    @AppStorage(SettingsKeys.SystemFocus.startName)  private var startShortcutName = "Start FocusGuard"
-    @AppStorage(SettingsKeys.SystemFocus.endName)    private var endShortcutName   = "End FocusGuard"
+    @AppStorage(SettingsKeys.SystemFocus.startName)  private var startShortcutName = ""
+    @AppStorage(SettingsKeys.SystemFocus.endName)    private var endShortcutName   = ""
+
+    @State private var availableShortcuts: [String] = []
 
     @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
     @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
@@ -79,23 +81,24 @@ struct SettingsSessionsPane: View {
                 sectionHeader("System Focus", topPad: 24)
                 groupCard {
                     row(title: "Run a Shortcut on session start/end",
-                        help: "Create two Shortcuts in the Shortcuts app — one to set a Focus mode (or DND, Slack status, etc.) and one to clear it. We'll trigger them automatically.") {
+                        help: "Create one or two Shortcuts in the Shortcuts app — for example, one to enable a Focus mode and one to clear it. We'll run them at session boundaries. Leave a name blank to skip that side.") {
                         Toggle("", isOn: $systemFocusEnabled)
                             .toggleStyle(.switch).labelsHidden()
                     }
                     if systemFocusEnabled {
                         Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "Start shortcut name") {
-                            TextField("Start FocusGuard", text: $startShortcutName)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 200)
+                        row(title: "On session start", help: shortcutHelp(startShortcutName)) {
+                            shortcutPicker(selection: $startShortcutName)
                         }
                         Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "End shortcut name") {
-                            TextField("End FocusGuard", text: $endShortcutName)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 200)
+                        row(title: "On session end", help: shortcutHelp(endShortcutName)) {
+                            shortcutPicker(selection: $endShortcutName)
                         }
+                    }
+                }
+                .task {
+                    if let list = await SystemFocusBridge.availableShortcuts() {
+                        availableShortcuts = list
                     }
                 }
 
@@ -202,6 +205,30 @@ struct SettingsSessionsPane: View {
         let hours = mins / 60
         let remain = mins % 60
         return "Starts at \(timeStr) (in \(hours)h \(remain)m)."
+    }
+
+    /// Dropdown of installed Shortcuts plus a "(none)" option. We list real
+    /// shortcut names so the user can't typo a name into oblivion.
+    @ViewBuilder
+    private func shortcutPicker(selection: Binding<String>) -> some View {
+        Picker("", selection: selection) {
+            Text("(none)").tag("")
+            ForEach(availableShortcuts, id: \.self) { name in
+                Text(name).tag(name)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .frame(width: 220)
+    }
+
+    private func shortcutHelp(_ name: String) -> String {
+        if name.isEmpty { return "Nothing will run on this side." }
+        if availableShortcuts.isEmpty { return "Reading installed Shortcuts…" }
+        if !availableShortcuts.contains(name) {
+            return "“\(name)” isn't installed. Create it in the Shortcuts app, then reopen Settings."
+        }
+        return "Will run “\(name)” via the Shortcuts CLI."
     }
 
     @ViewBuilder
