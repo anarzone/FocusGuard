@@ -402,6 +402,10 @@ struct ReportsView: View {
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: 60, alignment: .trailing)
+            reclassifyMenu(current: entry.classification) { newClass in
+                appState.classifier.setOverride(bundleId: entry.bundleId, classification: newClass)
+                refresh()
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -434,11 +438,41 @@ struct ReportsView: View {
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: 60, alignment: .trailing)
+            reclassifyMenu(current: tab.classification) { newClass in
+                appState.classifier.setOverride(host: tab.host, classification: newClass)
+                refresh()
+            }
         }
         .padding(.leading, 14)
         .padding(.trailing, 14)
         .padding(.vertical, 6)
         .background(Theme.cardBackground.opacity(0.5))
+    }
+
+    /// Compact menu surfaced as a `•••` button on each row. Calls back with
+    /// the chosen classification; the row wires it to either bundleId or host.
+    @ViewBuilder
+    private func reclassifyMenu(current: Classification, onPick: @escaping (Classification) -> Void) -> some View {
+        Menu {
+            Button { onPick(.focus) } label: {
+                Label("Mark as Focus", systemImage: current == .focus ? "checkmark" : "")
+            }
+            Button { onPick(.neutral) } label: {
+                Label("Mark as Neutral", systemImage: current == .neutral ? "checkmark" : "")
+            }
+            Button { onPick(.distraction) } label: {
+                Label("Mark as Distraction", systemImage: current == .distraction ? "checkmark" : "")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: 22)
     }
 
     private func classificationChip(_ c: Classification) -> some View {
@@ -528,7 +562,7 @@ struct ReportsView: View {
 
     private func distractionRow(_ d: DistractionEntry) -> some View {
         HStack(spacing: 10) {
-            AppGlyph(kind: d.kind, size: 28)
+            AppGlyph(kind: d.kind, bundleId: d.bundleId, size: 28)
             VStack(alignment: .leading, spacing: 1) {
                 Text(d.name).font(.system(size: 13))
                 Text(d.subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
@@ -542,6 +576,14 @@ struct ReportsView: View {
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(width: 56, alignment: .trailing)
+            reclassifyMenu(current: .distraction) { newClass in
+                if let host = d.host {
+                    appState.classifier.setOverride(host: host, classification: newClass)
+                } else {
+                    appState.classifier.setOverride(bundleId: d.bundleId, classification: newClass)
+                }
+                refresh()
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

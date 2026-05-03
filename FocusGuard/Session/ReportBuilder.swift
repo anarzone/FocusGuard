@@ -230,6 +230,8 @@ struct ReportBuilder {
             var name: String
             var subtitle: String
             var seconds: TimeInterval
+            var host: String?
+            var bundleId: String
         }
         var groups: [String: Group] = [:]
 
@@ -247,7 +249,9 @@ struct ReportBuilder {
                     kind: kind,
                     name: host ?? e.appName,
                     subtitle: host ?? e.bundleIdentifier,
-                    seconds: dur
+                    seconds: dur,
+                    host: host,
+                    bundleId: e.bundleIdentifier
                 )
             }
         }
@@ -262,7 +266,9 @@ struct ReportBuilder {
                     name: g.name,
                     subtitle: g.subtitle,
                     seconds: g.seconds,
-                    fractionOfTotal: totalDistr > 0 ? g.seconds / totalDistr : 0
+                    fractionOfTotal: totalDistr > 0 ? g.seconds / totalDistr : 0,
+                    host: g.host,
+                    bundleId: g.bundleId
                 )
             }
     }
@@ -318,6 +324,10 @@ struct DistractionEntry: Identifiable, Hashable {
     let subtitle: String
     let seconds: TimeInterval
     var fractionOfTotal: Double = 0
+    /// Set when the row was grouped by browser host. Used for reclassification.
+    let host: String?
+    /// The originating app bundle id (always set, even for browser host rows).
+    let bundleId: String
 
     var timeLabel: String {
         let total = Int(seconds)
