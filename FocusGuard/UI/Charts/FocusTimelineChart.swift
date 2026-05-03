@@ -9,27 +9,28 @@ struct TimelinePoint: Identifiable {
     let distraction: Double
 }
 
-/// Stacked time-series bar chart built on Apple Charts. Buckets the per-minute
-/// series into ~60 readable bars across the chart and stacks focus / neutral /
-/// distraction within each bar. Replaces the hand-drawn GeometryReader version
-/// which rendered as scattered dots when most buckets only had one category.
+/// Stacked time-series bar chart on Apple Charts. We bucket the per-minute
+/// series and use a CATEGORICAL x axis (one slot per bucket, identified by a
+/// stable string key). Categorical x is the only mode where Charts both
+/// (a) gives bars proper slot widths and (b) auto-stacks BarMarks that share
+/// the same x value and are categorized via foregroundStyle(by:). Quantitative
+/// (Int / Double) x values produced zero-width bars.
 struct FocusTimelineChart: View {
     let series: [TimelinePoint]
 
     private struct Stack: Identifiable {
         let id = UUID()
-        let bucketStart: Int   // minute offset from range start
+        let slot: String      // categorical x — stable per bucket
+        let bucketStart: Int  // minutes from range start (used to build labels)
         let category: String
         let seconds: Double
     }
 
     // MARK: - Bucketing
 
-    /// Aim for ~60 bars across the chart. Snaps to readable widths so labels
-    /// and bar density stay sane across "Today" (1440 min) → "Last 30 days"
-    /// (43200 min) ranges.
+    /// Aim for ~50 bars across the chart so they're wide enough to read.
     private var bucketMinutes: Int {
-        let target = max(1, series.count / 60)
+        let target = max(1, series.count / 50)
         let snaps = [1, 5, 10, 15, 30, 60, 120, 240, 480, 720, 1440]
         return snaps.first(where: { $0 >= target }) ?? snaps.last!
     }
@@ -47,11 +48,43 @@ struct FocusTimelineChart: View {
                 n += series[j].neutral * 60
                 d += series[j].distraction * 60
             }
-            // Order is the stack order from bottom to top.
-            if f > 0 { out.append(Stack(bucketStart: i, category: "Focus", seconds: f)) }
-            if n > 0 { out.append(Stack(bucketStart: i, category: "Neutral", seconds: n)) }
-            if d > 0 { out.append(Stack(bucketStart: i, category: "Distraction", seconds: d)) }
+            // Stable, sortable slot key — Charts keeps categorical order in
+            // insertion order when we build the array linearly.
+            let slot = String(format: "%06d", i)
+            // Order is the bottom-to-top stack order.
+            if f > 0 { out.append(Stack(slot: slot, bucketStart: i, category: "Focus",       seconds: f)) }
+            if n > 0 { out.append(Stack(slot: slot, bucketStart: i, category: "Neutral",     seconds: n)) }
+            if d > 0 { out.append(Stack(slot: slot, bucketStart: i, category: "Distraction", seconds: d)) }
             i = end
+        }
+        return out
+    }
+
+    /// Slots in display order — used for the X domain so we get every bucket
+    /// shown even if it has zero seconds.
+    private var allSlots: [String] {
+        guard !series.isEmpty else { return [] }
+        var out: [String] = []
+        var i = 0
+        while i < series.count {
+            out.append(String(format: "%06d", i))
+            i += bucketMinutes
+        }
+        return out
+    }
+
+    /// Subset of slots that should display an x-axis label, with the label
+    /// value (formatted minute → hour string).
+    private var labeledSlots: [(slot: String, label: String)] {
+        let total = max(1, series.count)
+        let target = max(1, total / 7)
+        let snaps = [60, 120, 180, 360, 720, 1440, 2880, 4320, 10080]
+        let strideMin = snaps.first(where: { $0 >= target }) ?? snaps.last!
+        let strideBuckets = max(1, strideMin / bucketMinutes)
+        var out: [(String, String)] = []
+        for (idx, slot) in allSlots.enumerated() where idx % strideBuckets == 0 {
+            let minute = idx * bucketMinutes
+            out.append((slot, formatX(minute)))
         }
         return out
     }
@@ -80,9 +113,8 @@ struct FocusTimelineChart: View {
     private var chart: some View {
         Chart(stacks) { s in
             BarMark(
-                x: .value("Time", s.bucketStart),
-                y: .value("Seconds", s.seconds),
-                width: .ratio(0.92)
+                x: .value("Time", s.slot),
+                y: .value("Seconds", s.seconds)
             )
             .foregroundStyle(by: .value("Category", s.category))
             .cornerRadius(1.5)
@@ -92,14 +124,15 @@ struct FocusTimelineChart: View {
             "Neutral":     Theme.neutral.opacity(0.6),
             "Distraction": Theme.distraction,
         ])
-        .chartXScale(domain: 0...max(1, series.count))
+        .chartXScale(domain: allSlots)
         .chartXAxis {
-            AxisMarks(values: xTicks) { v in
+            AxisMarks(values: labeledSlots.map(\.slot)) { v in
                 AxisGridLine().foregroundStyle(Theme.separator.opacity(0.5))
                 AxisTick().foregroundStyle(Theme.separator.opacity(0.5))
                 AxisValueLabel {
-                    if let m = v.as(Int.self) {
-                        Text(formatX(m))
+                    if let slot = v.as(String.self),
+                       let label = labeledSlots.first(where: { $0.slot == slot })?.label {
+                        Text(label)
                             .font(.system(size: 9.5))
                             .foregroundStyle(.secondary)
                     }
@@ -118,26 +151,14 @@ struct FocusTimelineChart: View {
                 }
             }
         }
-        .chartLegend(position: .top, alignment: .leading, spacing: 14)
-        .frame(height: 200)
+        .chartLegend(.hidden)
     }
 
-    // MARK: - Axes
-
-    private var xStrideMinutes: Int {
-        let total = max(1, series.count)
-        let target = max(1, total / 7)
-        let snaps = [60, 120, 180, 360, 720, 1440, 2880, 4320, 10080]
-        return snaps.first(where: { $0 >= target }) ?? snaps.last!
-    }
-
-    private var xTicks: [Int] {
-        Array(Swift.stride(from: 0, through: max(1, series.count), by: xStrideMinutes))
-    }
+    // MARK: - Formatting
 
     private func formatX(_ minute: Int) -> String {
         if series.count <= 60 * 36 {
-            // Single-day range — show clock-style hour labels.
+            // Single-day range — clock-style hour labels.
             if minute == 0 { return "0h" }
             if minute % 60 == 0 { return "\(minute / 60)h" }
             let h = minute / 60
