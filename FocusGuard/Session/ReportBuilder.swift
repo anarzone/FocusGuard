@@ -92,6 +92,62 @@ struct ReportBuilder {
 
     // MARK: - Top distractions
 
+    /// Top apps by time spent in the window, regardless of classification.
+    /// Used by the "All apps today" section so users can see what they actually
+    /// used — focus apps like PhpStorm wouldn't otherwise show anywhere except
+    /// the hero number.
+    func topApps(from: Date, to: Date, limit: Int = 10) -> [AppUsageEntry] {
+        let descriptor = FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+        )
+        let events = (try? context.fetch(descriptor)) ?? []
+
+        struct Group {
+            var kind: AppGlyphKind
+            var name: String
+            var bundleId: String
+            var seconds: TimeInterval
+            var classification: Classification
+            var events: Int
+        }
+        var groups: [String: Group] = [:]
+
+        for e in events {
+            let key = e.bundleIdentifier
+            let dur = max(0, min(e.endedAt, to).timeIntervalSince(max(e.startedAt, from)))
+            if dur <= 0 { continue }
+
+            if var existing = groups[key] {
+                existing.seconds += dur
+                existing.events += 1
+                groups[key] = existing
+            } else {
+                groups[key] = Group(
+                    kind: AppGlyph.kind(forBundleId: e.bundleIdentifier, name: e.appName),
+                    name: e.appName,
+                    bundleId: e.bundleIdentifier,
+                    seconds: dur,
+                    classification: e.classification ?? .neutral,
+                    events: 1
+                )
+            }
+        }
+
+        return groups.values
+            .sorted { $0.seconds > $1.seconds }
+            .prefix(limit)
+            .map {
+                AppUsageEntry(
+                    kind: $0.kind,
+                    name: $0.name,
+                    bundleId: $0.bundleId,
+                    classification: $0.classification,
+                    seconds: $0.seconds,
+                    events: $0.events
+                )
+            }
+    }
+
     func topDistractions(from: Date, to: Date, limit: Int = 5) -> [DistractionEntry] {
         let dRaw = Classification.distraction.rawValue
         let descriptor = FetchDescriptor<ActivityEvent>(
@@ -146,6 +202,25 @@ struct ReportBuilder {
 }
 
 // MARK: - DistractionEntry
+
+struct AppUsageEntry: Identifiable, Hashable {
+    let id = UUID()
+    let kind: AppGlyphKind
+    let name: String
+    let bundleId: String
+    let classification: Classification
+    let seconds: TimeInterval
+    let events: Int
+
+    var timeLabel: String {
+        let total = Int(seconds)
+        if total < 60 { return "\(total)s" }
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        if h == 0 { return "\(m)m" }
+        return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+    }
+}
 
 struct DistractionEntry: Identifiable, Hashable {
     let id = UUID()

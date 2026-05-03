@@ -8,6 +8,7 @@ struct ReportsView: View {
 
     @State private var breakdown: BreakdownSnapshot = .init(focus: 0, neutral: 0, distraction: 0)
     @State private var distractions: [DistractionEntry] = []
+    @State private var topApps: [AppUsageEntry] = []
     @State private var timeline: [TimelinePoint] = []
 
     private var builder: ReportBuilder { ReportBuilder(context: appState.container.mainContext) }
@@ -18,6 +19,7 @@ struct ReportsView: View {
                 heroBand
                 Divider().background(Theme.separator)
                 timelineSection
+                topAppsSection
                 topDistractionsSection
             }
             .padding(.horizontal, 32)
@@ -43,6 +45,7 @@ struct ReportsView: View {
         let dayStart = cal.startOfDay(for: .now)
         breakdown = builder.todayBreakdown()
         distractions = builder.topDistractions(from: dayStart, to: .now, limit: 5)
+        topApps = builder.topApps(from: dayStart, to: .now, limit: 10)
         // Use the active session window if any, else today
         if let session = appState.sessionManager.currentSession {
             timeline = builder.timeline(from: session.startedAt, to: .now)
@@ -204,6 +207,116 @@ struct ReportsView: View {
                 .frame(width: 8, height: 8)
             Text(label).font(.system(size: 11))
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Top apps (all classifications)
+
+    private var topAppsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("APPS TODAY")
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.4)
+                .foregroundStyle(.secondary)
+
+            if topApps.isEmpty {
+                emptyAppsCard
+            } else {
+                appsListCard
+            }
+        }
+    }
+
+    private var emptyAppsCard: some View {
+        HStack {
+            Spacer()
+            Text("No activity yet today.")
+                .font(.system(size: 12))
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .padding(.vertical, 24)
+        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card)
+                .stroke(Theme.separator, lineWidth: 0.5)
+        )
+    }
+
+    private var appsListCard: some View {
+        let maxSeconds = topApps.map(\.seconds).max() ?? 1
+        return VStack(spacing: 0) {
+            ForEach(topApps) { entry in
+                appRow(entry, maxSeconds: maxSeconds)
+                if entry.id != topApps.last?.id {
+                    Rectangle().fill(Theme.separator).frame(height: 0.5)
+                }
+            }
+        }
+        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card)
+                .stroke(Theme.separator, lineWidth: 0.5)
+        )
+    }
+
+    private func appRow(_ entry: AppUsageEntry, maxSeconds: TimeInterval) -> some View {
+        HStack(spacing: 10) {
+            AppGlyph(kind: entry.kind, size: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.name).font(.system(size: 13))
+                Text(entry.bundleId)
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            classificationChip(entry.classification)
+            ProgressView(value: entry.seconds / maxSeconds)
+                .progressViewStyle(.linear)
+                .tint(color(for: entry.classification))
+                .frame(width: 80)
+            Text(entry.timeLabel)
+                .font(.system(size: 12).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .trailing)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func classificationChip(_ c: Classification) -> some View {
+        Text(label(for: c))
+            .font(.system(size: 9.5, weight: .semibold))
+            .tracking(0.3)
+            .textCase(.uppercase)
+            .foregroundStyle(color(for: c))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint(for: c), in: RoundedRectangle(cornerRadius: 4))
+    }
+
+    private func label(for c: Classification) -> String {
+        switch c {
+        case .focus: return "Focus"
+        case .neutral: return "Neutral"
+        case .distraction: return "Distraction"
+        }
+    }
+
+    private func color(for c: Classification) -> Color {
+        switch c {
+        case .focus: return Theme.focus
+        case .neutral: return Theme.neutral
+        case .distraction: return Theme.distraction
+        }
+    }
+
+    private func tint(for c: Classification) -> Color {
+        switch c {
+        case .focus: return Theme.focusTint
+        case .neutral: return Theme.fill1
+        case .distraction: return Theme.distractionTint
         }
     }
 
