@@ -175,17 +175,15 @@ struct SettingsSessionsPane: View {
             get: { calendarEnabled },
             set: { newValue in
                 if newValue {
-                    // Toggle expresses INTENT — user wants autostart. Persist
-                    // that synchronously and keep it on regardless of grant
-                    // outcome. The calendarPermissionRow below explains what
-                    // to do when access is missing (grant prompt for
-                    // notDetermined, System Settings link for denied).
                     calendarEnabled = true
                     appState.calendarAutostart.enabled = true
-                    if appState.calendarAutostart.accessState == .notDetermined {
-                        Task {
-                            _ = await appState.calendarAutostart.requestAccess()
-                        }
+                    // Always fire requestAccess on enable. For .notDetermined
+                    // state EventKit pops the system prompt; for .denied it's
+                    // a silent no-op (and the logger captures the call so we
+                    // can see what happened). Either way the warning row
+                    // re-renders correctly afterwards.
+                    Task {
+                        _ = await appState.calendarAutostart.requestAccess()
                     }
                 } else {
                     calendarEnabled = false

@@ -18,5 +18,12 @@
     <!-- Apple Events: we send AppleScript to browsers to read the active tab URL. -->
     <key>com.apple.security.automation.apple-events</key>
     <true/>
+
+    <!-- Calendar access: required for EventKit's requestFullAccessToEvents
+         to actually pop the TCC prompt on macOS 14+ even for non-sandboxed
+         hardened-runtime apps. Without this, the request silently returns
+         false within ~20ms without changing authorizationStatus. -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
 </dict>
 </plist>

@@ -96,7 +96,9 @@ final class CalendarAutostartCoordinator {
     @discardableResult
     func requestAccess() async -> Bool {
         let logger = Logger(subsystem: "com.anar.focusguard", category: "calendar")
-        logger.info("requestAccess: starting; current state = \(String(describing: EKEventStore.authorizationStatus(for: .event).rawValue))")
+        let startState = EKEventStore.authorizationStatus(for: .event).rawValue
+        logger.notice("requestAccess: starting; status=\(startState, privacy: .public)")
+        FileHandle.standardError.write(Data("[FocusGuard.calendar] requestAccess: starting; status=\(startState)\n".utf8))
 
         // Bring the app to the foreground so the TCC prompt has a window
         // to anchor against. LSUIElement apps sometimes have prompts open
@@ -110,11 +112,14 @@ final class CalendarAutostartCoordinator {
             } else {
                 granted = try await eventStore.requestAccess(to: .event)
             }
-            logger.info("requestAccess: returned granted=\(granted); state now = \(String(describing: EKEventStore.authorizationStatus(for: .event).rawValue))")
+            let endState = EKEventStore.authorizationStatus(for: .event).rawValue
+            logger.notice("requestAccess: granted=\(granted, privacy: .public) endStatus=\(endState, privacy: .public)")
+            FileHandle.standardError.write(Data("[FocusGuard.calendar] requestAccess: granted=\(granted) endStatus=\(endState)\n".utf8))
             if granted, enabled { startWatching() }
             return granted
         } catch {
             logger.error("requestAccess: threw \(error.localizedDescription, privacy: .public)")
+            FileHandle.standardError.write(Data("[FocusGuard.calendar] requestAccess threw: \(error.localizedDescription)\n".utf8))
             return false
         }
     }
