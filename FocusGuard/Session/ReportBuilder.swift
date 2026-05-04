@@ -81,6 +81,59 @@ struct ReportBuilder {
         return days.map { DailyTotal(date: $0, seconds: totals[$0] ?? 0) }
     }
 
+    // MARK: - Per-day breakdown (focus / neutral / distraction)
+
+    /// Same shape as dailyTotals but split by classification. Used by the
+    /// menu-bar / home-view stacked weekly chart so each day's bar segments
+    /// the user's focus / neutral / distraction time.
+    func dailyBreakdowns(from: Date, to: Date, calendar: Calendar = .current) -> [DailyBreakdown] {
+        let descriptor = FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+        )
+        let events = (try? context.fetch(descriptor)) ?? []
+
+        let firstDay = calendar.startOfDay(for: from)
+        let lastDay = calendar.startOfDay(for: to.addingTimeInterval(-1))
+        var days: [Date] = []
+        var cursor = firstDay
+        while cursor <= lastDay {
+            days.append(cursor)
+            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor.addingTimeInterval(86400)
+        }
+
+        var byDay: [Date: (focus: TimeInterval, neutral: TimeInterval, distraction: TimeInterval)] = [:]
+        for d in days { byDay[d] = (0, 0, 0) }
+
+        for e in events {
+            let s = max(e.startedAt, from)
+            let f = min(e.endedAt, to)
+            guard f > s else { continue }
+            var segStart = s
+            while segStart < f {
+                let dayStart = calendar.startOfDay(for: segStart)
+                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+                let segEnd = min(f, dayEnd)
+                let dur = max(0, segEnd.timeIntervalSince(segStart))
+                var entry = byDay[dayStart] ?? (0, 0, 0)
+                switch e.classification ?? .neutral {
+                case .focus:       entry.focus       += dur
+                case .neutral:     entry.neutral     += dur
+                case .distraction: entry.distraction += dur
+                }
+                byDay[dayStart] = entry
+                segStart = segEnd
+            }
+        }
+
+        return days.map { day in
+            let entry = byDay[day] ?? (0, 0, 0)
+            return DailyBreakdown(date: day,
+                                  focus: entry.focus,
+                                  neutral: entry.neutral,
+                                  distraction: entry.distraction)
+        }
+    }
+
     // MARK: - Per-minute timeline
 
     /// Stacked-area timeline points for the given range, one minute each.
@@ -306,6 +359,15 @@ struct DailyTotal: Identifiable, Hashable {
     let id = UUID()
     let date: Date
     let seconds: TimeInterval
+}
+
+struct DailyBreakdown: Identifiable, Hashable {
+    let id = UUID()
+    let date: Date
+    let focus: TimeInterval
+    let neutral: TimeInterval
+    let distraction: TimeInterval
+    var total: TimeInterval { focus + neutral + distraction }
 }
 
 struct TabUsage: Identifiable, Hashable {

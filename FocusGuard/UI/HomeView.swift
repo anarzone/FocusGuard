@@ -121,8 +121,32 @@ struct HomeView: View {
             .padding(.top, 4)
 
             goalProgress(breakdown: breakdown).padding(.top, 10)
-            splitBar(breakdown: breakdown).padding(.top, 12)
-            weekStrip.padding(.top, 16)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    Text("LAST 7 DAYS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.4)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    legendDot(color: Theme.focus, label: "Focus")
+                    legendDot(color: Theme.neutral.opacity(0.55), label: "Neutral")
+                    legendDot(color: Theme.distraction, label: "Distraction")
+                }
+                WeekStackedChart(breakdowns: appState.weekDailyBreakdowns)
+                    .frame(height: 80)
+            }
+            .padding(.top, 16)
+        }
+    }
+
+    private func legendDot(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
         }
     }
 

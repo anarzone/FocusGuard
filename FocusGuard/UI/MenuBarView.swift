@@ -180,9 +180,24 @@ struct MenuBarView: View {
 
             goalProgress(breakdown: breakdown).padding(.top, 8)
 
-            weekStrip.padding(.top, 12)
-
-            splitBar(breakdown: breakdown).padding(.top, 10)
+            // Single chart that combines week-at-a-glance with classification
+            // split, replacing the older weekStrip + splitBar pair which was
+            // easy to misread as one continuous chart.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 10) {
+                    Text("LAST 7 DAYS")
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(0.4)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    legendDot(color: Theme.focus, label: "Focus")
+                    legendDot(color: Theme.neutral.opacity(0.55), label: "Neutral")
+                    legendDot(color: Theme.distraction, label: "Distract.")
+                }
+                WeekStackedChart(breakdowns: appState.weekDailyBreakdowns)
+                    .frame(height: 60)
+            }
+            .padding(.top, 14)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -196,6 +211,18 @@ struct MenuBarView: View {
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(Theme.focusTint, in: RoundedRectangle(cornerRadius: 6))
+    }
+
+    /// Tiny color-square + label used as the inline legend on the weekly chart.
+    private func legendDot(color: Color, label: String) -> some View {
+        HStack(spacing: 3) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(label)
+                .font(.system(size: 9.5))
+                .foregroundStyle(.secondary)
+        }
     }
 
     /// "🔥 5-day streak" pill. Hidden if streak < 2 to avoid noise on a fresh

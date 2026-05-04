@@ -213,6 +213,25 @@ final class AppState {
     /// Cached for 30s to keep the menu bar tick cheap.
     private var cachedWeek: [TimeInterval] = Array(repeating: 0, count: 7)
     private var lastWeekFetchAt: Date?
+    private var cachedWeekBreakdowns: [DailyBreakdown] = []
+    private var lastWeekBreakdownsAt: Date?
+
+    /// Last 7 days as classification-split breakdowns, oldest first. Used by
+    /// the popover/Home week chart that stacks focus/neutral/distraction.
+    var weekDailyBreakdowns: [DailyBreakdown] {
+        if let last = lastWeekBreakdownsAt, Date().timeIntervalSince(last) < Constants.Cache.weekStatsTTL,
+           !cachedWeekBreakdowns.isEmpty {
+            return cachedWeekBreakdowns
+        }
+        let calendar = Calendar.current
+        let endOfToday = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now)) ?? .now
+        let from = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: .now)) ?? .now
+        let result = ReportBuilder(context: container.mainContext)
+            .dailyBreakdowns(from: from, to: endOfToday)
+        cachedWeekBreakdowns = result
+        lastWeekBreakdownsAt = .now
+        return result
+    }
 
     var weekTrackedSeconds: [TimeInterval] {
         if let last = lastWeekFetchAt, Date().timeIntervalSince(last) < 30 {
