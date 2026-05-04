@@ -29,7 +29,9 @@ final class CalendarAutostartCoordinator {
 
     // MARK: - Live state observable by SwiftUI
 
-    private(set) var hasCalendarAccess: Bool = false
+    /// Live read from EventKit so the UI never sees stale state when the user
+    /// toggles the grant in System Settings while the app is running.
+    var hasCalendarAccess: Bool { isAccessAuthorized }
     private(set) var nextMatchTitle: String?
     private(set) var nextMatchStart: Date?
 
@@ -45,14 +47,6 @@ final class CalendarAutostartCoordinator {
 
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
-        self.hasCalendarAccess = isAccessAuthorized
-        // If the user previously enabled autostart but the grant is gone
-        // (revoked in System Settings, or a tccutil reset), don't keep the
-        // stale "denied" warning hanging in Settings forever. Force the
-        // toggle off; the user can re-enable to trigger a fresh prompt.
-        if enabled && !hasCalendarAccess {
-            self.enabled = false
-        }
         if enabled && hasCalendarAccess {
             startWatching()
         }
@@ -106,11 +100,9 @@ final class CalendarAutostartCoordinator {
             } else {
                 granted = try await eventStore.requestAccess(to: .event)
             }
-            hasCalendarAccess = granted
             if granted, enabled { startWatching() }
             return granted
         } catch {
-            hasCalendarAccess = false
             return false
         }
     }

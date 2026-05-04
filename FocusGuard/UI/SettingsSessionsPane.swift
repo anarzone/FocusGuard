@@ -175,18 +175,16 @@ struct SettingsSessionsPane: View {
             get: { calendarEnabled },
             set: { newValue in
                 if newValue {
-                    // Optimistically flip the toggle ON immediately so the UI
-                    // doesn't snap back to OFF while the async request is in
-                    // flight. We revert if the user denies the prompt.
+                    // Toggle expresses INTENT — user wants autostart. Persist
+                    // that synchronously and keep it on regardless of grant
+                    // outcome. The calendarPermissionRow below explains what
+                    // to do when access is missing (grant prompt for
+                    // notDetermined, System Settings link for denied).
                     calendarEnabled = true
                     appState.calendarAutostart.enabled = true
-                    if !appState.calendarAutostart.hasCalendarAccess {
+                    if appState.calendarAutostart.accessState == .notDetermined {
                         Task {
-                            let granted = await appState.calendarAutostart.requestAccess()
-                            if !granted {
-                                calendarEnabled = false
-                                appState.calendarAutostart.enabled = false
-                            }
+                            _ = await appState.calendarAutostart.requestAccess()
                         }
                     }
                 } else {
