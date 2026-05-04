@@ -158,14 +158,7 @@ struct SettingsSessionsPane: View {
                     }
                     if !appState.calendarAutostart.hasCalendarAccess && calendarEnabled {
                         Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "Calendar access denied",
-                            help: "Grant access in System Settings → Privacy & Security → Calendars.") {
-                            Button("Open Settings") {
-                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                                    NSWorkspace.shared.open(url)
-                                }
-                            }
-                        }
+                        calendarPermissionRow
                     }
                 }
             }
@@ -203,6 +196,36 @@ struct SettingsSessionsPane: View {
                 }
             }
         )
+    }
+
+    /// Permission state of the EventKit grant, with copy + button that match
+    /// the actual state. Avoids the "access denied" message after a fresh
+    /// install / TCC reset when the user never actually denied anything.
+    @ViewBuilder
+    private var calendarPermissionRow: some View {
+        switch appState.calendarAutostart.accessState {
+        case .notDetermined:
+            row(title: "Calendar access not granted yet",
+                help: "Click Grant to ask for access. macOS will show a permission prompt.") {
+                Button("Grant access") {
+                    Task {
+                        let granted = await appState.calendarAutostart.requestAccess()
+                        if granted { appState.calendarAutostart.enabled = true }
+                    }
+                }
+            }
+        case .denied:
+            row(title: "Calendar access denied",
+                help: "macOS won't re-prompt after a denial. Grant access in System Settings → Privacy & Security → Calendars, then return here.") {
+                Button("Open Settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+        case .authorized:
+            EmptyView()
+        }
     }
 
     @ViewBuilder

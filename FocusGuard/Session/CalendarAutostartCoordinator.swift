@@ -46,6 +46,13 @@ final class CalendarAutostartCoordinator {
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
         self.hasCalendarAccess = isAccessAuthorized
+        // If the user previously enabled autostart but the grant is gone
+        // (revoked in System Settings, or a tccutil reset), don't keep the
+        // stale "denied" warning hanging in Settings forever. Force the
+        // toggle off; the user can re-enable to trigger a fresh prompt.
+        if enabled && !hasCalendarAccess {
+            self.enabled = false
+        }
         if enabled && hasCalendarAccess {
             startWatching()
         }
@@ -62,13 +69,31 @@ final class CalendarAutostartCoordinator {
 
     // MARK: - Permission
 
-    var isAccessAuthorized: Bool {
-        if #available(macOS 14, *) {
-            return EKEventStore.authorizationStatus(for: .event) == .fullAccess
-        } else {
-            return EKEventStore.authorizationStatus(for: .event) == .authorized
+    enum AccessState {
+        /// User has never been asked. We can request and the system will prompt.
+        case notDetermined
+        /// User has explicitly denied. Re-request silently no-ops; only System
+        /// Settings can flip it back.
+        case denied
+        /// Granted (full access on macOS 14+, write access on older).
+        case authorized
+    }
+
+    var accessState: AccessState {
+        let raw = EKEventStore.authorizationStatus(for: .event)
+        switch raw {
+        case .notDetermined: return .notDetermined
+        case .denied, .restricted: return .denied
+        case .writeOnly:
+            // writeOnly counts as denied for our purposes — we need read.
+            return .denied
+        case .authorized: return .authorized
+        case .fullAccess: return .authorized
+        @unknown default: return .denied
         }
     }
+
+    var isAccessAuthorized: Bool { accessState == .authorized }
 
     /// Asks macOS for Calendar access. Triggers the system prompt the first
     /// time. Returns true if granted at the end of the flow.
