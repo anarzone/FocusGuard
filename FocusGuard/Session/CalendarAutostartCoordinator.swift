@@ -31,9 +31,11 @@ final class CalendarAutostartCoordinator {
 
     // MARK: - Live state observable by SwiftUI
 
-    /// Live read from EventKit so the UI never sees stale state when the user
-    /// toggles the grant in System Settings while the app is running.
-    var hasCalendarAccess: Bool { isAccessAuthorized }
+    /// Stored snapshot of access. Refreshed via `refreshAccess()` after a
+    /// request, on app activation, and on EKEventStoreChanged. SwiftUI's
+    /// @Observable only tracks stored properties — a computed property
+    /// reading EventKit live wouldn't trigger re-render.
+    private(set) var hasCalendarAccess: Bool = false
     private(set) var nextMatchTitle: String?
     private(set) var nextMatchStart: Date?
 
@@ -49,8 +51,29 @@ final class CalendarAutostartCoordinator {
 
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
+        self.hasCalendarAccess = isAccessAuthorized
         if enabled && hasCalendarAccess {
             startWatching()
+        }
+        // Refresh access state when the app comes back to the foreground —
+        // catches the case where the user grants/revokes via System Settings
+        // and then returns to FocusGuard.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.refreshAccess() }
+        }
+    }
+
+    /// Re-reads EventKit's authorization state into our stored property so
+    /// SwiftUI views re-render. Cheap; safe to call frequently.
+    func refreshAccess() {
+        let now = isAccessAuthorized
+        if now != hasCalendarAccess {
+            hasCalendarAccess = now
+            if now && enabled { startWatching() }
         }
     }
 
@@ -115,6 +138,7 @@ final class CalendarAutostartCoordinator {
             let endState = EKEventStore.authorizationStatus(for: .event).rawValue
             logger.notice("requestAccess: granted=\(granted, privacy: .public) endStatus=\(endState, privacy: .public)")
             FileHandle.standardError.write(Data("[FocusGuard.calendar] requestAccess: granted=\(granted) endStatus=\(endState)\n".utf8))
+            refreshAccess()  // mirror EventKit state into the stored prop so the UI re-renders
             if granted, enabled { startWatching() }
             return granted
         } catch {
