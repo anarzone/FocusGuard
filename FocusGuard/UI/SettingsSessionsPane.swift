@@ -175,18 +175,17 @@ struct SettingsSessionsPane: View {
             get: { calendarEnabled },
             set: { newValue in
                 if newValue {
-                    if appState.calendarAutostart.hasCalendarAccess {
-                        calendarEnabled = true
-                        appState.calendarAutostart.enabled = true
-                    } else {
-                        // Request access; only flip the toggle on if granted.
+                    // Optimistically flip the toggle ON immediately so the UI
+                    // doesn't snap back to OFF while the async request is in
+                    // flight. We revert if the user denies the prompt.
+                    calendarEnabled = true
+                    appState.calendarAutostart.enabled = true
+                    if !appState.calendarAutostart.hasCalendarAccess {
                         Task {
                             let granted = await appState.calendarAutostart.requestAccess()
-                            if granted {
-                                calendarEnabled = true
-                                appState.calendarAutostart.enabled = true
-                            } else {
+                            if !granted {
                                 calendarEnabled = false
+                                appState.calendarAutostart.enabled = false
                             }
                         }
                     }
