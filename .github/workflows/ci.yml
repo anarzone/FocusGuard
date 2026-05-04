@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:    # so release.yml can run the same build+test as a prereq
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

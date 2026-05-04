@@ -31,8 +31,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    name: CI prereq (build + test)
+    uses: ./.github/workflows/ci.yml
+
   release:
     name: Build, sign, release, bump tap
+    needs: test       # don't ship a tag if tests are red
     runs-on: macos-15
     permissions:
       contents: write   # for gh release create + tag push
