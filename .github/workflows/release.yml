@@ -4,26 +4,33 @@ name: Release
 # minus the tap-clone step (we use gh + a PAT instead of the user's git creds).
 #
 # Triggered by:
-#   • Pushing a tag matching v* (e.g. `git push origin v0.3.0`)
-#   • Manual dispatch with a version input (we tag from the workflow)
+#   • Pushing to main with changes under app code paths — auto-bumps the patch
+#     version, tags the commit, runs the full release flow.
+#   • Manual dispatch with an optional version override (otherwise auto-bumps).
+#
+# Skip a release for any commit by including [skip release] in the message.
 #
 # Required GitHub secrets:
 #   MACOS_CERT_P12             base64 of an Apple Development .p12 export
 #   MACOS_CERT_P12_PASSWORD    password set when exporting the .p12
 #   KEYCHAIN_PASSWORD          arbitrary; protects the temp build keychain
 #   TAP_PUSH_TOKEN             fine-grained PAT with write access to anarzone/homebrew-tap
-#   APPLE_TEAM_ID              Apple Developer team id (currently JVK43S5CGA)
-#   APPLE_SIGN_IDENTITY        cert common-name (e.g. "Apple Development: name@example.com (Q59RD22M3N)")
+#   APPLE_TEAM_ID              Apple Developer team id
+#   APPLE_SIGN_IDENTITY        cert SHA-1 hash, e.g. AB2E6306E4204F28FF692A59F7DD1E639E99B947
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'FocusGuard/**'
+      - 'project.yml'
+      - 'scripts/**'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (without v-prefix), e.g. 0.3.0'
-        required: true
+        description: 'Version override (without v-prefix). Leave blank to auto-bump patch.'
+        required: false
         type: string
 
 concurrency:
@@ -37,37 +44,47 @@ jobs:
 
   release:
     name: Build, sign, release, bump tap
-    needs: test       # don't ship a tag if tests are red
+    needs: test       # don't ship if tests are red
+    if: "!contains(github.event.head_commit.message, '[skip release]')"
     runs-on: macos-15
     permissions:
-      contents: write   # for gh release create + tag push
+      contents: write   # for tag push + gh release create
 
     steps:
-      - name: Resolve version
-        id: ver
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            REF="${GITHUB_REF#refs/tags/}"
-            echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
-            echo "tag=$REF" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # so we can push tags from workflow_dispatch path
+          fetch-depth: 0  # need history to find the latest tag
 
-      - name: Tag (workflow_dispatch only)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Resolve version (auto-bump unless overridden)
+        id: ver
         run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists." >&2
+          set -euo pipefail
+          OVERRIDE="${{ inputs.version }}"
+          if [ -n "$OVERRIDE" ]; then
+            VERSION="$OVERRIDE"
+          else
+            # Latest v* tag (or v0.0.0 on a fresh repo).
+            LATEST=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+            LATEST="${LATEST:-v0.0.0}"
+            CURRENT="${LATEST#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+          TAG="v$VERSION"
+          # Defensive: refuse to clobber a tag that already exists.
+          if git rev-parse --verify --quiet "$TAG" >/dev/null; then
+            echo "Tag $TAG already exists — pick a different version override." >&2
             exit 1
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "==> Releasing $TAG"
+
+      - name: Tag commit
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "$TAG"
@@ -88,15 +105,12 @@ jobs:
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           P12_PATH="$RUNNER_TEMP/cert.p12"
 
-          # Decode the base64-encoded .p12 from the secret.
           echo -n "$MACOS_CERT_P12" | base64 --decode > "$P12_PATH"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-          # -A allows codesign to use the key without prompting; the partition
-          # list grant lets command-line tools (codesign, xcodebuild) read it.
           security import "$P12_PATH" \
             -P "$MACOS_CERT_P12_PASSWORD" \
             -A -t cert -f pkcs12 \
@@ -106,13 +120,10 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" \
             "$KEYCHAIN_PATH"
 
-          # Make our keychain searchable so codesign finds the identity.
           security list-keychains -d user -s "$KEYCHAIN_PATH" \
             $(security list-keychains -d user | tr -d '"')
 
-          # Verify the identity is visible.
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
       - name: Build Release
@@ -146,8 +157,6 @@ jobs:
             cp "FocusGuard/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
           fi
 
-          # Mirror the local install script's hardened-runtime + entitlements
-          # re-sign using the imported keychain identity.
           codesign --force --sign "$APPLE_SIGN_IDENTITY" \
             --keychain "$KEYCHAIN_PATH" \
             --options runtime \
