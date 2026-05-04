@@ -44,12 +44,14 @@ struct SettingsSessionsPane: View {
                 groupCard {
                     row(title: "Daily focus goal",
                         help: "Drives the progress bar in the popover and the end-of-day summary notification.") {
-                        Stepper(value: $dailyGoalMinutes, in: 30...480, step: 15) {
+                        HStack(spacing: 8) {
                             Text(FocusGoal.format(minutes: dailyGoalMinutes))
                                 .font(.system(size: 13).monospacedDigit())
-                                .frame(width: 70, alignment: .trailing)
+                                .frame(width: 60, alignment: .trailing)
+                            Stepper("", value: $dailyGoalMinutes, in: 30...480, step: 15)
+                                .labelsHidden()
+                                .fixedSize()
                         }
-                        .labelsHidden()
                     }
                     Rectangle().fill(Theme.separator).frame(height: 0.5)
                     row(title: "Weekends count toward streak",

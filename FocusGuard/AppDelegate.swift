@@ -140,4 +140,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.accessory)
         }
     }
+
+    /// We're a menu-bar-resident app — closing any window (main, break overlay,
+    /// session-end sheet) must never terminate the process. The menu bar item
+    /// is the canonical "running" indicator. Without this returning false a
+    /// stray break-overlay close was quitting the app on Tahoe.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
 }

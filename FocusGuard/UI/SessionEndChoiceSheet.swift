@@ -58,10 +58,15 @@ final class SessionEndChoiceController {
         self.window = win
     }
 
+    /// Defer orderOut to the next runloop turn so the in-flight button action
+    /// (which lives inside the hosted SwiftUI view) finishes before AppKit
+    /// tears down the window's view hierarchy.
     func close() {
-        window?.orderOut(nil)
-        window?.close()
+        let win = window
         window = nil
+        DispatchQueue.main.async {
+            win?.orderOut(nil)
+        }
     }
 }
 
@@ -116,17 +121,17 @@ private struct SessionEndChoiceView: View {
 
             // Take a break section
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
+                HStack(spacing: 10) {
                     Image(systemName: "cup.and.saucer.fill")
                         .foregroundStyle(Theme.focus)
                     Text("Take a break").font(.system(size: 14, weight: .semibold))
                     Spacer()
-                    Stepper(value: $breakMinutes, in: 1...60, step: 1) {
-                        Text("\(breakMinutes) min")
-                            .font(.system(size: 12).monospacedDigit())
-                            .frame(width: 56, alignment: .trailing)
-                    }
-                    .labelsHidden()
+                    Text("\(breakMinutes) min")
+                        .font(.system(size: 12).monospacedDigit())
+                        .frame(width: 52, alignment: .trailing)
+                    Stepper("", value: $breakMinutes, in: 1...60, step: 1)
+                        .labelsHidden()
+                        .fixedSize()
                 }
                 Button {
                     onTakeBreak(breakMinutes)
@@ -156,12 +161,12 @@ private struct SessionEndChoiceView: View {
                     TextField("Label", text: $nextLabel)
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 180)
-                    Stepper(value: $nextSessionMinutes, in: 5...240, step: 5) {
-                        Text("\(nextSessionMinutes) min")
-                            .font(.system(size: 12).monospacedDigit())
-                            .frame(width: 56, alignment: .trailing)
-                    }
-                    .labelsHidden()
+                    Text("\(nextSessionMinutes) min")
+                        .font(.system(size: 12).monospacedDigit())
+                        .frame(width: 56, alignment: .trailing)
+                    Stepper("", value: $nextSessionMinutes, in: 5...240, step: 5)
+                        .labelsHidden()
+                        .fixedSize()
                     Spacer()
                     Button("Start") {
                         onStartNew(nextSessionMinutes, nextLabel.isEmpty ? nil : nextLabel)

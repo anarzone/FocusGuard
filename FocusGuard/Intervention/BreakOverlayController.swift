@@ -49,6 +49,10 @@ final class BreakOverlayController {
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isOpaque = false
         window.backgroundColor = .clear
+        // Critical: stop AppKit from auto-deallocating this window when it
+        // closes. Otherwise close() (called from a button inside the SwiftUI
+        // view) tears down the host controller that's still mid-action.
+        window.isReleasedWhenClosed = false
         window.contentViewController = host
         window.setFrame(screen.visibleFrame, display: true)
         window.makeKeyAndOrderFront(nil)
@@ -57,12 +61,17 @@ final class BreakOverlayController {
         self.window = window
     }
 
-    /// Hides the overlay window without ending the break. Called by the close
-    /// button and by skip / completion paths.
+    /// Hides the overlay window without ending the break. Defers the actual
+    /// orderOut to the next runloop turn so the SwiftUI button closure that
+    /// triggered this can finish unwinding before its hosting view is torn
+    /// down — calling close() synchronously from inside a button action was
+    /// destabilising.
     func dismiss() {
-        window?.orderOut(nil)
-        window?.close()
+        let win = window
         window = nil
         isPresenting = false
+        DispatchQueue.main.async {
+            win?.orderOut(nil)
+        }
     }
 }
