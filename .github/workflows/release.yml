@@ -1,0 +1,202 @@
+name: Release
+
+# Cuts a fully signed release. Mirrors what scripts/release.sh does locally,
+# minus the tap-clone step (we use gh + a PAT instead of the user's git creds).
+#
+# Triggered by:
+#   • Pushing a tag matching v* (e.g. `git push origin v0.3.0`)
+#   • Manual dispatch with a version input (we tag from the workflow)
+#
+# Required GitHub secrets:
+#   MACOS_CERT_P12             base64 of an Apple Development .p12 export
+#   MACOS_CERT_P12_PASSWORD    password set when exporting the .p12
+#   KEYCHAIN_PASSWORD          arbitrary; protects the temp build keychain
+#   TAP_PUSH_TOKEN             fine-grained PAT with write access to anarzone/homebrew-tap
+#   APPLE_TEAM_ID              Apple Developer team id (currently JVK43S5CGA)
+#   APPLE_SIGN_IDENTITY        cert common-name (e.g. "Apple Development: name@example.com (Q59RD22M3N)")
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (without v-prefix), e.g. 0.3.0'
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, sign, release, bump tap
+    runs-on: macos-15
+    permissions:
+      contents: write   # for gh release create + tag push
+
+    steps:
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            REF="${GITHUB_REF#refs/tags/}"
+            echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=$REF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # so we can push tags from workflow_dispatch path
+
+      - name: Tag (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists." >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import signing cert into temp keychain
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_P12_PASSWORD: ${{ secrets.MACOS_CERT_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          P12_PATH="$RUNNER_TEMP/cert.p12"
+
+          # Decode the base64-encoded .p12 from the secret.
+          echo -n "$MACOS_CERT_P12" | base64 --decode > "$P12_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # -A allows codesign to use the key without prompting; the partition
+          # list grant lets command-line tools (codesign, xcodebuild) read it.
+          security import "$P12_PATH" \
+            -P "$MACOS_CERT_P12_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          # Make our keychain searchable so codesign finds the identity.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"')
+
+          # Verify the identity is visible.
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Build Release
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
+        run: |
+          set -o pipefail
+          rm -rf build/release
+          xcodebuild \
+            -project FocusGuard.xcodeproj \
+            -scheme FocusGuard \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/release \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_IDENTITY="$APPLE_SIGN_IDENTITY" \
+            CODE_SIGN_STYLE=Manual \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
+            -allowProvisioningUpdates \
+            build
+
+      - name: Bundle authoritative icns + re-sign
+        env:
+          APPLE_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
+        run: |
+          APP="build/release/Build/Products/Release/FocusGuard.app"
+          [ -d "$APP" ] || { echo "Build did not produce $APP" >&2; exit 1; }
+
+          if [ -f "FocusGuard/Resources/AppIcon.icns" ]; then
+            cp "FocusGuard/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+          fi
+
+          # Mirror the local install script's hardened-runtime + entitlements
+          # re-sign using the imported keychain identity.
+          codesign --force --sign "$APPLE_SIGN_IDENTITY" \
+            --keychain "$KEYCHAIN_PATH" \
+            --options runtime \
+            --entitlements FocusGuard/Resources/FocusGuard.entitlements \
+            "$APP"
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Zip + sha256
+        id: zip
+        run: |
+          mkdir -p build
+          ZIP="build/FocusGuard-${{ steps.ver.outputs.tag }}.zip"
+          rm -f "$ZIP"
+          ditto -c -k --keepParent "build/release/Build/Products/Release/FocusGuard.app" "$ZIP"
+          SHA=$(shasum -a 256 "$ZIP" | awk '{print $1}')
+          echo "zip_path=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "==> $ZIP ($SHA)"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          gh release create "$TAG" "${{ steps.zip.outputs.zip_path }}" \
+            --title "$TAG" \
+            --notes "FocusGuard $TAG
+
+          \`\`\`sh
+          brew upgrade --cask anarzone/tap/focusguard
+          \`\`\`
+
+          (or first-time: \`brew install --cask anarzone/tap/focusguard\`)"
+
+      - name: Bump homebrew-tap
+        env:
+          TAP_PUSH_TOKEN: ${{ secrets.TAP_PUSH_TOKEN }}
+        run: |
+          TAP_DIR="$RUNNER_TEMP/homebrew-tap"
+          git clone "https://x-access-token:${TAP_PUSH_TOKEN}@github.com/anarzone/homebrew-tap.git" "$TAP_DIR"
+
+          CASK="$TAP_DIR/Casks/focusguard.rb"
+          sed -i '' "s|version \".*\"|version \"${{ steps.ver.outputs.version }}\"|" "$CASK"
+          sed -i '' "s|sha256 \".*\"|sha256 \"${{ steps.zip.outputs.sha256 }}\"|" "$CASK"
+
+          cd "$TAP_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/focusguard.rb
+          git commit -m "focusguard: bump to ${{ steps.ver.outputs.version }}"
+          git push origin main
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" || true
