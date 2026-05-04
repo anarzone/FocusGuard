@@ -41,6 +41,18 @@ class NotificationPresenter: DistractionNotifier {
         center.add(request) { _ in }
     }
 
+    /// Shown when a break timer hits zero. Friendly nudge — no urgency.
+    func presentBreakOver() {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "Break's over"
+        content.body = "Ready to start another session?"
+        content.sound = nil
+        content.interruptionLevel = .active
+        let request = UNNotificationRequest(identifier: "breakOver", content: content, trigger: nil)
+        center.add(request) { _ in }
+    }
+
     /// Shown when the PatternDetector spots repeated visits to the same
     /// distraction host while no session is active.
     func presentDriftPrompt(host: String) {

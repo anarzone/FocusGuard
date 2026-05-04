@@ -91,6 +91,15 @@ enum SettingsKeys {
         static let startName  = "systemFocus.startShortcutName"
         static let endName    = "systemFocus.endShortcutName"
     }
+
+    enum Breaks {
+        /// When true (default), session-end shows the break-or-skip prompt.
+        /// When false, sessions just stop quietly with the existing notification.
+        static let autoPromptAfterSession = "breaks.autoPromptAfterSession"
+        /// When true, the break overlay can't be skipped or hidden — only
+        /// extended. (Future use; not yet wired into the overlay.)
+        static let strictMode = "breaks.strictMode"
+    }
 }
 
 enum GoalDefaults {

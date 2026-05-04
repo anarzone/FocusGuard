@@ -17,6 +17,9 @@ final class AppState {
     let escalationEngine: EscalationEngine
     let calendarAutostart: CalendarAutostartCoordinator
     let patternDetector: PatternDetector
+    let breakManager: BreakManager
+    let breakOverlay: BreakOverlayController
+    private let sessionEndChoice = SessionEndChoiceController()
 
     init() {
         let schema = Schema([
@@ -53,6 +56,8 @@ final class AppState {
         self.escalationEngine = engine
         self.calendarAutostart = CalendarAutostartCoordinator(sessionManager: manager)
         self.patternDetector = PatternDetector(presenter: presenter)
+        self.breakManager = BreakManager()
+        self.breakOverlay = BreakOverlayController()
 
         // Hydrate engine config from persisted prefs.
         let defaults = UserDefaults.standard
@@ -79,17 +84,24 @@ final class AppState {
         // during a pause but the user has explicitly opted out of being nagged.
         tracker.onTick = { [weak manager, weak engine, weak tracker, weak self] in
             manager?.checkPlannedDuration()
+            // Drive break expiration off the same tick.
+            self?.breakManager.checkExpiration()
             if let snap = tracker?.currentSnapshot {
                 let inActiveSession = manager?.currentSession != nil
                     && manager?.currentSession?.pausedAt == nil
-                engine?.observe(snapshot: snap, isInSession: inActiveSession)
-                self?.patternDetector.observe(snapshot: snap, isInSession: inActiveSession)
+                let onBreak = self?.breakManager.isOnBreak ?? false
+                // EscalationEngine + PatternDetector stay silent during a
+                // break — interruptions defeat the point.
+                if !onBreak {
+                    engine?.observe(snapshot: snap, isInSession: inActiveSession)
+                    self?.patternDetector.observe(snapshot: snap, isInSession: inActiveSession)
+                }
             }
             self?.maybeFireDailySummary()
             self?.maybeAutoPauseOrResume()
         }
 
-        // Session boundaries: reset escalation, send completion notification.
+        // Session boundaries: reset escalation, prompt for break, send notif.
         manager.onSessionStarted = {
             SystemFocusBridge.onSessionStarted()
         }
@@ -106,6 +118,32 @@ final class AppState {
                 focusMinutes: focusMin,
                 focusPercent: pct
             )
+            // Surface the "take a break" choice sheet for any session that
+            // had a planned duration (the natural pomodoro shape). Manual
+            // sessions ended via the Stop button skip the prompt — most users
+            // who hit Stop are intentionally walking away.
+            let autoPrompt = UserDefaults.standard.object(forKey: SettingsKeys.Breaks.autoPromptAfterSession) as? Bool ?? true
+            if session.plannedDurationMinutes != nil && autoPrompt {
+                self.presentSessionEndChoice(for: session, focusMinutes: focusMin)
+            }
+        }
+
+        // Wire break overlay buttons → BreakManager actions.
+        self.breakOverlay.onSkip = { [weak self] in
+            self?.breakManager.skip()
+        }
+        self.breakOverlay.onExtend = { [weak self] minutes in
+            self?.breakManager.extend(byMinutes: minutes)
+        }
+        self.breakOverlay.onClose = {
+            // Closing the overlay just hides it — the timer keeps running
+            // and the menu bar shows the countdown.
+        }
+        self.breakManager.onBreakCompleted = { [weak self] in
+            self?.notificationPresenter.presentBreakOver()
+        }
+        self.breakManager.onBreakEnded = { [weak self] in
+            self?.breakOverlay.dismiss()
         }
 
         tracker.start()
@@ -247,6 +285,43 @@ final class AppState {
         cachedWeeklyAvgFocus = avg
         lastWeeklyAvgFocusAt = .now
         return avg
+    }
+
+    // MARK: - Break helpers
+
+    /// Pomodoro-style scale: 25→5, 50→10, 90→20. Falls back to 5 for tiny
+    /// custom sessions, 20 for anything > 90.
+    static func suggestedBreakMinutes(forSessionMinutes mins: Int) -> Int {
+        switch mins {
+        case ..<35:  return 5
+        case ..<70:  return 10
+        case ..<105: return 15
+        default:     return 20
+        }
+    }
+
+    private func presentSessionEndChoice(for session: Session, focusMinutes: Int) {
+        let plannedMin = session.plannedDurationMinutes ?? 25
+        let breakMin = Self.suggestedBreakMinutes(forSessionMinutes: plannedMin)
+        sessionEndChoice.present(
+            completedLabel: session.label,
+            focusMinutes: focusMinutes,
+            suggestedBreakMinutes: breakMin,
+            suggestedNextSessionMinutes: plannedMin,
+            onTakeBreak: { [weak self] minutes in
+                self?.startBreak(durationMinutes: minutes)
+            },
+            onStartNew: { [weak self] minutes, label in
+                self?.sessionManager.startSession(label: label, plannedDurationMinutes: minutes)
+            },
+            onDismiss: {}
+        )
+    }
+
+    /// Public so menu-bar/popover code can also start a break manually later.
+    func startBreak(durationMinutes: Int) {
+        breakManager.startBreak(durationMinutes: durationMinutes)
+        breakOverlay.present(breakManager: breakManager)
     }
 
     // MARK: - Auto-pause

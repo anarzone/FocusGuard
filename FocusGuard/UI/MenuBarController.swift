@@ -14,21 +14,37 @@ enum MenuBarIconStyle: String, CaseIterable {
     case dot    = "Dot"
 }
 
+/// Polled snapshot describing what (if anything) should appear next to the
+/// menu-bar icon. AppState provides this via a closure handed into init —
+/// keeps the controller decoupled from session/break internals.
+struct MenuBarTimer: Equatable {
+    enum Kind { case session, sessionPaused, breakRunning }
+    let kind: Kind
+    let remainingSeconds: Int
+}
+
 @MainActor
 final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let popoverWindow: PopoverWindow
+    private let timerProvider: () -> MenuBarTimer?
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
     private var sessionActive = false
+    private var tickTimer: Timer?
+    private var lastRenderedTimer: MenuBarTimer??   // double-optional: nil == not yet rendered
 
-    init<Content: View>(@ViewBuilder content: () -> Content) {
+    init<Content: View>(
+        timerProvider: @escaping () -> MenuBarTimer? = { nil },
+        @ViewBuilder content: () -> Content
+    ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popoverWindow = PopoverWindow(content: content())
+        self.timerProvider = timerProvider
         super.init()
         configureStatusItem()
+        startTicking()
 
-        // Re-apply the icon whenever the user switches style in Settings.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(userDefaultsChanged),
@@ -41,6 +57,27 @@ final class MenuBarController: NSObject {
         if let m = globalClickMonitor { NSEvent.removeMonitor(m) }
         if let m = localClickMonitor  { NSEvent.removeMonitor(m) }
         NotificationCenter.default.removeObserver(self)
+        tickTimer?.invalidate()
+    }
+
+    /// 1Hz tick to refresh the countdown label when a session or break is
+    /// running. Cheap — only string-formats when the timer state actually
+    /// changes (deep equality check).
+    private func startTicking() {
+        tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshTimerLabel() }
+        }
+        if let t = tickTimer { RunLoop.main.add(t, forMode: .common) }
+    }
+
+    private func refreshTimerLabel() {
+        let snapshot = timerProvider()
+        // Only re-apply if it's actually changed (avoids re-creating NSImage
+        // every tick when nothing's running).
+        if lastRenderedTimer != .some(snapshot) {
+            lastRenderedTimer = .some(snapshot)
+            applyIconStyle(currentIconStyle)
+        }
     }
 
     // MARK: - Status item
@@ -64,29 +101,52 @@ final class MenuBarController: NSObject {
 
     private func applyIconStyle(_ style: MenuBarIconStyle) {
         guard let button = statusItem.button else { return }
-        let badge = sessionActive ? " ●" : ""
+
+        // When a session OR break is running, the timer label takes priority
+        // over the static "● active" badge — it's strictly more informative.
+        let timer = timerProvider()
+        let label = label(for: timer, fallbackBadge: sessionActive ? " ●" : "")
 
         switch style {
         case .shield:
-            let image = NSImage(systemSymbolName: "shield.lefthalf.filled",
+            let symbol = timer.map { iconSymbol(for: $0) } ?? "shield.lefthalf.filled"
+            let image = NSImage(systemSymbolName: symbol,
                                 accessibilityDescription: "FocusGuard")
             image?.isTemplate = true
             button.image = image
-            button.title = badge
+            button.title = label
 
         case .fg:
             button.image = nil
-            button.title = "FG\(badge)"
+            button.title = "FG\(label)"
 
         case .dot:
             let cfg = NSImage.SymbolConfiguration(pointSize: 8, weight: .bold)
-            let image = NSImage(systemSymbolName: "circle.fill",
+            let symbol = timer.map { iconSymbol(for: $0) } ?? "circle.fill"
+            let image = NSImage(systemSymbolName: symbol,
                                 accessibilityDescription: "FocusGuard")?
                 .withSymbolConfiguration(cfg)
             image?.isTemplate = true
             button.image = image
-            button.title = badge
+            button.title = label
         }
+    }
+
+    /// Symbol shown when an active timer is running. Different glyph for break
+    /// vs session so the user can tell at a glance even if the time is small.
+    private func iconSymbol(for timer: MenuBarTimer) -> String {
+        switch timer.kind {
+        case .session:        return "timer"
+        case .sessionPaused:  return "pause.circle"
+        case .breakRunning:   return "cup.and.saucer.fill"
+        }
+    }
+
+    private func label(for timer: MenuBarTimer?, fallbackBadge: String) -> String {
+        guard let timer else { return fallbackBadge }
+        let m = max(0, timer.remainingSeconds) / 60
+        let s = max(0, timer.remainingSeconds) % 60
+        return String(format: " %d:%02d", m, s)
     }
 
     @objc private func toggle(_ sender: Any?) {

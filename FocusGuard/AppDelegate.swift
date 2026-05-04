@@ -14,7 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         appState = AppState()
-        menuBarController = MenuBarController { [weak self, appState = appState!] in
+        menuBarController = MenuBarController(
+            timerProvider: { [appState = appState!] in
+                Self.menuBarTimer(from: appState)
+            }
+        ) { [weak self, appState = appState!] in
             MenuBarView(
                 permissions: appState.permissions,
                 appState: appState,
@@ -28,6 +32,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !launchedAtLogin() {
             openMainWindow(tab: .home)
         }
+    }
+
+    /// Snapshot of what the menu-bar countdown should display. Break wins
+    /// over session because a break overlay/sticky timer is the user's
+    /// active intent at that moment.
+    @MainActor
+    private static func menuBarTimer(from appState: AppState) -> MenuBarTimer? {
+        if let state = appState.breakManager.current {
+            return MenuBarTimer(kind: .breakRunning,
+                                remainingSeconds: Int(state.remaining()))
+        }
+        if let session = appState.sessionManager.currentSession,
+           let planned = session.plannedDurationMinutes {
+            let elapsed = appState.sessionManager.runningSeconds(for: session)
+            let remaining = Int(TimeInterval(planned * 60) - elapsed)
+            let kind: MenuBarTimer.Kind = session.pausedAt == nil ? .session : .sessionPaused
+            return MenuBarTimer(kind: kind, remainingSeconds: max(0, remaining))
+        }
+        return nil
     }
 
     /// Best-effort check: are we being started as a login item, or did the
