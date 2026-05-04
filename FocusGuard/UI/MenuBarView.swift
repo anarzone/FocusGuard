@@ -380,7 +380,13 @@ struct MenuBarView: View {
 
     private var sessionSection: some View {
         Group {
-            if let session {
+            // Active break wins over everything — skip/extend/show controls
+            // are the only useful actions here. Without this row a hidden
+            // break overlay leaves the user stuck with a menu-bar timer
+            // they can't influence.
+            if appState.breakManager.isOnBreak {
+                breakControlRow
+            } else if let session {
                 runningSessionRow(session: session)
             } else {
                 tightStartRow
@@ -388,6 +394,54 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+    }
+
+    private var breakControlRow: some View {
+        let remaining = Int(appState.breakManager.current?.remaining(now: now) ?? 0)
+        let m = remaining / 60
+        let s = remaining % 60
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "cup.and.saucer.fill")
+                    .foregroundStyle(Theme.focus)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("ON BREAK")
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(0.4)
+                        .foregroundStyle(.secondary)
+                    Text(String(format: "%d:%02d remaining", m, s))
+                        .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                }
+                Spacer()
+            }
+            HStack(spacing: 8) {
+                Button { appState.breakManager.extend(byMinutes: 5) } label: {
+                    Label("+5 min", systemImage: "plus.circle")
+                        .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                }
+                .buttonStyle(.plain)
+                .background(Theme.fill1, in: RoundedRectangle(cornerRadius: 6))
+
+                Button { appState.breakOverlay.present(breakManager: appState.breakManager) } label: {
+                    Label("Show", systemImage: "rectangle.fill.on.rectangle.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                }
+                .buttonStyle(.plain)
+                .background(Theme.fill1, in: RoundedRectangle(cornerRadius: 6))
+
+                Spacer()
+
+                Button { appState.breakManager.skip() } label: {
+                    Label("Skip break", systemImage: "forward.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.distraction)
+            }
+        }
     }
 
     private var tightStartRow: some View {
