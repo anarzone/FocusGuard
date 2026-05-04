@@ -195,6 +195,28 @@ struct SettingsSessionsPane: View {
         )
     }
 
+    /// Apple's URL scheme for the Calendar privacy pane has rotated multiple
+    /// times. We try each known variant; the first one that the system
+    /// recognises wins. As a last resort just open System Settings — the
+    /// user is one click away from Privacy & Security → Calendars.
+    private func openCalendarPrivacySettings() {
+        let candidates = [
+            // Sonoma / Sequoia / Tahoe with the per-pane bundle id.
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Calendars",
+            // Older "preference" host that some macOS builds still accept.
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars",
+        ]
+        for str in candidates {
+            if let url = URL(string: str), NSWorkspace.shared.open(url) {
+                NSWorkspace.shared.activateFileViewerSelecting([])  // make sure it comes to front
+                return
+            }
+        }
+        // Final fallback: just launch System Settings.
+        let url = URL(fileURLWithPath: "/System/Applications/System Settings.app")
+        NSWorkspace.shared.open(url)
+    }
+
     /// Permission state of the EventKit grant, with copy + button that match
     /// the actual state. Avoids the "access denied" message after a fresh
     /// install / TCC reset when the user never actually denied anything.
@@ -203,22 +225,24 @@ struct SettingsSessionsPane: View {
         switch appState.calendarAutostart.accessState {
         case .notDetermined:
             row(title: "Calendar access not granted yet",
-                help: "Click Grant to ask for access. macOS will show a permission prompt.") {
+                help: "Click Grant to ask for access. macOS will show a permission prompt; if it doesn't, we open System Settings → Privacy & Security → Calendars as a fallback.") {
                 Button("Grant access") {
                     Task {
-                        let granted = await appState.calendarAutostart.requestAccess()
-                        if granted { appState.calendarAutostart.enabled = true }
+                        _ = await appState.calendarAutostart.requestAccess()
+                        // If the request didn't move us into authorized OR
+                        // denied (e.g. macOS suppressed the prompt for some
+                        // reason), open System Settings so the user has a
+                        // direct path forward.
+                        if appState.calendarAutostart.accessState == .notDetermined {
+                            openCalendarPrivacySettings()
+                        }
                     }
                 }
             }
         case .denied:
             row(title: "Calendar access denied",
                 help: "macOS won't re-prompt after a denial. Grant access in System Settings → Privacy & Security → Calendars, then return here.") {
-                Button("Open Settings") {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+                Button("Open Settings") { openCalendarPrivacySettings() }
             }
         case .authorized:
             EmptyView()
