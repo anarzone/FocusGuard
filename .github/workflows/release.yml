@@ -8,7 +8,8 @@ name: Release
 #     version, tags the commit, runs the full release flow.
 #   • Manual dispatch with an optional version override (otherwise auto-bumps).
 #
-# Skip a release for any commit by including [skip release] in the message.
+# Skip a release entirely by including [skip ci] in the commit message —
+# that's GitHub's built-in opt-out and works for every workflow in this repo.
 #
 # Required GitHub secrets:
 #   MACOS_CERT_P12             base64 of an Apple Development .p12 export
@@ -45,7 +46,6 @@ jobs:
   release:
     name: Build, sign, release, bump tap
     needs: test       # don't ship if tests are red
-    if: "!contains(github.event.head_commit.message, '[skip release]')"
     runs-on: macos-15
     permissions:
       contents: write   # for tag push + gh release create
