@@ -30,6 +30,8 @@
 	<string>FocusGuard reads the active browser tab to detect distraction sites during focus sessions.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
 </dict>

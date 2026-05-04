@@ -1,5 +1,7 @@
+import AppKit
 import Foundation
 import EventKit
+import os
 
 /// Watches the user's calendars for events whose title contains a configured
 /// keyword. When a matching event begins, auto-starts a focus session whose
@@ -93,6 +95,14 @@ final class CalendarAutostartCoordinator {
     /// time. Returns true if granted at the end of the flow.
     @discardableResult
     func requestAccess() async -> Bool {
+        let logger = Logger(subsystem: "com.anar.focusguard", category: "calendar")
+        logger.info("requestAccess: starting; current state = \(String(describing: EKEventStore.authorizationStatus(for: .event).rawValue))")
+
+        // Bring the app to the foreground so the TCC prompt has a window
+        // to anchor against. LSUIElement apps sometimes have prompts open
+        // behind their main window otherwise.
+        NSApp.activate(ignoringOtherApps: true)
+
         do {
             let granted: Bool
             if #available(macOS 14, *) {
@@ -100,9 +110,11 @@ final class CalendarAutostartCoordinator {
             } else {
                 granted = try await eventStore.requestAccess(to: .event)
             }
+            logger.info("requestAccess: returned granted=\(granted); state now = \(String(describing: EKEventStore.authorizationStatus(for: .event).rawValue))")
             if granted, enabled { startWatching() }
             return granted
         } catch {
+            logger.error("requestAccess: threw \(error.localizedDescription, privacy: .public)")
             return false
         }
     }

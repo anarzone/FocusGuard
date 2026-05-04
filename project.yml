@@ -43,6 +43,7 @@ targets:
         NSHumanReadableCopyright: ""
         NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions."
         NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
+        NSCalendarsUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard
