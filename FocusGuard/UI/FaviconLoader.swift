@@ -41,24 +41,25 @@ final class FaviconLoader: ObservableObject {
         guard !inFlight.contains(host) else { return }
         inFlight.insert(host)
         Task {
-            let img = await Self.fetch(host: host)
-            await MainActor.run {
-                self.inFlight.remove(host)
-                if let img {
-                    self.images[host] = img
-                    self.saveToDisk(host: host, image: img)
-                }
+            // Fetch returns Data (Sendable) instead of NSImage so the result
+            // can cross actor boundaries cleanly under Swift 6 strict
+            // concurrency. We convert to NSImage on the MainActor.
+            let data = await Self.fetchData(host: host)
+            self.inFlight.remove(host)
+            if let data, let img = NSImage(data: data) {
+                self.images[host] = img
+                self.saveToDisk(host: host, image: img)
             }
         }
     }
 
-    nonisolated private static func fetch(host: String) async -> NSImage? {
+    nonisolated private static func fetchData(host: String) async -> Data? {
         // Google S2 — most reliable, returns 32px PNG for any host.
         let urlString = "https://www.google.com/s2/favicons?sz=64&domain=\(host)"
         guard let url = URL(string: urlString) else { return nil }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            return NSImage(data: data)
+            return data
         } catch {
             return nil
         }

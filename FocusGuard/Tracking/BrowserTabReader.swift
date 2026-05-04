@@ -128,7 +128,10 @@ final class BrowserTabReader {
         case error
     }
 
-    private static func runScript(source: String, bundleId: String) -> FetchResult {
+    /// Marked `nonisolated` so the background `scriptQueue` can call it without
+    /// crossing the main-actor boundary. NSAppleScript is callable from any
+    /// thread; this method touches no actor state of BrowserTabReader.
+    nonisolated private static func runScript(source: String, bundleId: String) -> FetchResult {
         guard let script = NSAppleScript(source: source) else { return .error }
         var error: NSDictionary?
         let descriptor = script.executeAndReturnError(&error)
