@@ -52,6 +52,7 @@ xcodebuild \
     -destination 'platform=macOS' \
     -allowProvisioningUpdates \
     -derivedDataPath build/release \
+    MARKETING_VERSION="$VERSION" \
     -quiet \
     build
 

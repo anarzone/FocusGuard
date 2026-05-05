@@ -133,12 +133,19 @@ jobs:
         run: |
           set -o pipefail
           rm -rf build/release
+          # MARKETING_VERSION + CURRENT_PROJECT_VERSION drive
+          # CFBundleShortVersionString / CFBundleVersion in the bundled
+          # Info.plist. Without injecting the real release version here, every
+          # build shipped as 0.1.0 — brew users couldn't detect upgrades and
+          # the on-disk binary always disagreed with the tag.
           xcodebuild \
             -project FocusGuard.xcodeproj \
             -scheme FocusGuard \
             -configuration Release \
             -destination 'platform=macOS' \
             -derivedDataPath build/release \
+            MARKETING_VERSION="${{ steps.ver.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_IDENTITY="$APPLE_SIGN_IDENTITY" \
             CODE_SIGN_STYLE=Manual \
