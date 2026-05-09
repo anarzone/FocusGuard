@@ -30,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // app stays in .regular policy so the Dock icon is always visible —
         // user can launch FocusGuard from the Dock without needing the menu
         // bar at all.
-        if UserDefaults.standard.bool(forKey: SettingsKeys.showInDock) {
+        if (UserDefaults.standard.object(forKey: SettingsKeys.showInDock) as? Bool ?? true) {
             NSApp.setActivationPolicy(.regular)
         }
 
@@ -52,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func applyDockPreference() {
-        let pref = UserDefaults.standard.bool(forKey: SettingsKeys.showInDock)
+        let pref = (UserDefaults.standard.object(forKey: SettingsKeys.showInDock) as? Bool ?? true)
         let current = NSApp.activationPolicy()
         if pref && current != .regular {
             NSApp.setActivationPolicy(.regular)
@@ -168,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // .regular activation policy on window close. Otherwise drop back to
         // .accessory: hides the Dock icon, app keeps running via the menu
         // bar item only.
-        if UserDefaults.standard.bool(forKey: SettingsKeys.showInDock) { return }
+        if (UserDefaults.standard.object(forKey: SettingsKeys.showInDock) as? Bool ?? true) { return }
         DispatchQueue.main.async {
             NSApp.setActivationPolicy(.accessory)
         }

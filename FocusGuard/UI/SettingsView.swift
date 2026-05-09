@@ -111,7 +111,7 @@ struct SettingsGeneralPane: View {
     @AppStorage("menuBarIconStyle")       private var menuBarIconStyle = "Shield"
     @AppStorage("reduceMotion")           private var reduceMotion    = false
     @AppStorage("showNotifications")      private var showNotifications = true
-    @AppStorage(SettingsKeys.showInDock)  private var showInDock      = false
+    @AppStorage(SettingsKeys.showInDock)  private var showInDock      = true
 
     var body: some View {
         ScrollView {
