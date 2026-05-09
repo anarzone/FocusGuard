@@ -60,6 +60,9 @@ enum SettingsKeys {
     static let showNotifications     = "showNotifications"
     static let retentionDays         = "retentionDays"
     static let browserAutomationDenied = "browserAutomationDenied"
+    /// When true, keep .regular activation policy permanently so a Dock icon
+    /// is always visible. Default false (menu-bar-only).
+    static let showInDock            = "ui.showInDock"
 
     enum Session {
         static let defaultDurationMinutes = "session.defaultDurationMinutes"

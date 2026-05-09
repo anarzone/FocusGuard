@@ -111,6 +111,7 @@ struct SettingsGeneralPane: View {
     @AppStorage("menuBarIconStyle")       private var menuBarIconStyle = "Shield"
     @AppStorage("reduceMotion")           private var reduceMotion    = false
     @AppStorage("showNotifications")      private var showNotifications = true
+    @AppStorage(SettingsKeys.showInDock)  private var showInDock      = false
 
     var body: some View {
         ScrollView {
@@ -131,10 +132,14 @@ struct SettingsGeneralPane: View {
                             .toggleStyle(.switch).labelsHidden()
                             .onChange(of: launchAtLogin) { _, newValue in
                                 LoginItemController.setEnabled(newValue)
-                                // Re-read the actual state in case the system rejected
-                                // (e.g. user denied in System Settings prompt).
                                 launchAtLogin = LoginItemController.isEnabled
                             }
+                    }
+                    Rectangle().fill(Theme.separator).frame(height: 0.5)
+                    settingsRow(title: "Show in Dock",
+                                help: "Adds a permanent FocusGuard icon to your Dock so you can launch it without finding the menu bar item. Takes effect immediately.") {
+                        Toggle("", isOn: $showInDock)
+                            .toggleStyle(.switch).labelsHidden()
                     }
                 }
 

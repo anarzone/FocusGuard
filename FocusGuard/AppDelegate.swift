@@ -26,11 +26,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
 
+        // Apply the persisted "Show in Dock" preference. When enabled the
+        // app stays in .regular policy so the Dock icon is always visible —
+        // user can launch FocusGuard from the Dock without needing the menu
+        // bar at all.
+        if UserDefaults.standard.bool(forKey: SettingsKeys.showInDock) {
+            NSApp.setActivationPolicy(.regular)
+        }
+
+        // Listen for changes to the toggle so it takes effect immediately
+        // without a relaunch.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applyDockPreference),
+            name: UserDefaults.didChangeNotification,
+            object: nil
+        )
+
         // If the user explicitly launched us (Finder double-click, Spotlight,
         // brew install + open), surface the Home window. If we were started
         // by login items we stay quiet so the menu bar item is the only sign.
         if !launchedAtLogin() {
             openMainWindow(tab: .home)
+        }
+    }
+
+    @objc private func applyDockPreference() {
+        let pref = UserDefaults.standard.bool(forKey: SettingsKeys.showInDock)
+        let current = NSApp.activationPolicy()
+        if pref && current != .regular {
+            NSApp.setActivationPolicy(.regular)
+        } else if !pref && current == .regular && mainWindow == nil {
+            // Only drop the Dock icon when the user has explicitly opted out
+            // AND the main window isn't open (otherwise we'd hide the Dock
+            // icon mid-session, which is weird).
+            NSApp.setActivationPolicy(.accessory)
         }
     }
 
@@ -134,8 +164,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func mainWindowWillClose(_ note: Notification) {
-        // Drop back to accessory: removes Dock icon, app keeps running via
-        // the menu bar item. setActivationPolicy is async-safe to call here.
+        // If the user has opted into a persistent Dock icon, keep the
+        // .regular activation policy on window close. Otherwise drop back to
+        // .accessory: hides the Dock icon, app keeps running via the menu
+        // bar item only.
+        if UserDefaults.standard.bool(forKey: SettingsKeys.showInDock) { return }
         DispatchQueue.main.async {
             NSApp.setActivationPolicy(.accessory)
         }
