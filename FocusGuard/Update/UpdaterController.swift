@@ -26,8 +26,16 @@ final class UpdaterController: ObservableObject {
     private var canCheckObservation: NSKeyValueObservation?
 
     init() {
+        // Don't spin up the live updater inside the unit-test host. Tests
+        // construct AppState (which owns us), and a started updater fires a
+        // scheduled background check that hits the network and — in an
+        // unsigned/headless CI environment — aborts. `startingUpdater: false`
+        // defers all of that; production launch starts normally. XCTest is
+        // only loaded into the process when running tests.
+        let isTesting = NSClassFromString("XCTestCase") != nil
+
         controller = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: !isTesting,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
