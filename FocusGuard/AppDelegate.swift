@@ -13,6 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var didShowMainWindow = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // The unit-test bundle is injected into this same app as its test host,
+        // so this runs during `xcodebuild test`. A headless CI runner can't host
+        // the menu bar, a main window, or `.regular` Dock activation — bringing
+        // them up makes the host "never finish bootstrapping" and abort. Tests
+        // construct the pieces they need directly, so do nothing here under test.
+        if NSClassFromString("XCTestCase") != nil { return }
+
         appState = AppState()
         menuBarController = MenuBarController(
             timerProvider: { [appState = appState!] in
