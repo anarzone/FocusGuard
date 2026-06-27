@@ -23,7 +23,15 @@ Privacy-first: all data lives on your Mac. No network calls.
 brew install --cask anarzone/tap/focusguard
 ```
 
-That's it. Click 🛡 FG in the menu bar to start. Upgrade with `brew upgrade --cask anarzone/tap/focusguard`. Remove with all data via `brew uninstall --cask --zap focusguard`.
+That's it. Click 🛡 FG in the menu bar to start. Remove with all data via `brew uninstall --cask --zap focusguard`.
+
+## Updates
+
+FocusGuard updates itself via [Sparkle](https://sparkle-project.org). It checks for new
+versions in the background and prompts when one is available; you can also check on demand
+from **Settings → About → Check for Updates…**, or turn off automatic checks there. (The
+update check is the only network request FocusGuard makes — your activity data never leaves
+your Mac.) `brew upgrade --cask anarzone/tap/focusguard` still works too.
 
 ## Build from source
 

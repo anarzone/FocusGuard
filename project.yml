@@ -18,6 +18,11 @@ settings:
     CODE_SIGN_ENTITLEMENTS: FocusGuard/Resources/FocusGuard.entitlements
     SWIFT_STRICT_CONCURRENCY: minimal  # tighten to 'complete' once codebase is stable
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.9.0"
+
 targets:
   FocusGuard:
     type: application
@@ -26,6 +31,8 @@ targets:
       - path: FocusGuard
       - path: FocusGuard/Resources/AppIcon.icns
         buildPhase: resources
+    dependencies:
+      - package: Sparkle
     info:
       path: FocusGuard/Resources/Info.plist
       properties:
@@ -44,6 +51,12 @@ targets:
         NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions."
         NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
         NSCalendarsUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
+        # Sparkle auto-update. The appcast is published to GitHub Pages by the
+        # release pipeline; SUPublicEDKey is the EdDSA public key whose private
+        # half signs each release zip (see scripts/release.sh + docs/RELEASING.md).
+        SUFeedURL: "https://anarzone.github.io/FocusGuard/appcast.xml"
+        SUPublicEDKey: "c/Nu7tCDIlzOcOYwu1F71xW8b1fuq5bPcFiO1IBApYs="
+        SUEnableAutomaticChecks: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard

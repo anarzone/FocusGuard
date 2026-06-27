@@ -59,7 +59,7 @@ struct SettingsView: View {
                 case .escalation: SettingsEscalationPane(appState: appState)
                 case .rules:      SettingsRulesPane(appState: appState)
                 case .privacy:    SettingsPrivacyPane(appState: appState)
-                case .about:      SettingsAboutPane()
+                case .about:      SettingsAboutPane(updater: appState.updater)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -260,6 +260,8 @@ struct SettingsPlaceholderPane: View {
 }
 
 struct SettingsAboutPane: View {
+    @ObservedObject var updater: UpdaterController
+
     private var versionString: String {
         let info = Bundle.main.infoDictionary
         let short = info?["CFBundleShortVersionString"] as? String ?? "0.0.0"
@@ -276,11 +278,28 @@ struct SettingsAboutPane: View {
             Text(versionString)
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(.secondary)
-            Text("All data lives on this Mac. Nothing is sent over the network.")
+
+            Button("Check for Updates…") {
+                updater.checkForUpdates()
+            }
+            .controlSize(.regular)
+            .disabled(!updater.canCheckForUpdates)
+            .padding(.top, 8)
+
+            Toggle("Check automatically", isOn: Binding(
+                get: { updater.automaticallyChecksForUpdates },
+                set: { updater.setAutomaticChecks($0) }
+            ))
+            .toggleStyle(.checkbox)
+            .font(.system(size: 11.5))
+            .foregroundStyle(.secondary)
+
+            Text("Your activity data never leaves this Mac. The only network request FocusGuard makes is to check for app updates.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 4)
+                .frame(maxWidth: 320)
+                .padding(.top, 8)
             Spacer()
         }
         .frame(maxWidth: .infinity)
