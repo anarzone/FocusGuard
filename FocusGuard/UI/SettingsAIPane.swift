@@ -65,7 +65,12 @@ struct SettingsAIPane: View {
         .onChange(of: settings.anthropicAuth) { _, _ in
             persist(); refreshSecretState(); testResult = nil
         }
-        .onAppear(perform: refreshSecretState)
+        .onAppear {
+            refreshSecretState()
+            // Auto-verify on open so the banner always reflects working/not —
+            // the user never has to guess or remember to press Test.
+            if settings.enabled && secretSaved && testResult == nil { runTest() }
+        }
     }
 
     // MARK: - Status banner
@@ -77,19 +82,35 @@ struct SettingsAIPane: View {
             return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI insights are off.")
         }
         if !secretSaved {
+            // Guide between the two Anthropic methods: if the other one is
+            // already set up, tell the user to switch instead of re-entering.
+            if let other = otherConfiguredMethod {
+                return Status(symbol: "arrow.triangle.2.circlepath", color: Theme.warning,
+                              text: "No \(secretLabel) yet — but your \(other.label) is saved. Switch Authentication to use it, or add an \(secretLabel) below.")
+            }
             return Status(symbol: "key.fill", color: Theme.warning,
-                          text: "Enabled — add a \(secretLabel.lowercased()) below to start.")
+                          text: "On — add your \(secretLabel) below to start.")
         }
         switch testResult {
         case .success:
             return Status(symbol: "checkmark.seal.fill", color: Theme.focus,
-                          text: "Connected to \(settings.provider.label). Use “Generate insights” on Reports.")
+                          text: "Connected via \(secretLabel) (\(settings.provider.label)). Use “Generate insights” on Reports.")
         case .failure(let message):
             return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
         case nil:
             return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
                           text: "\(secretLabel) saved (\(settings.provider.label)). Run Test to verify.")
         }
+    }
+
+    /// For Anthropic, the *other* auth method when it has a saved credential —
+    /// so the banner can point the user at it instead of asking for a new one.
+    private var otherConfiguredMethod: AnthropicAuthMode? {
+        guard settings.provider == .anthropic else { return nil }
+        let other: AnthropicAuthMode = settings.anthropicAuth == .apiKey ? .subscription : .apiKey
+        var probe = settings
+        probe.anthropicAuth = other
+        return KeychainStore.has(account: probe.keychainAccount) ? other : nil
     }
 
     private var statusBanner: some View {
