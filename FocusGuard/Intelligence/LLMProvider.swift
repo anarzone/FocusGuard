@@ -24,8 +24,13 @@ enum LLMError: LocalizedError {
         case .badURL:
             return "The provider endpoint URL is invalid."
         case .http(let status, let body):
-            // Surface the provider's own error message — it's usually actionable
-            // (bad key, model not found, rate limit). Trim so the UI stays sane.
+            // Rate limiting is common with subscription tokens (much stricter
+            // limits than API keys) — give an actionable message rather than raw JSON.
+            if status == 429 {
+                return "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again. Subscription tokens have much lower limits than API keys."
+            }
+            // Otherwise surface the provider's own error — usually actionable
+            // (bad key, model not found). Trim so the UI stays sane.
             let detail = body.trimmingCharacters(in: .whitespacesAndNewlines)
             let snippet = detail.count > 300 ? String(detail.prefix(300)) + "…" : detail
             return "Request failed (HTTP \(status)).\(snippet.isEmpty ? "" : " \(snippet)")"

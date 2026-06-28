@@ -113,6 +113,11 @@ enum SettingsKeys {
         static let model          = "ai.model"
         static let baseURL        = "ai.baseURL"         // OpenAI-compatible only
         static let anthropicAuth  = "ai.anthropicAuthMode"
+        // Cache the last successful connection test so reopening the pane shows
+        // "Connected" without re-hitting the API (subscription tokens are
+        // rate-limited hard — repeated auto-tests cause 429s).
+        static let lastOKAccount  = "ai.lastVerifiedAccount"
+        static let lastOKAt       = "ai.lastVerifiedAt"  // timeIntervalSince1970
     }
 }
 
