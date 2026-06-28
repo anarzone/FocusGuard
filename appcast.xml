@@ -3,7 +3,16 @@
   <channel>
     <title>FocusGuard</title>
     <link>https://anarzone.github.io/FocusGuard/appcast.xml</link>
-    <description>Updates for FocusGuard. No releases are published through this feed yet.</description>
+    <description>Updates for FocusGuard.</description>
     <language>en</language>
+    <item>
+      <title>FocusGuard 0.2.7</title>
+      <pubDate>Sun, 28 Jun 2026 16:49:19 +0000</pubDate>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>0.2.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>FocusGuard 0.2.7. See the <a href="https://github.com/anarzone/FocusGuard/releases/tag/v0.2.7">release notes</a>.</p>]]></description>
+      <enclosure url="https://github.com/anarzone/FocusGuard/releases/download/v0.2.7/FocusGuard-v0.2.7.zip" type="application/octet-stream" sparkle:edSignature="b3WyJqF++FhE1TDKCXZ91BN1f5g7alxalnVDAsQ6mcIDx2Rb1aG5+6Jttyqu3juVMkUEszeikVWtufNK+BVsBg==" length="3020237" />
+    </item>
   </channel>
 </rss>
