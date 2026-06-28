@@ -18,6 +18,8 @@ name: Release
 #   TAP_PUSH_TOKEN             fine-grained PAT with write access to anarzone/homebrew-tap
 #   APPLE_TEAM_ID              Apple Developer team id
 #   APPLE_SIGN_IDENTITY        cert SHA-1 hash, e.g. AB2E6306E4204F28FF692A59F7DD1E639E99B947
+#   SPARKLE_ED_PRIVATE_KEY     Sparkle EdDSA private key (the base64 string emitted by
+#                              `generate_keys -x`); signs the appcast for in-app updates
 
 on:
   push:
@@ -198,6 +200,56 @@ jobs:
           \`\`\`
 
           (or first-time: \`brew install --cask anarzone/tap/focusguard\`)"
+
+      - name: Sign update + generate Sparkle appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          KEY_FILE="$RUNNER_TEMP/sparkle_ed_key"
+          # The key is base64 with no internal whitespace; strip any stray
+          # newline the secrets UI may have added.
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | tr -d '[:space:]' > "$KEY_FILE"
+
+          SIGN_UPDATE="build/release/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.ver.outputs.tag }}/FocusGuard-${{ steps.ver.outputs.tag }}.zip"
+
+          SIGN_UPDATE="$SIGN_UPDATE" ED_KEY_FILE="$KEY_FILE" \
+            scripts/generate_appcast.sh \
+              "${{ steps.zip.outputs.zip_path }}" \
+              "${{ steps.ver.outputs.version }}" \
+              "${{ github.run_number }}" \
+              "$DOWNLOAD_URL" \
+              build/appcast.xml
+
+          rm -f "$KEY_FILE"
+          echo "----- appcast.xml -----"
+          cat build/appcast.xml
+
+      - name: Publish appcast to gh-pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PAGES_DIR="$RUNNER_TEMP/ghpages"
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+
+          if git ls-remote --exit-code --heads "$REPO_URL" gh-pages >/dev/null 2>&1; then
+            git clone --quiet --branch gh-pages "$REPO_URL" "$PAGES_DIR"
+          else
+            git clone --quiet "$REPO_URL" "$PAGES_DIR"
+            ( cd "$PAGES_DIR" && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true )
+          fi
+
+          cp build/appcast.xml "$PAGES_DIR/appcast.xml"
+          touch "$PAGES_DIR/.nojekyll"   # serve appcast.xml verbatim, skip Jekyll
+
+          cd "$PAGES_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml .nojekyll
+          git commit -q -m "appcast: FocusGuard ${{ steps.ver.outputs.version }}" || echo "appcast unchanged"
+          git push --quiet origin gh-pages
 
       - name: Bump homebrew-tap
         env:

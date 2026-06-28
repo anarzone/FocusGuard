@@ -27,6 +27,11 @@ ZIP_NAME="FocusGuard-$TAG.zip"
 
 cd "$(dirname "$0")/.."
 
+# Monotonic build number for CFBundleVersion + Sparkle's sparkle:version. Both
+# the shipped app and the appcast use this same value so Sparkle can compare
+# versions. (CI uses github.run_number for the same purpose.)
+BUILD=$(git rev-list --count HEAD)
+
 # ----- preflight -----
 if ! git diff --quiet || ! git diff --cached --quiet; then
     echo "Working tree has uncommitted changes. Commit or stash first." >&2
@@ -53,6 +58,7 @@ xcodebuild \
     -allowProvisioningUpdates \
     -derivedDataPath build/release \
     MARKETING_VERSION="$VERSION" \
+    CURRENT_PROJECT_VERSION="$BUILD" \
     -quiet \
     build
 
@@ -99,6 +105,36 @@ brew upgrade --cask anarzone/tap/focusguard
 \`\`\`
 
 (or first-time: \`brew install --cask anarzone/tap/focusguard\`)"
+
+# ----- Sparkle appcast -----
+# Sign the zip + render appcast.xml, then publish it to the gh-pages branch so
+# https://anarzone.github.io/FocusGuard/appcast.xml serves the new version to
+# in-app updaters. The private EdDSA key is read from the login keychain
+# (stored there by Sparkle's generate_keys). See docs/RELEASING.md.
+echo "==> Generating + publishing Sparkle appcast…"
+SIGN_UPDATE="build/release/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+[ -x "$SIGN_UPDATE" ] || { echo "sign_update missing at $SIGN_UPDATE" >&2; exit 1; }
+DOWNLOAD_URL="https://github.com/anarzone/FocusGuard/releases/download/$TAG/$ZIP_NAME"
+SIGN_UPDATE="$SIGN_UPDATE" scripts/generate_appcast.sh \
+    "$ZIP" "$VERSION" "$BUILD" "$DOWNLOAD_URL" build/appcast.xml
+
+PAGES_DIR=$(mktemp -d)
+ORIGIN_URL=$(git remote get-url origin)
+if git ls-remote --exit-code --heads "$ORIGIN_URL" gh-pages >/dev/null 2>&1; then
+    git clone --quiet --branch gh-pages "$ORIGIN_URL" "$PAGES_DIR"
+else
+    git clone --quiet "$ORIGIN_URL" "$PAGES_DIR"
+    ( cd "$PAGES_DIR" && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true )
+fi
+cp build/appcast.xml "$PAGES_DIR/appcast.xml"
+touch "$PAGES_DIR/.nojekyll"   # serve appcast.xml verbatim, skip Jekyll
+(
+    cd "$PAGES_DIR"
+    git add appcast.xml .nojekyll
+    git commit -q -m "appcast: FocusGuard $VERSION" || echo "    (appcast unchanged)"
+    git push --quiet origin gh-pages
+)
+rm -rf "$PAGES_DIR"
 
 # ----- update tap -----
 TAP_DIR="${TAP_DIR:-$HOME/Projects/Own/homebrew-tap}"

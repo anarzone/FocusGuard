@@ -19,6 +19,7 @@ final class AppState {
     let patternDetector: PatternDetector
     let breakManager: BreakManager
     let breakOverlay: BreakOverlayController
+    let updater: UpdaterController
     private let sessionEndChoice = SessionEndChoiceController()
 
     init() {
@@ -58,6 +59,8 @@ final class AppState {
         self.patternDetector = PatternDetector(presenter: presenter)
         self.breakManager = BreakManager()
         self.breakOverlay = BreakOverlayController()
+        // Starts Sparkle's updater + scheduled background checks.
+        self.updater = UpdaterController()
 
         // Hydrate engine config from persisted prefs.
         let defaults = UserDefaults.standard

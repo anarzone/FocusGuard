@@ -34,5 +34,11 @@
 	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://anarzone.github.io/FocusGuard/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>c/Nu7tCDIlzOcOYwu1F71xW8b1fuq5bPcFiO1IBApYs=</string>
 </dict>
 </plist>
