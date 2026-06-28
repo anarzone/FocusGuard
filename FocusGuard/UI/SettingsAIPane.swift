@@ -28,13 +28,20 @@ struct SettingsAIPane: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
 
-                sectionHeader("Enable", topPad: 24)
+                statusBanner
+
+                sectionHeader("Enable", topPad: 20)
                 groupCard {
                     settingsRow(title: "Generate AI insights",
                                 help: "Adds a “Generate insights” button to Reports. Data is sent only when you click it.") {
                         Toggle("", isOn: $settings.enabled)
                             .toggleStyle(.switch).labelsHidden()
-                            .onChange(of: settings.enabled) { _, _ in persist() }
+                            .onChange(of: settings.enabled) { _, on in
+                                persist()
+                                // Give immediate feedback: verify the saved
+                                // credential the moment AI is switched on.
+                                if on && secretSaved { runTest() } else { testResult = nil }
+                            }
                     }
                 }
 
@@ -59,6 +66,49 @@ struct SettingsAIPane: View {
             persist(); refreshSecretState(); testResult = nil
         }
         .onAppear(perform: refreshSecretState)
+    }
+
+    // MARK: - Status banner
+
+    private struct Status { let symbol: String; let color: Color; let text: String }
+
+    private var status: Status {
+        if !settings.enabled {
+            return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI insights are off.")
+        }
+        if !secretSaved {
+            return Status(symbol: "key.fill", color: Theme.warning,
+                          text: "Enabled — add a \(secretLabel.lowercased()) below to start.")
+        }
+        switch testResult {
+        case .success:
+            return Status(symbol: "checkmark.seal.fill", color: Theme.focus,
+                          text: "Connected to \(settings.provider.label). Use “Generate insights” on Reports.")
+        case .failure(let message):
+            return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
+        case nil:
+            return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
+                          text: "\(secretLabel) saved (\(settings.provider.label)). Run Test to verify.")
+        }
+    }
+
+    private var statusBanner: some View {
+        HStack(spacing: 8) {
+            if testing {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: status.symbol).foregroundStyle(status.color)
+            }
+            Text(testing ? "Checking connection…" : status.text)
+                .font(.system(size: 12)).foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 9).padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background((testing ? Color.gray : status.color).opacity(0.12),
+                    in: RoundedRectangle(cornerRadius: 8))
+        .padding(.top, 16)
     }
 
     // MARK: - Provider
@@ -101,7 +151,7 @@ struct SettingsAIPane: View {
         groupCard {
             if settings.provider == .anthropic {
                 settingsRow(title: "Authentication",
-                            help: anthropicAuthHelp) {
+                            help: anthropicAuthHelp + " Only the selected method is used for requests.") {
                     Picker("", selection: $settings.anthropicAuth) {
                         ForEach(AnthropicAuthMode.allCases) { Text($0.label).tag($0) }
                     }
@@ -231,6 +281,9 @@ struct SettingsAIPane: View {
         secret = ""
         refreshSecretState()
         testResult = nil
+        // Immediately verify so the user gets a clear Connected ✓ / error
+        // signal right after saving — no guessing whether it works.
+        if settings.enabled { runTest() }
     }
 
     private func runTest() {
