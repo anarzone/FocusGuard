@@ -38,9 +38,13 @@ struct SettingsAIPane: View {
                             .toggleStyle(.switch).labelsHidden()
                             .onChange(of: settings.enabled) { _, on in
                                 persist()
-                                // Give immediate feedback: verify the saved
-                                // credential the moment AI is switched on.
-                                if on && secretSaved { runTest() } else { testResult = nil }
+                                // Feedback on enable — but reuse a recent cached
+                                // result instead of always hitting the API.
+                                if on && secretSaved {
+                                    if recentlyVerified { testResult = .success } else { runTest() }
+                                } else {
+                                    testResult = nil
+                                }
                             }
                     }
                 }
@@ -67,9 +71,10 @@ struct SettingsAIPane: View {
         }
         .onAppear {
             refreshSecretState()
-            // Auto-verify on open so the banner always reflects working/not —
-            // the user never has to guess or remember to press Test.
-            if settings.enabled && secretSaved && testResult == nil { runTest() }
+            // Show the cached "Connected" result without a network call.
+            // Crucially we do NOT auto-test on every appear — subscription
+            // tokens are tightly rate-limited and repeated tests cause 429s.
+            if settings.enabled && secretSaved && recentlyVerified { testResult = .success }
         }
     }
 
@@ -318,11 +323,34 @@ struct SettingsAIPane: View {
                 _ = try await provider.complete(system: "Reply with the single word: ok",
                                                 user: "ping", maxTokens: 5)
                 testResult = .success
+                markVerified(true)
             } catch {
                 let msg = (error as? LLMError)?.localizedDescription ?? error.localizedDescription
                 testResult = .failure(msg)
+                markVerified(false)
             }
             testing = false
+        }
+    }
+
+    /// True if the current credential was successfully verified recently — used
+    /// to show "Connected" on reopen without a fresh (rate-limited) API call.
+    private var recentlyVerified: Bool {
+        let d = UserDefaults.standard
+        guard d.string(forKey: SettingsKeys.AI.lastOKAccount) == settings.keychainAccount else { return false }
+        let at = d.double(forKey: SettingsKeys.AI.lastOKAt)
+        return at > 0 && (Date().timeIntervalSince1970 - at) < 24 * 3600
+    }
+
+    private func markVerified(_ ok: Bool) {
+        let d = UserDefaults.standard
+        if ok {
+            d.set(settings.keychainAccount, forKey: SettingsKeys.AI.lastOKAccount)
+            d.set(Date().timeIntervalSince1970, forKey: SettingsKeys.AI.lastOKAt)
+        } else if d.string(forKey: SettingsKeys.AI.lastOKAccount) == settings.keychainAccount {
+            // Don't keep showing a stale green badge once it starts failing.
+            d.removeObject(forKey: SettingsKeys.AI.lastOKAccount)
+            d.removeObject(forKey: SettingsKeys.AI.lastOKAt)
         }
     }
 
