@@ -33,6 +33,24 @@ from **Settings → About → Check for Updates…**, or turn off automatic chec
 update check is the only network request FocusGuard makes — your activity data never leaves
 your Mac.) `brew upgrade --cask anarzone/tap/focusguard` still works too.
 
+## AI Insights (optional)
+
+FocusGuard can generate short, AI-written focus tips from your report data. It's
+**off by default**. Turn it on in **Settings → AI**, choose a provider, and add a
+credential:
+
+- **Anthropic (Claude)** — paste a console API key, **or** select *Subscription
+  token* and paste a token from `claude setup-token` to use a Claude Pro/Max plan.
+- **OpenAI** — paste an API key.
+- **OpenAI-compatible** — set a base URL (e.g. `http://localhost:11434` for
+  Ollama) plus key, to use OpenRouter, Groq, LM Studio, and more.
+
+Credentials are stored in the macOS **Keychain**. A request happens **only** when
+you click **Generate insights** on the Reports view, and it sends only an
+aggregated summary — focus minutes, percentages, streaks, and the names/hosts of
+your top distractions — never window titles, full URLs, or raw activity. The
+exact payload is previewable in Settings → AI.
+
 ## Build from source
 
 Requires macOS 14+, Xcode 16+, and [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).

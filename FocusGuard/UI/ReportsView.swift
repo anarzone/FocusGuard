@@ -40,6 +40,7 @@ struct ReportsView: View {
                 timelineSection
                 topAppsSection
                 topDistractionsSection
+                aiInsightsSection
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 28)
@@ -164,6 +165,29 @@ struct ReportsView: View {
         trend = insights.focusTrend(from: from, to: to)
         peakHour = insights.peakFocusHour()
         topRegression = insights.topRegression(from: from, to: to)
+    }
+
+    // MARK: - AI insights
+
+    private var rangeLabelText: String {
+        if case .custom = range { return customLabel }
+        return range.label
+    }
+
+    private var aiInsightsSection: some View {
+        AIInsightsCard(
+            insights: appState.insights,
+            isConfigured: appState.insights.isConfigured,
+            onGenerate: {
+                appState.insights.generate(
+                    rangeLabel: rangeLabelText,
+                    breakdown: breakdown,
+                    distractions: distractions,
+                    currentStreak: appState.currentStreak,
+                    weeklyAverageFocusSeconds: appState.weeklyAverageFocusSeconds
+                )
+            }
+        )
     }
 
     // MARK: - Highlights row
@@ -732,5 +756,88 @@ struct ReportsView: View {
         let f = DateFormatter()
         f.dateFormat = "MMM d, yyyy"
         return f.string(from: date)
+    }
+}
+
+// MARK: - AI insights card
+
+/// On-demand AI coaching card. Observes the shared `AIInsightsViewModel`; the
+/// network call only fires when the user taps Generate.
+private struct AIInsightsCard: View {
+    @ObservedObject var insights: AIInsightsViewModel
+    let isConfigured: Bool
+    let onGenerate: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("AI insights", systemImage: "sparkles")
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                if isConfigured {
+                    Button(action: onGenerate) {
+                        Text(buttonTitle)
+                    }
+                    .disabled(insights.state == .loading)
+                }
+            }
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).stroke(Theme.separator, lineWidth: 0.5))
+    }
+
+    private var buttonTitle: String {
+        switch insights.state {
+        case .loading:            return "Generating…"
+        case .loaded, .failed:    return "Regenerate"
+        case .idle:               return "Generate insights"
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if !isConfigured {
+            Text("Turn on AI Insights in Settings → AI to get personalized focus tips generated from this report.")
+                .font(.system(size: 12)).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            switch insights.state {
+            case .idle:
+                Text("Generate 2–3 tips based on the data above. A summary is sent to your AI provider only when you click.")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .loading:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Analyzing your focus data…")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+            case .loaded(let tips):
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(tips.enumerated()), id: \.offset) { _, tip in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "sparkle")
+                                .font(.system(size: 11)).foregroundStyle(Theme.focus)
+                                .padding(.top, 2)
+                            Text(tip)
+                                .font(.system(size: 12.5)).foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            case .failed(let message):
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11)).foregroundStyle(Theme.distraction)
+                        .padding(.top, 2)
+                    Text(message)
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 }

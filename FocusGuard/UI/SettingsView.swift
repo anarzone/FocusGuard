@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, sessions, escalation, rules, privacy, about
+    case general, sessions, escalation, rules, ai, privacy, about
     var id: String { rawValue }
 
     var label: String {
@@ -10,6 +10,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sessions:   return "Sessions"
         case .escalation: return "Escalation"
         case .rules:      return "Rules"
+        case .ai:         return "AI"
         case .privacy:    return "Privacy"
         case .about:      return "About"
         }
@@ -21,6 +22,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sessions:   return "timer"
         case .escalation: return "bell.badge.fill"
         case .rules:      return "list.bullet.rectangle.fill"
+        case .ai:         return "sparkles"
         case .privacy:    return "lock.fill"
         case .about:      return "info.circle.fill"
         }
@@ -32,6 +34,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sessions:   return Theme.focus
         case .escalation: return Theme.warning
         case .rules:      return Color(red: 94/255, green: 92/255, blue: 230/255)
+        case .ai:         return Color(red: 175/255, green: 82/255, blue: 222/255)
         case .privacy:    return Color(red: 26/255, green: 115/255, blue: 232/255)
         case .about:      return Theme.distraction
         }
@@ -58,6 +61,7 @@ struct SettingsView: View {
                 case .sessions:   SettingsSessionsPane(appState: appState)
                 case .escalation: SettingsEscalationPane(appState: appState)
                 case .rules:      SettingsRulesPane(appState: appState)
+                case .ai:         SettingsAIPane()
                 case .privacy:    SettingsPrivacyPane(appState: appState)
                 case .about:      SettingsAboutPane(updater: appState.updater)
                 }
@@ -294,7 +298,7 @@ struct SettingsAboutPane: View {
             .font(.system(size: 11.5))
             .foregroundStyle(.secondary)
 
-            Text("Your activity data never leaves this Mac. The only network request FocusGuard makes is to check for app updates.")
+            Text("Your activity data stays on this Mac. FocusGuard only reaches the network to check for app updates — and, if you turn on AI Insights, to send an aggregated summary when you click Generate.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)

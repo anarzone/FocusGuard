@@ -103,6 +103,17 @@ enum SettingsKeys {
         /// extended. (Future use; not yet wired into the overlay.)
         static let strictMode = "breaks.strictMode"
     }
+
+    /// AI focus-insights settings. Non-secret config lives here; the API key /
+    /// subscription token is stored in the Keychain (see KeychainStore), never
+    /// in UserDefaults.
+    enum AI {
+        static let enabled        = "ai.enabled"
+        static let provider       = "ai.provider"        // ProviderKind.rawValue
+        static let model          = "ai.model"
+        static let baseURL        = "ai.baseURL"         // OpenAI-compatible only
+        static let anthropicAuth  = "ai.anthropicAuthMode"
+    }
 }
 
 enum GoalDefaults {
