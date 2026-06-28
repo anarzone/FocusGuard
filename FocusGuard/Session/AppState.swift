@@ -20,6 +20,7 @@ final class AppState {
     let breakManager: BreakManager
     let breakOverlay: BreakOverlayController
     let updater: UpdaterController
+    let insights = AIInsightsViewModel()
     private let sessionEndChoice = SessionEndChoiceController()
 
     init() {
