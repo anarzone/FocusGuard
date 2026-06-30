@@ -39,8 +39,8 @@ FocusGuard can generate short, AI-written focus tips from your report data. It's
 **off by default**. Turn it on in **Settings → AI**, choose a provider, and add a
 credential:
 
-- **Anthropic (Claude)** — paste a console API key, **or** select *Subscription
-  token* and paste a token from `claude setup-token` to use a Claude Pro/Max plan.
+- **Anthropic (Claude)** — paste a console API key (`sk-ant-…`) from
+  console.anthropic.com.
 - **OpenAI** — paste an API key.
 - **OpenAI-compatible** — set a base URL (e.g. `http://localhost:11434` for
   Ollama) plus key, to use OpenRouter, Groq, LM Studio, and more.
