@@ -1,40 +1,26 @@
 import Foundation
 
-/// Calls Anthropic's Messages API (`POST /v1/messages`). Supports two auth modes:
-///
-/// - `.apiKey`: a console API key sent via the `x-api-key` header.
-/// - `.subscription`: an OAuth token from Claude's `claude setup-token`, sent as
-///   `Authorization: Bearer …` plus the `anthropic-beta: oauth-2025-04-20`
-///   header — the same mechanism Claude Code uses for Pro/Max subscriptions.
+/// Calls Anthropic's Messages API (`POST /v1/messages`) with a console API key
+/// (`x-api-key`). Subscription / OAuth tokens are intentionally not supported —
+/// Anthropic gates and rate-limits those to its own clients (Claude Code), so
+/// they're unreliable from a third-party app.
 struct AnthropicProvider: LLMProvider {
-    enum Auth: Sendable {
-        case apiKey(String)
-        case subscription(token: String)
-    }
-
     static let defaultModel = "claude-sonnet-4-6"
     private static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
     private static let version = "2023-06-01"
 
     let model: String
-    let auth: Auth
+    let apiKey: String
     var session: URLSession = .shared
 
     func complete(system: String, user: String, maxTokens: Int) async throws -> String {
+        guard !apiKey.isEmpty else { throw LLMError.missingCredential }
+
         var req = URLRequest(url: Self.endpoint)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(Self.version, forHTTPHeaderField: "anthropic-version")
-
-        switch auth {
-        case .apiKey(let key):
-            guard !key.isEmpty else { throw LLMError.missingCredential }
-            req.setValue(key, forHTTPHeaderField: "x-api-key")
-        case .subscription(let token):
-            guard !token.isEmpty else { throw LLMError.missingCredential }
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        }
+        req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
 
         let body: [String: Any] = [
             "model": model,

@@ -66,14 +66,10 @@ struct SettingsAIPane: View {
             refreshSecretState()
             testResult = nil
         }
-        .onChange(of: settings.anthropicAuth) { _, _ in
-            persist(); refreshSecretState(); testResult = nil
-        }
         .onAppear {
             refreshSecretState()
-            // Show the cached "Connected" result without a network call.
-            // Crucially we do NOT auto-test on every appear — subscription
-            // tokens are tightly rate-limited and repeated tests cause 429s.
+            // Show the cached "Connected" result without a network call. We do
+            // NOT auto-test on every appear — that previously spammed the API.
             if settings.enabled && secretSaved && recentlyVerified { testResult = .success }
         }
     }
@@ -87,35 +83,19 @@ struct SettingsAIPane: View {
             return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI insights are off.")
         }
         if !secretSaved {
-            // Guide between the two Anthropic methods: if the other one is
-            // already set up, tell the user to switch instead of re-entering.
-            if let other = otherConfiguredMethod {
-                return Status(symbol: "arrow.triangle.2.circlepath", color: Theme.warning,
-                              text: "No \(secretLabel) yet — but your \(other.label) is saved. Switch Authentication to use it, or add an \(secretLabel) below.")
-            }
             return Status(symbol: "key.fill", color: Theme.warning,
-                          text: "On — add your \(secretLabel) below to start.")
+                          text: "On — add your API key below to start.")
         }
         switch testResult {
         case .success:
             return Status(symbol: "checkmark.seal.fill", color: Theme.focus,
-                          text: "Connected via \(secretLabel) (\(settings.provider.label)). Use “Generate insights” on Reports.")
+                          text: "Connected to \(settings.provider.label). Use “Generate insights” on Reports.")
         case .failure(let message):
             return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
         case nil:
             return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
-                          text: "\(secretLabel) saved (\(settings.provider.label)). Run Test to verify.")
+                          text: "API key saved (\(settings.provider.label)). Run Test to verify.")
         }
-    }
-
-    /// For Anthropic, the *other* auth method when it has a saved credential —
-    /// so the banner can point the user at it instead of asking for a new one.
-    private var otherConfiguredMethod: AnthropicAuthMode? {
-        guard settings.provider == .anthropic else { return nil }
-        let other: AnthropicAuthMode = settings.anthropicAuth == .apiKey ? .subscription : .apiKey
-        var probe = settings
-        probe.anthropicAuth = other
-        return KeychainStore.has(account: probe.keychainAccount) ? other : nil
     }
 
     private var statusBanner: some View {
@@ -175,19 +155,8 @@ struct SettingsAIPane: View {
     private var credentialSection: some View {
         sectionHeader("Credentials")
         groupCard {
-            if settings.provider == .anthropic {
-                settingsRow(title: "Authentication",
-                            help: anthropicAuthHelp + " Only the selected method is used for requests.") {
-                    Picker("", selection: $settings.anthropicAuth) {
-                        ForEach(AnthropicAuthMode.allCases) { Text($0.label).tag($0) }
-                    }
-                    .labelsHidden().pickerStyle(.menu).frame(width: 180)
-                }
-                Rectangle().fill(Theme.separator).frame(height: 0.5)
-            }
-
-            settingsRow(title: secretLabel,
-                        help: secretSaved ? "Saved to your Keychain." : "Stored only in the macOS Keychain — never synced or logged.") {
+            settingsRow(title: "API key",
+                        help: secretSaved ? "Saved to your Keychain." : keyHelp) {
                 HStack(spacing: 8) {
                     SecureField(secretSaved ? "••••••••" : "Paste here", text: $secret)
                         .textFieldStyle(.roundedBorder).frame(width: 200)
@@ -265,19 +234,12 @@ struct SettingsAIPane: View {
 
     // MARK: - Helpers
 
-    private var secretLabel: String {
+    private var keyHelp: String {
         switch settings.provider {
-        case .anthropic:
-            return settings.anthropicAuth == .subscription ? "Subscription token" : "API key"
-        case .openAI, .openAICompatible:
-            return "API key"
+        case .anthropic:        return "A key from console.anthropic.com (sk-ant-…). Stored only in your Keychain."
+        case .openAI:           return "An OpenAI API key (sk-…). Stored only in your Keychain."
+        case .openAICompatible: return "The API key for your endpoint. Stored only in your Keychain."
         }
-    }
-
-    private var anthropicAuthHelp: String {
-        settings.anthropicAuth == .subscription
-            ? "Use a Claude Pro/Max subscription. Generate a token with `claude setup-token` and paste it below."
-            : "A console API key from console.anthropic.com (pay-as-you-go)."
     }
 
     private var examplePayload: String {

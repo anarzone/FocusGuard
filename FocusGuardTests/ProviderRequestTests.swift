@@ -46,10 +46,10 @@ final class ProviderRequestTests: XCTestCase {
         StubURLProtocol.reset()
     }
 
-    func test_anthropic_apiKeyMode_setsXApiKeyHeader() async throws {
+    func test_anthropic_apiKey_setsXApiKeyHeader() async throws {
         StubURLProtocol.responseBody = #"{"content":[{"type":"text","text":"hello tips"}]}"#.data(using: .utf8)!
         let provider = AnthropicProvider(model: "claude-sonnet-4-6",
-                                         auth: .apiKey("sk-test-123"),
+                                         apiKey: "sk-test-123",
                                          session: stubbedSession())
         let text = try await provider.complete(system: "s", user: "u", maxTokens: 10)
 
@@ -59,19 +59,6 @@ final class ProviderRequestTests: XCTestCase {
         XCTAssertEqual(req.value(forHTTPHeaderField: "x-api-key"), "sk-test-123")
         XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-version"), "2023-06-01")
         XCTAssertNil(req.value(forHTTPHeaderField: "Authorization"))
-    }
-
-    func test_anthropic_subscriptionMode_setsBearerAndOAuthBeta() async throws {
-        StubURLProtocol.responseBody = #"{"content":[{"type":"text","text":"ok"}]}"#.data(using: .utf8)!
-        let provider = AnthropicProvider(model: "claude-sonnet-4-6",
-                                         auth: .subscription(token: "oauth-tok"),
-                                         session: stubbedSession())
-        _ = try await provider.complete(system: "s", user: "u", maxTokens: 10)
-
-        let req = try XCTUnwrap(StubURLProtocol.lastRequest)
-        XCTAssertEqual(req.value(forHTTPHeaderField: "Authorization"), "Bearer oauth-tok")
-        XCTAssertEqual(req.value(forHTTPHeaderField: "anthropic-beta"), "oauth-2025-04-20")
-        XCTAssertNil(req.value(forHTTPHeaderField: "x-api-key"))
     }
 
     func test_openAI_hitsChatCompletionsWithBearer() async throws {
@@ -101,7 +88,7 @@ final class ProviderRequestTests: XCTestCase {
     func test_httpError_surfacesProviderMessage() async {
         StubURLProtocol.statusCode = 401
         StubURLProtocol.responseBody = #"{"error":{"message":"invalid x-api-key"}}"#.data(using: .utf8)!
-        let provider = AnthropicProvider(model: "m", auth: .apiKey("bad"),
+        let provider = AnthropicProvider(model: "m", apiKey: "bad",
                                          session: stubbedSession())
         do {
             _ = try await provider.complete(system: "s", user: "u", maxTokens: 10)
@@ -118,7 +105,7 @@ final class ProviderRequestTests: XCTestCase {
     }
 
     func test_emptyCredential_throwsMissingCredential() async {
-        let provider = AnthropicProvider(model: "m", auth: .apiKey(""), session: stubbedSession())
+        let provider = AnthropicProvider(model: "m", apiKey: "", session: stubbedSession())
         do {
             _ = try await provider.complete(system: "s", user: "u", maxTokens: 10)
             XCTFail("expected an error")

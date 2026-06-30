@@ -112,7 +112,6 @@ enum SettingsKeys {
         static let provider       = "ai.provider"        // ProviderKind.rawValue
         static let model          = "ai.model"
         static let baseURL        = "ai.baseURL"         // OpenAI-compatible only
-        static let anthropicAuth  = "ai.anthropicAuthMode"
         // Cache the last successful connection test so reopening the pane shows
         // "Connected" without re-hitting the API (subscription tokens are
         // rate-limited hard — repeated auto-tests cause 429s).
