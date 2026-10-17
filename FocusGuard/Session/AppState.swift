@@ -24,7 +24,6 @@ final class AppState {
     /// Summary of the session that just ended. The menu shows it until the
     /// user starts a break or another session, or it goes stale.
     var recap: SessionRecap?
-    private let sessionEndChoice = SessionEndChoiceController()
 
     init() {
         let schema = Schema([
@@ -127,14 +126,6 @@ final class AppState {
                 focusMinutes: focusMin,
                 focusPercent: pct
             )
-            // Surface the "take a break" choice sheet for any session that
-            // had a planned duration (the natural pomodoro shape). Manual
-            // sessions ended via the Stop button skip the prompt — most users
-            // who hit Stop are intentionally walking away.
-            let autoPrompt = UserDefaults.standard.object(forKey: SettingsKeys.Breaks.autoPromptAfterSession) as? Bool ?? true
-            if session.plannedDurationMinutes != nil && autoPrompt {
-                self.presentSessionEndChoice(for: session, focusMinutes: focusMin)
-            }
         }
 
         // Wire break overlay buttons → BreakManager actions.
@@ -326,24 +317,6 @@ final class AppState {
         case ..<105: return 15
         default:     return 20
         }
-    }
-
-    private func presentSessionEndChoice(for session: Session, focusMinutes: Int) {
-        let plannedMin = session.plannedDurationMinutes ?? 25
-        let breakMin = Self.suggestedBreakMinutes(forSessionMinutes: plannedMin)
-        sessionEndChoice.present(
-            completedLabel: session.label,
-            focusMinutes: focusMinutes,
-            suggestedBreakMinutes: breakMin,
-            suggestedNextSessionMinutes: plannedMin,
-            onTakeBreak: { [weak self] minutes in
-                self?.startBreak(durationMinutes: minutes)
-            },
-            onStartNew: { [weak self] minutes, label in
-                self?.sessionManager.startSession(label: label, plannedDurationMinutes: minutes)
-            },
-            onDismiss: {}
-        )
     }
 
     /// Public so menu-bar/popover code can also start a break manually later.
