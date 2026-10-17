@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var appState: AppState!
-    private var menuBarController: MenuBarController!
+    private var menuBarController: MenuBarController?
     private var mainWindow: NSWindow?
     private var mainWindowTab: MainTab?
     /// Tracks whether the user has interacted with the app since launch.
@@ -22,14 +22,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         appState = AppState()
         menuBarController = MenuBarController(
-            timerProvider: { [appState = appState!] in
-                Self.menuBarTimer(from: appState)
-            }
+            glyphProvider: { [appState = appState!] in appState.statusGlyphState }
         ) { [weak self, appState = appState!] in
             MenuBarView(
                 permissions: appState.permissions,
                 appState: appState,
-                onOpenMain: { tab in self?.openMainWindow(tab: tab) }
+                onOpenMain: { tab in self?.openMainWindow(tab: tab) },
+                dismiss: { self?.menuBarController?.close() }
             )
         }
 
@@ -69,25 +68,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // icon mid-session, which is weird).
             NSApp.setActivationPolicy(.accessory)
         }
-    }
-
-    /// Snapshot of what the menu-bar countdown should display. Break wins
-    /// over session because a break overlay/sticky timer is the user's
-    /// active intent at that moment.
-    @MainActor
-    private static func menuBarTimer(from appState: AppState) -> MenuBarTimer? {
-        if let state = appState.breakManager.current {
-            return MenuBarTimer(kind: .breakRunning,
-                                remainingSeconds: Int(state.remaining()))
-        }
-        if let session = appState.sessionManager.currentSession,
-           let planned = session.plannedDurationMinutes {
-            let elapsed = appState.sessionManager.runningSeconds(for: session)
-            let remaining = Int(TimeInterval(planned * 60) - elapsed)
-            let kind: MenuBarTimer.Kind = session.pausedAt == nil ? .session : .sessionPaused
-            return MenuBarTimer(kind: kind, remainingSeconds: max(0, remaining))
-        }
-        return nil
     }
 
     /// Best-effort check: are we being started as a login item, or did the

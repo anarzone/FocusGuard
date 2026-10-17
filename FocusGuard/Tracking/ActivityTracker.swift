@@ -20,10 +20,22 @@ struct ActivitySnapshot: Equatable {
 @Observable
 final class ActivityTracker {
     private(set) var currentSnapshot: ActivitySnapshot?
+    /// Most recent app classified as focus — where "Back to work" returns to.
+    private(set) var lastFocusBundleId: String?
 
     /// Set by `SessionManager` when a focus session starts/stops. Newly created
     /// `ActivityEvent`s pick up this association at insert time.
-    var currentSession: Session?
+    var currentSession: Session? {
+        didSet {
+            // Split the in-flight event at the session boundary (start, pause,
+            // resume, stop). Otherwise the app you're already in when a
+            // session starts keeps extending an event with no session, and
+            // that time never counts toward it.
+            guard oldValue?.id != currentSession?.id, let event = currentEvent else { return }
+            event.endedAt = .now
+            currentEvent = nil
+        }
+    }
 
     /// Optional callback invoked every tick. SessionManager hooks this to
     /// enforce planned-duration auto-stop and to feed the escalation engine.
@@ -126,6 +138,9 @@ final class ActivityTracker {
             : nil
         let classification = classifier.classify(bundleId: bundleId, windowTitle: title, url: url)
         let now = Date()
+        if classification == .focus, bundleId != Bundle.main.bundleIdentifier {
+            lastFocusBundleId = bundleId
+        }
 
         currentSnapshot = ActivitySnapshot(
             bundleIdentifier: bundleId,

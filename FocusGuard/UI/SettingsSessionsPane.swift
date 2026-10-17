@@ -16,7 +16,6 @@ struct SettingsSessionsPane: View {
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
 
-    @AppStorage(SettingsKeys.Breaks.autoPromptAfterSession) private var breakAutoPrompt = true
     @AppStorage(SettingsKeys.Breaks.strictMode)             private var breakStrictMode = false
 
     @AppStorage(SettingsKeys.SystemFocus.enabled)    private var systemFocusEnabled = false
@@ -86,12 +85,6 @@ struct SettingsSessionsPane: View {
 
                 sectionHeader("Breaks", topPad: 24)
                 groupCard {
-                    row(title: "Prompt for a break after each session",
-                        help: "When a session's planned timer hits zero, show a sheet to start a break or jump straight into another session. Manual stops never trigger the prompt.") {
-                        Toggle("", isOn: $breakAutoPrompt)
-                            .toggleStyle(.switch).labelsHidden()
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
                     row(title: "Strict mode (no skipping)",
                         help: "When on, the break overlay can only be extended — Skip and Hide are disabled. Helps if you tend to skip your way through every break.") {
                         Toggle("", isOn: $breakStrictMode)

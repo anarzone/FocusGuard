@@ -55,7 +55,6 @@ enum Constants {
 
 /// Centralised UserDefaults keys. Avoids stringly-typed scatter across the codebase.
 enum SettingsKeys {
-    static let menuBarIconStyle      = "menuBarIconStyle"
     static let reduceMotion          = "reduceMotion"
     static let showNotifications     = "showNotifications"
     static let retentionDays         = "retentionDays"
@@ -96,9 +95,6 @@ enum SettingsKeys {
     }
 
     enum Breaks {
-        /// When true (default), session-end shows the break-or-skip prompt.
-        /// When false, sessions just stop quietly with the existing notification.
-        static let autoPromptAfterSession = "breaks.autoPromptAfterSession"
         /// When true, the break overlay can't be skipped or hidden — only
         /// extended. (Future use; not yet wired into the overlay.)
         static let strictMode = "breaks.strictMode"

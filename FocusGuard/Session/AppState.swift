@@ -21,7 +21,9 @@ final class AppState {
     let breakOverlay: BreakOverlayController
     let updater: UpdaterController
     let insights = AIInsightsViewModel()
-    private let sessionEndChoice = SessionEndChoiceController()
+    /// Summary of the session that just ended. The menu shows it until the
+    /// user starts a break or another session, or it goes stale.
+    var recap: SessionRecap?
 
     init() {
         let schema = Schema([
@@ -106,13 +108,15 @@ final class AppState {
         }
 
         // Session boundaries: reset escalation, prompt for break, send notif.
-        manager.onSessionStarted = {
+        manager.onSessionStarted = { [weak self] in
+            self?.recap = nil
             SystemFocusBridge.onSessionStarted()
         }
         manager.onSessionEnded = { [weak engine, weak self] session in
             engine?.resetForSessionEnd()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
+            self.recap = SessionRecap(session: session)
             let breakdown = ReportBuilder(context: context)
                 .breakdown(from: session.startedAt, to: session.endedAt ?? .now)
             let focusMin = Int(breakdown.focus / 60)
@@ -122,14 +126,6 @@ final class AppState {
                 focusMinutes: focusMin,
                 focusPercent: pct
             )
-            // Surface the "take a break" choice sheet for any session that
-            // had a planned duration (the natural pomodoro shape). Manual
-            // sessions ended via the Stop button skip the prompt — most users
-            // who hit Stop are intentionally walking away.
-            let autoPrompt = UserDefaults.standard.object(forKey: SettingsKeys.Breaks.autoPromptAfterSession) as? Bool ?? true
-            if session.plannedDurationMinutes != nil && autoPrompt {
-                self.presentSessionEndChoice(for: session, focusMinutes: focusMin)
-            }
         }
 
         // Wire break overlay buttons → BreakManager actions.
@@ -314,7 +310,7 @@ final class AppState {
 
     /// Pomodoro-style scale: 25→5, 50→10, 90→20. Falls back to 5 for tiny
     /// custom sessions, 20 for anything > 90.
-    static func suggestedBreakMinutes(forSessionMinutes mins: Int) -> Int {
+    nonisolated static func suggestedBreakMinutes(forSessionMinutes mins: Int) -> Int {
         switch mins {
         case ..<35:  return 5
         case ..<70:  return 10
@@ -323,26 +319,9 @@ final class AppState {
         }
     }
 
-    private func presentSessionEndChoice(for session: Session, focusMinutes: Int) {
-        let plannedMin = session.plannedDurationMinutes ?? 25
-        let breakMin = Self.suggestedBreakMinutes(forSessionMinutes: plannedMin)
-        sessionEndChoice.present(
-            completedLabel: session.label,
-            focusMinutes: focusMinutes,
-            suggestedBreakMinutes: breakMin,
-            suggestedNextSessionMinutes: plannedMin,
-            onTakeBreak: { [weak self] minutes in
-                self?.startBreak(durationMinutes: minutes)
-            },
-            onStartNew: { [weak self] minutes, label in
-                self?.sessionManager.startSession(label: label, plannedDurationMinutes: minutes)
-            },
-            onDismiss: {}
-        )
-    }
-
     /// Public so menu-bar/popover code can also start a break manually later.
     func startBreak(durationMinutes: Int) {
+        recap = nil
         breakManager.startBreak(durationMinutes: durationMinutes)
         breakOverlay.present(breakManager: breakManager)
     }
