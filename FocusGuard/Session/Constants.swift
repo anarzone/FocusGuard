@@ -55,7 +55,6 @@ enum Constants {
 
 /// Centralised UserDefaults keys. Avoids stringly-typed scatter across the codebase.
 enum SettingsKeys {
-    static let menuBarIconStyle      = "menuBarIconStyle"
     static let reduceMotion          = "reduceMotion"
     static let showNotifications     = "showNotifications"
     static let retentionDays         = "retentionDays"

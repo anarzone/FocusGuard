@@ -112,7 +112,6 @@ struct SettingsView: View {
 
 struct SettingsGeneralPane: View {
     @State private var launchAtLogin = LoginItemController.isEnabled
-    @AppStorage("menuBarIconStyle")       private var menuBarIconStyle = "Shield"
     @AppStorage("reduceMotion")           private var reduceMotion    = false
     @AppStorage("showNotifications")      private var showNotifications = true
     @AppStorage(SettingsKeys.showInDock)  private var showInDock      = true
@@ -149,18 +148,6 @@ struct SettingsGeneralPane: View {
 
                 sectionHeader("Appearance")
                 groupCard {
-                    settingsRow(title: "Menu bar icon",
-                                help: "Choose how FocusGuard appears in the menu bar.") {
-                        Picker("", selection: $menuBarIconStyle) {
-                            Text("Shield").tag("Shield")
-                            Text("FG").tag("FG")
-                            Text("Dot").tag("Dot")
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(width: 110)
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
                     settingsRow(title: "Reduce motion",
                                 help: "Use cross-fades instead of sliding transitions.") {
                         Toggle("", isOn: $reduceMotion).toggleStyle(.switch).labelsHidden()

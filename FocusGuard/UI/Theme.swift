@@ -7,33 +7,68 @@ import SwiftUI
 enum Theme {
     // MARK: - Classifications
 
+    // Focus is indigo (close to macOS Focus), drift is orange. The pair was
+    // checked for colour-vision deficiency in both modes; green/red failed.
+    // Orange is weak on light surfaces, so it always ships with a label.
     static let focus = dynamicColor(
-        light: Color(red: 52/255, green: 199/255, blue: 89/255),     // #34C759
-        dark:  Color(red: 48/255, green: 209/255, blue: 88/255)      // #30D158
+        light: Color(red: 97/255, green: 85/255, blue: 245/255),     // #6155F5
+        dark:  Color(red: 109/255, green: 124/255, blue: 255/255)    // #6D7CFF
     )
     static let neutral = dynamicColor(
         light: Color(red: 142/255, green: 142/255, blue: 147/255),   // #8E8E93
         dark:  Color(red: 152/255, green: 152/255, blue: 157/255)    // #98989D
     )
     static let distraction = dynamicColor(
-        light: Color(red: 255/255, green: 69/255, blue: 58/255),     // #FF453A
-        dark:  Color(red: 255/255, green: 105/255, blue: 97/255)     // #FF6961
+        light: Color(red: 255/255, green: 141/255, blue: 40/255),    // #FF8D28
+        dark:  Color(red: 220/255, green: 118/255, blue: 32/255)     // #DC7620
+    )
+    /// Orange dark enough for glyphs and small marks on light glass.
+    static let distractionInk = dynamicColor(
+        light: Color(red: 224/255, green: 115/255, blue: 22/255),    // #E07316
+        dark:  Color(red: 255/255, green: 146/255, blue: 48/255)     // #FF9230
     )
     static let warning = Color(red: 255/255, green: 159/255, blue: 10/255)  // #FF9F0A
 
     // MARK: - Tints (16-22% alpha of the base)
 
     static let focusTint = dynamicColor(
-        light: Color(red: 52/255, green: 199/255, blue: 89/255).opacity(0.16),
-        dark:  Color(red: 48/255, green: 209/255, blue: 88/255).opacity(0.22)
+        light: Color(red: 97/255, green: 85/255, blue: 245/255).opacity(0.14),
+        dark:  Color(red: 109/255, green: 124/255, blue: 255/255).opacity(0.22)
     )
     static let neutralTint = dynamicColor(
         light: Color(red: 142/255, green: 142/255, blue: 147/255).opacity(0.18),
         dark:  Color(red: 152/255, green: 152/255, blue: 157/255).opacity(0.22)
     )
     static let distractionTint = dynamicColor(
-        light: Color(red: 255/255, green: 69/255, blue: 58/255).opacity(0.16),
-        dark:  Color(red: 255/255, green: 105/255, blue: 97/255).opacity(0.22)
+        light: Color(red: 255/255, green: 141/255, blue: 40/255).opacity(0.14),
+        dark:  Color(red: 220/255, green: 118/255, blue: 32/255).opacity(0.22)
+    )
+
+    // MARK: - Menu glass
+
+    /// "Other" minutes in the session grid — monochrome, never a hue.
+    static let other = dynamicColor(
+        light: Color.black.opacity(0.16),
+        dark:  Color.white.opacity(0.30)
+    )
+    /// Rounded module sitting on the menu's glass.
+    static let module = dynamicColor(
+        light: Color.white.opacity(0.58),
+        dark:  Color.white.opacity(0.07)
+    )
+    static let moduleStroke = dynamicColor(
+        light: Color.black.opacity(0.06),
+        dark:  Color.white.opacity(0.08)
+    )
+    /// Circular control platters and secondary capsules.
+    static let control = dynamicColor(
+        light: Color.black.opacity(0.07),
+        dark:  Color.white.opacity(0.12)
+    )
+    /// Outline of a minute that hasn't happened yet.
+    static let gridFuture = dynamicColor(
+        light: Color.black.opacity(0.13),
+        dark:  Color.white.opacity(0.16)
     )
 
     // MARK: - Fills (gray-on-gray subtle backgrounds)

@@ -59,6 +59,13 @@ final class SessionManager {
         tracker.currentSession = session
     }
 
+    /// "5 more min": push the planned end out. No-op for open-ended sessions.
+    func extendSession(byMinutes minutes: Int) {
+        guard let session = currentSession, let planned = session.plannedDurationMinutes else { return }
+        session.plannedDurationMinutes = planned + minutes
+        Persistence.save(context)
+    }
+
     /// Called every tracker tick. If the active session has a planned duration
     /// and elapsed *running* time has reached it, auto-stop. Time spent paused
     /// doesn't count.

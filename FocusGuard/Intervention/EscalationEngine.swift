@@ -31,6 +31,9 @@ final class EscalationEngine {
     var strictMode: Bool = false
 
     private(set) var currentStreakStartedAt: Date?
+    /// Sites / apps the user said are "for work" during this session. Never
+    /// escalated until the session ends. Keyed by URL host, else bundle id.
+    private(set) var allowedThisSession: Set<String> = []
     private var lastNotifiedAt: Date?
     private var overrideExpiresAt: Date?
 
@@ -62,7 +65,8 @@ final class EscalationEngine {
             }
         }
 
-        guard isInSession, snapshot.classification == .distraction else {
+        guard isInSession, snapshot.classification == .distraction,
+              !allowedThisSession.contains(Self.allowKey(for: snapshot)) else {
             // Reset the streak on focus / neutral / no session.
             currentStreakStartedAt = nil
             lastNotifiedAt = nil
@@ -109,10 +113,24 @@ final class EscalationEngine {
         }
     }
 
+    /// "It's for work": stop escalating this site / app for the rest of the
+    /// session, and lift the block if it's already up.
+    func allowForSession(_ snapshot: ActivitySnapshot) {
+        allowedThisSession.insert(Self.allowKey(for: snapshot))
+        currentStreakStartedAt = nil
+        lastNotifiedAt = nil
+        if overlay.isPresenting { overlay.dismiss() }
+    }
+
+    static func allowKey(for snapshot: ActivitySnapshot) -> String {
+        snapshot.url.flatMap { URL(string: $0)?.host?.lowercased() } ?? snapshot.bundleIdentifier
+    }
+
     func resetForSessionEnd() {
         currentStreakStartedAt = nil
         lastNotifiedAt = nil
         overrideExpiresAt = nil
+        allowedThisSession = []
         if overlay.isPresenting { overlay.dismiss() }
     }
 }
