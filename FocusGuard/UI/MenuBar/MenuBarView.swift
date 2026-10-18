@@ -277,7 +277,8 @@ struct MenuBarView: View {
             VStack(spacing: 14) {
                 SessionRingView(
                     timeline: timeline,
-                    progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline)
+                    progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
+                    secondsSweep: isPaused ? nil : SessionClock.sweep(elapsed: elapsed)
                 ) {
                     ringCenter(session: session, elapsed: elapsed, isPaused: isPaused)
                 }
@@ -315,25 +316,28 @@ struct MenuBarView: View {
         }
     }
 
-    /// Minutes left, big, with the end time — or elapsed for open-ended sessions.
+    /// Live clock: time left counting down (or elapsed counting up for
+    /// open-ended sessions), with the end time underneath.
     private func ringCenter(session: Session, elapsed: TimeInterval, isPaused: Bool) -> some View {
         let big: String
         let unit: String
         let detail: String
         if let planned = session.plannedDurationMinutes {
             let left = max(0, Double(planned * 60) - elapsed)
-            big = "\(Int((left / 60).rounded(.up)))"
-            unit = "min left"
+            big = SessionClock.format(left)
+            unit = "left"
             detail = isPaused ? "paused" : "ends \(clock(now.addingTimeInterval(left)))"
         } else {
-            big = "\(Int(elapsed / 60))"
-            unit = "min"
+            big = SessionClock.format(elapsed)
+            unit = "elapsed"
             detail = isPaused ? "paused" : "open-ended"
         }
         return VStack(spacing: 0) {
             Text(big)
-                .font(.system(size: 44, weight: .semibold).monospacedDigit())
-                .kerning(-1.2)
+                .font(.system(size: big.count > 5 ? 30 : 38, weight: .semibold).monospacedDigit())
+                .kerning(-0.8)
+                .contentTransition(.numericText(countsDown: session.plannedDurationMinutes != nil))
+                .animation(.snappy(duration: 0.25), value: big)
             Text(unit)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
