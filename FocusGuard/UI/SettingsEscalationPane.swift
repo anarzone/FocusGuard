@@ -8,6 +8,7 @@ struct SettingsEscalationPane: View {
     @AppStorage(SettingsKeys.Escalation.blockThreshold)   private var block:   Int = Constants.Escalation.defaultBlockSeconds
     @AppStorage(SettingsKeys.Escalation.cooldown)         private var cooldown: Int = Constants.Escalation.defaultCooldownSeconds
     @AppStorage(SettingsKeys.Escalation.notificationsEnabled) private var notificationsEnabled = true
+    @AppStorage(SettingsKeys.showNotifications) private var showNotifications = true
     @AppStorage(SettingsKeys.Escalation.strictMode)       private var strictMode = false
 
     var body: some View {
@@ -117,10 +118,13 @@ struct SettingsEscalationPane: View {
     private var notificationToggleRow: some View {
         settingsRow(
             title: "Motivational notification",
-            help: "Send a calm reminder once distraction crosses the next threshold."
+            help: showNotifications
+                ? "Send a calm reminder once distraction crosses the next threshold. The block overlay works either way."
+                : "Notifications are off in Settings → General, so no reminders are sent."
         ) {
             Toggle("", isOn: $notificationsEnabled)
                 .toggleStyle(.switch).labelsHidden()
+                .disabled(!showNotifications)
         }
     }
 
@@ -178,13 +182,10 @@ struct SettingsEscalationPane: View {
     private var testNotificationRow: some View {
         settingsRow(
             title: "Send test notification",
-            help: "Verify notifications are coming through."
+            help: "Check that macOS lets FocusGuard's notifications through. Always sends, even with the switches above off."
         ) {
             Button("Send") {
-                appState.notificationPresenter.presentDistractionWarning(
-                    appName: "Test app",
-                    currentURL: nil
-                )
+                appState.notificationPresenter.presentTestNotification()
             }
         }
     }

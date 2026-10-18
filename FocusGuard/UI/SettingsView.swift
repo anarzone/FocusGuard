@@ -113,7 +113,7 @@ struct SettingsView: View {
 struct SettingsGeneralPane: View {
     @State private var launchAtLogin = LoginItemController.isEnabled
     @AppStorage("reduceMotion")           private var reduceMotion    = false
-    @AppStorage("showNotifications")      private var showNotifications = true
+    @AppStorage(SettingsKeys.showNotifications) private var showNotifications = true
     @AppStorage(SettingsKeys.showInDock)  private var showInDock      = true
 
     var body: some View {
@@ -154,7 +154,7 @@ struct SettingsGeneralPane: View {
                     }
                     Rectangle().fill(Theme.separator).frame(height: 0.5)
                     settingsRow(title: "Show notifications",
-                                help: "Required for motivational nudges.") {
+                                help: "Drift nudges, session and break updates, and the daily wrap-up. Turn off to silence every FocusGuard notification.") {
                         Toggle("", isOn: $showNotifications).toggleStyle(.switch).labelsHidden()
                     }
                 }
