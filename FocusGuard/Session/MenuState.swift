@@ -47,6 +47,8 @@ struct SessionRecap {
     let plannedMinutes: Int?
     let timeline: SessionTimeline
     let topDrift: (name: String, seconds: TimeInterval)?
+    /// The finished session, for looking up what happened in each arc.
+    let session: Session
     /// Longest unbroken focus run in this session.
     let longestZone: TimeInterval
     /// True when that run is also the longest of the day so far.
@@ -70,6 +72,7 @@ struct SessionRecap {
             current: nil
         )
         topDrift = SessionTimeline.topDrift(in: session.events)
+        self.session = session
         longestZone = FocusRuns.compute(FocusRuns.spans(from: session.events), now: endedAt).longest
         isBestToday = longestZone >= 60 && longestZone + 1 >= bestZoneToday
     }

@@ -180,7 +180,11 @@ struct TodayPage: View {
                 SessionRingView(timeline: timeline,
                                 progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
                                 size: 120, lineWidth: 11,
-                                secondsSweep: paused ? nil : SessionClock.sweep(elapsed: elapsed)) {
+                                secondsSweep: paused ? nil : SessionClock.sweep(elapsed: elapsed),
+                                stretchDetail: { segment in
+                                    SessionTimeline.stretch(cells: segment.cells, kind: segment.kind, in: timeline,
+                                                            events: session.events, now: now)
+                                }) {
                     VStack(spacing: 0) {
                         Text(SessionClock.format(left ?? elapsed))
                             .font(.system(size: 22, weight: .semibold).monospacedDigit())

@@ -194,7 +194,12 @@ struct SessionRingView<Center: View>: View {
     /// (one second barely moves the knob on a 50-minute ring). Nil when
     /// paused or finished.
     var secondsSweep: Double? = nil
+    /// What happened in a hovered arc. When set, hovering an arc highlights
+    /// it and shows its time, kind and top apps in the centre.
+    var stretchDetail: ((SessionTimeline.RingSegment) -> SessionTimeline.Stretch?)? = nil
     @ViewBuilder var center: () -> Center
+
+    @State private var hovered: Int?
 
     var body: some View {
         let segments = timeline.ringSegments(progress: progress)
@@ -212,14 +217,16 @@ struct SessionRingView<Center: View>: View {
                 track.addArc(center: c, radius: radius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
                 context.stroke(track, with: .color(Theme.control), lineWidth: lineWidth)
 
-                for segment in segments {
+                for (index, segment) in segments.enumerated() {
                     var arc = Path()
                     arc.addArc(center: c, radius: radius,
                                startAngle: .degrees(segment.start - 90),
                                endAngle: .degrees(segment.end - 90),
                                clockwise: false)
-                    context.stroke(arc, with: .color(Self.color(segment.kind)),
-                                   style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                    let isHovered = hovered == index
+                    let dimmed = hovered != nil && !isHovered
+                    context.stroke(arc, with: .color(Self.color(segment.kind).opacity(dimmed ? 0.4 : 1)),
+                                   style: StrokeStyle(lineWidth: isHovered ? lineWidth + 4 : lineWidth, lineCap: .butt))
                 }
 
                 if let secondsSweep {
@@ -248,11 +255,41 @@ struct SessionRingView<Center: View>: View {
                                    lineWidth: lineWidth * 0.23)
                 }
             }
-            center()
+            if let index = hovered, segments.indices.contains(index),
+               let detail = stretchDetail?(segments[index]) {
+                StretchSummary(stretch: detail, compact: size < 150)
+                    .frame(width: (size - lineWidth * 2) * 0.74)
+                    .transition(.opacity)
+            } else {
+                center()
+            }
         }
         .frame(width: size, height: size)
+        .contentShape(Circle())
+        .onContinuousHover { phase in
+            guard stretchDetail != nil else { return }
+            switch phase {
+            case .active(let point):
+                hovered = Self.segmentIndex(at: point, size: size, lineWidth: lineWidth, segments: segments)
+            case .ended:
+                hovered = nil
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: hovered)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
+    }
+
+    /// Which arc is under the pointer: on the ring (with some slack either
+    /// side so it's easy to hit), at an angle inside an arc.
+    static func segmentIndex(at point: CGPoint, size: CGFloat, lineWidth: CGFloat,
+                             segments: [SessionTimeline.RingSegment]) -> Int? {
+        let radius = (size - lineWidth) / 2 - 3
+        let dx = point.x - size / 2, dy = point.y - size / 2
+        guard abs(hypot(dx, dy) - radius) <= lineWidth else { return nil }
+        var degrees = atan2(dx, -dy) * 180 / .pi
+        if degrees < 0 { degrees += 360 }
+        return segments.firstIndex { degrees >= $0.start - 1 && degrees <= $0.end + 1 }
     }
 
     static func color(_ kind: SessionTimeline.Kind) -> Color {
@@ -281,6 +318,65 @@ enum SessionClock {
     /// How far through the current minute a running session is.
     static func sweep(elapsed: TimeInterval) -> Double {
         elapsed.truncatingRemainder(dividingBy: 60) / 60
+    }
+}
+
+/// A hovered arc, shown in the ring's centre: when, what kind, top apps.
+struct StretchSummary: View {
+    let stretch: SessionTimeline.Stretch
+    var compact = false
+
+    var body: some View {
+        VStack(spacing: compact ? 2 : 4) {
+            Text(timeRange)
+                .font(.system(size: compact ? 11 : 13, weight: .semibold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            HStack(spacing: 4) {
+                Circle().fill(SessionRingView<EmptyView>.color(stretch.kind)).frame(width: 6, height: 6)
+                Text(compact ? "\(kindName) \(stretch.minutes)m" : "\(kindName) · \(stretch.minutes) min")
+                    .font(.system(size: compact ? 10 : 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            if compact {
+                if let top = stretch.apps.first {
+                    Text(top.name).font(.system(size: 10)).lineLimit(1).truncationMode(.middle)
+                }
+            } else {
+                VStack(spacing: 2) {
+                    ForEach(stretch.apps) { app in
+                        HStack(spacing: 4) {
+                            Text(app.name).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 2)
+                            Text(Self.duration(app.seconds)).monospacedDigit().foregroundStyle(.secondary)
+                        }
+                        .font(.system(size: 11))
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var kindName: String {
+        switch stretch.kind {
+        case .focus: return "Focused"
+        case .drift: return "Drifted"
+        case .other: return "Other"
+        }
+    }
+
+    private var timeRange: String {
+        let start = stretch.start.formatted(date: .omitted, time: .shortened)
+        if stretch.includesNow { return "\(start) – now" }
+        return "\(start)–\(stretch.end.formatted(date: .omitted, time: .shortened))"
+    }
+
+    static func duration(_ seconds: TimeInterval) -> String {
+        let s = Int(seconds.rounded())
+        return s < 60 ? "\(s)s" : "\(s / 60)m"
     }
 }
 

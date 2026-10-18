@@ -272,7 +272,11 @@ struct MenuBarView: View {
                 SessionRingView(
                     timeline: timeline,
                     progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
-                    secondsSweep: isPaused ? nil : SessionClock.sweep(elapsed: elapsed)
+                    secondsSweep: isPaused ? nil : SessionClock.sweep(elapsed: elapsed),
+                    stretchDetail: { segment in
+                        SessionTimeline.stretch(cells: segment.cells, kind: segment.kind, in: timeline,
+                                                events: session.events, now: now)
+                    }
                 ) {
                     ringCenter(session: session, elapsed: elapsed, isPaused: isPaused)
                 }
@@ -393,7 +397,10 @@ struct MenuBarView: View {
         let m = timeline.minutesPerCell
         return VStack(alignment: .leading, spacing: 6) {
             VStack(spacing: 14) {
-                SessionRingView(timeline: timeline, progress: nil) {
+                SessionRingView(timeline: timeline, progress: nil, stretchDetail: { segment in
+                    SessionTimeline.stretch(cells: segment.cells, kind: segment.kind, in: timeline,
+                                            events: recap.session.events)
+                }) {
                     VStack(spacing: 0) {
                         Text("\(timeline.focusPercent)%")
                             .font(.system(size: 40, weight: .semibold).monospacedDigit())
