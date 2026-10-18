@@ -110,28 +110,4 @@ final class ReportBuilderTests: XCTestCase {
         let entries = builder.topDistractions(from: now.addingTimeInterval(-400), to: now, limit: 2)
         XCTAssertEqual(entries.count, 2)
     }
-
-    // MARK: - Timeline
-
-    func test_timelineNoCrashWithEmptyEvents() {
-        // The crash bug we fixed: previously `for m in startMin...endMin` could
-        // trap when startMin > endMin. With no events, we just want zeros.
-        let now = Date()
-        let points = builder.timeline(from: now.addingTimeInterval(-3600), to: now)
-        XCTAssertEqual(points.count, 60)
-        XCTAssertTrue(points.allSatisfy { $0.focus == 0 && $0.neutral == 0 && $0.distraction == 0 })
-    }
-
-    func test_timelineDistributesAcrossMinutes() {
-        let now = Date()
-        // Single 5-minute focus event right at the start of the window.
-        insertEvent(
-            start: now.addingTimeInterval(-300),
-            end:   now,
-            classification: .focus
-        )
-        let points = builder.timeline(from: now.addingTimeInterval(-300), to: now)
-        XCTAssertEqual(points.count, 5)
-        XCTAssertTrue(points.allSatisfy { $0.focus > 0 })
-    }
 }

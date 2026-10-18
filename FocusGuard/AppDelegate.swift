@@ -108,10 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab)
             let hosting = NSHostingController(rootView: view)
-            hosting.preferredContentSize = NSSize(width: 920, height: 620)
+            hosting.preferredContentSize = NSSize(width: 1160, height: 760)
 
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 920, height: 620),
+                contentRect: NSRect(x: 0, y: 0, width: 1160, height: 760),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -122,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.titlebarAppearsTransparent = true
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 880, height: 580)
+            window.minSize = NSSize(width: 980, height: 640)
             window.center()
 
             // When the user clicks the red traffic light, drop the Dock icon

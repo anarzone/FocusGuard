@@ -78,23 +78,32 @@ struct WeekInsights {
 @MainActor
 enum MenuInsightsBuilder {
     static func today(context: ModelContext, now: Date = .now, calendar: Calendar = .current) -> TodayInsights {
-        let dayStart = calendar.startOfDay(for: now)
+        day(now, context: context, now: now, calendar: calendar)
+    }
+
+    /// Any day's insights; today's stop at `now`.
+    static func day(_ date: Date, context: ModelContext, now: Date = .now, calendar: Calendar = .current) -> TodayInsights {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let until = min(now, dayEnd)
         let reports = ReportBuilder(context: context)
-        let breakdown = reports.breakdown(from: dayStart, to: now)
+        let breakdown = reports.breakdown(from: dayStart, to: until)
 
         let priorStart = calendar.date(byAdding: .day, value: -7, to: dayStart) ?? dayStart
         let prior = reports.dailyBreakdowns(from: priorStart, to: dayStart, calendar: calendar).filter { $0.total > 60 }
         let average = prior.isEmpty ? nil : prior.map { $0.focus / $0.total }.reduce(0, +) / Double(prior.count)
 
         let descriptor = FetchDescriptor<ActivityEvent>(
-            predicate: #Predicate { $0.endedAt >= dayStart },
+            predicate: #Predicate { $0.endedAt >= dayStart && $0.startedAt < dayEnd },
             sortBy: [SortDescriptor(\.startedAt)]
         )
         let events = Persistence.fetch(context, descriptor)
-        let activity = mergedSpans(events, from: dayStart)
+        let activity = mergedSpans(events, from: dayStart).map {
+            DaySpan(start: $0.start, end: min($0.end, dayEnd), kind: $0.kind)
+        }
 
         var sessionDescriptor = FetchDescriptor<Session>(
-            predicate: #Predicate { $0.startedAt >= dayStart },
+            predicate: #Predicate { $0.startedAt >= dayStart && $0.startedAt < dayEnd },
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
         sessionDescriptor.fetchLimit = 50
@@ -103,8 +112,10 @@ enum MenuInsightsBuilder {
         // 8 AM–6 PM, stretched to cover whatever actually happened.
         let firstHour = activity.first.map { calendar.component(.hour, from: $0.start) } ?? 8
         let startHour = min(8, firstHour)
-        let nowHour = calendar.component(.hour, from: now) + 1
-        let endHour = max(18, min(24, nowHour))
+        let lastHour = until >= dayEnd
+            ? (activity.last.map { calendar.component(.hour, from: $0.end.addingTimeInterval(-1)) } ?? 17) + 1
+            : calendar.component(.hour, from: now) + 1
+        let endHour = max(18, min(24, lastHour))
         let windowStart = calendar.date(byAdding: .hour, value: startHour, to: dayStart) ?? dayStart
         let windowEnd = calendar.date(byAdding: .hour, value: endHour, to: dayStart) ?? now
 
@@ -116,8 +127,8 @@ enum MenuInsightsBuilder {
             sessions: sessions,
             window: DateInterval(start: windowStart, end: max(windowEnd, windowStart.addingTimeInterval(3600))),
             activity: activity,
-            sessionSpans: sessions.map { DateInterval(start: $0.start, end: max($0.start, $0.end ?? now)) },
-            topApps: usageRows(context: context, from: dayStart, to: now, limit: 4)
+            sessionSpans: sessions.map { DateInterval(start: $0.start, end: max($0.start, $0.end ?? until)) },
+            topApps: usageRows(context: context, from: dayStart, to: until, limit: 4)
         )
     }
 
