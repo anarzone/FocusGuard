@@ -230,7 +230,7 @@ struct ReportBuilder {
         for e in events {
             let host = e.url.flatMap { URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") }
             let key = host ?? e.bundleIdentifier
-            let dur = max(0, e.endedAt.timeIntervalSince(max(e.startedAt, from)))
+            let dur = max(0, min(e.endedAt, to).timeIntervalSince(max(e.startedAt, from)))
 
             if var existing = groups[key] {
                 existing.seconds += dur

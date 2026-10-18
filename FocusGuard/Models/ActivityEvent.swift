@@ -22,7 +22,8 @@ final class ActivityEvent {
         set { classificationRaw = newValue?.rawValue }
     }
 
-    var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
+    /// Never negative, even if the clock jumped backwards mid-event.
+    var duration: TimeInterval { max(0, endedAt.timeIntervalSince(startedAt)) }
 
     init(
         id: UUID = UUID(),

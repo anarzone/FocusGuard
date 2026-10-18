@@ -298,9 +298,10 @@ final class AppState {
             let day = calendar.date(byAdding: .day, value: -offset, to: .now) ?? .now
             let dayStart = calendar.startOfDay(for: day)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+            let focusRaw = Classification.focus.rawValue
             let descriptor = FetchDescriptor<ActivityEvent>(
                 predicate: #Predicate {
-                    $0.endedAt >= dayStart && $0.startedAt < dayEnd && $0.classificationRaw == 0
+                    $0.endedAt >= dayStart && $0.startedAt < dayEnd && $0.classificationRaw == focusRaw
                 }
             )
             let events = Persistence.fetch(context, descriptor)

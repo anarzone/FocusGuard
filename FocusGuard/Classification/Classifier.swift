@@ -13,6 +13,8 @@ import SwiftData
 final class Classifier {
     private let context: ModelContext
     private var rules: [AppRule] = []
+    /// Title patterns compiled once per refresh; invalid ones map to nil.
+    private var compiledTitlePatterns: [String: Regex<AnyRegexOutput>?] = [:]
     private var lastFetch: Date?
     private let cacheTTL: TimeInterval = 30
 
@@ -78,10 +80,9 @@ final class Classifier {
                 predicate: #Predicate { $0.url != nil }
             )
             let events = (try? context.fetch(urlDescriptor)) ?? []
-            let needle = pattern.lowercased()
             for e in events {
                 if let host = e.url.flatMap({ URL(string: $0)?.host?.lowercased() }),
-                   host.contains(needle) {
+                   Self.host(host, matches: pattern) {
                     e.classificationRaw = raw
                 }
             }
@@ -105,13 +106,13 @@ final class Classifier {
                 if bundleId == pattern { return rule.classification }
 
             case .host:
-                if let host, host.contains(pattern.lowercased()) {
+                if let host, Self.host(host, matches: pattern) {
                     return rule.classification
                 }
 
             case .titleRegex:
                 if let title = windowTitle,
-                   let regex = try? Regex(pattern).ignoresCase(),
+                   let regex = compiledTitlePatterns[pattern] ?? nil,
                    (try? regex.firstMatch(in: title)) != nil {
                     return rule.classification
                 }
@@ -129,8 +130,39 @@ final class Classifier {
 
     private func refresh() {
         var descriptor = FetchDescriptor<AppRule>()
-        descriptor.sortBy = [SortDescriptor(\.priority, order: .reverse)]
+        // Highest priority first; on a tie the newer rule wins, so the
+        // order is the same on every launch.
+        descriptor.sortBy = [SortDescriptor(\.priority, order: .reverse),
+                             SortDescriptor(\.createdAt, order: .reverse)]
         rules = (try? context.fetch(descriptor)) ?? []
+        compiledTitlePatterns = [:]
+        for rule in rules where rule.matchKind == .titleRegex && compiledTitlePatterns[rule.pattern] == nil {
+            let regex = Self.compileTitlePattern(rule.pattern)
+            if regex == nil {
+                Persistence.logger.error("ignoring invalid title rule: \(rule.pattern, privacy: .public)")
+            }
+            compiledTitlePatterns[rule.pattern] = .some(regex)
+        }
         lastFetch = .now
+    }
+
+    // MARK: - Matching
+
+    /// A site rule matches the host itself and its subdomains — `youtube.com`
+    /// matches `m.youtube.com`, but not `notyoutube.com` or
+    /// `youtube.com.example.net` (it used to be a plain substring check).
+    static func host(_ host: String, matches pattern: String) -> Bool {
+        var p = pattern.lowercased().trimmingCharacters(in: .whitespaces)
+        if let schemeEnd = p.range(of: "://") { p = String(p[schemeEnd.upperBound...]) }
+        if let slash = p.firstIndex(of: "/") { p = String(p[..<slash]) }
+        if p.hasPrefix("www.") { p = String(p.dropFirst(4)) }
+        guard !p.isEmpty else { return false }
+        let h = host.lowercased()
+        return h == p || h.hasSuffix("." + p)
+    }
+
+    /// Case-insensitive title pattern, or nil when it isn't valid.
+    static func compileTitlePattern(_ pattern: String) -> Regex<AnyRegexOutput>? {
+        (try? Regex(pattern))?.ignoresCase()
     }
 }

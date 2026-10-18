@@ -66,7 +66,7 @@ final class ClassifierTests: XCTestCase {
         )
     }
 
-    func test_hostMatchIsSubstring() {
+    func test_hostMatchCoversSubdomains() {
         // "youtube.com" should also match "music.youtube.com"
         context.insert(AppRule(pattern: "youtube.com", matchKind: .host, classification: .distraction))
         Persistence.save(context)
