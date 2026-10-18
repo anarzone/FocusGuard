@@ -403,13 +403,7 @@ struct MenuBarView: View {
             .menuModule()
 
             HStack(alignment: .top, spacing: 10) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle().fill(Theme.focusTint)
-                        ZoneGlyph(color: Theme.focus).frame(width: 16, height: 16)
-                    }
-                    .frame(width: 30, height: 30)
-                    .accessibilityHidden(true)
+                HStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Longest in the zone")
                             .font(.system(size: 11))

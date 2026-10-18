@@ -48,8 +48,8 @@ enum Theme {
 
     /// "Other" minutes in the session grid — monochrome, never a hue.
     static let other = dynamicColor(
-        light: Color.black.opacity(0.16),
-        dark:  Color.white.opacity(0.30)
+        light: Color.black.opacity(0.24),
+        dark:  Color.white.opacity(0.34)
     )
     /// Rounded module sitting on the menu's glass.
     static let module = dynamicColor(
