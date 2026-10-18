@@ -99,9 +99,12 @@ final class AppState {
                 let onBreak = self?.breakManager.isOnBreak ?? false
                 // EscalationEngine + PatternDetector stay silent during a
                 // break — interruptions defeat the point.
+                // Time in FocusGuard's own windows never counts as drift:
+                // the engine sees a neutral moment, which resets any streak.
+                let observed = tracker?.isFrontmostSelf == true ? snap.asNeutral(at: .now) : snap
                 if !onBreak {
-                    engine?.observe(snapshot: snap, isInSession: inActiveSession)
-                    self?.patternDetector.observe(snapshot: snap, isInSession: inActiveSession)
+                    engine?.observe(snapshot: observed, isInSession: inActiveSession)
+                    self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession)
                 }
             }
             self?.maybeFireDailySummary()
@@ -153,6 +156,7 @@ final class AppState {
         // One-time cleanup of pre-fix idle events (loginwindow / screensaver)
         // that the old tracker counted as activity.
         HistoricalCleanup.runIfNeeded(context: context)
+        SelfTrackingCleanup.runIfNeeded(context: context)
 
         // Apply retention policy on launch, then once a day while running.
         RetentionPolicy.prune(context: context)
@@ -376,7 +380,7 @@ final class AppState {
         if session.pausedAt != nil && autoPausedAt == nil { return }
 
         // Recent activity? Use the tracker's last snapshot timestamp.
-        let lastObserved = tracker.currentSnapshot?.observedAt ?? .distantPast
+        let lastObserved = tracker.lastActiveAt ?? tracker.currentSnapshot?.observedAt ?? .distantPast
         let idle = Date().timeIntervalSince(lastObserved)
 
         if session.pausedAt == nil, idle >= autoPauseIdleSeconds {

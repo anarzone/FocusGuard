@@ -12,6 +12,14 @@ struct ActivitySnapshot: Equatable {
     let observedAt: Date
 }
 
+extension ActivitySnapshot {
+    /// The same moment treated as neutral — used while FocusGuard is frontmost.
+    func asNeutral(at date: Date) -> ActivitySnapshot {
+        ActivitySnapshot(bundleIdentifier: bundleIdentifier, appName: appName, windowTitle: windowTitle,
+                         url: url, classification: .neutral, observedAt: date)
+    }
+}
+
 /// Runs the always-on tracking loop. On each tick (1 Hz, plus immediate on app
 /// switch) it samples the frontmost app + window title and either extends the
 /// current `ActivityEvent` or coalesces into a new one when the
@@ -22,6 +30,16 @@ final class ActivityTracker {
     private(set) var currentSnapshot: ActivitySnapshot?
     /// Most recent app classified as focus — where "Back to work" returns to.
     private(set) var lastFocusBundleId: String?
+    /// True while FocusGuard itself is frontmost. Its own windows aren't
+    /// tracked, can't count as drift, and keep the session from looking idle.
+    private(set) var isFrontmostSelf = false
+    /// Last tick with the user at the Mac (any app, FocusGuard included).
+    /// Drives idle auto-pause, which `currentSnapshot` can't once FocusGuard
+    /// is frontmost (the snapshot keeps showing the last real app).
+    private(set) var lastActiveAt: Date?
+
+    /// FocusGuard's own bundle id; time in its windows isn't recorded.
+    static let selfBundleId = Bundle.main.bundleIdentifier ?? "com.anar.focusguard"
 
     /// Set by `SessionManager` when a focus session starts/stops. Newly created
     /// `ActivityEvent`s pick up this association at insert time.
@@ -122,10 +140,24 @@ final class ActivityTracker {
         // stretch through the lock period — otherwise a 9-hour overnight
         // lock looks like 9 hours of activity in the last app you used.
         if Self.idleProcessBundleIds.contains(bundleId) {
+            isFrontmostSelf = false
             if currentEvent != nil {
                 Persistence.save(context)
                 currentEvent = nil
             }
+            return
+        }
+
+        // FocusGuard's own menu/window: close the event in progress and
+        // record nothing. The user is still here, so stay "active".
+        isFrontmostSelf = bundleId == Self.selfBundleId
+        lastActiveAt = Date()
+        if isFrontmostSelf {
+            if currentEvent != nil {
+                Persistence.save(context)
+                currentEvent = nil
+            }
+            onTick?()
             return
         }
 
@@ -138,7 +170,7 @@ final class ActivityTracker {
             : nil
         let classification = classifier.classify(bundleId: bundleId, windowTitle: title, url: url)
         let now = Date()
-        if classification == .focus, bundleId != Bundle.main.bundleIdentifier {
+        if classification == .focus {
             lastFocusBundleId = bundleId
         }
 

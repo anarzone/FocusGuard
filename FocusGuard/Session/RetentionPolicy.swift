@@ -44,6 +44,32 @@ enum HistoricalCleanup {
     }
 }
 
+/// One-time removal of time FocusGuard recorded in its own windows, from
+/// before it stopped tracking itself.
+enum SelfTrackingCleanup {
+    static let migrationKey = "historicalCleanup.selfEvents.v1"
+
+    @MainActor
+    @discardableResult
+    static func runIfNeeded(context: ModelContext, defaults: UserDefaults = .standard,
+                            bundleId: String = ActivityTracker.selfBundleId) -> Int {
+        guard !defaults.bool(forKey: migrationKey) else { return 0 }
+        let pred = #Predicate<ActivityEvent> { $0.bundleIdentifier == bundleId }
+        let count = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(predicate: pred))
+        if count > 0 {
+            do {
+                try context.delete(model: ActivityEvent.self, where: pred)
+                Persistence.save(context)
+            } catch {
+                Persistence.logger.error("self-tracking cleanup failed: \(error.localizedDescription, privacy: .public)")
+                return 0
+            }
+        }
+        defaults.set(true, forKey: migrationKey)
+        return count
+    }
+}
+
 enum RetentionPolicy {
     /// Days of history to keep. Persisted via UserDefaults; 0 means keep all.
     static var days: Int {
