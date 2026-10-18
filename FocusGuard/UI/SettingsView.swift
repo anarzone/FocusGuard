@@ -114,6 +114,7 @@ struct SettingsGeneralPane: View {
     @State private var launchAtLogin = LoginItemController.isEnabled
     @AppStorage("reduceMotion")           private var reduceMotion    = false
     @AppStorage(SettingsKeys.showNotifications) private var showNotifications = true
+    @AppStorage(SettingsKeys.menuBarShowTime) private var menuBarShowTime = true
     @AppStorage(SettingsKeys.showInDock)  private var showInDock      = true
 
     var body: some View {
@@ -148,6 +149,11 @@ struct SettingsGeneralPane: View {
 
                 sectionHeader("Appearance")
                 groupCard {
+                    settingsRow(title: "Show time in menu bar",
+                                help: "Minutes left beside the FocusGuard icon during a session or break, like “24m”.") {
+                        Toggle("", isOn: $menuBarShowTime).toggleStyle(.switch).labelsHidden()
+                    }
+                    Rectangle().fill(Theme.separator).frame(height: 0.5)
                     settingsRow(title: "Reduce motion",
                                 help: "Use cross-fades instead of sliding transitions.") {
                         Toggle("", isOn: $reduceMotion).toggleStyle(.switch).labelsHidden()

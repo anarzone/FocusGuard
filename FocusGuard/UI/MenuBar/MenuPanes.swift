@@ -916,6 +916,7 @@ private struct QuickSettingsPane: View {
     @AppStorage(SettingsKeys.retentionDays) private var retentionDays = 365
     /// Master switch, shared with Settings → General.
     @AppStorage(SettingsKeys.showNotifications) private var showNotifications = true
+    @AppStorage(SettingsKeys.menuBarShowTime) private var menuBarShowTime = true
 
     @State private var drift: DriftResponse? = DriftResponse.current
     @State private var launchAtLogin = LoginItemController.isEnabled
@@ -990,6 +991,11 @@ private struct QuickSettingsPane: View {
                 divider
                 row("Notifications", detail: "Nudges, session updates, daily wrap-up") {
                     Toggle("", isOn: $showNotifications)
+                        .toggleStyle(.switch).labelsHidden().controlSize(.mini)
+                }
+                divider
+                row("Show time in menu bar", detail: "Minutes left, like “24m”") {
+                    Toggle("", isOn: $menuBarShowTime)
                         .toggleStyle(.switch).labelsHidden().controlSize(.mini)
                 }
             }

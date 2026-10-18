@@ -6,8 +6,9 @@ import SwiftUI
 /// the popover tail pointing at the status item, and rather than NSPanel so we
 /// avoid the activation-policy quirks NSPanel hits in accessory apps.
 ///
-/// The status item is a template glyph only — state is carried by shape
-/// (see `StatusGlyphState`), never by a countdown in the menu bar.
+/// The status item is a template glyph whose shape carries the state (see
+/// `StatusGlyphState`), plus — during a session or break — the minutes left
+/// as a calm "24m" label (see `StatusLabel`), never a ticking mm:ss.
 ///
 /// Dismissal: NSEvent global + local monitors close the window on any click
 /// outside our content. Same pattern Ice / Bartender / Stats use.
@@ -16,18 +17,22 @@ final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let popoverWindow: PopoverWindow
     private let glyphProvider: () -> StatusGlyphState
+    private let labelProvider: () -> StatusLabel?
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
     private var tickTimer: Timer?
     private var renderedGlyph: StatusGlyphState?
+    private var renderedLabel: StatusLabel??   // double optional: nil = not rendered yet
 
     init<Content: View>(
         glyphProvider: @escaping () -> StatusGlyphState,
+        labelProvider: @escaping () -> StatusLabel? = { nil },
         @ViewBuilder content: () -> Content
     ) {
-        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popoverWindow = PopoverWindow(content: content())
         self.glyphProvider = glyphProvider
+        self.labelProvider = labelProvider
         super.init()
         configureStatusItem()
         startTicking()
@@ -50,10 +55,27 @@ final class MenuBarController: NSObject {
 
     private func refreshGlyph() {
         let state = glyphProvider()
-        guard state != renderedGlyph, let button = statusItem.button else { return }
+        let label = labelProvider()
+        guard state != renderedGlyph || renderedLabel != .some(label),
+              let button = statusItem.button else { return }
+        if state != renderedGlyph {
+            button.image = StatusGlyph.templateImage(for: state)
+        }
         renderedGlyph = state
-        button.image = StatusGlyph.templateImage(for: state)
-        button.setAccessibilityLabel(state.accessibilityLabel)
+        renderedLabel = .some(label)
+
+        if let label {
+            button.imagePosition = .imageLeading
+            button.attributedTitle = NSAttributedString(string: " " + label.text, attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
+                .foregroundColor: label.dimmed ? NSColor.secondaryLabelColor : NSColor.labelColor,
+            ])
+            button.setAccessibilityLabel("\(state.accessibilityLabel), \(label.accessibilityText)")
+        } else {
+            button.imagePosition = .imageOnly
+            button.attributedTitle = NSAttributedString(string: "")
+            button.setAccessibilityLabel(state.accessibilityLabel)
+        }
     }
 
     // MARK: - Status item

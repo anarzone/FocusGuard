@@ -15,6 +15,30 @@ struct DriftInfo: Equatable {
     }
 }
 
+/// The minutes beside the menu-bar icon.
+struct StatusLabel: Equatable {
+    enum Kind: Equatable { case sessionLeft, sessionElapsed, breakLeft }
+
+    let minutes: Int
+    /// Paused sessions show their time dimmed.
+    let dimmed: Bool
+    let kind: Kind
+
+    var text: String {
+        if minutes >= 60 { return "\(minutes / 60)h \(minutes % 60)m" }
+        return "\(minutes)m"
+    }
+
+    var accessibilityText: String {
+        let unit = minutes == 1 ? "minute" : "minutes"
+        switch kind {
+        case .sessionLeft:    return "\(minutes) \(unit) left\(dimmed ? ", paused" : "")"
+        case .sessionElapsed: return "\(minutes) \(unit) so far\(dimmed ? ", paused" : "")"
+        case .breakLeft:      return "\(minutes) \(unit) of break left"
+        }
+    }
+}
+
 /// The finished session, frozen at the moment it ended.
 struct SessionRecap {
     let label: String
@@ -91,6 +115,29 @@ extension AppState {
                 planned: session.plannedDurationMinutes.map { TimeInterval($0 * 60) }
             )
         }
+    }
+
+    /// Minutes shown beside the menu-bar icon: left in a timed session or a
+    /// break, elapsed in an open-ended one, dimmed while paused. Nil when
+    /// nothing is running or the user turned it off.
+    func statusLabel(now: Date = .now) -> StatusLabel? {
+        guard UserDefaults.standard.object(forKey: SettingsKeys.menuBarShowTime) as? Bool ?? true else { return nil }
+        if let state = breakManager.current {
+            return StatusLabel(minutes: Self.minutesRoundedUp(state.remaining(now: now)), dimmed: false, kind: .breakLeft)
+        }
+        guard let session = sessionManager.currentSession else { return nil }
+        let elapsed = sessionManager.runningSeconds(for: session, now: now)
+        let paused = session.pausedAt != nil
+        if let planned = session.plannedDurationMinutes {
+            let left = max(0, Double(planned * 60) - elapsed)
+            return StatusLabel(minutes: Self.minutesRoundedUp(left), dimmed: paused, kind: .sessionLeft)
+        }
+        return StatusLabel(minutes: Int(elapsed / 60), dimmed: paused, kind: .sessionElapsed)
+    }
+
+    /// "1m" until the last second, so the label never reads "0m" while time remains.
+    nonisolated static func minutesRoundedUp(_ seconds: TimeInterval) -> Int {
+        seconds <= 0 ? 0 : Int((seconds / 60).rounded(.up))
     }
 
     /// A drift counts once it outlasts the engine's silence window, so a
