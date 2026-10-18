@@ -16,6 +16,9 @@ struct MenuBarView: View {
     @State private var pick: SessionDurationChoice = .min50
     @State private var now: Date = .now
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
+    @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
+    /// The picker opens on the last length the user started with.
+    @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -45,6 +48,7 @@ struct MenuBarView: View {
         .padding(6)
         .frame(width: 320)
         .task { await permissions.refresh() }
+        .onAppear(perform: restorePick)
         .onReceive(ticker) { now = $0 }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView(permissions: permissions) {
@@ -107,13 +111,8 @@ struct MenuBarView: View {
                 let left = planned.map { " · \(formatMinutes(Double($0 * 60) - elapsed)) left" } ?? ""
                 return (.paused, .primary, label, "Paused\(left)")
             }
-            let subtitle: String
-            if let planned {
-                let end = now.addingTimeInterval(Double(planned * 60) - elapsed)
-                subtitle = "Until \(clock(end)) · \(planned)-minute session"
-            } else {
-                subtitle = "Since \(clock(session.startedAt)) · open-ended"
-            }
+            let subtitle = planned.map { "\($0)-minute session · started \(clock(session.startedAt))" }
+                ?? "Open-ended · started \(clock(session.startedAt))"
             if drift != nil {
                 return (.drifted, Theme.distractionInk, "\(label) · drifted", subtitle)
             }
@@ -229,7 +228,20 @@ struct MenuBarView: View {
 
     private var startTitle: String { "Start \(chosenMinutes) minutes of focus" }
 
+    private func restorePick() {
+        let minutes = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
+        switch minutes {
+        case 25: pick = .min25
+        case 50: pick = .min50
+        case 90: pick = .min90
+        default:
+            customMinutes = minutes
+            pick = .custom
+        }
+    }
+
     private func start() {
+        lastSessionMinutes = chosenMinutes
         appState.sessionManager.startSession(
             label: defaultLabel.isEmpty ? nil : defaultLabel,
             plannedDurationMinutes: chosenMinutes
@@ -240,29 +252,28 @@ struct MenuBarView: View {
 
     private func sessionContent(_ session: Session, drift: DriftInfo?) -> some View {
         let isPaused = session.pausedAt != nil
-        let grid = appState.liveGrid(for: session, now: now)
+        let timeline = appState.liveTimeline(for: session, now: now)
         let elapsed = appState.sessionManager.runningSeconds(for: session, now: now)
+        let runs = appState.focusRuns(for: session, now: now)
 
         return VStack(alignment: .leading, spacing: 6) {
             if let drift {
                 driftModule(drift)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("This session")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if grid.classifiedCells > 0 {
-                        Text("\(grid.focusPercent)% focused")
-                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                    }
+            VStack(spacing: 14) {
+                SessionRingView(
+                    timeline: timeline,
+                    progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline)
+                ) {
+                    ringCenter(session: session, elapsed: elapsed, isPaused: isPaused)
                 }
-                SessionGridView(grid: grid)
-                GridLegend(trailing: progressCaption(session: session, elapsed: elapsed))
+                RingLegend(trailing: timeline.classifiedCells > 0 ? "\(timeline.focusPercent)% focused" : nil)
             }
+            .padding(.top, 4)
             .menuModule()
+
+            ZoneModule(runs: runs, bestToday: appState.bestZoneToday(now: now), drifting: drift != nil)
 
             HStack(spacing: 6) {
                 if isPaused {
@@ -291,10 +302,34 @@ struct MenuBarView: View {
         }
     }
 
-    private func progressCaption(session: Session, elapsed: TimeInterval) -> String {
-        let done = Int(elapsed / 60)
-        if let planned = session.plannedDurationMinutes { return "\(done) of \(planned) min" }
-        return "\(done) min"
+    /// Minutes left, big, with the end time — or elapsed for open-ended sessions.
+    private func ringCenter(session: Session, elapsed: TimeInterval, isPaused: Bool) -> some View {
+        let big: String
+        let unit: String
+        let detail: String
+        if let planned = session.plannedDurationMinutes {
+            let left = max(0, Double(planned * 60) - elapsed)
+            big = "\(Int((left / 60).rounded(.up)))"
+            unit = "min left"
+            detail = isPaused ? "paused" : "ends \(clock(now.addingTimeInterval(left)))"
+        } else {
+            big = "\(Int(elapsed / 60))"
+            unit = "min"
+            detail = isPaused ? "paused" : "open-ended"
+        }
+        return VStack(spacing: 0) {
+            Text(big)
+                .font(.system(size: 44, weight: .semibold).monospacedDigit())
+                .kerning(-1.2)
+            Text(unit)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
+            Text(detail)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 1)
+        }
     }
 
     private func driftModule(_ drift: DriftInfo) -> some View {
@@ -343,27 +378,56 @@ struct MenuBarView: View {
     // MARK: - Recap
 
     private func recapContent(_ recap: SessionRecap) -> some View {
-        let grid = recap.grid
+        let timeline = recap.timeline
+        let m = timeline.minutesPerCell
         return VStack(alignment: .leading, spacing: 6) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(grid.focusPercent)%")
-                        .font(.system(size: 30, weight: .semibold).monospacedDigit())
-                        .kerning(-0.6)
-                    Text("focused · \(grid.focusCells * grid.minutesPerCell) of \(grid.classifiedCells * grid.minutesPerCell) min")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+            VStack(spacing: 14) {
+                SessionRingView(timeline: timeline, progress: nil) {
+                    VStack(spacing: 0) {
+                        Text("\(timeline.focusPercent)%")
+                            .font(.system(size: 40, weight: .semibold).monospacedDigit())
+                            .kerning(-1.2)
+                        Text("focused")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 2)
+                        Text("\(timeline.focusCells * m) of \(timeline.classifiedCells * m) min")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 1)
+                    }
                 }
-                SessionGridView(grid: grid)
-                GridLegend(counts: (grid.focusCells, grid.driftCells, grid.otherCells),
-                           minutesPerCell: grid.minutesPerCell)
-                Rectangle().fill(Theme.moduleStroke).frame(height: 1)
-                HStack(alignment: .top, spacing: 10) {
-                    stat("Longest focus run", "\(grid.longestFocusRunMinutes) min")
-                    stat("Most drift", recap.topDrift.map {
-                        "\($0.name) · \(max(1, Int(($0.seconds / 60).rounded()))) min"
-                    } ?? "None")
+                RingLegend(counts: (timeline.focusCells * m, timeline.driftCells * m, timeline.otherCells * m))
+            }
+            .padding(.top, 4)
+            .menuModule()
+
+            HStack(alignment: .top, spacing: 10) {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(Theme.focusTint)
+                        ZoneGlyph(color: Theme.focus).frame(width: 16, height: 16)
+                    }
+                    .frame(width: 30, height: 30)
+                    .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Longest in the zone")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text("\(Int(recap.longestZone / 60)) min")
+                            .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                        if recap.isBestToday {
+                            Text("Best today")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Theme.focus)
+                        }
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                stat("Most drift", recap.topDrift.map {
+                    "\($0.name) · \(max(1, Int(($0.seconds / 60).rounded()))) min"
+                } ?? "None")
             }
             .menuModule()
 

@@ -179,78 +179,82 @@ struct NowRow: View {
     }
 }
 
-// MARK: - Session grid
+// MARK: - Session ring
 
-struct SessionGridView: View {
-    let grid: SessionGrid
-
-    private var cellHeight: CGFloat { grid.cells.count > 50 ? 14 : 18 }
+/// The timer: a ring that fills clockwise from 12 o'clock as the session
+/// runs, coloured by what each stretch actually was. The knob marks now.
+struct SessionRingView<Center: View>: View {
+    let timeline: SessionTimeline
+    /// 0...1 through the timeline for a live session; nil once it has ended.
+    let progress: Double?
+    var size: CGFloat = 168
+    var lineWidth: CGFloat = 13
+    @ViewBuilder var center: () -> Center
 
     var body: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: SessionGrid.columns),
-            spacing: 4
-        ) {
-            ForEach(Array(grid.cells.enumerated()), id: \.offset) { _, cell in
-                cellView(cell)
+        let segments = timeline.ringSegments(progress: progress)
+        let knobKind = timeline.cells.lazy.compactMap { cell -> SessionTimeline.Kind? in
+            if case .now(let c) = cell { return SessionTimeline.Kind(c) }
+            return nil
+        }.first
+
+        ZStack {
+            Canvas { context, canvasSize in
+                let radius = (min(canvasSize.width, canvasSize.height) - lineWidth) / 2 - 3
+                let c = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+
+                var track = Path()
+                track.addArc(center: c, radius: radius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                context.stroke(track, with: .color(Theme.control), lineWidth: lineWidth)
+
+                for segment in segments {
+                    var arc = Path()
+                    arc.addArc(center: c, radius: radius,
+                               startAngle: .degrees(segment.start - 90),
+                               endAngle: .degrees(segment.end - 90),
+                               clockwise: false)
+                    context.stroke(arc, with: .color(Self.color(segment.kind)),
+                                   style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                }
+
+                if let progress {
+                    let angle = Angle.degrees(progress * 360 - 90).radians
+                    let p = CGPoint(x: c.x + radius * cos(angle), y: c.y + radius * sin(angle))
+                    let knobRadius = lineWidth * 0.65
+                    let knob = Path(ellipseIn: CGRect(x: p.x - knobRadius, y: p.y - knobRadius,
+                                                      width: knobRadius * 2, height: knobRadius * 2))
+                    context.fill(knob, with: .color(.white))
+                    context.stroke(knob, with: .color(knobKind.map(Self.color) ?? Color.secondary),
+                                   lineWidth: lineWidth * 0.23)
+                }
             }
+            center()
         }
-        .accessibilityElement(children: .ignore)
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
     }
 
-    @ViewBuilder
-    private func cellView(_ cell: SessionGrid.Cell) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
-        switch cell {
-        case .focus:
-            shape.fill(Theme.focus).frame(height: cellHeight)
-        case .drift:
-            shape.fill(Theme.distraction).frame(height: cellHeight)
-        case .other:
-            shape.fill(Theme.other).frame(height: cellHeight)
-        case .now(let c):
-            let fill = c == .focus ? Theme.focus : (c == .distraction ? Theme.distraction : Theme.other)
-            shape.fill(fill)
-                .frame(height: cellHeight)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .stroke(fill, lineWidth: 1.5)
-                        .padding(-3)
-                )
-        case .future:
-            shape.strokeBorder(Theme.gridFuture, lineWidth: 1).frame(height: cellHeight)
+    static func color(_ kind: SessionTimeline.Kind) -> Color {
+        switch kind {
+        case .focus: return Theme.focus
+        case .drift: return Theme.distraction
+        case .other: return Theme.other
         }
     }
 
     private var accessibilitySummary: String {
-        let m = grid.minutesPerCell
-        let future = grid.cells.filter { $0 == .future }.count
-        var parts = [
-            "\(grid.focusCells * m) minutes focused",
-            "\(grid.driftCells * m) drifted",
-            "\(grid.otherCells * m) in other apps",
-        ]
-        if future > 0 { parts.append("\(future * m) remaining") }
-        return "Session minutes: " + parts.joined(separator: ", ")
+        let m = timeline.minutesPerCell
+        return "Session ring: \(timeline.focusCells * m) minutes focused, "
+            + "\(timeline.driftCells * m) drifted, \(timeline.otherCells * m) in other apps"
     }
 }
 
-/// Legend under the grid. Live sessions show a trailing caption; the recap
-/// shows per-kind minute counts instead.
-struct GridLegend: View {
+/// Legend under the ring. Live sessions show the focus share on the right;
+/// the recap shows per-kind minute counts instead.
+struct RingLegend: View {
     var counts: (focus: Int, drift: Int, other: Int)?
-    var minutesPerCell: Int = 1
     var trailing: String?
-
-    init(trailing: String) {
-        self.trailing = trailing
-    }
-
-    init(counts: (Int, Int, Int), minutesPerCell: Int) {
-        self.counts = (counts.0, counts.1, counts.2)
-        self.minutesPerCell = minutesPerCell
-    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -260,7 +264,7 @@ struct GridLegend: View {
             Spacer(minLength: 0)
             if let trailing {
                 Text(trailing)
-                    .foregroundStyle(.secondary)
+                    .fontWeight(.semibold)
                     .monospacedDigit()
             }
         }
@@ -269,8 +273,97 @@ struct GridLegend: View {
 
     private func swatch(_ color: Color, _ title: String, _ count: Int?) -> some View {
         HStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text(count.map { "\(title) \($0 * minutesPerCell)" } ?? title)
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(count.map { "\(title) \($0)" } ?? title)
+        }
+    }
+}
+
+// MARK: - In the zone
+
+/// Current unbroken focus run, measured against today's best.
+struct ZoneModule: View {
+    let runs: FocusRuns
+    let bestToday: TimeInterval
+    /// Drifting right now: the counter shows the reset.
+    let drifting: Bool
+
+    private var currentMinutes: Int { Int(runs.current / 60) }
+    private var bestMinutes: Int { Int(max(bestToday, runs.longest) / 60) }
+    private var active: Bool { !drifting && runs.current > 0 }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(active ? Theme.focusTint : Theme.control)
+                ZoneGlyph(color: active ? Theme.focus : Color.secondary)
+                    .frame(width: 18, height: 18)
+            }
+            .frame(width: 34, height: 34)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("In the zone")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Text("\(active ? currentMinutes : 0) min")
+                    .font(.system(size: 20, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(active ? Color.primary : Color.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 5) {
+                if drifting {
+                    if runs.lastEnded >= 60 {
+                        Text("Run ended at \(Int(runs.lastEnded / 60)) min")
+                            .font(.system(size: 11))
+                    }
+                    Text("Restarts when you're back")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                } else if active, currentMinutes >= bestMinutes, currentMinutes >= 1 {
+                    Text("New best today")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.focus)
+                } else if bestMinutes > 0 {
+                    Text("Best today \(bestMinutes) min")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Theme.control)
+                            Capsule().fill(Theme.focus)
+                                .frame(width: geo.size.width * CGFloat(min(1, Double(currentMinutes) / Double(bestMinutes))))
+                        }
+                    }
+                    .frame(width: 112, height: 5)
+                    .accessibilityHidden(true)
+                }
+            }
+            .multilineTextAlignment(.trailing)
+        }
+        .menuModule()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Concentric target used for "in the zone".
+struct ZoneGlyph: View {
+    let color: Color
+
+    var body: some View {
+        Canvas { context, size in
+            let s = size.width / 18
+            let c = CGPoint(x: size.width / 2, y: size.height / 2)
+            for r in [7.0, 3.6] {
+                let rr = r * s
+                context.stroke(Path(ellipseIn: CGRect(x: c.x - rr, y: c.y - rr, width: rr * 2, height: rr * 2)),
+                               with: .color(color), lineWidth: 1.6 * s)
+            }
+            let dot = 0.9 * s
+            context.fill(Path(ellipseIn: CGRect(x: c.x - dot, y: c.y - dot, width: dot * 2, height: dot * 2)),
+                         with: .color(color))
         }
     }
 }
