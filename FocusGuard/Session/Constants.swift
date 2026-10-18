@@ -50,6 +50,9 @@ enum Constants {
         static let presets = [25, 50, 90]
         static let customMin = 5
         static let customMax = 480
+        /// A session left open by a quit (an update relaunch, a restart) picks
+        /// up again on launch if the app was last seen this recently.
+        static let resumeAfterQuitWindow: TimeInterval = 15 * 60
     }
 }
 
