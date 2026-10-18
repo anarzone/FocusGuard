@@ -65,6 +65,19 @@ enum Theme {
         light: Color.black.opacity(0.07),
         dark:  Color.white.opacity(0.12)
     )
+    // MARK: - Window
+
+    /// Main window backdrop behind the floating sidebar and cards.
+    static let windowBackground = dynamicColor(
+        light: Color(red: 245/255, green: 245/255, blue: 248/255),   // #F5F5F8
+        dark:  Color(red: 28/255, green: 28/255, blue: 33/255)       // #1C1C21
+    )
+    /// Content cards in the main window.
+    static let windowCard = dynamicColor(
+        light: Color.white,
+        dark:  Color(red: 38/255, green: 38/255, blue: 44/255)       // #26262C
+    )
+
     /// Outline of a minute that hasn't happened yet.
     static let gridFuture = dynamicColor(
         light: Color.black.opacity(0.13),

@@ -109,7 +109,7 @@ private struct PaneTitle<Trailing: View>: View {
     }
 }
 
-private struct StatTile: View {
+struct StatTile: View {
     let label: String
     let value: String
     let detail: String
@@ -129,7 +129,7 @@ private struct StatTile: View {
     }
 }
 
-private func sectionLabel(_ text: String) -> some View {
+func sectionLabel(_ text: String) -> some View {
     Text(text).font(.system(size: 12, weight: .semibold))
 }
 
@@ -141,7 +141,7 @@ func formatDuration(_ seconds: TimeInterval) -> String {
     return "\(h)h \(m)m"
 }
 
-private func kindColor(_ classification: Classification) -> Color {
+func kindColor(_ classification: Classification) -> Color {
     switch classification {
     case .focus:       return Theme.focus
     case .neutral:     return Theme.other
@@ -149,7 +149,7 @@ private func kindColor(_ classification: Classification) -> Color {
     }
 }
 
-private func categoryName(_ classification: Classification) -> String {
+func categoryName(_ classification: Classification) -> String {
     switch classification {
     case .focus:       return "Focus"
     case .neutral:     return "Neutral"
@@ -158,7 +158,7 @@ private func categoryName(_ classification: Classification) -> String {
 }
 
 /// Small chip that opens a menu to change an app's or site's category.
-private struct CategoryMenu: View {
+struct CategoryMenu: View {
     let current: Classification
     let onChange: (Classification) -> Void
 
@@ -186,10 +186,12 @@ private struct CategoryMenu: View {
 }
 
 /// Bar + time row used for top apps and top distractions.
-private struct UsageBarRow: View {
+struct UsageBarRow: View {
     let row: UsageRow
     let maxSeconds: TimeInterval
     var onChange: ((Classification) -> Void)?
+    var nameWidth: CGFloat = 86
+    var barWidth: CGFloat?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -197,7 +199,7 @@ private struct UsageBarRow: View {
                 .font(.system(size: 12))
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .frame(width: 86, alignment: .leading)
+                .frame(width: nameWidth, alignment: .leading)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.control)
@@ -205,7 +207,7 @@ private struct UsageBarRow: View {
                         .frame(width: max(4, geo.size.width * CGFloat(row.seconds / max(1, maxSeconds))))
                 }
             }
-            .frame(width: onChange == nil ? 134 : 70, height: 6)
+            .frame(width: barWidth ?? (onChange == nil ? 134 : 70), height: 6)
             .accessibilityHidden(true)
             Text(formatDuration(row.seconds))
                 .font(.system(size: 11).monospacedDigit())
@@ -413,7 +415,7 @@ private struct InsightsPane: View {
 
 /// A session in the Insights list. Hover shows rename and delete; the running
 /// session can't be deleted from here.
-private struct SessionRow: View {
+struct SessionRow: View {
     let summary: SessionSummary
     let now: Date
     let onRename: (String) -> Void
@@ -512,7 +514,7 @@ private struct SessionRow: View {
 }
 
 /// Sessions on a thin top lane, activity coloured by kind below, a line at now.
-private struct DayTimelineView: View {
+struct DayTimelineView: View {
     let insights: TodayInsights
     let now: Date
 
@@ -528,17 +530,23 @@ private struct DayTimelineView: View {
                 return Path(CGRect(x: x0, y: y, width: max(1, x1 - x0 - 0.5), height: h))
             }
 
-            context.fill(Path(roundedRect: CGRect(x: 0, y: 16, width: w, height: 18), cornerRadius: 4),
+            // Lanes scale with the frame: sessions on a thin lane, activity below, labels under.
+            let activityHeight = max(18, (size.height - 26) * 0.6)
+            let sessionHeight = activityHeight / 2
+            let activityY = 2 + sessionHeight + 5
+            let labelY = activityY + activityHeight + 12
+
+            context.fill(Path(roundedRect: CGRect(x: 0, y: activityY, width: w, height: activityHeight), cornerRadius: 4),
                          with: .color(Theme.control))
             for span in insights.sessionSpans {
-                context.fill(bar(span.start, span.end, y: 2, h: 9), with: .color(Theme.focus.opacity(0.85)))
+                context.fill(bar(span.start, span.end, y: 2, h: sessionHeight), with: .color(Theme.focus.opacity(0.85)))
             }
             for span in insights.activity {
-                context.fill(bar(span.start, span.end, y: 16, h: 18), with: .color(SessionRingView<EmptyView>.color(span.kind)))
+                context.fill(bar(span.start, span.end, y: activityY, h: activityHeight), with: .color(SessionRingView<EmptyView>.color(span.kind)))
             }
             let nx = x(now)
             if nx >= 0, nx <= w {
-                context.fill(Path(CGRect(x: nx - 0.75, y: 0, width: 1.5, height: 38)), with: .color(.primary))
+                context.fill(Path(CGRect(x: nx - 0.75, y: 0, width: 1.5, height: activityY + activityHeight + 4)), with: .color(.primary))
             }
 
             // Hour labels every two hours.
@@ -553,7 +561,7 @@ private struct DayTimelineView: View {
                         .foregroundStyle(.secondary)
                     let px = x(tick)
                     let anchor: UnitPoint = px < 12 ? .leading : (px > w - 12 ? .trailing : .center)
-                    context.draw(label, at: CGPoint(x: px, y: 54), anchor: anchor)
+                    context.draw(label, at: CGPoint(x: px, y: labelY), anchor: anchor)
                 }
                 tick = tick.addingTimeInterval(3600)
             }
@@ -655,9 +663,12 @@ private struct WeekChartView: View {
 
 // MARK: - Apps & sites
 
-private struct AppsPane: View {
+struct AppsPane: View {
     @Bindable var appState: AppState
-    let close: () -> Void
+    /// Nil in the main window, which has its own title.
+    var close: (() -> Void)?
+    /// Fixed list height in the menu; nil fills the space available.
+    var listHeight: CGFloat? = 300
 
     @State private var rows: [UsageRow] = []
     @State private var rules: [AppRule] = []
@@ -668,7 +679,9 @@ private struct AppsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PaneTitle(title: "Apps & sites", close: close) { EmptyView() }
+            if let close {
+                PaneTitle(title: "Apps & sites", close: close) { EmptyView() }
+            }
 
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -735,7 +748,8 @@ private struct AppsPane: View {
                 .padding(.horizontal, 6)
             }
             .padding(.horizontal, -6)
-            .frame(height: 300)
+            .frame(height: listHeight)
+            .frame(maxHeight: listHeight == nil ? .infinity : nil)
 
             HStack(spacing: 6) {
                 TextField("Add a distracting site, e.g. reddit.com", text: $newSite)
@@ -811,7 +825,7 @@ private struct AppsPane: View {
     }
 }
 
-private struct AppRuleRow: View {
+struct AppRuleRow: View {
     let title: String
     let subtitle: String
     let bundleId: String?
@@ -853,7 +867,7 @@ private struct AppRuleRow: View {
 }
 
 /// Three-way Focus / Neutral / Distracting switch, coloured by kind.
-private struct CategoryPicker: View {
+struct CategoryPicker: View {
     let selection: Classification
     let onChange: (Classification) -> Void
 

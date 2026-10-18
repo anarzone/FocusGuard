@@ -134,61 +134,6 @@ struct ReportBuilder {
         }
     }
 
-    // MARK: - Per-minute timeline
-
-    /// Stacked-area timeline points for the given range, one minute each.
-    /// Used by the Reports timeline chart to replace its mock data.
-    func timeline(from: Date, to: Date) -> [TimelinePoint] {
-        let descriptor = FetchDescriptor<ActivityEvent>(
-            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
-        )
-        let events = (try? context.fetch(descriptor)) ?? []
-
-        let totalMinutes = max(1, Int(to.timeIntervalSince(from) / 60))
-        var focus  = [Double](repeating: 0, count: totalMinutes)
-        var neutr  = [Double](repeating: 0, count: totalMinutes)
-        var distr  = [Double](repeating: 0, count: totalMinutes)
-
-        for e in events {
-            let s = max(e.startedAt, from)
-            let f = min(e.endedAt, to)
-            guard f > s else { continue }
-
-            // Clamp both bounds to a valid array index range. The predicate
-            // can let through edge events where the floor of the start minute
-            // lands at totalMinutes; without the explicit clamp we'd build
-            // an invalid `start...end` range and trap.
-            let rawStart = Int(s.timeIntervalSince(from) / 60)
-            let rawEnd   = Int(f.timeIntervalSince(from) / 60)
-            let startMin = max(0, min(totalMinutes - 1, rawStart))
-            let endMin   = max(0, min(totalMinutes - 1, rawEnd))
-            guard startMin <= endMin else { continue }
-
-            for m in startMin...endMin {
-                let minStart = from.addingTimeInterval(Double(m) * 60)
-                let minEnd   = minStart.addingTimeInterval(60)
-                let segStart = max(s, minStart)
-                let segEnd   = min(f, minEnd)
-                let segDur   = max(0, segEnd.timeIntervalSince(segStart))
-                let frac     = segDur / 60
-                switch e.classification ?? .neutral {
-                case .focus: focus[m] += frac
-                case .neutral: neutr[m] += frac
-                case .distraction: distr[m] += frac
-                }
-            }
-        }
-
-        return (0..<totalMinutes).map { i in
-            TimelinePoint(
-                minute: i,
-                focus: min(1, focus[i]),
-                neutral: min(1, neutr[i]),
-                distraction: min(1, distr[i])
-            )
-        }
-    }
-
     // MARK: - Top distractions
 
     /// Top apps by time spent in the window, regardless of classification.
