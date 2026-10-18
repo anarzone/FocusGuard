@@ -194,6 +194,11 @@ struct AddRuleSheet: View {
     @State private var classification: Classification = .focus
     @State private var priority: Int = 200
 
+    private var invalidPattern: Bool {
+        let trimmed = pattern.trimmingCharacters(in: .whitespacesAndNewlines)
+        return matchKind == .titleRegex && !trimmed.isEmpty && Classifier.compileTitlePattern(trimmed) == nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Add rule")
@@ -249,6 +254,12 @@ struct AddRuleSheet: View {
             }
             .font(.system(size: 12))
 
+            if invalidPattern {
+                Text("That pattern isn't a valid regular expression, so it would never match.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.distractionInk)
+            }
+
             HStack {
                 Button("Cancel") { onDismiss(nil) }
                     .keyboardShortcut(.cancelAction)
@@ -266,7 +277,7 @@ struct AddRuleSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .disabled(pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || invalidPattern)
             }
         }
         .padding(20)
