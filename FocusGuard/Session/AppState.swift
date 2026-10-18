@@ -390,16 +390,16 @@ final class AppState {
         let idle = Date().timeIntervalSince(lastObserved)
 
         if session.pausedAt == nil, idle >= autoPauseIdleSeconds {
-            autoPauseIfActive(reason: "idle \(Int(idle))s")
+            autoPauseIfActive(reason: "idle \(Int(idle))s", since: lastObserved)
         } else if let _ = session.pausedAt, autoPausedAt != nil, idle < 30 {
             autoResumeIfWePaused()
         }
     }
 
-    private func autoPauseIfActive(reason: String) {
+    private func autoPauseIfActive(reason: String, since: Date = .now) {
         guard let session = sessionManager.currentSession,
               session.pausedAt == nil else { return }
-        sessionManager.pauseSession()
+        sessionManager.pauseSession(at: since)
         autoPausedAt = .now
     }
 
