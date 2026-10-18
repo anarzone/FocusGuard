@@ -177,6 +177,9 @@ extension SessionTimeline {
         let kind: Kind
         let start: Double
         let end: Double
+        /// The timeline cells this arc covers — how a hovered arc is traced
+        /// back to the activity behind it.
+        var cells: Range<Int> = 0..<0
     }
 
     /// Arcs for the ring. Consecutive cells of the same kind merge into one
@@ -204,9 +207,10 @@ extension SessionTimeline {
                 continue
             }
             if let last = raw.last, last.kind == kind, abs(last.end - start) < 0.001 {
-                raw[raw.count - 1] = RingSegment(kind: kind, start: last.start, end: end)
+                raw[raw.count - 1] = RingSegment(kind: kind, start: last.start, end: end,
+                                                 cells: last.cells.lowerBound..<(index + 1))
             } else {
-                raw.append(RingSegment(kind: kind, start: start, end: end))
+                raw.append(RingSegment(kind: kind, start: start, end: end, cells: index..<(index + 1)))
             }
         }
 
@@ -216,7 +220,7 @@ extension SessionTimeline {
             let start = segment.start + ((index > 0 || closed) ? half : 0)
             let end = segment.end - ((index < raw.count - 1 || closed) ? half : 0)
             guard end > start else { return nil }
-            return RingSegment(kind: segment.kind, start: start, end: min(end, start + 359.9))
+            return RingSegment(kind: segment.kind, start: start, end: min(end, start + 359.9), cells: segment.cells)
         }
     }
 
@@ -225,5 +229,81 @@ extension SessionTimeline {
         let total = Double(timeline.cells.count * timeline.minutesPerCell) * 60
         guard total > 0 else { return 0 }
         return min(1, max(0, elapsed / total))
+    }
+}
+
+// MARK: - What happened in a stretch
+
+extension SessionTimeline {
+    /// One app or site inside a stretch of the ring.
+    struct StretchApp: Identifiable, Equatable {
+        var id: String { name }
+        let name: String
+        let seconds: TimeInterval
+        let classification: Classification
+    }
+
+    /// A hovered arc of the ring: when it was, what kind, and what was used.
+    struct Stretch: Equatable {
+        let kind: Kind
+        let start: Date
+        let end: Date
+        let minutes: Int
+        let apps: [StretchApp]
+        /// The arc reaches the minute in progress.
+        let includesNow: Bool
+    }
+
+    /// Summarises the activity behind `cells`. Cells spread tracked time
+    /// evenly (see `classify`), so this walks the same cumulative tracked
+    /// time to find which events — and which wall-clock span — they cover.
+    static func stretch(cells: Range<Int>, kind: Kind, in timeline: SessionTimeline,
+                        events: [ActivityEvent], now: Date = .now) -> Stretch? {
+        let sorted = events.sorted { $0.startedAt < $1.startedAt }
+        let lengths = sorted.map { max(0, $0.duration) + 1 }
+        let total = lengths.reduce(0, +)
+        let done = timeline.classifiedCells
+        guard total > 0, !cells.isEmpty else { return nil }
+
+        let slice = done > 0 ? total / Double(done) : total
+        let includesNow = cells.upperBound > done
+        // Tracked time is spread over the finished cells only, so the minute
+        // in progress has none of its own — show the latest minute instead.
+        let latest = max(0, total - Double(timeline.minutesPerCell) * 60)
+        let lo = includesNow ? min(Double(cells.lowerBound) * slice, latest)
+                             : Double(cells.lowerBound) * slice
+        let hi = includesNow ? total : Double(cells.upperBound) * slice
+        guard hi > lo || includesNow else { return nil }
+
+        var cursor: TimeInterval = 0
+        var start: Date?
+        var end: Date?
+        var tally: [String: (seconds: TimeInterval, classification: Classification)] = [:]
+        for (event, length) in zip(sorted, lengths) {
+            let a = cursor, b = cursor + length
+            cursor = b
+            let overlap = min(b, hi) - max(a, lo)
+            guard overlap > 0 else { continue }
+            if start == nil { start = event.startedAt.addingTimeInterval(max(0, lo - a)) }
+            end = event.startedAt.addingTimeInterval(min(b, hi) - a)
+            let host = event.url.flatMap { URL(string: $0)?.host }.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
+            let name = host ?? event.appName
+            let previous = tally[name]?.seconds ?? 0
+            tally[name] = (previous + overlap, event.classification ?? .neutral)
+        }
+        guard let first = start ?? sorted.last?.endedAt else { return nil }
+        let last = includesNow ? now : (end ?? first)
+
+        let apps = tally
+            .map { StretchApp(name: $0.key, seconds: $0.value.seconds, classification: $0.value.classification) }
+            .sorted { $0.seconds > $1.seconds }
+        return Stretch(
+            kind: kind,
+            start: first,
+            end: max(first, last),
+            minutes: max(1, Int(((hi - lo) / 60).rounded())),
+            apps: Array(apps.prefix(3)),
+            includesNow: includesNow
+        )
     }
 }
