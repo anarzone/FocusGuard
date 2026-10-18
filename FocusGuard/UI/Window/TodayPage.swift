@@ -267,7 +267,7 @@ struct TodayPage: View {
                             .foregroundStyle(selected ? Color.white : Color.primary)
                             .padding(.horizontal, 12)
                             .frame(height: 28)
-                            .background(Capsule().fill(selected ? Theme.focus : Theme.control))
+                            .background(Capsule().fill(selected ? Theme.focusFill : Theme.control))
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(selected ? .isSelected : [])
@@ -283,7 +283,7 @@ struct TodayPage: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 34)
-                    .background(Capsule().fill(Theme.focus))
+                    .background(Capsule().fill(Theme.focusFill))
             }
             .buttonStyle(.plain)
         }
@@ -369,7 +369,7 @@ struct TodayPage: View {
             Spacer()
             Button("Set up…") { showingOnboarding = true }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.focus)
+                .tint(Theme.focusFill)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.warning.opacity(0.12)))

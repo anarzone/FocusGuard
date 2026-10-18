@@ -180,7 +180,7 @@ private struct SessionCard: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
-                    .background(Capsule().fill(Theme.focus))
+                    .background(Capsule().fill(Theme.focusFill))
             }
             .buttonStyle(.plain)
         }

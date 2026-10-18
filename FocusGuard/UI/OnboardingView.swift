@@ -45,7 +45,7 @@ struct OnboardingView: View {
             // Linear progress bar
             ProgressView(value: Double(grantedCount) / 3.0)
                 .progressViewStyle(.linear)
-                .tint(Theme.focus)
+                .tint(Theme.focusFill)
 
             permissionRow(
                 title: "Notifications",
