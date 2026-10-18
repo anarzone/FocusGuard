@@ -18,8 +18,10 @@ This doc covers the **Sparkle in-app update** machinery and the one-time setup i
 
 Sparkle compares the appcast's `<sparkle:version>` (the build number) against the installed
 app's `CFBundleVersion`. Both the build and the appcast take that number from the **same**
-source per release: `github.run_number` in CI, `git rev-list --count HEAD` locally — so they
-always agree within a release flow.
+source: `git rev-list --count HEAD`, in CI and locally (`release.sh`, `install.sh`) alike —
+so every build agrees and the number only grows. (CI used `github.run_number` until v0.3.0
+(build 25); local installs had already passed that, so Sparkle saw them as newer than every
+CI release. Releases after v0.3.0 use the commit count.)
 
 ## One-time setup
 

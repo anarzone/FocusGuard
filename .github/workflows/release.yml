@@ -82,6 +82,12 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Build number (CFBundleVersion + sparkle:version): the commit count,
+          # the same counter scripts/release.sh and scripts/install.sh use, so
+          # every way of building agrees and it only ever grows. (It used to be
+          # github.run_number, which local builds overtook — Sparkle then saw
+          # those installs as newer than every CI release.)
+          echo "build=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
           echo "==> Releasing $TAG"
 
       - name: Tag commit
@@ -147,7 +153,7 @@ jobs:
             -destination 'platform=macOS' \
             -derivedDataPath build/release \
             MARKETING_VERSION="${{ steps.ver.outputs.version }}" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.ver.outputs.build }}" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_IDENTITY="$APPLE_SIGN_IDENTITY" \
             CODE_SIGN_STYLE=Manual \
@@ -218,7 +224,7 @@ jobs:
             scripts/generate_appcast.sh \
               "${{ steps.zip.outputs.zip_path }}" \
               "${{ steps.ver.outputs.version }}" \
-              "${{ github.run_number }}" \
+              "${{ steps.ver.outputs.build }}" \
               "$DOWNLOAD_URL" \
               build/appcast.xml
 
