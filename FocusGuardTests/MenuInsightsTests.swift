@@ -96,4 +96,28 @@ final class MenuInsightsTests: XCTestCase {
         XCTAssertEqual(events.count, 1)
         XCTAssertNil(events.first?.session)
     }
+
+    func testSiteCategoryIsTheOneCoveringMostTime() {
+        let t = morning
+        // 5 min distracting, then a 1 min stray neutral event, then 2 min distracting.
+        event(t, 300, .distraction, app: "Safari", bundle: "com.apple.Safari", url: "https://www.youtube.com/a")
+        event(t.addingTimeInterval(300), 60, .neutral, app: "Safari", bundle: "com.apple.Safari", url: "https://www.youtube.com/b")
+        event(t.addingTimeInterval(360), 120, .distraction, app: "Safari", bundle: "com.apple.Safari", url: "https://www.youtube.com/c")
+        Persistence.save(context)
+
+        for _ in 0..<5 { // fetch order isn't fixed; the answer must be
+            let rows = MenuInsightsBuilder.usageRows(context: context, from: t, to: t.addingTimeInterval(3600), limit: 5)
+            XCTAssertEqual(rows.first?.host, "youtube.com")
+            XCTAssertEqual(rows.first?.classification, .distraction)
+        }
+    }
+
+    func testTallyPrefersDriftOnTies() {
+        var tally = ClassificationTally()
+        tally.add(60, .focus)
+        tally.add(60, .distraction)
+        XCTAssertEqual(tally.dominant, .distraction)
+        tally.add(1, .focus)
+        XCTAssertEqual(tally.dominant, .focus)
+    }
 }

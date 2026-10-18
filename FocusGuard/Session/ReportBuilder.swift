@@ -151,11 +151,11 @@ struct ReportBuilder {
             var name: String
             var bundleId: String
             var seconds: TimeInterval
-            var classification: Classification
+            var tally: ClassificationTally
             var events: Int
             // Per-host breakdown — only populated for browser bundles. Maps
-            // host (e.g. "github.com") → (seconds, dominant classification).
-            var hosts: [String: (seconds: TimeInterval, classification: Classification)]
+            // host (e.g. "github.com") → time per classification.
+            var hosts: [String: ClassificationTally]
         }
         var groups: [String: Group] = [:]
 
@@ -169,29 +169,23 @@ struct ReportBuilder {
                 ? e.url.flatMap { URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") }
                 : nil
 
-            if var existing = groups[key] {
-                existing.seconds += dur
-                existing.events += 1
-                if let h = host {
-                    let prev = existing.hosts[h] ?? (0, e.classification ?? .neutral)
-                    existing.hosts[h] = (prev.seconds + dur, e.classification ?? prev.classification)
-                }
-                groups[key] = existing
-            } else {
-                var hosts: [String: (TimeInterval, Classification)] = [:]
-                if let h = host {
-                    hosts[h] = (dur, e.classification ?? .neutral)
-                }
-                groups[key] = Group(
-                    kind: AppGlyph.kind(forBundleId: e.bundleIdentifier, name: e.appName),
-                    name: e.appName,
-                    bundleId: e.bundleIdentifier,
-                    seconds: dur,
-                    classification: e.classification ?? .neutral,
-                    events: 1,
-                    hosts: hosts
-                )
+            let classification = e.classification ?? .neutral
+            var group = groups[key] ?? Group(
+                kind: AppGlyph.kind(forBundleId: e.bundleIdentifier, name: e.appName),
+                name: e.appName,
+                bundleId: e.bundleIdentifier,
+                seconds: 0,
+                tally: ClassificationTally(),
+                events: 0,
+                hosts: [:]
+            )
+            group.seconds += dur
+            group.events += 1
+            group.tally.add(dur, classification)
+            if let h = host {
+                group.hosts[h, default: ClassificationTally()].add(dur, classification)
             }
+            groups[key] = group
         }
 
         return groups.values
@@ -199,13 +193,13 @@ struct ReportBuilder {
             .prefix(limit)
             .map { g in
                 let tabs = g.hosts
-                    .map { TabUsage(host: $0.key, seconds: $0.value.seconds, classification: $0.value.classification) }
+                    .map { TabUsage(host: $0.key, seconds: $0.value.total, classification: $0.value.dominant) }
                     .sorted { $0.seconds > $1.seconds }
                 return AppUsageEntry(
                     kind: g.kind,
                     name: g.name,
                     bundleId: g.bundleId,
-                    classification: g.classification,
+                    classification: g.tally.dominant,
                     seconds: g.seconds,
                     events: g.events,
                     tabs: tabs
@@ -304,6 +298,33 @@ struct DailyTotal: Identifiable, Hashable {
     let id = UUID()
     let date: Date
     let seconds: TimeInterval
+}
+
+/// Time per classification for one app or site. Its category is whichever
+/// covers the most time — events can disagree (a rule changed, or a page
+/// title matched a different rule), and picking any single event's label
+/// made the category flip between refreshes.
+struct ClassificationTally: Equatable {
+    var focus: TimeInterval = 0
+    var neutral: TimeInterval = 0
+    var distraction: TimeInterval = 0
+
+    var total: TimeInterval { focus + neutral + distraction }
+
+    mutating func add(_ seconds: TimeInterval, _ classification: Classification) {
+        switch classification {
+        case .focus:       focus += seconds
+        case .neutral:     neutral += seconds
+        case .distraction: distraction += seconds
+        }
+    }
+
+    /// Ties go to distraction, then focus, so a drift never hides.
+    var dominant: Classification {
+        if distraction > 0, distraction >= focus, distraction >= neutral { return .distraction }
+        if focus > 0, focus >= neutral { return .focus }
+        return .neutral
+    }
 }
 
 struct DailyBreakdown: Identifiable, Hashable {

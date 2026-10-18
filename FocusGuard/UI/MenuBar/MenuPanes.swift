@@ -41,7 +41,7 @@ struct PaneButtons: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(isOpen ? Color.white : Color.primary.opacity(0.75))
                         .frame(width: 28, height: 28)
-                        .background(Circle().fill(isOpen ? Theme.focus : Theme.control))
+                        .background(Circle().fill(isOpen ? Theme.focusFill : Theme.control))
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -873,7 +873,7 @@ struct CategoryPicker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            segment(.focus, "Focus", fill: Theme.focus, text: .white)
+            segment(.focus, "Focus", fill: Theme.focusFill, text: .white)
             segment(.neutral, "Neutral", fill: Theme.cardBackground, text: .primary)
             segment(.distraction, "Distr.", fill: Theme.distraction, text: .black)
         }
@@ -1088,7 +1088,7 @@ private struct QuickSettingsPane: View {
                 Button("Allow…", action: request)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.mini)
-                    .tint(Theme.focus)
+                    .tint(Theme.focusFill)
             }
         }
     }

@@ -225,7 +225,7 @@ struct MenuBarView: View {
                     .font(.system(size: 15, weight: .semibold).monospacedDigit())
                     .foregroundStyle(selected ? Color.white : Color.primary)
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(selected ? Theme.focus : Theme.control))
+                    .background(Circle().fill(selected ? Theme.focusFill : Theme.control))
                 Text(label)
                     .font(.system(size: 11, weight: selected ? .semibold : .regular))
             }

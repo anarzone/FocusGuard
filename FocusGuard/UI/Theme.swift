@@ -14,6 +14,13 @@ enum Theme {
         light: Color(red: 97/255, green: 85/255, blue: 245/255),     // #6155F5
         dark:  Color(red: 109/255, green: 124/255, blue: 255/255)    // #6D7CFF
     )
+    /// Fill for controls with white labels (prominent buttons, selected
+    /// pills). Dark mode's `focus` is too light for white text (3.5:1);
+    /// this keeps it at least 5:1 in both modes.
+    static let focusFill = dynamicColor(
+        light: Color(red: 97/255, green: 85/255, blue: 245/255),     // #6155F5, 5.1:1
+        dark:  Color(red: 94/255, green: 92/255, blue: 230/255)      // #5E5CE6, 5.1:1
+    )
     static let neutral = dynamicColor(
         light: Color(red: 142/255, green: 142/255, blue: 147/255),   // #8E8E93
         dark:  Color(red: 152/255, green: 152/255, blue: 157/255)    // #98989D

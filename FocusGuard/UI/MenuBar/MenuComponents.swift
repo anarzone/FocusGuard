@@ -42,7 +42,7 @@ struct CapsuleButton: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(Capsule().fill(prominent ? Theme.focus : Theme.control))
+                .background(Capsule().fill(prominent ? Theme.focusFill : Theme.control))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
