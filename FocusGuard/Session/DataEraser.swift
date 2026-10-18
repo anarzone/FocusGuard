@@ -16,7 +16,7 @@ enum DataEraser {
         appState.tracker.stop()
         defer { appState.tracker.start() }
 
-        try? context.delete(model: ActivityEvent.self, where: #Predicate { $0.startedAt >= dayStart })
+        Persistence.deleteAll(ActivityEvent.self, where: #Predicate { $0.startedAt >= dayStart }, in: context)
         let sessions = Persistence.fetch(context, FetchDescriptor<Session>(predicate: #Predicate { $0.startedAt >= dayStart }))
         for session in sessions where session.id != running {
             context.delete(session)
@@ -36,10 +36,9 @@ enum DataEraser {
         appState.tracker.stop()
         defer { appState.tracker.start() }
 
-        try? context.delete(model: ActivityEvent.self)
-        try? context.delete(model: Session.self)
-        try? context.delete(model: AppRule.self)
-        Persistence.save(context)
+        Persistence.deleteAll(Session.self, in: context)        // cascades to their events
+        Persistence.deleteAll(ActivityEvent.self, in: context)  // events outside sessions
+        Persistence.deleteAll(AppRule.self, in: context)
 
         DefaultRules.seedIfNeeded(in: context)
         appState.classifier.invalidate()

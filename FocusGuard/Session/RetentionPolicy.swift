@@ -24,18 +24,8 @@ enum HistoricalCleanup {
 
         var deleted = 0
         for bid in idleBundleIds {
-            let pred = #Predicate<ActivityEvent> { $0.bundleIdentifier == bid }
-            let count = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(predicate: pred))
-            if count > 0 {
-                do {
-                    try context.delete(model: ActivityEvent.self, where: pred)
-                    deleted += count
-                } catch {
-                    Persistence.logger.error("idle cleanup failed for \(bid, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                }
-            }
+            deleted += Persistence.deleteAll(ActivityEvent.self, where: #Predicate { $0.bundleIdentifier == bid }, in: context)
         }
-        Persistence.save(context)
         UserDefaults.standard.set(true, forKey: migrationKey)
         if deleted > 0 {
             Persistence.logger.info("historical cleanup removed \(deleted, privacy: .public) idle events")
@@ -54,19 +44,11 @@ enum SelfTrackingCleanup {
     static func runIfNeeded(context: ModelContext, defaults: UserDefaults = .standard,
                             bundleId: String = ActivityTracker.selfBundleId) -> Int {
         guard !defaults.bool(forKey: migrationKey) else { return 0 }
-        let pred = #Predicate<ActivityEvent> { $0.bundleIdentifier == bundleId }
-        let count = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(predicate: pred))
-        if count > 0 {
-            do {
-                try context.delete(model: ActivityEvent.self, where: pred)
-                Persistence.save(context)
-            } catch {
-                Persistence.logger.error("self-tracking cleanup failed: \(error.localizedDescription, privacy: .public)")
-                return 0
-            }
-        }
-        defaults.set(true, forKey: migrationKey)
-        return count
+        let deleted = Persistence.deleteAll(ActivityEvent.self, where: #Predicate { $0.bundleIdentifier == bundleId }, in: context)
+        // Only mark done once nothing is left, so a failed run retries next launch.
+        let left = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(predicate: #Predicate { $0.bundleIdentifier == bundleId }))
+        if left == 0 { defaults.set(true, forKey: migrationKey) }
+        return deleted
     }
 }
 
@@ -93,44 +75,26 @@ enum RetentionPolicy {
 
     @MainActor
     @discardableResult
-    static func prune(context: ModelContext) -> Int {
+    static func prune(context: ModelContext, days: Int = RetentionPolicy.days) -> Int {
         let cutoff = days
         guard cutoff > 0 else { return 0 }
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -cutoff, to: .now) ?? .now
 
         var pruned = 0
 
-        // Delete old activity events. Use a predicate-driven batch delete so
-        // SwiftData doesn't load every row into memory.
-        let eventCount = Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>(
-            predicate: #Predicate { $0.endedAt < cutoffDate }
-        ))
-        if eventCount > 0 {
-            do {
-                try context.delete(model: ActivityEvent.self,
-                                  where: #Predicate { $0.endedAt < cutoffDate })
-                pruned += eventCount
-            } catch {
-                Persistence.logger.error("retention prune failed (events): \(error.localizedDescription, privacy: .public)")
-            }
-        }
+        // Delete old activity events (paged; batch delete fails on rows
+        // that belong to a session — see Persistence.deleteAll).
+        pruned += Persistence.deleteAll(ActivityEvent.self, where: #Predicate { $0.endedAt < cutoffDate }, in: context)
 
-        // Delete old completed sessions. Keep active sessions regardless of age.
-        // SwiftData #Predicate doesn't allow `?? .distantFuture` — use a coalesced
-        // explicit endedAt check instead.
+        // Delete old finished sessions; keep active ones regardless of age.
+        // Filter on startedAt: SwiftData can't evaluate `endedAt! < cutoff`
+        // (a force-unwrap in #Predicate fails the whole fetch at runtime,
+        // which is why old sessions were never pruned).
         let activeRaw = SessionStatus.active.rawValue
         let sessionPredicate = #Predicate<Session> { session in
-            session.statusRaw != activeRaw && session.endedAt != nil && session.endedAt! < cutoffDate
+            session.statusRaw != activeRaw && session.endedAt != nil && session.startedAt < cutoffDate
         }
-        let sessionCount = Persistence.fetchCount(context, FetchDescriptor<Session>(predicate: sessionPredicate))
-        if sessionCount > 0 {
-            do {
-                try context.delete(model: Session.self, where: sessionPredicate)
-                pruned += sessionCount
-            } catch {
-                Persistence.logger.error("retention prune failed (sessions): \(error.localizedDescription, privacy: .public)")
-            }
-        }
+        pruned += Persistence.deleteAll(Session.self, where: sessionPredicate, in: context)
 
         Persistence.save(context)
         if pruned > 0 {

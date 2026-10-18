@@ -13,7 +13,12 @@ final class SelfTrackingTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let now = Date()
-        for (bundle, name) in [("com.anar.focusguard", "FocusGuard"), ("com.anar.focusguard", "FocusGuard"), ("com.apple.dt.Xcode", "Xcode")] {
+        // One self event inside a session: batch delete used to fail on these.
+        let session = Session(label: "Deep work")
+        context.insert(session)
+        context.insert(ActivityEvent(startedAt: now, endedAt: now.addingTimeInterval(60),
+                                     bundleIdentifier: "com.anar.focusguard", appName: "FocusGuard", session: session))
+        for (bundle, name) in [("com.anar.focusguard", "FocusGuard"), ("com.apple.dt.Xcode", "Xcode")] {
             context.insert(ActivityEvent(startedAt: now, endedAt: now.addingTimeInterval(60), bundleIdentifier: bundle, appName: name))
         }
         Persistence.save(context)
@@ -21,6 +26,7 @@ final class SelfTrackingTests: XCTestCase {
         XCTAssertEqual(SelfTrackingCleanup.runIfNeeded(context: context, defaults: defaults, bundleId: "com.anar.focusguard"), 2)
         let left = Persistence.fetch(context, FetchDescriptor<ActivityEvent>())
         XCTAssertEqual(left.map(\.appName), ["Xcode"])
+        XCTAssertEqual(Persistence.fetchCount(context, FetchDescriptor<Session>()), 1) // the session itself stays
 
         // Runs once: a new FocusGuard row added later isn't touched.
         context.insert(ActivityEvent(startedAt: now, endedAt: now, bundleIdentifier: "com.anar.focusguard", appName: "FocusGuard"))
