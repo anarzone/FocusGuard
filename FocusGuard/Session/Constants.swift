@@ -56,6 +56,8 @@ enum Constants {
 /// Centralised UserDefaults keys. Avoids stringly-typed scatter across the codebase.
 enum SettingsKeys {
     static let reduceMotion          = "reduceMotion"
+    /// Show minutes left next to the menu-bar icon during a session or break.
+    static let menuBarShowTime       = "menuBar.showTime"
     static let showNotifications     = "showNotifications"
     static let retentionDays         = "retentionDays"
     static let browserAutomationDenied = "browserAutomationDenied"

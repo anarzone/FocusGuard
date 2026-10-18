@@ -34,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         appState = AppState()
         menuBarController = MenuBarController(
-            glyphProvider: { [appState = appState!] in appState.statusGlyphState }
+            glyphProvider: { [appState = appState!] in appState.statusGlyphState },
+            labelProvider: { [appState = appState!] in appState.statusLabel() }
         ) { [weak self, appState = appState!] in
             MenuBarView(
                 permissions: appState.permissions,
