@@ -21,6 +21,7 @@ final class MenuBarController: NSObject {
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
     private var tickTimer: Timer?
+    private var animationTimer: Timer?
     private var renderedGlyph: StatusGlyphState?
     /// When the menu last closed — so the mouse-up of a click that closed it
     /// doesn't immediately reopen it.
@@ -45,6 +46,7 @@ final class MenuBarController: NSObject {
         if let m = globalClickMonitor { NSEvent.removeMonitor(m) }
         if let m = localClickMonitor  { NSEvent.removeMonitor(m) }
         tickTimer?.invalidate()
+        animationTimer?.invalidate()
     }
 
     /// 1 Hz poll of the glyph state. Only redraws when the state changes —
@@ -62,7 +64,9 @@ final class MenuBarController: NSObject {
         guard state != renderedGlyph || renderedLabel != .some(label),
               let button = statusItem.button else { return }
         if state != renderedGlyph {
-            button.image = StatusGlyph.templateImage(for: state)
+            let frames = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+                ? [] : GlyphAnimation.frames(from: renderedGlyph, to: state)
+            play(frames, for: state)
         }
         renderedGlyph = state
         renderedLabel = .some(label)
@@ -79,6 +83,34 @@ final class MenuBarController: NSObject {
             button.attributedTitle = NSAttributedString(string: "")
             button.setAccessibilityLabel(state.accessibilityLabel)
         }
+    }
+
+    /// Plays a one-off glyph animation, ending on the still glyph. A new
+    /// state change mid-animation cancels it and starts from there.
+    private func play(_ frames: [GlyphStyle], for state: StatusGlyphState) {
+        animationTimer?.invalidate()
+        animationTimer = nil
+        guard let button = statusItem.button else { return }
+        guard !frames.isEmpty else {
+            button.image = StatusGlyph.templateImage(for: state)
+            return
+        }
+        var index = 0
+        let timer = Timer(timeInterval: 1 / GlyphAnimation.framesPerSecond, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                guard let self, let button = self.statusItem.button else { timer.invalidate(); return }
+                if index < frames.count {
+                    button.image = StatusGlyph.templateImage(for: state, style: frames[index])
+                    index += 1
+                } else {
+                    button.image = StatusGlyph.templateImage(for: state)
+                    timer.invalidate()
+                    if self.animationTimer === timer { self.animationTimer = nil }
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        animationTimer = timer
     }
 
     // MARK: - Status item
