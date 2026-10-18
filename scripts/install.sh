@@ -4,7 +4,12 @@
 # replacing any existing copy. Use after changing source code so the running
 # /Applications/FocusGuard.app picks up your changes.
 #
-# Usage:  ./scripts/install.sh
+# Usage:  ./scripts/install.sh [version]
+#
+# The build is stamped like a release (see release.sh) so Sparkle never sees
+# a local install as older than the published appcast and "updates" it back:
+#   CFBundleShortVersionString = [version], default: latest v* tag
+#   CFBundleVersion            = commit count, same counter release.sh uses
 #
 set -euo pipefail
 
@@ -20,7 +25,11 @@ xcodegen generate >/dev/null
 # Make sure we use a real Xcode, not just CLT.
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
-echo "Building Release…"
+LATEST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "v0.0.0")
+VERSION="${1:-${LATEST_TAG#v}}"
+BUILD=$(git rev-list --count HEAD)
+
+echo "Building Release $VERSION ($BUILD)…"
 xcodebuild \
     -project FocusGuard.xcodeproj \
     -scheme FocusGuard \
@@ -28,6 +37,8 @@ xcodebuild \
     -destination 'platform=macOS' \
     -allowProvisioningUpdates \
     -derivedDataPath build/release \
+    MARKETING_VERSION="$VERSION" \
+    CURRENT_PROJECT_VERSION="$BUILD" \
     -quiet \
     build
 
@@ -89,4 +100,4 @@ cp -R "$APP" "$DEST"
 echo "Launching…"
 open "$DEST"
 
-echo "Installed FocusGuard to $DEST"
+echo "Installed FocusGuard $VERSION ($BUILD) to $DEST"
