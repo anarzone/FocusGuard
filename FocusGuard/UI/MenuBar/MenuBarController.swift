@@ -18,6 +18,7 @@ final class MenuBarController: NSObject {
     private let popoverWindow: PopoverWindow
     private let glyphProvider: () -> StatusGlyphState
     private let labelProvider: () -> StatusLabel?
+    private let minuteProvider: () -> Int?
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
     private var tickTimer: Timer?
@@ -26,20 +27,25 @@ final class MenuBarController: NSObject {
     /// When the menu last closed — so the mouse-up of a click that closed it
     /// doesn't immediately reopen it.
     private var lastClosedAt: Date?
+    /// Running minute of the session at the last render, for the minute pulse.
+    private var renderedMinute: Int?
     private var renderedLabel: StatusLabel??   // double optional: nil = not rendered yet
 
     init<Content: View>(
         glyphProvider: @escaping () -> StatusGlyphState,
         labelProvider: @escaping () -> StatusLabel? = { nil },
+        minuteProvider: @escaping () -> Int? = { nil },
         @ViewBuilder content: () -> Content
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popoverWindow = PopoverWindow(content: content())
         self.glyphProvider = glyphProvider
         self.labelProvider = labelProvider
+        self.minuteProvider = minuteProvider
         super.init()
         configureStatusItem()
         startTicking()
+        observeChanges()
     }
 
     deinit {
@@ -58,14 +64,38 @@ final class MenuBarController: NSObject {
         if let t = tickTimer { RunLoop.main.add(t, forMode: .common) }
     }
 
+    /// Re-render the moment session, break or drift state changes, instead
+    /// of waiting for the next 1 Hz tick (which stays as a backstop for
+    /// purely time-based changes, like a drift crossing its silence window).
+    private func observeChanges() {
+        withObservationTracking {
+            _ = glyphProvider()
+            _ = labelProvider()
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.refreshGlyph()
+                self?.observeChanges()
+            }
+        }
+    }
+
     private func refreshGlyph() {
         let state = glyphProvider()
         let label = labelProvider()
-        guard state != renderedGlyph || renderedLabel != .some(label),
+        let mark = minuteProvider()
+        let pulse = GlyphAnimation.shouldPulse(previousMinute: renderedMinute, minute: mark, state: state)
+        renderedMinute = mark
+        guard state != renderedGlyph || renderedLabel != .some(label) || pulse,
               let button = statusItem.button else { return }
-        if state != renderedGlyph {
-            let frames = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-                ? [] : GlyphAnimation.frames(from: renderedGlyph, to: state)
+        if state != renderedGlyph || pulse {
+            let frames: [GlyphStyle]
+            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                frames = []
+            } else if pulse {
+                frames = GlyphAnimation.pulse(from: renderedGlyph, to: state)
+            } else {
+                frames = GlyphAnimation.frames(from: renderedGlyph, to: state)
+            }
             play(frames, for: state)
         }
         renderedGlyph = state

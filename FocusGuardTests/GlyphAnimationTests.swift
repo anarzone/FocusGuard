@@ -47,4 +47,20 @@ final class GlyphAnimationTests: XCTestCase {
         let path = StatusGlyph.partialPolyline([.zero, CGPoint(x: 10, y: 0)], fraction: 0.5)
         XCTAssertEqual(path.currentPoint.x, 5, accuracy: 0.0001)
     }
+
+    func testMinutePulseSwellsAndSettlesOnTheNewLevel() {
+        let frames = GlyphAnimation.pulse(from: .focusing(progress: 0.3), to: .focusing(progress: 1.0 / 3))
+        XCTAssertEqual(frames.count, 16)
+        XCTAssertEqual(frames.map { $0.fill! }.max()!, 1.0 / 3 + 0.12, accuracy: 0.0001)
+        XCTAssertEqual(frames.last!.fill!, 1.0 / 3, accuracy: 0.0001)
+        XCTAssertTrue(GlyphAnimation.pulse(from: .focusing(progress: 0.3), to: .drifted).isEmpty)
+    }
+
+    func testPulseOnlyOnANewMinuteWhileFocusing() {
+        XCTAssertTrue(GlyphAnimation.shouldPulse(previousMinute: 4, minute: 5, state: .focusing(progress: 0.2)))
+        XCTAssertFalse(GlyphAnimation.shouldPulse(previousMinute: 5, minute: 5, state: .focusing(progress: 0.2)))
+        XCTAssertFalse(GlyphAnimation.shouldPulse(previousMinute: nil, minute: 0, state: .focusing(progress: 0)))   // session start: the sweep plays instead
+        XCTAssertFalse(GlyphAnimation.shouldPulse(previousMinute: 24, minute: 0, state: .focusing(progress: 0)))    // a new session
+        XCTAssertFalse(GlyphAnimation.shouldPulse(previousMinute: 4, minute: 5, state: .drifted))
+    }
 }
