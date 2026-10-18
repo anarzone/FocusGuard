@@ -12,6 +12,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// (Finder click) vs stay hidden (login startup).
     private var didShowMainWindow = false
 
+    /// Read in `applicationWillFinishLaunching`, while the launch Apple
+    /// event is still the current one.
+    private var launchedAsLoginItem = false
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        launchedAsLoginItem = Self.isLoginItemLaunch(
+            NSAppleEventManager.shared().currentAppleEvent,
+            loginItemEnabled: LoginItemController.isEnabled,
+            systemUptime: ProcessInfo.processInfo.systemUptime
+        )
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The unit-test bundle is injected into this same app as its test host,
         // so this runs during `xcodebuild test`. A headless CI runner can't host
@@ -52,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // If the user explicitly launched us (Finder double-click, Spotlight,
         // brew install + open), surface the Home window. If we were started
         // by login items we stay quiet so the menu bar item is the only sign.
-        if !launchedAtLogin() {
+        if !launchedAsLoginItem {
             openMainWindow(tab: .home)
         }
     }
@@ -70,16 +82,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Best-effort check: are we being started as a login item, or did the
-    /// user just click us? `NSApplication.LaunchOptionsKey.startedByLogin`
-    /// is iOS-only. On macOS we approximate by checking the launching process.
-    private func launchedAtLogin() -> Bool {
-        // ProcessInfo's `userName` is always set; the smarter signal is whether
-        // our parent process is `launchd` (login) vs `Finder`/`Dock`/`open`.
-        let parentPID = getppid()
-        let parentName = NSRunningApplication(processIdentifier: parentPID)?.localizedName ?? ""
-        // launchd has pid 1 and no associated NSRunningApplication.
-        return parentPID == 1 || parentName.isEmpty
+    /// Whether macOS started us as a login item. Login items get an
+    /// open-application Apple event flagged `keyAELaunchedAsLogInItem`;
+    /// Finder, Dock, Spotlight and `open` don't set it. (Checking for a
+    /// launchd parent doesn't work: every app launched from Finder has one.)
+    /// Fallback: launch-at-login is on and the Mac booted moments ago.
+    static func isLoginItemLaunch(_ event: NSAppleEventDescriptor?,
+                                  loginItemEnabled: Bool,
+                                  systemUptime: TimeInterval) -> Bool {
+        if let event,
+           event.eventID == AEEventID(kAEOpenApplication),
+           event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue == OSType(keyAELaunchedAsLogInItem) {
+            return true
+        }
+        return loginItemEnabled && systemUptime < 180
     }
 
     func applicationWillTerminate(_ notification: Notification) {
