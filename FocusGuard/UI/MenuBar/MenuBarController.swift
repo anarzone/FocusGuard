@@ -91,11 +91,11 @@ final class MenuBarController: NSObject {
             y: buttonScreenFrame.minY - panelSize.height - 5
         )
         // Keep on-screen with an 8pt margin.
-        if let screen = buttonWindow.screen ?? NSScreen.main {
-            let f = screen.visibleFrame
-            let margin: CGFloat = 8
-            origin.x = max(f.minX + margin, min(f.maxX - panelSize.width - margin, origin.x))
-            origin.y = max(f.minY + margin, origin.y)
+        let screenFrame = (buttonWindow.screen ?? NSScreen.main)?.visibleFrame
+        popoverWindow.anchor = (preferredX: origin.x, screen: screenFrame)
+        if let f = screenFrame {
+            origin.x = PopoverWindow.clampedX(origin.x, width: panelSize.width, in: f)
+            origin.y = max(f.minY + 8, origin.y)
         }
         popoverWindow.setFrameOrigin(origin)
 
@@ -152,6 +152,14 @@ final class MenuBarController: NSObject {
 /// while open, keeping its top edge pinned under the menu bar.
 private final class PopoverWindow: NSWindow {
     static let cornerRadius: CGFloat = 18
+    /// Where the panel wants its left edge (under the status item) and the
+    /// screen it must stay on. Side panes widen it; near the right edge of
+    /// the screen it grows leftward instead of running off.
+    var anchor: (preferredX: CGFloat, screen: NSRect?)?
+
+    static func clampedX(_ x: CGFloat, width: CGFloat, in screen: NSRect, margin: CGFloat = 8) -> CGFloat {
+        max(screen.minX + margin, min(screen.maxX - width - margin, x))
+    }
     private let hosting: NSHostingController<AnyView>
 
     init<Content: View>(content: Content) {
@@ -226,11 +234,15 @@ private final class PopoverWindow: NSWindow {
     }
 
     /// Phase changes (start, drift, end) change the menu's height while it's
-    /// open; grow or shrink downward from the pinned top edge.
+    /// open, and side panes change its width; the top edge stays pinned.
     private func fit(to size: CGSize) {
         guard size.width > 0, size.height > 0, size != frame.size else { return }
         let top = frame.maxY
-        setFrame(NSRect(x: frame.minX, y: top - size.height, width: size.width, height: size.height),
-                 display: isVisible)
+        var x = frame.minX
+        if let anchor, let screen = anchor.screen {
+            x = Self.clampedX(anchor.preferredX, width: size.width, in: screen)
+        }
+        setFrame(NSRect(x: x, y: top - size.height, width: size.width, height: size.height),
+                 display: isVisible, animate: false)
     }
 }
