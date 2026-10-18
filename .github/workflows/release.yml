@@ -48,7 +48,7 @@ jobs:
   release:
     name: Build, sign, release, bump tap
     needs: test       # don't ship if tests are red
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: write   # for tag push + gh release create
 
