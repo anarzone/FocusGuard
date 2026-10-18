@@ -64,6 +64,10 @@ struct TodayPage: View {
             }
         }
         .task { await appState.permissions.refresh() }
+        // The session card's clock ticks every second; the rest reloads every 10 s.
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
+            if isToday && appState.sessionManager.currentSession != nil { now = date }
+        }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView(permissions: appState.permissions) { showingOnboarding = false }
         }
@@ -179,11 +183,13 @@ struct TodayPage: View {
             HStack(spacing: 18) {
                 SessionRingView(timeline: timeline,
                                 progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
-                                size: 120, lineWidth: 11) {
+                                size: 120, lineWidth: 11,
+                                secondsSweep: paused ? nil : SessionClock.sweep(elapsed: elapsed)) {
                     VStack(spacing: 0) {
-                        Text(left.map { "\(Int(($0 / 60).rounded(.up)))" } ?? "\(Int(elapsed / 60))")
-                            .font(.system(size: 30, weight: .semibold).monospacedDigit())
-                        Text(left == nil ? "min" : "min left").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(SessionClock.format(left ?? elapsed))
+                            .font(.system(size: 22, weight: .semibold).monospacedDigit())
+                            .contentTransition(.numericText(countsDown: left != nil))
+                        Text(left == nil ? "elapsed" : "left").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }
                 VStack(alignment: .leading, spacing: 10) {

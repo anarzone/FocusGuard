@@ -189,6 +189,11 @@ struct SessionRingView<Center: View>: View {
     let progress: Double?
     var size: CGFloat = 168
     var lineWidth: CGFloat = 13
+    /// 0...1 through the current minute. Drawn as a thin inner ring that
+    /// fills once a minute, so a running session visibly moves every second
+    /// (one second barely moves the knob on a 50-minute ring). Nil when
+    /// paused or finished.
+    var secondsSweep: Double? = nil
     @ViewBuilder var center: () -> Center
 
     var body: some View {
@@ -215,6 +220,21 @@ struct SessionRingView<Center: View>: View {
                                clockwise: false)
                     context.stroke(arc, with: .color(Self.color(segment.kind)),
                                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
+                }
+
+                if let secondsSweep {
+                    let inner = radius - lineWidth / 2 - max(5, lineWidth * 0.45)
+                    let sweepWidth = max(2, lineWidth * 0.2)
+                    var sweepTrack = Path()
+                    sweepTrack.addArc(center: c, radius: inner, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                    context.stroke(sweepTrack, with: .color(Theme.control), lineWidth: sweepWidth)
+                    if secondsSweep > 0 {
+                        var sweep = Path()
+                        sweep.addArc(center: c, radius: inner, startAngle: .degrees(-90),
+                                     endAngle: .degrees(min(1, secondsSweep) * 360 - 90), clockwise: false)
+                        context.stroke(sweep, with: .color(Theme.focus.opacity(0.6)),
+                                       style: StrokeStyle(lineWidth: sweepWidth, lineCap: .round))
+                    }
                 }
 
                 if let progress {
@@ -247,6 +267,20 @@ struct SessionRingView<Center: View>: View {
         let m = timeline.minutesPerCell
         return "Session ring: \(timeline.focusCells * m) minutes focused, "
             + "\(timeline.driftCells * m) drifted, \(timeline.otherCells * m) in other apps"
+    }
+}
+
+/// "44:12", or "1:05:09" past an hour — the live clock in the ring's centre.
+enum SessionClock {
+    static func format(_ seconds: TimeInterval) -> String {
+        let total = Int(max(0, seconds).rounded(.up))
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    /// How far through the current minute a running session is.
+    static func sweep(elapsed: TimeInterval) -> Double {
+        elapsed.truncatingRemainder(dividingBy: 60) / 60
     }
 }
 
