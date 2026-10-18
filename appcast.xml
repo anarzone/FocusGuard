@@ -6,13 +6,13 @@
     <description>Updates for FocusGuard.</description>
     <language>en</language>
     <item>
-      <title>FocusGuard 0.3.2</title>
-      <pubDate>Sun, 18 Oct 2026 13:39:56 +0000</pubDate>
-      <sparkle:version>73</sparkle:version>
-      <sparkle:shortVersionString>0.3.2</sparkle:shortVersionString>
+      <title>FocusGuard 0.3.3</title>
+      <pubDate>Sun, 18 Oct 2026 13:51:04 +0000</pubDate>
+      <sparkle:version>74</sparkle:version>
+      <sparkle:shortVersionString>0.3.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[<p>FocusGuard 0.3.2. See the <a href="https://github.com/anarzone/FocusGuard/releases/tag/v0.3.2">release notes</a>.</p>]]></description>
-      <enclosure url="https://github.com/anarzone/FocusGuard/releases/download/v0.3.2/FocusGuard-v0.3.2.zip" type="application/octet-stream" sparkle:edSignature="eQCNTE0B6GZi2hPpAOk+dgCeM6LLPWyagAK8IskyqZ2w8bAAu8V2D8r+qUqD3W+mtPSRQh3OJirTo9L4x/ntAg==" length="3435389" />
+      <description><![CDATA[<p>FocusGuard 0.3.3. See the <a href="https://github.com/anarzone/FocusGuard/releases/tag/v0.3.3">release notes</a>.</p>]]></description>
+      <enclosure url="https://github.com/anarzone/FocusGuard/releases/download/v0.3.3/FocusGuard-v0.3.3.zip" type="application/octet-stream" sparkle:edSignature="ikOhUoRCIvBKz/nrvqcCu+CUVue47tdclKQEyWWsWsqAnFk3WrOdV68kZtGPN9Gn4vEK17UCA+D47nLc4qPeCw==" length="3435341" />
     </item>
   </channel>
 </rss>
