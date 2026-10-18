@@ -1,10 +1,10 @@
 import Foundation
 
-/// Minute-by-minute picture of a focus session — the menu's replacement for a
-/// countdown. One cell is one minute (several, for long sessions, so the grid
-/// never exceeds `maxCells`), coloured by what dominated that slice of
+/// Minute-by-minute picture of a focus session, drawn as the session ring.
+/// One cell is one minute (several, for long sessions, so the ring never has
+/// more than `maxCells` slices), coloured by what dominated that slice of
 /// running time.
-struct SessionGrid: Equatable {
+struct SessionTimeline: Equatable {
     enum Cell: Equatable {
         case focus, drift, other
         /// The minute in progress, tinted by what the user is doing right now.
@@ -19,6 +19,7 @@ struct SessionGrid: Equatable {
     }
 
     static let maxCells = 60
+    /// Open-ended sessions grow their timeline in steps of this many minutes.
     static let columns = 10
 
     let cells: [Cell]
@@ -62,7 +63,7 @@ struct SessionGrid: Equatable {
         planned: TimeInterval?,
         current: Classification?,
         live: Bool? = nil
-    ) -> SessionGrid {
+    ) -> SessionTimeline {
         let elapsedMinutes = max(0, elapsed) / 60
         let live = live ?? (current != nil)
 
@@ -87,7 +88,7 @@ struct SessionGrid: Equatable {
             cells.append(.now(current))
         }
         while cells.count < cellCount { cells.append(.future) }
-        return SessionGrid(cells: cells, minutesPerCell: minutesPerCell)
+        return SessionTimeline(cells: cells, minutesPerCell: minutesPerCell)
     }
 
     /// Spreads tracked time evenly across `count` cells and gives each cell
@@ -135,7 +136,7 @@ struct SessionGrid: Equatable {
     }
 }
 
-extension SessionGrid {
+extension SessionTimeline {
     /// Segments from a session's events, in order. Each event covers its
     /// first through last 1 Hz sample, so it stands for `duration + 1` seconds.
     static func segments(from events: [ActivityEvent]) -> [Segment] {
@@ -153,5 +154,76 @@ extension SessionGrid {
             totals[host ?? event.appName, default: 0] += max(0, event.duration) + 1
         }
         return totals.max { $0.value < $1.value }.map { (name: $0.key, seconds: $0.value) }
+    }
+}
+
+// MARK: - Ring geometry
+
+extension SessionTimeline {
+    enum Kind: Equatable {
+        case focus, drift, other
+
+        init(_ classification: Classification) {
+            switch classification {
+            case .focus:       self = .focus
+            case .distraction: self = .drift
+            case .neutral:     self = .other
+            }
+        }
+    }
+
+    /// One coloured arc of the ring, in degrees clockwise from 12 o'clock.
+    struct RingSegment: Equatable {
+        let kind: Kind
+        let start: Double
+        let end: Double
+    }
+
+    /// Arcs for the ring. Consecutive cells of the same kind merge into one
+    /// arc, with a small gap between arcs of different kinds.
+    ///
+    /// - Parameter progress: live sessions pass how far through the timeline
+    ///   they are (0...1); the `now` cell's arc stops there and the knob sits
+    ///   on it. Finished sessions pass nil and the ring closes, gap included.
+    func ringSegments(progress: Double?, gapDegrees: Double = 1.6) -> [RingSegment] {
+        guard !cells.isEmpty else { return [] }
+        let per = 360.0 / Double(cells.count)
+        var raw: [RingSegment] = []
+        for (index, cell) in cells.enumerated() {
+            let start = Double(index) * per
+            let kind: Kind
+            var end = start + per
+            switch cell {
+            case .focus: kind = .focus
+            case .drift: kind = .drift
+            case .other: kind = .other
+            case .now(let classification):
+                kind = Kind(classification)
+                if let progress { end = min(end, max(start, progress * 360)) }
+            case .future:
+                continue
+            }
+            if let last = raw.last, last.kind == kind, abs(last.end - start) < 0.001 {
+                raw[raw.count - 1] = RingSegment(kind: kind, start: last.start, end: end)
+            } else {
+                raw.append(RingSegment(kind: kind, start: start, end: end))
+            }
+        }
+
+        let closed = progress == nil
+        let half = gapDegrees / 2
+        return raw.enumerated().compactMap { index, segment in
+            let start = segment.start + ((index > 0 || closed) ? half : 0)
+            let end = segment.end - ((index < raw.count - 1 || closed) ? half : 0)
+            guard end > start else { return nil }
+            return RingSegment(kind: segment.kind, start: start, end: min(end, start + 359.9))
+        }
+    }
+
+    /// Fraction of the timeline that has elapsed, for the ring's knob.
+    static func progress(elapsed: TimeInterval, timeline: SessionTimeline) -> Double {
+        let total = Double(timeline.cells.count * timeline.minutesPerCell) * 60
+        guard total > 0 else { return 0 }
+        return min(1, max(0, elapsed / total))
     }
 }

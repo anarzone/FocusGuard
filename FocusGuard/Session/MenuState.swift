@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftData
 
 /// What the user drifted to, while it's happening.
 struct DriftInfo: Equatable {
@@ -20,27 +21,33 @@ struct SessionRecap {
     let startedAt: Date
     let endedAt: Date
     let plannedMinutes: Int?
-    let grid: SessionGrid
+    let timeline: SessionTimeline
     let topDrift: (name: String, seconds: TimeInterval)?
+    /// Longest unbroken focus run in this session.
+    let longestZone: TimeInterval
+    /// True when that run is also the longest of the day so far.
+    let isBestToday: Bool
 
     /// How long the menu keeps showing the recap before going back to Ready.
     static let shelfLife: TimeInterval = 15 * 60
 
     @MainActor
-    init(session: Session) {
+    init(session: Session, bestZoneToday: TimeInterval) {
         let endedAt = session.endedAt ?? .now
         let running = max(0, endedAt.timeIntervalSince(session.startedAt) - session.pausedSeconds)
         label = session.label ?? "Focus session"
         startedAt = session.startedAt
         self.endedAt = endedAt
         plannedMinutes = session.plannedDurationMinutes
-        grid = SessionGrid.build(
-            segments: SessionGrid.segments(from: session.events),
+        timeline = SessionTimeline.build(
+            segments: SessionTimeline.segments(from: session.events),
             elapsed: running,
             planned: session.plannedDurationMinutes.map { TimeInterval($0 * 60) },
             current: nil
         )
-        topDrift = SessionGrid.topDrift(in: session.events)
+        topDrift = SessionTimeline.topDrift(in: session.events)
+        longestZone = FocusRuns.compute(FocusRuns.spans(from: session.events), now: endedAt).longest
+        isBestToday = longestZone >= 60 && longestZone + 1 >= bestZoneToday
     }
 
     var nextSessionMinutes: Int { plannedMinutes ?? 25 }
@@ -99,14 +106,35 @@ extension AppState {
         return DriftInfo(since: since, snapshot: snapshot, blocksAt: blocksAt)
     }
 
-    func liveGrid(for session: Session, now: Date = .now) -> SessionGrid {
-        SessionGrid.build(
-            segments: SessionGrid.segments(from: session.events),
+    func liveTimeline(for session: Session, now: Date = .now) -> SessionTimeline {
+        SessionTimeline.build(
+            segments: SessionTimeline.segments(from: session.events),
             elapsed: sessionManager.runningSeconds(for: session, now: now),
             planned: session.plannedDurationMinutes.map { TimeInterval($0 * 60) },
             current: session.pausedAt == nil ? (tracker.currentSnapshot?.classification ?? .neutral) : nil,
             live: true
         )
+    }
+
+    /// "In the zone" for the running session.
+    func focusRuns(for session: Session, now: Date = .now) -> FocusRuns {
+        FocusRuns.compute(FocusRuns.spans(from: session.events), now: now)
+    }
+
+    /// Longest focus run across today's sessions. Cached for 30 s — it scans
+    /// the whole day's events; callers fold in the live session's run.
+    func bestZoneToday(now: Date = .now, fresh: Bool = false) -> TimeInterval {
+        if !fresh, let cache = bestZoneCache, now.timeIntervalSince(cache.at) < 30 {
+            return cache.value
+        }
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let descriptor = FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= startOfDay }
+        )
+        let events = Persistence.fetch(container.mainContext, descriptor).filter { $0.session != nil }
+        let value = FocusRuns.compute(FocusRuns.spans(from: events), now: now).longest
+        bestZoneCache = (now, value)
+        return value
     }
 
     /// Bring back the last app the user was focused in; failing that, just

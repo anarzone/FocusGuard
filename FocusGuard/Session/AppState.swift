@@ -24,6 +24,7 @@ final class AppState {
     /// Summary of the session that just ended. The menu shows it until the
     /// user starts a break or another session, or it goes stale.
     var recap: SessionRecap?
+    @ObservationIgnored var bestZoneCache: (at: Date, value: TimeInterval)?
 
     init() {
         let schema = Schema([
@@ -116,7 +117,7 @@ final class AppState {
             engine?.resetForSessionEnd()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
-            self.recap = SessionRecap(session: session)
+            self.recap = SessionRecap(session: session, bestZoneToday: self.bestZoneToday(fresh: true))
             let breakdown = ReportBuilder(context: context)
                 .breakdown(from: session.startedAt, to: session.endedAt ?? .now)
             let focusMin = Int(breakdown.focus / 60)
