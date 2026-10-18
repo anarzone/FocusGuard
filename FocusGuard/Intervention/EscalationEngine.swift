@@ -85,6 +85,7 @@ final class EscalationEngine {
         if strictMode, !overlay.isPresenting {
             overlay.present(
                 distractionAppName: snapshot.appName,
+                bundleId: snapshot.bundleIdentifier,
                 urlHost: snapshot.url.flatMap { URL(string: $0)?.host },
                 overrideSeconds: Constants.Escalation.blockOverrideCountdown
             )
@@ -95,6 +96,7 @@ final class EscalationEngine {
         if elapsed >= blockThreshold, !overlay.isPresenting {
             overlay.present(
                 distractionAppName: snapshot.appName,
+                bundleId: snapshot.bundleIdentifier,
                 urlHost: snapshot.url.flatMap { URL(string: $0)?.host },
                 overrideSeconds: Constants.Escalation.blockOverrideCountdown
             )

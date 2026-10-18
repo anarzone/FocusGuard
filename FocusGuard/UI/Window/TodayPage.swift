@@ -11,7 +11,6 @@ struct TodayPage: View {
     @State private var data: TodayInsights = .empty
     @State private var bestZone: TimeInterval = 0
     @State private var now = Date.now
-    @State private var showingOnboarding = false
 
     private var isToday: Bool { dayOffset == 0 }
 
@@ -67,9 +66,6 @@ struct TodayPage: View {
         // The session card's clock ticks every second; the rest reloads every 10 s.
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
             if isToday && appState.sessionManager.currentSession != nil { now = date }
-        }
-        .sheet(isPresented: $showingOnboarding) {
-            OnboardingView(permissions: appState.permissions) { showingOnboarding = false }
         }
     }
 
@@ -369,11 +365,11 @@ struct TodayPage: View {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Permissions needed").font(.system(size: 13, weight: .semibold))
-                Text("Grant Accessibility and Screen Recording so FocusGuard can see what you're working on.")
+                Text("Grant Screen Recording and Notifications so FocusGuard can see what you're working on and nudge you.")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Set up…") { showingOnboarding = true }
+            Button("Set up…") { NotificationCenter.default.post(name: .showOnboarding, object: nil) }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.focusFill)
         }
