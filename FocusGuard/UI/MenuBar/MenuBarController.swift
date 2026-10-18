@@ -22,6 +22,9 @@ final class MenuBarController: NSObject {
     private var localClickMonitor: Any?
     private var tickTimer: Timer?
     private var renderedGlyph: StatusGlyphState?
+    /// When the menu last closed — so the mouse-up of a click that closed it
+    /// doesn't immediately reopen it.
+    private var lastClosedAt: Date?
     private var renderedLabel: StatusLabel??   // double optional: nil = not rendered yet
 
     init<Content: View>(
@@ -91,9 +94,24 @@ final class MenuBarController: NSObject {
     @objc private func toggle(_ sender: Any?) {
         if popoverWindow.isVisible {
             close()
+        } else if let closed = lastClosedAt, Date().timeIntervalSince(closed) < 0.3 {
+            // This click already closed the menu on mouse-down (a click
+            // monitor got there first); don't reopen it on mouse-up.
+            return
         } else {
             show()
         }
+    }
+
+    /// Whether a click landed on the status item. Checked by screen position
+    /// because `event.window` isn't reliably the status bar's window — e.g.
+    /// when FocusGuard isn't the active app — and treating the icon as
+    /// "outside" made a second click close the menu and instantly reopen it.
+    private func isOnStatusItem(_ event: NSEvent) -> Bool {
+        if let window = event.window, window === statusItem.button?.window { return true }
+        guard let button = statusItem.button, let window = button.window else { return false }
+        let frame = window.convertToScreen(button.convert(button.bounds, to: nil))
+        return frame.insetBy(dx: -2, dy: -2).contains(NSEvent.mouseLocation)
     }
 
     // MARK: - Show / close
@@ -129,6 +147,7 @@ final class MenuBarController: NSObject {
     }
 
     func close() {
+        if popoverWindow.isVisible { lastClosedAt = Date() }
         popoverWindow.orderOut(nil)
         statusItem.button?.highlight(false)
         teardownMonitors()
@@ -140,8 +159,11 @@ final class MenuBarController: NSObject {
         if globalClickMonitor == nil {
             globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
                 matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
-            ) { [weak self] _ in
-                Task { @MainActor in self?.close() }
+            ) { [weak self] event in
+                Task { @MainActor in
+                    guard let self, !self.isOnStatusItem(event) else { return }
+                    self.close()
+                }
             }
         }
         if localClickMonitor == nil {
@@ -153,7 +175,7 @@ final class MenuBarController: NSObject {
                 if event.window === self.popoverWindow || event.window?.sheetParent === self.popoverWindow {
                     return event
                 }
-                if event.window === self.statusItem.button?.window { return event }
+                if self.isOnStatusItem(event) { return event }
                 Task { @MainActor in self.close() }
                 return event
             }
