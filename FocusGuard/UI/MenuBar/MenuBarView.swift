@@ -10,7 +10,6 @@ struct MenuBarView: View {
     var onOpenMain: (MainTab) -> Void = { _ in }
     var dismiss: () -> Void = {}
 
-    @State private var showingOnboarding = false
     @State private var showingCustomDuration = false
     @State private var customMinutes: Int = 30
     @State private var pick: SessionDurationChoice = .min50
@@ -61,11 +60,6 @@ struct MenuBarView: View {
         .task { await permissions.refresh() }
         .onAppear(perform: restorePick)
         .onReceive(ticker) { now = $0 }
-        .sheet(isPresented: $showingOnboarding) {
-            OnboardingView(permissions: permissions) {
-                showingOnboarding = false
-            }
-        }
         .sheet(isPresented: $showingCustomDuration) {
             CustomDurationSheet(minutes: $customMinutes) { minutes in
                 showingCustomDuration = false
@@ -532,7 +526,10 @@ struct MenuBarView: View {
                 .font(.system(size: 12))
                 .labelStyle(.titleAndIcon)
             HStack(spacing: 6) {
-                CapsuleButton(title: "Set up…", prominent: true, height: 28) { showingOnboarding = true }
+                CapsuleButton(title: "Set up…", prominent: true, height: 28) {
+                    dismiss()
+                    NotificationCenter.default.post(name: .showOnboarding, object: nil)
+                }
                 CapsuleButton(title: "Recheck", prominent: false, height: 28) {
                     Task { await permissions.refresh() }
                 }

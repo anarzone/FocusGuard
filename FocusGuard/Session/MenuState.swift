@@ -193,6 +193,27 @@ extension AppState {
         return value
     }
 
+    /// What the block screen shows: the session it's protecting, live.
+    func blockContext(now: Date = .now) -> BlockContext? {
+        guard let session = sessionManager.currentSession else { return nil }
+        let timeline = liveTimeline(for: session, now: now)
+        let elapsed = sessionManager.runningSeconds(for: session, now: now)
+        let left = session.plannedDurationMinutes.map { max(0, Double($0 * 60) - elapsed) }
+        let backTo = tracker.lastFocusBundleId.flatMap {
+            NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
+        }
+        return BlockContext(
+            sessionLabel: session.label ?? "your session",
+            timeline: timeline,
+            progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
+            timeLeft: left,
+            endsAt: left.map { now.addingTimeInterval($0) },
+            awaySince: escalationEngine.currentStreakStartedAt,
+            zoneBefore: focusRuns(for: session, now: now).lastEnded,
+            backToAppName: backTo
+        )
+    }
+
     /// Bring back the last app the user was focused in; failing that, just
     /// hide the distraction.
     func backToWork() {

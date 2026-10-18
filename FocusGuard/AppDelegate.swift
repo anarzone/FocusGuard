@@ -1,10 +1,12 @@
 import AppKit
 import SwiftUI
+import SwiftData
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var appState: AppState!
     private var menuBarController: MenuBarController?
+    private let onboarding = OnboardingWindowController()
     private var mainWindow: NSWindow?
     private var mainWindowTab: MainTab?
     /// Tracks whether the user has interacted with the app since launch.
@@ -66,8 +68,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // If the user explicitly launched us (Finder double-click, Spotlight,
         // brew install + open), surface the Home window. If we were started
         // by login items we stay quiet so the menu bar item is the only sign.
+        NotificationCenter.default.addObserver(forName: .showOnboarding, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let appState = self.appState else { return }
+                self.onboarding.show(appState: appState, startAt: .permissions)
+            }
+        }
+
+        // People who already have sessions on record were onboarded by the
+        // old flow; don't greet them as new.
+        if !OnboardingState.isCompleted,
+           Persistence.fetchCount(appState.container.mainContext, FetchDescriptor<Session>()) > 0 {
+            OnboardingState.isCompleted = true
+        }
+
         if !launchedAsLoginItem {
-            openMainWindow(tab: .home)
+            if OnboardingState.isCompleted {
+                openMainWindow(tab: .home)
+            } else {
+                onboarding.show(appState: appState)
+            }
         }
     }
 

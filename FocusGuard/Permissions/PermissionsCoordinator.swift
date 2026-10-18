@@ -15,18 +15,16 @@ enum PermissionStatus: Equatable {
 @MainActor
 final class PermissionsCoordinator {
     var notifications: PermissionStatus = .unknown
-    var accessibility: PermissionStatus = .unknown
     var screenRecording: PermissionStatus = .unknown
 
     var allGranted: Bool {
-        notifications == .granted
-            && accessibility == .granted
-            && screenRecording == .granted
+        // Tracking needs window titles (Screen Recording) and nudges need
+        // notifications. Accessibility isn't used by anything, so it isn't asked for.
+        notifications == .granted && screenRecording == .granted
     }
 
     func refresh() async {
         notifications = await currentNotificationStatus()
-        accessibility = currentAccessibilityStatus()
         screenRecording = currentScreenRecordingStatus()
     }
 
@@ -37,7 +35,7 @@ final class PermissionsCoordinator {
         // Once denied (or revoked via System Settings), Apple won't re-prompt
         // and silently returns — perceived as "the button does nothing". Fall
         // through to opening System Settings → Notifications for FocusGuard
-        // so the user can flip it back on, same as the Accessibility / Screen
+        // so the user can flip it back on, same as the Screen
         // Recording flows.
         if current == .notDetermined {
             do {
@@ -49,18 +47,6 @@ final class PermissionsCoordinator {
             openSettings(path: "id=com.anar.focusguard", scheme: "notifications")
         }
         notifications = await currentNotificationStatus()
-    }
-
-    /// Triggers the system prompt the first time; subsequent calls just open
-    /// System Settings if not yet granted.
-    func requestAccessibility() {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options: CFDictionary = [key: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-        accessibility = currentAccessibilityStatus()
-        if accessibility != .granted {
-            openSettings(path: "Privacy_Accessibility")
-        }
     }
 
     /// Triggers the system prompt the first time; otherwise opens System Settings.
@@ -82,10 +68,6 @@ final class PermissionsCoordinator {
         case .notDetermined: return .notDetermined
         @unknown default: return .unknown
         }
-    }
-
-    private func currentAccessibilityStatus() -> PermissionStatus {
-        AXIsProcessTrusted() ? .granted : .denied
     }
 
     private func currentScreenRecordingStatus() -> PermissionStatus {

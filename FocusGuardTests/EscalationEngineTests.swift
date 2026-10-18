@@ -18,7 +18,7 @@ final class EscalationEngineTests: XCTestCase {
         var presented = false
         var onOverride: (() -> Void)?
         var isPresenting: Bool { presented }
-        func present(distractionAppName: String, urlHost: String?, overrideSeconds: Int) {
+        func present(distractionAppName: String, bundleId: String, urlHost: String?, overrideSeconds: Int) {
             presented = true
         }
         func dismiss() { presented = false; onOverride?() }

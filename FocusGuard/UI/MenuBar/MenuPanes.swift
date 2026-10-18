@@ -1002,8 +1002,6 @@ private struct QuickSettingsPane: View {
 
             caption("Permissions")
             group {
-                permissionRow("Accessibility", appState.permissions.accessibility) { appState.permissions.requestAccessibility() }
-                divider
                 permissionRow("Screen Recording", appState.permissions.screenRecording) { appState.permissions.requestScreenRecording() }
                 divider
                 permissionRow("Notifications", appState.permissions.notifications) {

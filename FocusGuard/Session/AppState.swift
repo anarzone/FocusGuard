@@ -50,7 +50,8 @@ final class AppState {
         let tracker = ActivityTracker(context: context, optOutCache: cache, classifier: classifier)
         let manager = SessionManager(context: context, tracker: tracker)
         let presenter = NotificationPresenter()
-        let engine = EscalationEngine(presenter: presenter)
+        let blockOverlay = BlockOverlayController()
+        let engine = EscalationEngine(presenter: presenter, overlay: blockOverlay)
 
         self.permissions = PermissionsCoordinator()
         self.optOutCache = cache
@@ -149,6 +150,11 @@ final class AppState {
         self.breakManager.onBreakEnded = { [weak self] in
             self?.breakOverlay.dismiss()
         }
+
+        // The block screen reads the live session and acts on it.
+        blockOverlay.contextProvider = { [weak self] in self?.blockContext() }
+        blockOverlay.onBackToWork = { [weak self] in self?.backToWork() }
+        blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
 
         tracker.start()
         setupAutoPauseObservers()
