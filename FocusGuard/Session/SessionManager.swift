@@ -59,6 +59,21 @@ final class SessionManager {
         tracker.currentSession = session
     }
 
+    func rename(_ session: Session, to label: String) {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        session.label = trimmed.isEmpty ? nil : trimmed
+        Persistence.save(context)
+    }
+
+    /// Removes a finished session from the list. Its tracked activity stays
+    /// in reports — only the session grouping goes.
+    func delete(_ session: Session) {
+        guard session.id != currentSession?.id else { return }
+        for event in session.events { event.session = nil }
+        context.delete(session)
+        Persistence.save(context)
+    }
+
     /// "5 more min": push the planned end out. No-op for open-ended sessions.
     func extendSession(byMinutes minutes: Int) {
         guard let session = currentSession, let planned = session.plannedDurationMinutes else { return }

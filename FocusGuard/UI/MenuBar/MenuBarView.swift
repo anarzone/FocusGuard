@@ -15,6 +15,8 @@ struct MenuBarView: View {
     @State private var customMinutes: Int = 30
     @State private var pick: SessionDurationChoice = .min50
     @State private var now: Date = .now
+    /// Side pane slid out next to the session column, if any.
+    @State private var openPane: MenuPane?
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
@@ -25,6 +27,7 @@ struct MenuBarView: View {
     var body: some View {
         let phase = appState.menuPhase(now: now)
 
+        HStack(alignment: .top, spacing: 6) {
         VStack(alignment: .leading, spacing: 6) {
             header(for: phase)
 
@@ -45,8 +48,16 @@ struct MenuBarView: View {
 
             menuItems(for: phase)
         }
+        .frame(width: 308)
+
+            if let pane = openPane {
+                MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss) {
+                    withAnimation(.snappy(duration: 0.22)) { openPane = nil }
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
         .padding(6)
-        .frame(width: 320)
         .task { await permissions.refresh() }
         .onAppear(perform: restorePick)
         .onReceive(ticker) { now = $0 }
@@ -81,12 +92,14 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
+            PaneButtons(open: $openPane)
         }
-        .padding(.horizontal, 10)
+        .padding(.leading, 10)
+        .padding(.trailing, 4)
         .padding(.top, 8)
         .padding(.bottom, 4)
-        .accessibilityElement(children: .combine)
     }
 
     private func headerContent(for phase: MenuPhase) -> (StatusGlyphState, Color, String, String) {

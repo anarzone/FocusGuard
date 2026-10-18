@@ -220,18 +220,7 @@ struct SettingsPrivacyPane: View {
     }
 
     private func deleteAllData() {
-        // Stop tracking first so no new rows land mid-delete.
-        appState.tracker.stop()
-        defer { appState.tracker.start() }
-
-        try? context.delete(model: ActivityEvent.self)
-        try? context.delete(model: Session.self)
-        try? context.delete(model: AppRule.self)
-        Persistence.save(context)
-
-        // Re-seed defaults so the app remains functional
-        DefaultRules.seedIfNeeded(in: context)
-        appState.classifier.invalidate()
+        DataEraser.eraseAll(appState: appState)
         reload()
     }
 
