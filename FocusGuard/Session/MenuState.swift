@@ -135,6 +135,15 @@ extension AppState {
         return StatusLabel(minutes: Int(elapsed / 60), dimmed: paused, kind: .sessionElapsed)
     }
 
+    /// Whole minutes the running session has been going, for the menu-bar
+    /// minute pulse. Nil when no session is running, it's paused, or on a break.
+    func sessionMinuteMark(now: Date = .now) -> Int? {
+        guard breakManager.current == nil,
+              let session = sessionManager.currentSession,
+              session.pausedAt == nil else { return nil }
+        return Int(sessionManager.runningSeconds(for: session, now: now) / 60)
+    }
+
     /// "1m" until the last second, so the label never reads "0m" while time remains.
     nonisolated static func minutesRoundedUp(_ seconds: TimeInterval) -> Int {
         seconds <= 0 ? 0 : Int((seconds / 60).rounded(.up))

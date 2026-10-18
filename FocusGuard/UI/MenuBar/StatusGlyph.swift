@@ -276,6 +276,23 @@ enum GlyphAnimation {
         }
     }
 
+    /// Once a minute while focusing, the fill swells a little and settles —
+    /// a visible "time is passing" beat without anything looping. When the
+    /// fill also steps up that minute, the pulse lands on the new level.
+    static func pulse(from old: StatusGlyphState?, to new: StatusGlyphState) -> [GlyphStyle] {
+        guard case .focusing(let p) = new else { return [] }
+        var q = p
+        if case .focusing(let previous)? = old { q = previous }
+        let peak = min(1, max(p, q) + 0.12)
+        return ramp(7) { GlyphStyle(fill: q + (peak - q) * $0) } + ramp(9) { GlyphStyle(fill: peak + (p - peak) * $0) }
+    }
+
+    /// A new running minute of the same focusing session.
+    static func shouldPulse(previousMinute: Int?, minute: Int?, state: StatusGlyphState) -> Bool {
+        guard case .focusing = state, let previousMinute, let minute else { return false }
+        return minute > previousMinute
+    }
+
     /// `count` frames with eased progress from just above 0 to exactly 1.
     private static func ramp(_ count: Int, _ make: (Double) -> GlyphStyle) -> [GlyphStyle] {
         (1...count).map { make(easeInOut(Double($0) / Double(count))) }
