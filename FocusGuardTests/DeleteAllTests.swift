@@ -68,13 +68,13 @@ final class DeleteAllTests: XCTestCase {
     }
 
     func testRetentionPrunesOldSessionActivity() {
-        let old = Calendar.current.date(byAdding: .day, value: -(RetentionPolicy.days + 30), to: .now)!
-        guard RetentionPolicy.days > 0 else { return } // "keep all" on this machine: nothing to prune
+        // Explicit retention, so the test never depends on this machine's setting.
+        let old = Calendar.current.date(byAdding: .day, value: -120, to: .now)!
         _ = sessionWithEvents(startedAt: old, events: 3)
         _ = sessionWithEvents(startedAt: .now, events: 2)
         Persistence.save(context)
 
-        RetentionPolicy.prune(context: context)
+        RetentionPolicy.prune(context: context, days: 90)
 
         XCTAssertEqual(Persistence.fetchCount(context, FetchDescriptor<ActivityEvent>()), 2)
         XCTAssertEqual(Persistence.fetchCount(context, FetchDescriptor<Session>()), 1)

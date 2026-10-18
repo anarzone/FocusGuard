@@ -75,7 +75,7 @@ enum RetentionPolicy {
 
     @MainActor
     @discardableResult
-    static func prune(context: ModelContext) -> Int {
+    static func prune(context: ModelContext, days: Int = RetentionPolicy.days) -> Int {
         let cutoff = days
         guard cutoff > 0 else { return 0 }
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -cutoff, to: .now) ?? .now
@@ -86,12 +86,13 @@ enum RetentionPolicy {
         // that belong to a session — see Persistence.deleteAll).
         pruned += Persistence.deleteAll(ActivityEvent.self, where: #Predicate { $0.endedAt < cutoffDate }, in: context)
 
-        // Delete old completed sessions. Keep active sessions regardless of age.
-        // SwiftData #Predicate doesn't allow `?? .distantFuture` — use a coalesced
-        // explicit endedAt check instead.
+        // Delete old finished sessions; keep active ones regardless of age.
+        // Filter on startedAt: SwiftData can't evaluate `endedAt! < cutoff`
+        // (a force-unwrap in #Predicate fails the whole fetch at runtime,
+        // which is why old sessions were never pruned).
         let activeRaw = SessionStatus.active.rawValue
         let sessionPredicate = #Predicate<Session> { session in
-            session.statusRaw != activeRaw && session.endedAt != nil && session.endedAt! < cutoffDate
+            session.statusRaw != activeRaw && session.endedAt != nil && session.startedAt < cutoffDate
         }
         pruned += Persistence.deleteAll(Session.self, where: sessionPredicate, in: context)
 
