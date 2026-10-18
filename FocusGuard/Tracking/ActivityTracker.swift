@@ -33,6 +33,10 @@ final class ActivityTracker {
     /// True while FocusGuard itself is frontmost. Its own windows aren't
     /// tracked, can't count as drift, and keep the session from looking idle.
     private(set) var isFrontmostSelf = false
+    /// True while nobody's at the Mac (no input for `IdleMonitor.awayAfter`
+    /// and nothing like a video keeping the display awake). Nothing is
+    /// recorded meanwhile.
+    private(set) var isAway = false
     /// Last tick with the user at the Mac (any app, FocusGuard included).
     /// Drives idle auto-pause, which `currentSnapshot` can't once FocusGuard
     /// is frontmost (the snapshot keeps showing the last real app).
@@ -147,6 +151,26 @@ final class ActivityTracker {
             }
             return
         }
+
+        // Away from the Mac: end the event in progress at the last input, so
+        // the idle stretch isn't counted, and record nothing until they're back.
+        // `lastActiveAt` points at the last input so idle auto-pause fires on time.
+        let idleSeconds = IdleMonitor.secondsSinceInput()
+        if idleSeconds >= IdleMonitor.awayAfter,
+           IdleMonitor.isAway(idleSeconds: idleSeconds, displayKeptAwake: IdleMonitor.displayKeptAwake()) {
+            let lastInput = Date().addingTimeInterval(-idleSeconds)
+            isAway = true
+            isFrontmostSelf = false
+            lastActiveAt = lastInput
+            if let event = currentEvent {
+                event.endedAt = max(event.startedAt, min(event.endedAt, lastInput))
+                Persistence.save(context)
+                currentEvent = nil
+            }
+            onTick?()
+            return
+        }
+        isAway = false
 
         // FocusGuard's own menu/window: close the event in progress and
         // record nothing. The user is still here, so stay "active".

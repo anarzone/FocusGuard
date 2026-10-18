@@ -43,9 +43,11 @@ final class SessionManager {
         onSessionEnded?(session)
     }
 
-    func pauseSession() {
+    /// - Parameter date: when the pause began; idle auto-pause backdates it
+    ///   to the last input so the idle minutes don't count as session time.
+    func pauseSession(at date: Date = .now) {
         guard let session = currentSession, session.pausedAt == nil else { return }
-        session.pausedAt = .now
+        session.pausedAt = max(session.startedAt, min(date, .now))
         Persistence.save(context)
         // Detach so events created during the pause don't count toward the session.
         tracker.currentSession = nil
