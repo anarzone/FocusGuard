@@ -14,6 +14,8 @@ final class SessionManager {
     /// Set externally by AppState. We call its hooks on session boundaries.
     var onSessionStarted: (() -> Void)?
     var onSessionEnded: ((Session) -> Void)?
+    /// True on pause (by the user or idle auto-pause), false on resume.
+    var onSessionPauseChanged: ((Bool) -> Void)?
 
     init(context: ModelContext, tracker: ActivityTracker) {
         self.context = context
@@ -60,6 +62,7 @@ final class SessionManager {
         Persistence.save(context)
         // Detach so events created during the pause don't count toward the session.
         tracker.currentSession = nil
+        onSessionPauseChanged?(true)
     }
 
     func resumeSession() {
@@ -68,6 +71,7 @@ final class SessionManager {
         session.pausedAt = nil
         Persistence.save(context)
         tracker.currentSession = session
+        onSessionPauseChanged?(false)
     }
 
     func rename(_ session: Session, to label: String) {

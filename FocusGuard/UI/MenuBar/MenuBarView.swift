@@ -58,7 +58,11 @@ struct MenuBarView: View {
         .padding(6)
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
-        .onReceive(ticker) { now = $0 }
+        .onReceive(ticker) { tick in
+            now = tick
+            // The music card follows Spotify while a session is on screen.
+            if appState.sessionManager.currentSession != nil { appState.music.spotify.refresh() }
+        }
     }
 
     // MARK: - Header
@@ -132,6 +136,10 @@ struct MenuBarView: View {
             }
             .padding(.top, 4)
             .menuModule()
+
+            if appState.music.spotify.isInstalled {
+                MusicShelf(music: appState.music)
+            }
 
             CapsuleButton(title: "Start \(lengthText(minutes)) of focus", prominent: true) { start() }
                 .padding(.horizontal, 4)
@@ -240,6 +248,10 @@ struct MenuBarView: View {
             .menuModule()
 
             ZoneModule(runs: runs, bestToday: appState.bestZoneToday(now: now), drifting: drift != nil)
+
+            if appState.music.spotify.isInstalled {
+                NowPlayingCard(music: appState.music, now: now)
+            }
 
             HStack(spacing: 6) {
                 if isPaused {

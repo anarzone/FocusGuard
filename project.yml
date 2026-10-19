@@ -48,7 +48,7 @@ targets:
         LSUIElement: true                # menu bar app, no Dock icon
         CFBundleIconFile: AppIcon        # references AppIcon.icns we bundle directly
         NSHumanReadableCopyright: ""
-        NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions."
+        NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify."
         NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
         NSCalendarsUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
         # Sparkle auto-update. The appcast is published to GitHub Pages by the
