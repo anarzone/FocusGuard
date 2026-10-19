@@ -13,8 +13,8 @@ final class ReadyDialTests: XCTestCase {
 
     func testPointsMeasureClockwiseFromTwelve() {
         let size: CGFloat = 168
-        XCTAssertEqual(DialMath.minutes(at: CGPoint(x: 160, y: 84), in: size, previous: 50, continuing: false), 30)
-        XCTAssertEqual(DialMath.minutes(at: CGPoint(x: 8, y: 84), in: size, previous: 50, continuing: false), 90)
+        XCTAssertEqual(DialMath.snap(DialMath.rawMinutes(at: CGPoint(x: 160, y: 84), in: size, previous: 50, continuing: false)), 30)
+        XCTAssertEqual(DialMath.snap(DialMath.rawMinutes(at: CGPoint(x: 8, y: 84), in: size, previous: 50, continuing: false)), 90)
     }
 
     func testDraggingPastTwelvePinsToTheNearerEnd() {
@@ -38,6 +38,14 @@ final class ReadyDialTests: XCTestCase {
         XCTAssertEqual(DialMath.laps(for: 120).degrees, 360)
         XCTAssertEqual(DialMath.laps(for: 150).full, 1)
         XCTAssertEqual(DialMath.laps(for: 150).degrees, 90)
+        XCTAssertEqual(DialMath.laps(for: 62.5).degrees, 187.5)   // follows the pointer between marks
+    }
+
+    func testDialTracksThePointerBetweenMarksAndSnapsOnTheNearest() {
+        XCTAssertEqual(DialMath.rawMinutes(atDegrees: 152, previous: 50, continuing: true), 50.667, accuracy: 0.01)
+        XCTAssertEqual(DialMath.snap(50.667), 50)
+        XCTAssertEqual(DialMath.snap(52.6), 55)
+        XCTAssertEqual(DialMath.rawMinutes(atDegrees: 20, previous: 117.5, continuing: true), 120)
     }
 
     // MARK: - Ruler
