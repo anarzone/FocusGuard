@@ -40,6 +40,31 @@ final class ReadyDialTests: XCTestCase {
         XCTAssertEqual(DialMath.laps(for: 150).degrees, 90)
     }
 
+    // MARK: - Ruler
+
+    func testDraggingLeftBringsLongerLengthsIn() {
+        let ppm = RulerMath.pointsPerMinute
+        XCTAssertEqual(RulerMath.value(start: 50, translation: -10 * ppm), 60, accuracy: 0.001)
+        XCTAssertEqual(RulerMath.value(start: 50, translation: 10 * ppm), 40, accuracy: 0.001)
+    }
+
+    func testRulerClampsToFiveMinutesAndEightHours() {
+        XCTAssertEqual(RulerMath.value(start: 10, translation: 1000), 5)
+        XCTAssertEqual(RulerMath.value(start: 470, translation: -1000), 480)
+        XCTAssertEqual(RulerMath.snap(52.4), 50)
+        XCTAssertEqual(RulerMath.snap(52.6), 55)
+        XCTAssertEqual(RulerMath.snap(1), 5)
+    }
+
+    func testRulerLabelsPresetsTheHourAndWholeHours() {
+        XCTAssertEqual(RulerMath.label(for: 25), "25")
+        XCTAssertEqual(RulerMath.label(for: 60), "60")
+        XCTAssertEqual(RulerMath.label(for: 90), "90")
+        XCTAssertEqual(RulerMath.label(for: 180), "3h")
+        XCTAssertNil(RulerMath.label(for: 30))
+        XCTAssertNil(RulerMath.label(for: 150))
+    }
+
     // MARK: - Day strip
 
     private var calendar: Calendar {
