@@ -1,10 +1,15 @@
 import AppKit
 import SwiftUI
 
+/// How the dial and ruler settle on a length, and glide when the other one
+/// changes it.
+private let settle = Animation.spring(response: 0.32, dampingFraction: 0.88)
+
 // MARK: - Twist dial
 
 /// The ready menu's length picker: drag round the ring like a kitchen timer.
-/// One turn is two hours, in 5-minute clicks. Same size and stroke as
+/// One turn is two hours. The arc follows the pointer and settles on the
+/// nearest 5 minutes when you let go. Same size and stroke as
 /// `SessionRingView`, so the arc you set is the ring you then watch fill.
 struct TwistDial<Center: View>: View {
     @Binding var minutes: Int
@@ -12,62 +17,12 @@ struct TwistDial<Center: View>: View {
     var lineWidth: CGFloat = 13
     @ViewBuilder var center: () -> Center
 
-    @State private var dragging = false
+    /// Fractional minutes under the pointer while a drag is in progress.
+    @State private var scrub: Double?
 
     var body: some View {
         ZStack {
-            Canvas { context, canvasSize in
-                let radius = (min(canvasSize.width, canvasSize.height) - lineWidth) / 2 - 3
-                let c = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
-                func point(_ degrees: Double, _ r: CGFloat) -> CGPoint {
-                    let a = Angle.degrees(degrees - 90).radians
-                    return CGPoint(x: c.x + r * cos(a), y: c.y + r * sin(a))
-                }
-                func arc(to degrees: Double) -> Path {
-                    var p = Path()
-                    p.addArc(center: c, radius: radius, startAngle: .degrees(-90),
-                             endAngle: .degrees(degrees - 90), clockwise: false)
-                    return p
-                }
-
-                var track = Path()
-                track.addArc(center: c, radius: radius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
-                context.stroke(track, with: .color(Theme.control), lineWidth: lineWidth)
-
-                // A tick every 5 minutes, longer each quarter hour.
-                let tickOuter = radius - lineWidth / 2 - 4
-                let ticks = DialMath.minutesPerTurn / DialMath.step
-                for i in 0..<ticks {
-                    let degrees = Double(i) / Double(ticks) * 360
-                    let major = (i * DialMath.step) % 15 == 0
-                    var tick = Path()
-                    tick.move(to: point(degrees, tickOuter))
-                    tick.addLine(to: point(degrees, tickOuter - (major ? 6 : 3)))
-                    context.stroke(tick, with: .color(major ? Theme.other : Theme.gridFuture),
-                                   style: StrokeStyle(lineWidth: major ? 1.5 : 1, lineCap: .round))
-                }
-                for mark in [30, 60, 90] {
-                    let label = Text("\(mark)").font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
-                    context.draw(label, at: point(DialMath.degrees(for: mark), tickOuter - 18))
-                }
-
-                // The set length, from 12 o'clock. Past one turn, the extra
-                // lap rides on top with a shadow, like an overfull Activity ring.
-                let laps = DialMath.laps(for: minutes)
-                context.stroke(arc(to: laps.full > 0 ? 360 : laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
-                if laps.full > 0 {
-                    var lap = context
-                    lap.addFilter(.shadow(color: .black.opacity(0.35), radius: 2))
-                    lap.stroke(arc(to: laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
-                }
-
-                let p = point(laps.degrees, radius)
-                let knobRadius = lineWidth * (dragging ? 0.8 : 0.65)
-                let knob = Path(ellipseIn: CGRect(x: p.x - knobRadius, y: p.y - knobRadius,
-                                                  width: knobRadius * 2, height: knobRadius * 2))
-                context.fill(knob, with: .color(.white))
-                context.stroke(knob, with: .color(Theme.focus), lineWidth: lineWidth * 0.23)
-            }
+            DialFace(value: scrub ?? Double(minutes), knobScale: scrub == nil ? 0.65 : 0.8, lineWidth: lineWidth)
             center()
         }
         .frame(width: size, height: size)
@@ -75,16 +30,20 @@ struct TwistDial<Center: View>: View {
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
-                    guard dragging || DialMath.isOnRing(value.startLocation, size: size, lineWidth: lineWidth) else { return }
-                    let next = DialMath.minutes(at: value.location, in: size, previous: minutes, continuing: dragging)
-                    dragging = true
-                    guard next != minutes else { return }
-                    minutes = next
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                    let continuing = scrub != nil
+                    guard continuing || DialMath.isOnRing(value.startLocation, size: size, lineWidth: lineWidth) else { return }
+                    let raw = DialMath.rawMinutes(at: value.location, in: size, previous: scrub ?? Double(minutes),
+                                                  continuing: continuing)
+                    // The first press glides to where it landed; after that the arc tracks the pointer.
+                    withAnimation(continuing ? nil : settle) { scrub = raw }
+                    setMinutes(DialMath.snap(raw), on: $minutes)
                 }
-                .onEnded { _ in dragging = false }
+                .onEnded { _ in
+                    guard scrub != nil else { return }
+                    withAnimation(settle) { scrub = nil }
+                }
         )
-        .animation(.snappy(duration: 0.2), value: dragging)
+        .animation(scrub == nil ? settle : nil, value: minutes)
         .help("Drag round the ring to set how long")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Session length")
@@ -99,25 +58,102 @@ struct TwistDial<Center: View>: View {
     }
 }
 
+/// The dial's ring, ticks, arc and knob at `value` minutes. Animatable so
+/// the arc glides rather than jumping between 5-minute marks.
+private struct DialFace: View, Animatable {
+    var value: Double
+    var knobScale: Double
+    let lineWidth: CGFloat
+
+    var animatableData: AnimatablePair<Double, Double> {
+        get { AnimatablePair(value, knobScale) }
+        set { value = newValue.first; knobScale = newValue.second }
+    }
+
+    var body: some View {
+        Canvas { context, canvasSize in
+            let radius = (min(canvasSize.width, canvasSize.height) - lineWidth) / 2 - 3
+            let c = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+            func point(_ degrees: Double, _ r: CGFloat) -> CGPoint {
+                let a = Angle.degrees(degrees - 90).radians
+                return CGPoint(x: c.x + r * cos(a), y: c.y + r * sin(a))
+            }
+            func arc(to degrees: Double) -> Path {
+                var p = Path()
+                p.addArc(center: c, radius: radius, startAngle: .degrees(-90),
+                         endAngle: .degrees(degrees - 90), clockwise: false)
+                return p
+            }
+
+            var track = Path()
+            track.addArc(center: c, radius: radius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+            context.stroke(track, with: .color(Theme.control), lineWidth: lineWidth)
+
+            // A tick every 5 minutes, longer each quarter hour.
+            let tickOuter = radius - lineWidth / 2 - 4
+            let ticks = DialMath.minutesPerTurn / DialMath.step
+            for i in 0..<ticks {
+                let degrees = Double(i) / Double(ticks) * 360
+                let major = (i * DialMath.step) % 15 == 0
+                var tick = Path()
+                tick.move(to: point(degrees, tickOuter))
+                tick.addLine(to: point(degrees, tickOuter - (major ? 6 : 3)))
+                context.stroke(tick, with: .color(major ? Theme.other : Theme.gridFuture),
+                               style: StrokeStyle(lineWidth: major ? 1.5 : 1, lineCap: .round))
+            }
+            for mark in [30, 60, 90] {
+                let label = Text("\(mark)").font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
+                context.draw(label, at: point(DialMath.degrees(for: Double(mark)), tickOuter - 18))
+            }
+
+            // The set length, from 12 o'clock. Past one turn, the extra
+            // lap rides on top with a shadow, like an overfull Activity ring.
+            let laps = DialMath.laps(for: value)
+            context.stroke(arc(to: laps.full > 0 ? 360 : laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
+            if laps.full > 0 {
+                var lap = context
+                lap.addFilter(.shadow(color: .black.opacity(0.35), radius: 2))
+                lap.stroke(arc(to: laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
+            }
+
+            let p = point(laps.degrees, radius)
+            let knobRadius = lineWidth * knobScale
+            let knob = Path(ellipseIn: CGRect(x: p.x - knobRadius, y: p.y - knobRadius,
+                                              width: knobRadius * 2, height: knobRadius * 2))
+            context.fill(knob, with: .color(.white))
+            context.stroke(knob, with: .color(Theme.focus), lineWidth: lineWidth * 0.23)
+        }
+    }
+}
+
+/// Sets the length if it changed, with a trackpad tick for each 5-minute
+/// step crossed. Shared by the dial and the ruler.
+@MainActor
+private func setMinutes(_ value: Int, on minutes: Binding<Int>) {
+    guard value != minutes.wrappedValue else { return }
+    minutes.wrappedValue = value
+    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+}
+
 /// Angle ↔ minutes for `TwistDial`.
 enum DialMath {
     static let minutesPerTurn = 120
     static let step = 5
-    /// What dragging can set. Longer sessions come from the custom sheet.
+    /// What the dial can set. Longer sessions come from the ruler.
     static let range = 5...120
     static let maxMinutes = Constants.SessionDurations.customMax
 
     /// Clockwise from 12 o'clock.
-    static func degrees(for minutes: Int) -> Double {
-        Double(minutes) / Double(minutesPerTurn) * 360
+    static func degrees(for minutes: Double) -> Double {
+        minutes / Double(minutesPerTurn) * 360
     }
 
     /// Whole turns, and where the knob sits on the last one. 120 is one full
     /// turn with the knob back at the top, not zero.
-    static func laps(for minutes: Int) -> (full: Int, degrees: Double) {
+    static func laps(for minutes: Double) -> (full: Int, degrees: Double) {
         guard minutes > 0 else { return (0, 0) }
-        let full = (minutes - 1) / minutesPerTurn
-        return (full, degrees(for: minutes - full * minutesPerTurn))
+        let full = max(0, Int((minutes / Double(minutesPerTurn)).rounded(.up)) - 1)
+        return (full, degrees(for: minutes - Double(full * minutesPerTurn)))
     }
 
     /// Presses start a drag only on or just inside the ring, so clicking the
@@ -128,27 +164,36 @@ enum DialMath {
         return distance >= radius - lineWidth * 2.5 && distance <= radius + lineWidth
     }
 
-    /// The length for a pointer at `point` on a dial `size` across, snapped
-    /// to 5 minutes. While a drag is `continuing`, sweeping past 12 o'clock
-    /// pins to the nearer end instead of jumping from 2 hours to 5 minutes.
-    static func minutes(at point: CGPoint, in size: CGFloat, previous: Int, continuing: Bool) -> Int {
+    /// The unsnapped length for a pointer at `point` on a dial `size` across.
+    static func rawMinutes(at point: CGPoint, in size: CGFloat, previous: Double, continuing: Bool) -> Double {
         var degrees = atan2(point.x - size / 2, size / 2 - point.y) * 180 / .pi
         if degrees < 0 { degrees += 360 }
-        return minutes(atDegrees: degrees, previous: previous, continuing: continuing)
+        return rawMinutes(atDegrees: degrees, previous: previous, continuing: continuing)
+    }
+
+    /// While a drag is `continuing`, sweeping past 12 o'clock pins to the
+    /// nearer end instead of jumping from 2 hours to 5 minutes. A fresh press
+    /// right at the top goes to whichever end the length was nearer.
+    static func rawMinutes(atDegrees degrees: Double, previous: Double, continuing: Bool) -> Double {
+        let turn = Double(minutesPerTurn)
+        let raw = degrees / 360 * turn
+        let low = Double(range.lowerBound), high = Double(range.upperBound)
+        if continuing {
+            if previous >= turn * 0.75, raw < turn * 0.25 { return high }
+            if previous <= turn * 0.25, raw > turn * 0.75 { return low }
+        } else if raw < Double(step) / 2 || raw > turn - Double(step) / 2 {
+            return previous > turn / 2 ? high : low
+        }
+        return min(max(raw, low), high)
+    }
+
+    static func snap(_ raw: Double) -> Int {
+        let snapped = Int((raw / Double(step)).rounded()) * step
+        return min(max(snapped, range.lowerBound), range.upperBound)
     }
 
     static func minutes(atDegrees degrees: Double, previous: Int, continuing: Bool) -> Int {
-        let snapped = Int((degrees / 360 * Double(minutesPerTurn) / Double(step)).rounded()) * step
-        let quarter = minutesPerTurn / 4
-        let wasHigh = previous > minutesPerTurn / 2
-        if snapped == 0 || snapped == minutesPerTurn {
-            return wasHigh ? range.upperBound : range.lowerBound
-        }
-        if continuing {
-            if previous >= minutesPerTurn - quarter, snapped < quarter { return range.upperBound }
-            if previous <= quarter, snapped > minutesPerTurn - quarter { return range.lowerBound }
-        }
-        return min(max(snapped, range.lowerBound), range.upperBound)
+        snap(rawMinutes(atDegrees: degrees, previous: Double(previous), continuing: continuing))
     }
 }
 
@@ -156,14 +201,16 @@ enum DialMath {
 
 /// Scrub sideways to set the length, like a camera's zoom ruler: the marks
 /// slide under a fixed line in the middle. Covers 5 minutes to 8 hours, so
-/// it reaches past the dial's two-hour turn. Presets are labelled in the
-/// accent colour; click a mark to jump to it.
+/// it reaches past the dial's two-hour turn. Drag or swipe with two fingers
+/// (momentum carries it on); a flick coasts before it settles. Presets are
+/// labelled in the accent colour; click a mark to jump to it.
 struct LengthRuler: View {
     @Binding var minutes: Int
 
-    /// Fractional minutes under the line while a drag is in progress.
+    /// Fractional minutes under the line while a drag or swipe is in progress.
     @State private var scrub: Double?
     @State private var dragStart: Int?
+    @State private var pendingSettle: DispatchWorkItem?
 
     var body: some View {
         GeometryReader { geo in
@@ -176,31 +223,38 @@ struct LengthRuler: View {
                     Capsule().fill(Theme.focus).frame(width: 2.5, height: 24)
                 }
                 .contentShape(Rectangle())
+                .background(ScrollWheelReader(onScroll: scroll))
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
                             let start = dragStart ?? minutes
                             dragStart = start
                             guard abs(value.translation.width) >= 3 || scrub != nil else { return }
-                            let raw = RulerMath.value(start: start, translation: value.translation.width)
+                            let raw = RulerMath.value(start: Double(start), translation: value.translation.width)
                             scrub = raw
-                            set(RulerMath.snap(raw))
+                            setMinutes(RulerMath.snap(raw), on: $minutes)
                         }
                         .onEnded { value in
                             if scrub == nil {
                                 // A click: jump to the mark under the pointer.
-                                let target = RulerMath.snap(RulerMath.value(start: minutes, translation: width / 2 - value.location.x))
-                                withAnimation(.snappy(duration: 0.3)) { set(target) }
+                                let target = RulerMath.value(start: Double(minutes), translation: width / 2 - value.location.x)
+                                setMinutes(RulerMath.snap(target), on: $minutes)
                             } else {
-                                withAnimation(.snappy(duration: 0.2)) { scrub = nil }
+                                // A flick coasts on to where it was heading, then settles.
+                                let start = Double(dragStart ?? minutes)
+                                let target = RulerMath.snap(RulerMath.value(start: start, translation: value.predictedEndTranslation.width))
+                                withAnimation(settle) {
+                                    scrub = nil
+                                    minutes = target
+                                }
                             }
                             dragStart = nil
                         }
                 )
         }
         .frame(height: 40)
-        .animation(scrub == nil ? .snappy(duration: 0.18) : nil, value: minutes)
-        .help("Drag sideways to set how long")
+        .animation(scrub == nil ? settle : nil, value: minutes)
+        .help("Drag or swipe sideways to set how long")
         .accessibilityElement()
         .accessibilityLabel("Session length ruler")
         .accessibilityValue("\(minutes) minutes")
@@ -218,10 +272,83 @@ struct LengthRuler: View {
         }
     }
 
-    private func set(_ value: Int) {
-        guard value != minutes else { return }
-        minutes = value
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+    /// Trackpad swipes scrub like a drag, momentum included, then settle.
+    /// A mouse wheel moves 5 minutes a notch.
+    private func scroll(_ event: NSEvent) {
+        guard event.hasPreciseScrollingDeltas else {
+            let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : -event.scrollingDeltaX
+            guard delta != 0 else { return }
+            let next = minutes + (delta > 0 ? RulerMath.step : -RulerMath.step)
+            setMinutes(min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, next)), on: $minutes)
+            return
+        }
+
+        if event.phase == .began || event.momentumPhase == .began {
+            pendingSettle?.cancel()
+            pendingSettle = nil
+        }
+        let delta = abs(event.scrollingDeltaX) >= abs(event.scrollingDeltaY) ? event.scrollingDeltaX : event.scrollingDeltaY
+        if delta != 0 {
+            let raw = RulerMath.value(start: scrub ?? Double(minutes), translation: delta)
+            scrub = raw
+            setMinutes(RulerMath.snap(raw), on: $minutes)
+        }
+
+        if event.momentumPhase == .ended || event.momentumPhase == .cancelled {
+            settleScrub()
+        } else if event.phase == .ended || event.phase == .cancelled {
+            // Momentum, if any, starts right after the fingers lift; wait for it.
+            let work = DispatchWorkItem { settleScrub() }
+            pendingSettle = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
+        }
+    }
+
+    private func settleScrub() {
+        pendingSettle = nil
+        guard scrub != nil else { return }
+        withAnimation(settle) { scrub = nil }
+    }
+}
+
+/// Hands scroll-wheel and trackpad scroll events over the view to
+/// `onScroll`. Sits behind the SwiftUI content and never takes clicks. Once a
+/// swipe starts over the view, it keeps the swipe (momentum too) even if the
+/// pointer drifts off.
+private struct ScrollWheelReader: NSViewRepresentable {
+    let onScroll: (NSEvent) -> Void
+
+    func makeNSView(context: Context) -> ReaderView { ReaderView() }
+    func updateNSView(_ view: ReaderView, context: Context) { view.onScroll = onScroll }
+    static func dismantleNSView(_ view: ReaderView, coordinator: ()) { view.stopMonitoring() }
+
+    final class ReaderView: NSView {
+        var onScroll: ((NSEvent) -> Void)?
+        private var monitor: Any?
+        private var tracking = false
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stopMonitoring()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self, event.window === self.window else { return event }
+                let inside = self.bounds.contains(self.convert(event.locationInWindow, from: nil))
+                if event.phase == .began || event.phase == .mayBegin { self.tracking = inside }
+                guard inside || self.tracking else { return event }
+                self.onScroll?(event)
+                if event.momentumPhase == .ended || event.momentumPhase == .cancelled { self.tracking = false }
+                return nil
+            }
+        }
+
+        func stopMonitoring() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            tracking = false
+        }
     }
 }
 
@@ -270,8 +397,8 @@ enum RulerMath {
 
     /// The fractional length under the line after dragging `translation`
     /// points from `start`. Dragging left brings longer lengths in.
-    static func value(start: Int, translation: CGFloat) -> Double {
-        let raw = Double(start) - Double(translation / pointsPerMinute)
+    static func value(start: Double, translation: CGFloat) -> Double {
+        let raw = start - Double(translation / pointsPerMinute)
         return min(Double(range.upperBound), max(Double(range.lowerBound), raw))
     }
 
@@ -292,17 +419,23 @@ enum RulerMath {
 
 /// Today on one line: each stretch coloured by what it was, a line at now,
 /// and a dashed block where the session you're about to start would land.
-struct DayStripView: View {
+/// Animatable so the block glides as the length changes.
+struct DayStripView: View, Animatable {
     let spans: [DaySpan]
     let now: Date
-    /// Length of the session being set up; nil hides the preview.
-    var previewMinutes: Int?
+    /// Length of the session being set up; 0 hides the preview.
+    var previewMinutes: Double = 0
     var calendar: Calendar = .current
+
+    var animatableData: Double {
+        get { previewMinutes }
+        set { previewMinutes = newValue }
+    }
 
     var body: some View {
         let dayStart = calendar.startOfDay(for: now)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
-        let previewEnd = previewMinutes.map { min(dayEnd, now.addingTimeInterval(TimeInterval($0 * 60))) }
+        let previewEnd = previewMinutes > 0 ? min(dayEnd, now.addingTimeInterval(previewMinutes * 60)) : nil
         let window = DayStrip.window(dayStart: dayStart, firstActivity: spans.first?.start,
                                      until: max(now, previewEnd ?? now), calendar: calendar)
 

@@ -162,7 +162,8 @@ struct MenuBarView: View {
             }
             .accessibilityElement(children: .combine)
 
-            DayStripView(spans: appState.todaySpans(now: now), now: now, previewMinutes: minutes)
+            DayStripView(spans: appState.todaySpans(now: now), now: now, previewMinutes: Double(minutes))
+                .animation(.spring(response: 0.32, dampingFraction: 0.88), value: minutes)
         }
         .menuModule()
     }
