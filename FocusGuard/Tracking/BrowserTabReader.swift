@@ -55,8 +55,7 @@ final class BrowserTabReader {
         set { UserDefaults.standard.set(Array(newValue), forKey: "browserAutomationDenied") }
     }
 
-    private let scriptQueue = DispatchQueue(label: "com.anar.focusguard.applescript",
-                                            qos: .userInitiated)
+    private let scriptQueue = AppleScriptQueue.shared
 
     // MARK: - Public API
 

@@ -73,6 +73,11 @@ enum SettingsKeys {
         static let defaultLabel           = "session.defaultLabel"
     }
 
+    enum Music {
+        static let playlists = "music.playlists"
+        static let selected  = "music.selectedPlaylist"
+    }
+
     enum Calendar {
         static let enabled = "calendarAutostart.enabled"
         static let keyword = "calendarAutostart.keyword"

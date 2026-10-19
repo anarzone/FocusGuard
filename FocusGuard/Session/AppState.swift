@@ -21,6 +21,7 @@ final class AppState {
     let breakOverlay: BreakOverlayController
     let updater: UpdaterController
     let insights = AIInsightsViewModel()
+    let music = FocusMusic()
     /// Summary of the session that just ended. The menu shows it until the
     /// user starts a break or another session, or it goes stale.
     var recap: SessionRecap?
@@ -117,11 +118,16 @@ final class AppState {
         manager.onSessionStarted = { [weak self] in
             self?.recap = nil
             SystemFocusBridge.onSessionStarted()
+            self?.music.sessionStarted()
+        }
+        manager.onSessionPauseChanged = { [weak self] paused in
+            if paused { self?.music.sessionPaused() } else { self?.music.sessionResumed() }
         }
         manager.onSessionEnded = { [weak engine, weak self] session in
             engine?.resetForSessionEnd()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
+            self.music.sessionEnded()
             self.recap = SessionRecap(session: session, bestZoneToday: self.bestZoneToday(fresh: true))
             let breakdown = ReportBuilder(context: context)
                 .breakdown(from: session.startedAt, to: session.endedAt ?? .now)
