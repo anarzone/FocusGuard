@@ -15,6 +15,8 @@ struct MenuBarView: View {
     @State private var now: Date = .now
     /// Side pane slid out next to the session column, if any.
     @State private var openPane: MenuPane?
+    /// The music pane, slid out on the column's left.
+    @State private var musicOpen = false
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
@@ -26,6 +28,13 @@ struct MenuBarView: View {
         let phase = appState.menuPhase(now: now)
 
         HStack(alignment: .top, spacing: 6) {
+            if musicOpen {
+                MusicPane(music: appState.music, now: now, inSession: appState.sessionManager.currentSession != nil) {
+                    withAnimation(.snappy(duration: 0.22)) { musicOpen = false }
+                }
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+
         VStack(alignment: .leading, spacing: 6) {
             header(for: phase)
 
@@ -56,12 +65,18 @@ struct MenuBarView: View {
             }
         }
         .padding(6)
+        .preference(key: MenuLeadingExtensionKey.self, value: musicOpen ? MusicPane.width + 6 : 0)
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
         .onReceive(ticker) { tick in
             now = tick
-            // The music card follows Spotify while a session is on screen.
-            if appState.sessionManager.currentSession != nil { appState.music.spotify.refresh() }
+            // Follow Spotify while the music pane is open, and in a session for
+            // the header's playing indicator.
+            if musicOpen {
+                appState.music.spotify.refresh(every: 1)
+            } else if appState.sessionManager.currentSession != nil {
+                appState.music.spotify.refresh()
+            }
         }
     }
 
@@ -82,6 +97,9 @@ struct MenuBarView: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
+            if appState.music.spotify.isInstalled {
+                MusicButton(isOpen: $musicOpen, isPlaying: appState.music.spotify.nowPlaying?.isPlaying == true)
+            }
             PaneButtons(open: $openPane)
         }
         .padding(.leading, 10)
@@ -136,10 +154,6 @@ struct MenuBarView: View {
             }
             .padding(.top, 4)
             .menuModule()
-
-            if appState.music.spotify.isInstalled {
-                MusicShelf(music: appState.music)
-            }
 
             CapsuleButton(title: "Start \(lengthText(minutes)) of focus", prominent: true) { start() }
                 .padding(.horizontal, 4)
@@ -248,10 +262,6 @@ struct MenuBarView: View {
             .menuModule()
 
             ZoneModule(runs: runs, bestToday: appState.bestZoneToday(now: now), drifting: drift != nil)
-
-            if appState.music.spotify.isInstalled {
-                NowPlayingCard(music: appState.music, now: now)
-            }
 
             HStack(spacing: 6) {
                 if isPaused {

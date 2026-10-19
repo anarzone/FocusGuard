@@ -41,6 +41,26 @@ final class FocusMusicTests: XCTestCase {
         XCTAssertEqual(track.artworkURL?.host, "i.scdn.co")
     }
 
+    func testReadsShuffleRepeatAndVolume() throws {
+        let output = ["paused", "Snowman", "WYS", "Snowman", "", "171000", "0", "true", "false", "64"]
+            .joined(separator: "\t")
+        let track = try XCTUnwrap(SpotifyPlayer.parse(output, readAt: .now))
+        XCTAssertFalse(track.isPlaying)
+        XCTAssertTrue(track.shuffling)
+        XCTAssertFalse(track.repeating)
+        XCTAssertEqual(track.volume, 64)
+    }
+
+    // MARK: - Timeline
+
+    func testDraggingTheTimelinePicksATimeAlongTheTrack() {
+        XCTAssertEqual(SeekMath.time(at: 75, width: 300, duration: 200), 50)
+        XCTAssertEqual(SeekMath.time(at: -20, width: 300, duration: 200), 0)     // dragged past the start
+        XCTAssertEqual(SeekMath.time(at: 900, width: 300, duration: 200), 200)   // and past the end
+        XCTAssertEqual(SeekMath.label(171), "2:51")
+        XCTAssertEqual(SeekMath.label(3725), "1:02:05")
+    }
+
     func testStoppedOrEmptyMeansNothingPlaying() {
         XCTAssertNil(SpotifyPlayer.parse("stopped", readAt: .now))
         XCTAssertNil(SpotifyPlayer.parse("", readAt: .now))
