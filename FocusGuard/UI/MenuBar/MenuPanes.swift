@@ -84,7 +84,7 @@ struct MenuPaneView: View {
 
 // MARK: - Shared bits
 
-private struct PaneTitle<Trailing: View>: View {
+struct PaneTitle<Trailing: View>: View {
     let title: String
     let close: () -> Void
     @ViewBuilder var trailing: () -> Trailing

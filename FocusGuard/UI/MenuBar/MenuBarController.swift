@@ -195,6 +195,8 @@ final class MenuBarController: NSObject {
         // Keep on-screen with an 8pt margin.
         let screenFrame = (buttonWindow.screen ?? NSScreen.main)?.visibleFrame
         popoverWindow.anchor = (preferredX: origin.x, screen: screenFrame)
+        // A pane left open on the left last time keeps the column in place.
+        origin.x -= popoverWindow.leadingExtension
         if let f = screenFrame {
             origin.x = PopoverWindow.clampedX(origin.x, width: panelSize.width, in: f)
             origin.y = max(f.minY + 8, origin.y)
@@ -250,6 +252,16 @@ final class MenuBarController: NSObject {
     }
 }
 
+// MARK: - Left panes
+
+/// How much the menu reaches left of its main column (a pane open on the
+/// left, plus the gap). The window grows leftward by this much, so the
+/// column stays under the status item.
+struct MenuLeadingExtensionKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
 // MARK: - PopoverWindow
 
 /// Borderless floating window hosting the SwiftUI menu on Liquid Glass
@@ -282,8 +294,14 @@ private final class PopoverWindow: NSWindow {
         hosting.rootView = AnyView(
             content
                 .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGSize.self) { $0.size } action: { [weak self] size in
-                    self?.fit(to: size)
+                // Size and left extension arrive together, so opening a pane on
+                // the left resizes and shifts the window in one step.
+                .backgroundPreferenceValue(MenuLeadingExtensionKey.self) { leading in
+                    Color.clear.onGeometryChange(for: Placement.self) { proxy in
+                        Placement(size: proxy.size, leadingExtension: leading)
+                    } action: { [weak self] placement in
+                        self?.fit(placement)
+                    }
                 }
         )
 
@@ -339,16 +357,29 @@ private final class PopoverWindow: NSWindow {
         }
     }
 
+    struct Placement: Equatable {
+        var size: CGSize
+        var leadingExtension: CGFloat
+    }
+
+    /// How far left of the anchor the window starts: a pane open on the
+    /// menu's left. See `MenuLeadingExtensionKey`.
+    private(set) var leadingExtension: CGFloat = 0
+
     /// Phase changes (start, drift, end) change the menu's height while it's
-    /// open, and side panes change its width; the top edge stays pinned.
-    private func fit(to size: CGSize) {
-        guard size.width > 0, size.height > 0, size != frame.size else { return }
+    /// open, and side panes change its width; the top edge stays pinned, and
+    /// a pane on the left grows the window leftward.
+    private func fit(_ placement: Placement) {
+        leadingExtension = placement.leadingExtension
+        let size = placement.size
+        guard size.width > 0, size.height > 0 else { return }
         let top = frame.maxY
         var x = frame.minX
         if let anchor, let screen = anchor.screen {
-            x = Self.clampedX(anchor.preferredX, width: size.width, in: screen)
+            x = Self.clampedX(anchor.preferredX - leadingExtension, width: size.width, in: screen)
         }
-        setFrame(NSRect(x: x, y: top - size.height, width: size.width, height: size.height),
-                 display: isVisible, animate: false)
+        let target = NSRect(x: x, y: top - size.height, width: size.width, height: size.height)
+        guard target != frame else { return }
+        setFrame(target, display: isVisible, animate: false)
     }
 }

@@ -80,11 +80,10 @@ final class FocusMusic {
         spotify.play(uri)
     }
 
-    /// "Play" on the session's music card when nothing is playing: the
-    /// focus playlist becomes the session's, paused and stopped with it.
-    func playSelected() {
-        guard let uri = selected?.uri else { return }
-        sessionOwnsPlayback = true
+    /// Plays a saved playlist now. During a session it becomes the
+    /// session's music, paused and stopped with it.
+    func play(_ uri: String, inSession: Bool) {
+        if inSession { sessionOwnsPlayback = true }
         spotify.play(uri)
     }
 

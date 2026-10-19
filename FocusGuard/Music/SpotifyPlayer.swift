@@ -11,6 +11,10 @@ struct NowPlaying: Equatable {
     var duration: TimeInterval
     var position: TimeInterval
     var isPlaying: Bool
+    var shuffling = false
+    var repeating = false
+    /// 0–100.
+    var volume = 50
     var readAt: Date
 
     /// Where the track is now, counting on from the last read while playing.
@@ -34,6 +38,8 @@ final class SpotifyPlayer {
     private(set) var nowPlaying: NowPlaying?
     /// The user turned down "control Spotify" in Privacy & Security.
     private(set) var notAuthorized = false
+    /// The playlist or album FocusGuard last started, to mark it in the list.
+    private(set) var lastStartedURI: String?
 
     @ObservationIgnored private var lastRefresh: Date = .distantPast
     @ObservationIgnored private var refreshing = false
@@ -62,7 +68,10 @@ final class SpotifyPlayer {
             refreshing = false
             apply(result)
             if case .output(let text) = result {
-                nowPlaying = Self.parse(text, readAt: .now)
+                var track = Self.parse(text, readAt: .now)
+                // Don't snap the volume slider back mid-drag.
+                if sendingVolume || pendingVolume != nil, let volume = nowPlaying?.volume { track?.volume = volume }
+                nowPlaying = track
             }
         }
     }
@@ -81,6 +90,7 @@ final class SpotifyPlayer {
     /// it has loaded, so this keeps asking for a few seconds.
     func play(_ uri: String) {
         guard SpotifyLink.webURL(for: uri) != nil else { return }
+        lastStartedURI = uri
         let script = "tell application \"Spotify\" to play track \"\(uri)\""
         Task {
             if !isRunning {
@@ -107,6 +117,46 @@ final class SpotifyPlayer {
     func next() { command("next track") }
     func previous() { command("previous track") }
 
+    /// Jumps to `seconds` into the track.
+    func seek(to seconds: TimeInterval) {
+        guard var track = nowPlaying else { return }
+        let target = min(max(0, seconds), track.duration)
+        track.position = target
+        track.readAt = .now
+        nowPlaying = track
+        command(String(format: "set player position to %.1f", target))
+    }
+
+    func toggleShuffle() {
+        nowPlaying?.shuffling.toggle()
+        command("set shuffling to not shuffling")
+    }
+
+    func toggleRepeat() {
+        nowPlaying?.repeating.toggle()
+        command("set repeating to not repeating")
+    }
+
+    /// Sets the volume (0–100). Slider drags send many values; only the
+    /// latest one is sent once the previous change has gone through.
+    func setVolume(_ volume: Int) {
+        let clamped = min(100, max(0, volume))
+        nowPlaying?.volume = clamped
+        pendingVolume = clamped
+        guard !sendingVolume, isRunning else { return }
+        sendingVolume = true
+        Task {
+            while let next = pendingVolume {
+                pendingVolume = nil
+                apply(await Self.run("tell application \"Spotify\" to set sound volume to \(next)"))
+            }
+            sendingVolume = false
+        }
+    }
+
+    @ObservationIgnored private var pendingVolume: Int?
+    @ObservationIgnored private var sendingVolume = false
+
     private func command(_ verb: String) {
         guard isRunning else { return }
         Task {
@@ -115,7 +165,7 @@ final class SpotifyPlayer {
         }
     }
 
-    /// Re-read shortly after a command so the card catches up.
+    /// Re-read shortly after a command so the player catches up.
     private func settle() {
         lastRefresh = .distantPast
         Task {
@@ -148,14 +198,16 @@ final class SpotifyPlayer {
         case failed
     }
 
-    /// Fields joined by tabs: state, name, artist, album, artwork, duration, position.
+    /// Fields joined by tabs: state, name, artist, album, artwork, duration,
+    /// position, shuffling, repeating, volume.
     static let readScript = """
         if application "Spotify" is running then
             tell application "Spotify"
                 if player state is stopped then return "stopped"
                 set t to current track
                 return (player state as text) & tab & (name of t) & tab & (artist of t) & tab & (album of t) ¬
-                    & tab & (artwork url of t) & tab & (duration of t) & tab & (player position as text)
+                    & tab & (artwork url of t) & tab & (duration of t) & tab & (player position as text) ¬
+                    & tab & (shuffling as text) & tab & (repeating as text) & tab & (sound volume as text)
             end tell
         end if
         return "stopped"
@@ -176,10 +228,16 @@ final class SpotifyPlayer {
         let rawDuration = Double(fields[5].replacingOccurrences(of: ",", with: ".")) ?? 0
         let duration = rawDuration > 20_000 ? rawDuration / 1000 : rawDuration
         let position = Double(fields[6].replacingOccurrences(of: ",", with: ".")) ?? 0
-        return NowPlaying(title: fields[1], artist: fields[2], album: fields[3],
-                          artworkURL: URL(string: fields[4]), duration: duration,
-                          position: min(position, duration), isPlaying: fields[0] == "playing",
-                          readAt: readAt)
+        var track = NowPlaying(title: fields[1], artist: fields[2], album: fields[3],
+                               artworkURL: URL(string: fields[4]), duration: duration,
+                               position: min(position, duration), isPlaying: fields[0] == "playing",
+                               readAt: readAt)
+        if fields.count >= 10 {
+            track.shuffling = fields[7] == "true"
+            track.repeating = fields[8] == "true"
+            track.volume = Int(fields[9]) ?? track.volume
+        }
+        return track
     }
 
     private static func run(_ source: String) async -> ScriptResult {
