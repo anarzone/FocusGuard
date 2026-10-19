@@ -12,7 +12,8 @@ struct MenuBarView: View {
 
     @State private var showingCustomDuration = false
     @State private var customMinutes: Int = 30
-    @State private var pick: SessionDurationChoice = .min50
+    /// Length of the next session, set on the dial.
+    @State private var minutes: Int = 50
     @State private var now: Date = .now
     /// Side pane slid out next to the session column, if any.
     @State private var openPane: MenuPane?
@@ -58,14 +59,14 @@ struct MenuBarView: View {
         }
         .padding(6)
         .task { await permissions.refresh() }
-        .onAppear(perform: restorePick)
+        .onAppear(perform: restoreLength)
         .onReceive(ticker) { now = $0 }
         .sheet(isPresented: $showingCustomDuration) {
-            CustomDurationSheet(minutes: $customMinutes) { minutes in
+            CustomDurationSheet(minutes: $customMinutes) { picked in
                 showingCustomDuration = false
-                if let minutes {
-                    customMinutes = minutes
-                    pick = .custom
+                if let picked {
+                    customMinutes = picked
+                    withAnimation(.snappy(duration: 0.3)) { minutes = picked }
                 }
             }
         }
@@ -99,7 +100,9 @@ struct MenuBarView: View {
     private func headerContent(for phase: MenuPhase) -> (StatusGlyphState, Color, String, String) {
         switch phase {
         case .ready:
-            return (.ready, Theme.focus, "FocusGuard", "Ready when you are")
+            let streak = appState.currentStreak
+            return (.ready, Theme.focus, "FocusGuard",
+                    streak >= 2 ? "\(streak)-day streak · ready when you are" : "Ready when you are")
 
         case .onBreak(let state):
             let backAt = now.addingTimeInterval(state.remaining(now: now))
@@ -134,124 +137,117 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 6) {
             todayModule
 
-            Text("Focus for")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.top, 6)
-
-            HStack(spacing: 4) {
-                ForEach(SessionDurationChoice.allCases, id: \.self) { choice in
-                    durationButton(choice)
+            VStack(spacing: 12) {
+                TwistDial(minutes: $minutes) { dialCenter }
+                HStack(spacing: 4) {
+                    ForEach(SessionDurationChoice.allCases, id: \.self) { choice in
+                        presetChip(choice)
+                    }
                 }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Preset lengths")
             }
-            .padding(.horizontal, 4)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Session length")
+            .padding(.top, 4)
+            .menuModule()
 
-            CapsuleButton(title: startTitle, prominent: true) { start() }
+            CapsuleButton(title: "Start \(lengthText(minutes)) of focus", prominent: true) { start() }
                 .padding(.horizontal, 4)
-                .padding(.top, 6)
+                .padding(.top, 4)
                 .padding(.bottom, 2)
 
             NowRow(snapshot: appState.tracker.currentSnapshot)
         }
     }
 
+    /// Today so far on a timeline, with where the session being set up would land.
     private var todayModule: some View {
         let focus = appState.todayBreakdown.focus
         let progress = FocusGoal.progress(focusSecondsToday: focus)
-        let streak = appState.currentStreak
 
         return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Today")
-                Spacer()
-                if streak >= 2 { Text("\(streak)-day streak") }
-            }
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(formatMinutes(focus))
-                    .font(.system(size: 26, weight: .semibold).monospacedDigit())
-                    .kerning(-0.5)
-                Text("focused")
-                    .font(.system(size: 13))
+                    .font(.system(size: 20, weight: .semibold).monospacedDigit())
+                    .kerning(-0.4)
+                Text("focused today")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text("\(Int((progress * 100).rounded()))% of \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.control)
-                    Capsule().fill(Theme.focus)
-                        .frame(width: geo.size.width * CGFloat(min(1, progress)))
-                }
-            }
-            .frame(height: 6)
-            .accessibilityHidden(true)
-
-            Text("\(Int((progress * 100).rounded()))% of your \(FocusGoal.format(minutes: FocusGoal.dailyMinutes)) goal")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+            DayStripView(spans: appState.todaySpans(now: now), now: now, previewMinutes: minutes)
         }
         .menuModule()
     }
 
-    private func durationButton(_ choice: SessionDurationChoice) -> some View {
-        let selected = pick == choice
-        let big: String
-        let label: String
-        switch choice {
-        case .custom:
-            big = pick == .custom ? "\(customMinutes)" : "…"
-            label = "Custom"
-        default:
-            big = "\(choice.minutes ?? 0)"
-            label = "\(choice.minutes ?? 0) min"
+    /// The length in the dial's middle, with when it would end.
+    private var dialCenter: some View {
+        let long = minutes >= 120
+        let big = long ? String(format: "%d:%02d", minutes / 60, minutes % 60) : "\(minutes)"
+        return VStack(spacing: 0) {
+            Text(big)
+                .font(.system(size: 38, weight: .semibold).monospacedDigit())
+                .kerning(-0.8)
+                .contentTransition(.numericText(value: Double(minutes)))
+                .animation(.snappy(duration: 0.2), value: minutes)
+            Text(long ? "hours" : "min")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
+            Text("ends \(clock(now.addingTimeInterval(TimeInterval(minutes * 60))))")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 1)
         }
+        .offset(y: -3)
+        .allowsHitTesting(false)
+    }
+
+    private func presetChip(_ choice: SessionDurationChoice) -> some View {
+        let isPreset = SessionDurationChoice.allCases.contains { $0.minutes == minutes }
+        let selected = choice.minutes.map { $0 == minutes } ?? !isPreset
+        let title = choice.minutes.map { "\($0)" } ?? (selected ? lengthText(minutes, short: true) : "Custom…")
 
         return Button {
-            if choice == .custom { showingCustomDuration = true } else { pick = choice }
-        } label: {
-            VStack(spacing: 5) {
-                Text(big)
-                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(selected ? Color.white : Color.primary)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(selected ? Theme.focusFill : Theme.control))
-                Text(label)
-                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+            if let preset = choice.minutes {
+                withAnimation(.snappy(duration: 0.3)) { minutes = preset }
+            } else {
+                customMinutes = minutes
+                showingCustomDuration = true
             }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+        } label: {
+            Text(title)
+                .font(.system(size: 12, weight: selected ? .semibold : .regular).monospacedDigit())
+                .foregroundStyle(selected ? Color.white : Color.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 26)
+                .background(Capsule().fill(selected ? Theme.focusFill : Theme.control))
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(choice == .custom ? "Custom length" : "\(choice.minutes ?? 0) minutes")
+        .accessibilityLabel(choice.minutes.map { "\($0) minutes" } ?? "Custom length")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private var chosenMinutes: Int { pick == .custom ? customMinutes : (pick.minutes ?? 50) }
+    /// "50 minutes", "2h 30m"; short: "50 min", "1h 30m".
+    private func lengthText(_ minutes: Int, short: Bool = false) -> String {
+        if short { return minutes < 60 ? "\(minutes) min" : FocusGoal.format(minutes: minutes) }
+        return minutes < 120 ? "\(minutes) minutes" : FocusGoal.format(minutes: minutes)
+    }
 
-    private var startTitle: String { "Start \(chosenMinutes) minutes of focus" }
-
-    private func restorePick() {
-        let minutes = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
-        switch minutes {
-        case 25: pick = .min25
-        case 50: pick = .min50
-        case 90: pick = .min90
-        default:
-            customMinutes = minutes
-            pick = .custom
-        }
+    private func restoreLength() {
+        minutes = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
     }
 
     private func start() {
-        lastSessionMinutes = chosenMinutes
+        lastSessionMinutes = minutes
         appState.sessionManager.startSession(
             label: defaultLabel.isEmpty ? nil : defaultLabel,
-            plannedDurationMinutes: chosenMinutes
+            plannedDurationMinutes: minutes
         )
     }
 

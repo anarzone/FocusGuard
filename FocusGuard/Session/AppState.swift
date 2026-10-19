@@ -25,6 +25,7 @@ final class AppState {
     /// user starts a break or another session, or it goes stale.
     var recap: SessionRecap?
     @ObservationIgnored var bestZoneCache: (at: Date, value: TimeInterval)?
+    @ObservationIgnored var todaySpansCache: (at: Date, value: [DaySpan])?
 
     init() {
         let schema = Schema([
