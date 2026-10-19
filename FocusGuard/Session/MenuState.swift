@@ -196,6 +196,24 @@ extension AppState {
         return value
     }
 
+    /// Today's activity as merged spans, for the ready menu's day strip.
+    /// Cached for 15 s; the menu redraws every second.
+    func todaySpans(now: Date = .now) -> [DaySpan] {
+        let calendar = Calendar.current
+        if let cache = todaySpansCache, now.timeIntervalSince(cache.at) < 15,
+           calendar.isDate(cache.at, inSameDayAs: now) {
+            return cache.value
+        }
+        let dayStart = calendar.startOfDay(for: now)
+        let descriptor = FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= dayStart },
+            sortBy: [SortDescriptor(\.startedAt)]
+        )
+        let value = MenuInsightsBuilder.mergedSpans(Persistence.fetch(container.mainContext, descriptor), from: dayStart)
+        todaySpansCache = (now, value)
+        return value
+    }
+
     /// What the block screen shows: the session it's protecting, live.
     func blockContext(now: Date = .now) -> BlockContext? {
         guard let session = sessionManager.currentSession else { return nil }

@@ -1,0 +1,245 @@
+import AppKit
+import SwiftUI
+
+// MARK: - Twist dial
+
+/// The ready menu's length picker: drag round the ring like a kitchen timer.
+/// One turn is two hours, in 5-minute clicks. Same size and stroke as
+/// `SessionRingView`, so the arc you set is the ring you then watch fill.
+struct TwistDial<Center: View>: View {
+    @Binding var minutes: Int
+    var size: CGFloat = 168
+    var lineWidth: CGFloat = 13
+    @ViewBuilder var center: () -> Center
+
+    @State private var dragging = false
+
+    var body: some View {
+        ZStack {
+            Canvas { context, canvasSize in
+                let radius = (min(canvasSize.width, canvasSize.height) - lineWidth) / 2 - 3
+                let c = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+                func point(_ degrees: Double, _ r: CGFloat) -> CGPoint {
+                    let a = Angle.degrees(degrees - 90).radians
+                    return CGPoint(x: c.x + r * cos(a), y: c.y + r * sin(a))
+                }
+                func arc(to degrees: Double) -> Path {
+                    var p = Path()
+                    p.addArc(center: c, radius: radius, startAngle: .degrees(-90),
+                             endAngle: .degrees(degrees - 90), clockwise: false)
+                    return p
+                }
+
+                var track = Path()
+                track.addArc(center: c, radius: radius, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                context.stroke(track, with: .color(Theme.control), lineWidth: lineWidth)
+
+                // A tick every 5 minutes, longer each quarter hour.
+                let tickOuter = radius - lineWidth / 2 - 4
+                let ticks = DialMath.minutesPerTurn / DialMath.step
+                for i in 0..<ticks {
+                    let degrees = Double(i) / Double(ticks) * 360
+                    let major = (i * DialMath.step) % 15 == 0
+                    var tick = Path()
+                    tick.move(to: point(degrees, tickOuter))
+                    tick.addLine(to: point(degrees, tickOuter - (major ? 6 : 3)))
+                    context.stroke(tick, with: .color(major ? Theme.other : Theme.gridFuture),
+                                   style: StrokeStyle(lineWidth: major ? 1.5 : 1, lineCap: .round))
+                }
+                for mark in [30, 60, 90] {
+                    let label = Text("\(mark)").font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
+                    context.draw(label, at: point(DialMath.degrees(for: mark), tickOuter - 18))
+                }
+
+                // The set length, from 12 o'clock. Past one turn, the extra
+                // lap rides on top with a shadow, like an overfull Activity ring.
+                let laps = DialMath.laps(for: minutes)
+                context.stroke(arc(to: laps.full > 0 ? 360 : laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
+                if laps.full > 0 {
+                    var lap = context
+                    lap.addFilter(.shadow(color: .black.opacity(0.35), radius: 2))
+                    lap.stroke(arc(to: laps.degrees), with: .color(Theme.focus), lineWidth: lineWidth)
+                }
+
+                let p = point(laps.degrees, radius)
+                let knobRadius = lineWidth * (dragging ? 0.8 : 0.65)
+                let knob = Path(ellipseIn: CGRect(x: p.x - knobRadius, y: p.y - knobRadius,
+                                                  width: knobRadius * 2, height: knobRadius * 2))
+                context.fill(knob, with: .color(.white))
+                context.stroke(knob, with: .color(Theme.focus), lineWidth: lineWidth * 0.23)
+            }
+            center()
+        }
+        .frame(width: size, height: size)
+        .contentShape(Circle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    guard dragging || DialMath.isOnRing(value.startLocation, size: size, lineWidth: lineWidth) else { return }
+                    let next = DialMath.minutes(at: value.location, in: size, previous: minutes, continuing: dragging)
+                    dragging = true
+                    guard next != minutes else { return }
+                    minutes = next
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                }
+                .onEnded { _ in dragging = false }
+        )
+        .animation(.snappy(duration: 0.2), value: dragging)
+        .help("Drag round the ring to set how long")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Session length")
+        .accessibilityValue("\(minutes) minutes")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: minutes = min(DialMath.maxMinutes, minutes + DialMath.step)
+            case .decrement: minutes = max(DialMath.range.lowerBound, minutes - DialMath.step)
+            @unknown default: break
+            }
+        }
+    }
+}
+
+/// Angle ↔ minutes for `TwistDial`.
+enum DialMath {
+    static let minutesPerTurn = 120
+    static let step = 5
+    /// What dragging can set. Longer sessions come from the custom sheet.
+    static let range = 5...120
+    static let maxMinutes = 480
+
+    /// Clockwise from 12 o'clock.
+    static func degrees(for minutes: Int) -> Double {
+        Double(minutes) / Double(minutesPerTurn) * 360
+    }
+
+    /// Whole turns, and where the knob sits on the last one. 120 is one full
+    /// turn with the knob back at the top, not zero.
+    static func laps(for minutes: Int) -> (full: Int, degrees: Double) {
+        guard minutes > 0 else { return (0, 0) }
+        let full = (minutes - 1) / minutesPerTurn
+        return (full, degrees(for: minutes - full * minutesPerTurn))
+    }
+
+    /// Presses start a drag only on or just inside the ring, so clicking the
+    /// numbers in the middle doesn't change the length.
+    static func isOnRing(_ point: CGPoint, size: CGFloat, lineWidth: CGFloat) -> Bool {
+        let radius = (size - lineWidth) / 2 - 3
+        let distance = hypot(point.x - size / 2, point.y - size / 2)
+        return distance >= radius - lineWidth * 2.5 && distance <= radius + lineWidth
+    }
+
+    /// The length for a pointer at `point` on a dial `size` across, snapped
+    /// to 5 minutes. While a drag is `continuing`, sweeping past 12 o'clock
+    /// pins to the nearer end instead of jumping from 2 hours to 5 minutes.
+    static func minutes(at point: CGPoint, in size: CGFloat, previous: Int, continuing: Bool) -> Int {
+        var degrees = atan2(point.x - size / 2, size / 2 - point.y) * 180 / .pi
+        if degrees < 0 { degrees += 360 }
+        return minutes(atDegrees: degrees, previous: previous, continuing: continuing)
+    }
+
+    static func minutes(atDegrees degrees: Double, previous: Int, continuing: Bool) -> Int {
+        let snapped = Int((degrees / 360 * Double(minutesPerTurn) / Double(step)).rounded()) * step
+        let quarter = minutesPerTurn / 4
+        let wasHigh = previous > minutesPerTurn / 2
+        if snapped == 0 || snapped == minutesPerTurn {
+            return wasHigh ? range.upperBound : range.lowerBound
+        }
+        if continuing {
+            if previous >= minutesPerTurn - quarter, snapped < quarter { return range.upperBound }
+            if previous <= quarter, snapped > minutesPerTurn - quarter { return range.lowerBound }
+        }
+        return min(max(snapped, range.lowerBound), range.upperBound)
+    }
+}
+
+// MARK: - Day strip
+
+/// Today on one line: each stretch coloured by what it was, a line at now,
+/// and a dashed block where the session you're about to start would land.
+struct DayStripView: View {
+    let spans: [DaySpan]
+    let now: Date
+    /// Length of the session being set up; nil hides the preview.
+    var previewMinutes: Int?
+    var calendar: Calendar = .current
+
+    var body: some View {
+        let dayStart = calendar.startOfDay(for: now)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let previewEnd = previewMinutes.map { min(dayEnd, now.addingTimeInterval(TimeInterval($0 * 60))) }
+        let window = DayStrip.window(dayStart: dayStart, firstActivity: spans.first?.start,
+                                     until: max(now, previewEnd ?? now), calendar: calendar)
+
+        Canvas { context, size in
+            let w = size.width
+            let barHeight: CGFloat = 14
+            func x(_ date: Date) -> CGFloat {
+                min(w, max(0, CGFloat(date.timeIntervalSince(window.start) / window.duration) * w))
+            }
+            func bar(_ start: Date, _ end: Date) -> CGRect {
+                let x0 = x(start), x1 = x(end)
+                return CGRect(x: x0, y: 0, width: max(1, x1 - x0 - 0.5), height: barHeight)
+            }
+
+            let strip = Path(roundedRect: CGRect(x: 0, y: 0, width: w, height: barHeight), cornerRadius: 4)
+            context.fill(strip, with: .color(Theme.control))
+            var spansContext = context
+            spansContext.clip(to: strip)
+            for span in spans where span.end > window.start {
+                spansContext.fill(Path(bar(span.start, span.end)), with: .color(SessionRingView<EmptyView>.color(span.kind)))
+            }
+
+            if let previewEnd, previewEnd > now {
+                let rect = bar(now, previewEnd).insetBy(dx: 0.75, dy: 0.75)
+                let ghost = Path(roundedRect: rect, cornerRadius: 3)
+                context.fill(ghost, with: .color(Theme.focus.opacity(0.18)))
+                context.stroke(ghost, with: .color(Theme.focus),
+                               style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+            }
+
+            let nx = x(now)
+            context.fill(Path(CGRect(x: nx - 0.75, y: -2, width: 1.5, height: barHeight + 4)), with: .color(.primary))
+
+            // Hour labels, spaced so they never crowd.
+            let hours = window.duration / 3600
+            let every = hours > 18 ? 4 : (hours > 12 ? 3 : 2)
+            var tick = calendar.nextDate(after: window.start.addingTimeInterval(-1),
+                                         matching: DateComponents(minute: 0), matchingPolicy: .nextTime) ?? window.start
+            while tick <= window.end {
+                if calendar.component(.hour, from: tick) % every == 0 {
+                    let label = Text(tick.formatted(.dateTime.hour()))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    let px = x(tick)
+                    let anchor: UnitPoint = px < 14 ? .leading : (px > w - 14 ? .trailing : .center)
+                    context.draw(label, at: CGPoint(x: px, y: barHeight + 11), anchor: anchor)
+                }
+                tick = tick.addingTimeInterval(3600)
+            }
+        }
+        .frame(height: 30)
+        .accessibilityElement()
+        .accessibilityLabel(accessibilitySummary(previewEnd: previewEnd))
+    }
+
+    private func accessibilitySummary(previewEnd: Date?) -> String {
+        let focused = spans.filter { $0.kind == .focus }.reduce(0) { $0 + $1.end.timeIntervalSince($1.start) }
+        let base = "Today so far: \(formatDuration(focused)) focused"
+        guard let previewEnd else { return base }
+        return base + ". A session now would end at \(previewEnd.formatted(date: .omitted, time: .shortened))"
+    }
+}
+
+enum DayStrip {
+    /// 8 AM to 6 PM, stretched to the hour to cover the day's first activity
+    /// and `until` (now, or the end of the session being set up). Never past
+    /// midnight.
+    static func window(dayStart: Date, firstActivity: Date?, until: Date, calendar: Calendar) -> DateInterval {
+        func hours(_ date: Date) -> Double { date.timeIntervalSince(dayStart) / 3600 }
+        let startHour = min(8, firstActivity.map { floor(hours($0)) } ?? 8)
+        let endHour = min(24, max(18, ceil(hours(until))))
+        let start = calendar.date(byAdding: .hour, value: Int(max(0, startHour)), to: dayStart) ?? dayStart
+        let end = calendar.date(byAdding: .hour, value: Int(endHour), to: dayStart) ?? until
+        return DateInterval(start: start, end: max(end, start.addingTimeInterval(3600)))
+    }
+}
