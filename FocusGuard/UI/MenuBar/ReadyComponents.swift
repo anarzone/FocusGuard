@@ -105,7 +105,7 @@ enum DialMath {
     static let step = 5
     /// What dragging can set. Longer sessions come from the custom sheet.
     static let range = 5...120
-    static let maxMinutes = 480
+    static let maxMinutes = Constants.SessionDurations.customMax
 
     /// Clockwise from 12 o'clock.
     static func degrees(for minutes: Int) -> Double {
@@ -149,6 +149,142 @@ enum DialMath {
             if previous <= quarter, snapped > minutesPerTurn - quarter { return range.lowerBound }
         }
         return min(max(snapped, range.lowerBound), range.upperBound)
+    }
+}
+
+// MARK: - Length ruler
+
+/// Scrub sideways to set the length, like a camera's zoom ruler: the marks
+/// slide under a fixed line in the middle. Covers 5 minutes to 8 hours, so
+/// it reaches past the dial's two-hour turn. Presets are labelled in the
+/// accent colour; click a mark to jump to it.
+struct LengthRuler: View {
+    @Binding var minutes: Int
+
+    /// Fractional minutes under the line while a drag is in progress.
+    @State private var scrub: Double?
+    @State private var dragStart: Int?
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            RulerMarks(value: scrub ?? Double(minutes))
+                .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.16),
+                                             .init(color: .black, location: 0.84), .init(color: .clear, location: 1)],
+                                     startPoint: .leading, endPoint: .trailing))
+                .overlay(alignment: .top) {
+                    Capsule().fill(Theme.focus).frame(width: 2.5, height: 24)
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let start = dragStart ?? minutes
+                            dragStart = start
+                            guard abs(value.translation.width) >= 3 || scrub != nil else { return }
+                            let raw = RulerMath.value(start: start, translation: value.translation.width)
+                            scrub = raw
+                            set(RulerMath.snap(raw))
+                        }
+                        .onEnded { value in
+                            if scrub == nil {
+                                // A click: jump to the mark under the pointer.
+                                let target = RulerMath.snap(RulerMath.value(start: minutes, translation: width / 2 - value.location.x))
+                                withAnimation(.snappy(duration: 0.3)) { set(target) }
+                            } else {
+                                withAnimation(.snappy(duration: 0.2)) { scrub = nil }
+                            }
+                            dragStart = nil
+                        }
+                )
+        }
+        .frame(height: 40)
+        .animation(scrub == nil ? .snappy(duration: 0.18) : nil, value: minutes)
+        .help("Drag sideways to set how long")
+        .accessibilityElement()
+        .accessibilityLabel("Session length ruler")
+        .accessibilityValue("\(minutes) minutes")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: minutes = min(RulerMath.range.upperBound, minutes + RulerMath.step)
+            case .decrement: minutes = max(RulerMath.range.lowerBound, minutes - RulerMath.step)
+            @unknown default: break
+            }
+        }
+        .accessibilityActions {
+            ForEach(Constants.SessionDurations.presets, id: \.self) { preset in
+                Button("\(preset) minutes") { minutes = preset }
+            }
+        }
+    }
+
+    private func set(_ value: Int) {
+        guard value != minutes else { return }
+        minutes = value
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+    }
+}
+
+/// The ruler's marks, centred on `value`. Animatable so the marks glide when
+/// the length changes from the dial or a click.
+private struct RulerMarks: View, Animatable {
+    var value: Double
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    var body: some View {
+        Canvas { context, size in
+            let mid = size.width / 2
+            let reach = Double(mid / RulerMath.pointsPerMinute) + Double(RulerMath.step)
+            let first = max(RulerMath.range.lowerBound, Int((value - reach) / Double(RulerMath.step)) * RulerMath.step)
+            let last = min(RulerMath.range.upperBound, Int(value + reach))
+            guard first <= last else { return }
+            for m in stride(from: first, through: last, by: RulerMath.step) {
+                let x = mid + CGFloat(Double(m) - value) * RulerMath.pointsPerMinute
+                let label = RulerMath.label(for: m)
+                let preset = Constants.SessionDurations.presets.contains(m)
+                let height: CGFloat = label != nil ? 14 : (m % 15 == 0 ? 10 : 6)
+                var tick = Path()
+                tick.move(to: CGPoint(x: x, y: 4))
+                tick.addLine(to: CGPoint(x: x, y: 4 + height))
+                let color = preset ? Theme.focus : (label != nil || m % 15 == 0 ? Theme.other : Theme.gridFuture)
+                context.stroke(tick, with: .color(color), style: StrokeStyle(lineWidth: preset ? 2 : 1.2, lineCap: .round))
+                if let label {
+                    let text = Text(label)
+                        .font(.system(size: preset ? 11 : 10, weight: preset ? .semibold : .regular).monospacedDigit())
+                        .foregroundStyle(preset ? AnyShapeStyle(Theme.focus) : AnyShapeStyle(.secondary))
+                    context.draw(text, at: CGPoint(x: x, y: 32))
+                }
+            }
+        }
+    }
+}
+
+/// Minutes ↔ points for `LengthRuler`.
+enum RulerMath {
+    static let pointsPerMinute: CGFloat = 3.2
+    static let step = 5
+    static let range = Constants.SessionDurations.customMin...Constants.SessionDurations.customMax
+
+    /// The fractional length under the line after dragging `translation`
+    /// points from `start`. Dragging left brings longer lengths in.
+    static func value(start: Int, translation: CGFloat) -> Double {
+        let raw = Double(start) - Double(translation / pointsPerMinute)
+        return min(Double(range.upperBound), max(Double(range.lowerBound), raw))
+    }
+
+    static func snap(_ value: Double) -> Int {
+        let snapped = Int((value / Double(step)).rounded()) * step
+        return min(range.upperBound, max(range.lowerBound, snapped))
+    }
+
+    /// Presets in minutes, the hour, then whole hours from two.
+    static func label(for minutes: Int) -> String? {
+        if Constants.SessionDurations.presets.contains(minutes) || minutes == 60 { return "\(minutes)" }
+        if minutes >= 120, minutes % 60 == 0 { return "\(minutes / 60)h" }
+        return nil
     }
 }
 

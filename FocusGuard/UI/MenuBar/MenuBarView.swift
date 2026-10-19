@@ -10,9 +10,7 @@ struct MenuBarView: View {
     var onOpenMain: (MainTab) -> Void = { _ in }
     var dismiss: () -> Void = {}
 
-    @State private var showingCustomDuration = false
-    @State private var customMinutes: Int = 30
-    /// Length of the next session, set on the dial.
+    /// Length of the next session, set on the dial or the ruler.
     @State private var minutes: Int = 50
     @State private var now: Date = .now
     /// Side pane slid out next to the session column, if any.
@@ -61,15 +59,6 @@ struct MenuBarView: View {
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
         .onReceive(ticker) { now = $0 }
-        .sheet(isPresented: $showingCustomDuration) {
-            CustomDurationSheet(minutes: $customMinutes) { picked in
-                showingCustomDuration = false
-                if let picked {
-                    customMinutes = picked
-                    withAnimation(.snappy(duration: 0.3)) { minutes = picked }
-                }
-            }
-        }
     }
 
     // MARK: - Header
@@ -137,15 +126,9 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 6) {
             todayModule
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 TwistDial(minutes: $minutes) { dialCenter }
-                HStack(spacing: 4) {
-                    ForEach(SessionDurationChoice.allCases, id: \.self) { choice in
-                        presetChip(choice)
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Preset lengths")
+                LengthRuler(minutes: $minutes)
             }
             .padding(.top, 4)
             .menuModule()
@@ -207,40 +190,14 @@ struct MenuBarView: View {
         .allowsHitTesting(false)
     }
 
-    private func presetChip(_ choice: SessionDurationChoice) -> some View {
-        let isPreset = SessionDurationChoice.allCases.contains { $0.minutes == minutes }
-        let selected = choice.minutes.map { $0 == minutes } ?? !isPreset
-        let title = choice.minutes.map { "\($0)" } ?? (selected ? lengthText(minutes, short: true) : "Custom…")
-
-        return Button {
-            if let preset = choice.minutes {
-                withAnimation(.snappy(duration: 0.3)) { minutes = preset }
-            } else {
-                customMinutes = minutes
-                showingCustomDuration = true
-            }
-        } label: {
-            Text(title)
-                .font(.system(size: 12, weight: selected ? .semibold : .regular).monospacedDigit())
-                .foregroundStyle(selected ? Color.white : Color.primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 26)
-                .background(Capsule().fill(selected ? Theme.focusFill : Theme.control))
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(choice.minutes.map { "\($0) minutes" } ?? "Custom length")
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    /// "50 minutes", "2h 30m"; short: "50 min", "1h 30m".
-    private func lengthText(_ minutes: Int, short: Bool = false) -> String {
-        if short { return minutes < 60 ? "\(minutes) min" : FocusGoal.format(minutes: minutes) }
-        return minutes < 120 ? "\(minutes) minutes" : FocusGoal.format(minutes: minutes)
+    /// "50 minutes", or "2h 30m" from two hours.
+    private func lengthText(_ minutes: Int) -> String {
+        minutes < 120 ? "\(minutes) minutes" : FocusGoal.format(minutes: minutes)
     }
 
     private func restoreLength() {
-        minutes = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
+        let saved = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
+        minutes = min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, saved))
     }
 
     private func start() {
