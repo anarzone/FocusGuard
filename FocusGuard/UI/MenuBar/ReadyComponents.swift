@@ -43,6 +43,7 @@ struct TwistDial<Center: View>: View {
                     withAnimation(settle) { scrub = nil }
                 }
         )
+        .takesActivatingClick()
         .animation(scrub == nil ? settle : nil, value: minutes)
         .help("Drag round the ring to set how long")
         .accessibilityElement(children: .combine)
@@ -253,6 +254,7 @@ struct LengthRuler: View {
                 )
         }
         .frame(height: 40)
+        .takesActivatingClick()
         .animation(scrub == nil ? settle : nil, value: minutes)
         .help("Drag or swipe sideways to set how long")
         .accessibilityElement()
@@ -273,12 +275,13 @@ struct LengthRuler: View {
     }
 
     /// Trackpad swipes scrub like a drag, momentum included, then settle.
-    /// A mouse wheel moves 5 minutes a notch.
+    /// A mouse wheel moves 5 minutes a line, so a fast spin goes further.
     private func scroll(_ event: NSEvent) {
         guard event.hasPreciseScrollingDeltas else {
             let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : -event.scrollingDeltaX
             guard delta != 0 else { return }
-            let next = minutes + (delta > 0 ? RulerMath.step : -RulerMath.step)
+            let lines = max(1, Int(abs(delta).rounded()))
+            let next = minutes + (delta > 0 ? 1 : -1) * lines * RulerMath.step
             setMinutes(min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, next)), on: $minutes)
             return
         }
@@ -308,6 +311,21 @@ struct LengthRuler: View {
         pendingSettle = nil
         guard scrub != nil else { return }
         withAnimation(settle) { scrub = nil }
+    }
+}
+
+extension View {
+    /// The menu opens without activating FocusGuard, so the first press in it
+    /// is also the click that activates its window. SwiftUI gestures ignore
+    /// that click by default, which made the first drag on the dial or ruler
+    /// after opening the menu go nowhere.
+    @ViewBuilder
+    func takesActivatingClick() -> some View {
+        if #available(macOS 15.0, *) {
+            allowsWindowActivationEvents(true)
+        } else {
+            self
+        }
     }
 }
 
