@@ -134,28 +134,78 @@ final class SpotifyAccount {
         return playlists + albums
     }
 
-    private func get<T: Decodable>(_ path: String, query: [String: String]) async -> T? {
+    /// The songs of a playlist or album, up to 200. Spotify only lists a
+    /// playlist's songs if the user made it or collaborates on it; for any
+    /// other it answers 403 or leaves the songs out.
+    func tracks(of uri: String) async -> TrackList {
+        guard isSignedIn else { return .needsSignIn }
+        let parts = uri.split(separator: ":")
+        guard SpotifyLink.webURL(for: uri) != nil, parts.count == 3 else { return .failed }
+        let isAlbum = parts[1] == "album"
+        let path = isAlbum ? "albums/\(parts[2])/tracks" : "playlists/\(parts[2])/items"
+        var tracks: [PlaylistTrack] = []
+        var offset = 0
+        while tracks.count < 200 {
+            var query = ["limit": "50", "offset": "\(offset)"]
+            if !isAlbum { query["additional_types"] = "track,episode" }
+            let page: TrackPage
+            if isAlbum {
+                switch await fetch(path, query: query) as Fetch<Page<APITrack>> {
+                case .ok(let result): page = TrackPage(tracks: result.items.compactMap { $0?.track }, more: result.next != nil)
+                case .status(403), .status(404): return .notShared
+                case .status, .failed: return tracks.isEmpty ? .failed : .tracks(tracks)
+                }
+            } else {
+                switch await fetch(path, query: query) as Fetch<Page<APIPlaylistItem>> {
+                case .ok(let result) where !result.hasItems: return .notShared
+                case .ok(let result): page = TrackPage(tracks: result.items.compactMap { $0?.playable?.track }, more: result.next != nil)
+                case .status(403), .status(404): return .notShared
+                case .status, .failed: return tracks.isEmpty ? .failed : .tracks(tracks)
+                }
+            }
+            tracks += page.tracks
+            guard page.more else { break }
+            offset += 50
+        }
+        return .tracks(tracks)
+    }
+
+    private struct TrackPage {
+        let tracks: [PlaylistTrack]
+        let more: Bool
+    }
+
+    enum Fetch<T> {
+        case ok(T)
+        case status(Int)
+        case failed
+    }
+
+    /// A Web API GET, with the HTTP status when it isn't a success.
+    private func fetch<T: Decodable>(_ path: String, query: [String: String]) async -> Fetch<T> {
         guard let token = await validAccessToken(),
-              var components = URLComponents(string: "https://api.spotify.com/v1/" + path) else { return nil }
+              var components = URLComponents(string: "https://api.spotify.com/v1/" + path) else { return .failed }
         components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
-        guard let url = components.url else { return nil }
+        guard let url = components.url else { return .failed }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
-              let status = (response as? HTTPURLResponse)?.statusCode else {
-            problem = .requestFailed
-            return nil
-        }
-        switch status {
-        case 200:
+              let status = (response as? HTTPURLResponse)?.statusCode else { return .failed }
+        if status == 401 { accessToken = nil }
+        guard status == 200 else { return .status(status) }
+        guard let decoded = try? JSONDecoder().decode(T.self, from: data) else { return .failed }
+        return .ok(decoded)
+    }
+
+    /// `fetch`, recording what went wrong for the pane to explain.
+    private func get<T: Decodable>(_ path: String, query: [String: String]) async -> T? {
+        switch await fetch(path, query: query) as Fetch<T> {
+        case .ok(let value):
             problem = nil
-            return try? JSONDecoder().decode(T.self, from: data)
-        case 401:
-            accessToken = nil
-            problem = .requestFailed
-        case 403:
+            return value
+        case .status(403):
             problem = .notAllowed
-        default:
+        case .status, .failed:
             problem = .requestFailed
         }
         return nil
@@ -212,6 +262,44 @@ final class SpotifyAccount {
     /// Spotify sometimes returns null entries in result lists.
     struct Page<Element: Decodable>: Decodable {
         let items: [Element?]
+        let next: String?
+        /// False when Spotify left the list out (a playlist it won't share).
+        let hasItems: Bool
+
+        enum CodingKeys: String, CodingKey { case items, next }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let items = try container.decodeIfPresent([Element?].self, forKey: .items)
+            self.items = items ?? []
+            hasItems = items != nil
+            next = try container.decodeIfPresent(String.self, forKey: .next)
+        }
+    }
+
+    struct APITrack: Decodable {
+        let uri: String
+        let name: String
+        let duration_ms: Int?
+        let artists: [APIArtist]?
+        /// Podcast episodes in playlists carry a show instead of artists.
+        let show: APIShow?
+
+        var track: PlaylistTrack? {
+            guard SpotifyLink.isPlayableItem(uri) else { return nil }   // skips local files
+            let by = artists?.map(\.name).joined(separator: ", ") ?? show?.name ?? ""
+            return PlaylistTrack(id: uri, title: name, artist: by, duration: Double(duration_ms ?? 0) / 1000)
+        }
+    }
+
+    struct APIShow: Decodable { let name: String }
+
+    /// A playlist entry. Spotify renamed `track` to `item` in February 2026;
+    /// either is read.
+    struct APIPlaylistItem: Decodable {
+        let item: APITrack?
+        let track: APITrack?
+        var playable: APITrack? { item ?? track }
     }
 
     struct APIImage: Decodable { let url: URL? }
