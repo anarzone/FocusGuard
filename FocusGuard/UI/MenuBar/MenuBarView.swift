@@ -72,10 +72,14 @@ struct MenuBarView: View {
             now = tick
             // Follow Spotify while the music pane is open, and in a session for
             // the header's playing indicator.
+            let music = appState.music
             if musicOpen {
-                appState.music.spotify.refresh(every: 1)
+                music.player.refresh(every: 1)
             } else if appState.sessionManager.currentSession != nil {
-                appState.music.spotify.refresh()
+                music.player.refresh()
+            }
+            if let owner = music.sessionService, owner != music.service {
+                music.player(for: owner).refresh()
             }
         }
     }
@@ -97,8 +101,8 @@ struct MenuBarView: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
-            if appState.music.spotify.isInstalled {
-                MusicButton(isOpen: $musicOpen, isPlaying: appState.music.spotify.nowPlaying?.isPlaying == true)
+            if !appState.music.availableServices.isEmpty {
+                MusicButton(isOpen: $musicOpen, isPlaying: appState.music.player.nowPlaying?.isPlaying == true)
             }
             PaneButtons(open: $openPane)
         }

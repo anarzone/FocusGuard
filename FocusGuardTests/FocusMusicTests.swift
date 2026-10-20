@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import FocusGuard
 
 @MainActor
@@ -32,7 +33,7 @@ final class FocusMusicTests: XCTestCase {
     func testReadsTheCurrentTrack() throws {
         let output = ["playing", "Snowman", "WYS", "Snowman", "https://i.scdn.co/image/abc", "171000", "72,5"]
             .joined(separator: "\t")
-        let track = try XCTUnwrap(SpotifyPlayer.parse(output, readAt: Date(timeIntervalSince1970: 0)))
+        let track = try XCTUnwrap(MusicScripts.parse(output, readAt: Date(timeIntervalSince1970: 0)))
         XCTAssertEqual(track.title, "Snowman")
         XCTAssertEqual(track.artist, "WYS")
         XCTAssertEqual(track.duration, 171)          // milliseconds from Spotify
@@ -44,7 +45,7 @@ final class FocusMusicTests: XCTestCase {
     func testReadsShuffleRepeatAndVolume() throws {
         let output = ["paused", "Snowman", "WYS", "Snowman", "", "171000", "0", "true", "false", "64"]
             .joined(separator: "\t")
-        let track = try XCTUnwrap(SpotifyPlayer.parse(output, readAt: .now))
+        let track = try XCTUnwrap(MusicScripts.parse(output, readAt: .now))
         XCTAssertFalse(track.isPlaying)
         XCTAssertTrue(track.shuffling)
         XCTAssertFalse(track.repeating)
@@ -62,8 +63,8 @@ final class FocusMusicTests: XCTestCase {
     }
 
     func testStoppedOrEmptyMeansNothingPlaying() {
-        XCTAssertNil(SpotifyPlayer.parse("stopped", readAt: .now))
-        XCTAssertNil(SpotifyPlayer.parse("", readAt: .now))
+        XCTAssertNil(MusicScripts.parse("stopped", readAt: .now))
+        XCTAssertNil(MusicScripts.parse("", readAt: .now))
     }
 
     func testPositionRunsOnWhilePlayingAndHoldsWhilePaused() {
@@ -74,6 +75,64 @@ final class FocusMusicTests: XCTestCase {
         XCTAssertEqual(track.position(at: start.addingTimeInterval(500)), 100)
         track.isPlaying = false
         XCTAssertEqual(track.position(at: start.addingTimeInterval(5)), 40)
+    }
+
+    // MARK: - Apple Music
+
+    func testLibraryPlaylistsParseAndBadLinesAreSkipped() {
+        let text = "A1B2C3D4E5F60718\tDeep Focus\nNOTHEX!!\tBroken\n0011223344556677\tRain & Piano\n\n9999\t  "
+        let playlists = AppleMusicLibrary.parsePlaylists(text)
+        XCTAssertEqual(playlists.map(\.name), ["Deep Focus", "Rain & Piano"])
+        XCTAssertEqual(playlists.first?.uri, "applemusic:playlist:A1B2C3D4E5F60718")
+    }
+
+    func testSearchMatchesEveryWordInAnyOrder() {
+        let playlists = [AppleMusicLibrary.Playlist(persistentID: "01", name: "Deep Focus Piano"),
+                         AppleMusicLibrary.Playlist(persistentID: "02", name: "Morning Run"),
+                         AppleMusicLibrary.Playlist(persistentID: "03", name: "piano for focus")]
+        XCTAssertEqual(AppleMusicLibrary.filter(playlists, by: "focus PIANO").map(\.persistentID), ["01", "03"])
+        XCTAssertEqual(AppleMusicLibrary.filter(playlists, by: "  ").count, 3)
+        XCTAssertTrue(AppleMusicLibrary.filter(playlists, by: "jazz").isEmpty)
+    }
+
+    func testOnlyWellFormedIdsReachAScript() {
+        XCTAssertEqual(AppleMusicLibrary.persistentID(from: "applemusic:playlist:A1B2C3"), "A1B2C3")
+        XCTAssertNil(AppleMusicLibrary.persistentID(from: "applemusic:playlist:A1\" to quit"))
+        XCTAssertNil(AppleMusicLibrary.persistentID(from: "spotify:playlist:A1B2C3"))
+        XCTAssertNil(MusicScripts.play("applemusic:playlist:", on: .appleMusic))
+        XCTAssertEqual(MusicScripts.play("applemusic:playlist:A1B2C3", on: .appleMusic),
+                       "tell application \"Music\" to play (first user playlist whose persistent ID is \"A1B2C3\")")
+    }
+
+    func testSavedPlaylistsKnowTheirApp() {
+        XCTAssertEqual(MusicService.of(uri: "applemusic:playlist:A1"), .appleMusic)
+        XCTAssertEqual(MusicService.of(uri: "spotify:album:x"), .spotify)
+    }
+
+    func testAppleMusicReadsParseWithSecondsDurations() throws {
+        let output = ["playing", "Weightless", "Marconi Union", "Weightless", "", "480,6", "12,5", "false", "true", "70"]
+            .joined(separator: "\t")
+        let track = try XCTUnwrap(MusicScripts.parse(output, readAt: .now))
+        XCTAssertEqual(track.duration, 480.6, accuracy: 0.01)
+        XCTAssertNil(track.artworkURL)
+        XCTAssertTrue(track.repeating)
+    }
+
+    /// Compiling reads Music's dictionary without sending it anything, so
+    /// this catches script typos without a permission prompt.
+    func testAppleMusicScriptsCompile() throws {
+        let scripts = [MusicScripts.read(.appleMusic), MusicScripts.state(.appleMusic),
+                       MusicScripts.play("applemusic:playlist:A1B2C3", on: .appleMusic) ?? "",
+                       MusicScripts.tell(.appleMusic, MusicScripts.toggleShuffle(.appleMusic)),
+                       MusicScripts.tell(.appleMusic, MusicScripts.setRepeat(true, .appleMusic)),
+                       MusicScripts.tell(.appleMusic, "set sound volume to 40"),
+                       MusicScripts.tell(.appleMusic, "set player position to 12.0"),
+                       AppleMusicLibrary.listScript]
+        for source in scripts {
+            let script = try XCTUnwrap(NSAppleScript(source: source))
+            var error: NSDictionary?
+            XCTAssertTrue(script.compileAndReturnError(&error), "\(source)\n\(String(describing: error))")
+        }
     }
 
     // MARK: - Saved playlists
