@@ -135,9 +135,13 @@ struct MusicPane: View {
             }
 
             if let track = music.player.nowPlaying {
+                // First claim on the height, up to full-size artwork; the
+                // playlists keep a minimum and scroll in what's left.
                 PlayerSection(track: track, context: context, now: now, player: music.player)
+                    .layoutPriority(1)
             } else {
                 idleSection
+                    .layoutPriority(1)
             }
 
             PlaylistList(music: music, inSession: inSession)
@@ -160,10 +164,11 @@ struct MusicPane: View {
         VStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Theme.control)
-                .frame(width: 160, height: 160)
                 .overlay(Image(systemName: "music.note")
-                    .font(.system(size: 44))
+                    .font(.system(size: 36))
                     .foregroundStyle(.tertiary))
+                .aspectRatio(1, contentMode: .fit)
+                .frame(minHeight: 64, maxHeight: 160)
             Text(music.player.isRunning ? "Nothing playing" : "\(music.service.name) isn't open")
                 .font(.system(size: 13, weight: .semibold))
             if let focus = music.selected, focus.service == music.service {
@@ -215,7 +220,10 @@ struct PlayerSection: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            PlaylistCover(url: track.artworkURL, size: 168)
+            // Full size when there's room; smaller when the column is short,
+            // so the playlists below always keep room to scroll.
+            Artwork(url: track.artworkURL)
+                .frame(minHeight: 72, maxHeight: 168)
                 .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
 
             VStack(spacing: 2) {
@@ -1398,6 +1406,33 @@ struct SessionsPill: View {
 }
 
 // MARK: - Cover
+
+/// Album artwork that takes whatever square fits its frame.
+struct Artwork: View {
+    let url: URL?
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Theme.control.overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.tertiary)
+                        )
+                    }
+                }
+            }
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
+            .accessibilityHidden(true)
+    }
+}
 
 /// A playlist cover or album artwork from Spotify, with a quiet placeholder
 /// while it loads or when there isn't one.
