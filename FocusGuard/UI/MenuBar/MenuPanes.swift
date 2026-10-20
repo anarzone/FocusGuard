@@ -24,6 +24,15 @@ enum MenuPane: String, CaseIterable, Identifiable {
     }
 
     static let width: CGFloat = 348
+
+    /// How a side pane comes in. The animation rides on the transition, not
+    /// on the state change: the window resizes and shifts in one step, so the
+    /// column has to land in its new place at once (an animated layout would
+    /// slide it while the window had already moved, and it would jump). Only
+    /// the pane itself slides and fades in.
+    static func slide(from edge: Edge) -> AnyTransition {
+        AnyTransition.move(edge: edge).combined(with: .opacity).animation(.snappy(duration: 0.22))
+    }
 }
 
 /// Three round buttons in the menu header. Tapping the open one closes it.
@@ -35,7 +44,7 @@ struct PaneButtons: View {
             ForEach(MenuPane.allCases) { pane in
                 let isOpen = open == pane
                 Button {
-                    withAnimation(.snappy(duration: 0.22)) { open = isOpen ? nil : pane }
+                    open = isOpen ? nil : pane   // not animated: see MenuPane.slide
                 } label: {
                     Image(systemName: pane.systemImage)
                         .font(.system(size: 12, weight: .semibold))

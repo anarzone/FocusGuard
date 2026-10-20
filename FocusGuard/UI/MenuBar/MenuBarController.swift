@@ -303,6 +303,10 @@ private final class PopoverWindow: NSWindow {
                         self?.fit(placement)
                     }
                 }
+                // Pinned to the top-left: if the window and the content are
+                // ever a frame apart in size, the content must not be centered
+                // in the window, which reads as the menu dropping and coming back.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         )
 
         self.level = .popUpMenu
