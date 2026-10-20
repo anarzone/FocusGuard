@@ -19,7 +19,9 @@ struct UsageRow: Identifiable, Equatable {
 /// A session from today, for the Insights list.
 struct SessionSummary: Identifiable {
     let id: UUID
-    let session: Session
+    /// To find the session again on the main context (rename, delete); the
+    /// summary itself may come from a background context.
+    let modelID: PersistentIdentifier
     let label: String
     let start: Date
     let end: Date?
@@ -75,14 +77,17 @@ struct WeekInsights {
 
 /// Builds the menu panes' data from the store. Cheap enough to run every few
 /// seconds while a pane is open.
-@MainActor
+/// Plain reads of a context, so `StatsStore` can run them off the main thread.
 enum MenuInsightsBuilder {
     static func today(context: ModelContext, now: Date = .now, calendar: Calendar = .current) -> TodayInsights {
         day(now, context: context, now: now, calendar: calendar)
     }
 
     /// Any day's insights; today's stop at `now`.
-    static func day(_ date: Date, context: ModelContext, now: Date = .now, calendar: Calendar = .current) -> TodayInsights {
+    /// `prior`: the seven days before, if the caller has them (StatsStore
+    /// keeps finished days), so they aren't re-read.
+    static func day(_ date: Date, context: ModelContext, now: Date = .now, calendar: Calendar = .current,
+                    prior knownPrior: [DailyBreakdown]? = nil) -> TodayInsights {
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let until = min(now, dayEnd)
@@ -90,7 +95,8 @@ enum MenuInsightsBuilder {
         let breakdown = reports.breakdown(from: dayStart, to: until)
 
         let priorStart = calendar.date(byAdding: .day, value: -7, to: dayStart) ?? dayStart
-        let prior = reports.dailyBreakdowns(from: priorStart, to: dayStart, calendar: calendar).filter { $0.total > 60 }
+        let prior = (knownPrior ?? reports.dailyBreakdowns(from: priorStart, to: dayStart, calendar: calendar))
+            .filter { $0.total > 60 }
         let average = prior.isEmpty ? nil : prior.map { $0.focus / $0.total }.reduce(0, +) / Double(prior.count)
 
         let descriptor = FetchDescriptor<ActivityEvent>(
@@ -196,7 +202,7 @@ enum MenuInsightsBuilder {
         let running = max(0, (end ?? now).timeIntervalSince(session.startedAt) - session.pausedSeconds)
         return SessionSummary(
             id: session.id,
-            session: session,
+            modelID: session.persistentModelID,
             label: session.label ?? "Focus session",
             start: session.startedAt,
             end: end,

@@ -245,9 +245,21 @@ private struct InsightsPane: View {
     let close: () -> Void
 
     @State private var range: InsightsRange = .today
-    @State private var today: TodayInsights = .empty
-    @State private var week: WeekInsights = .empty
+    @State private var today: TodayInsights
+    @State private var week: WeekInsights
     @State private var now: Date = .now
+
+    /// Opens on the last results, so nothing pops in or resizes while the
+    /// pane slides in; fresh numbers arrive from `StatsStore` a moment later.
+    init(appState: AppState, onOpenMain: @escaping (MainTab) -> Void, dismiss: @escaping () -> Void,
+         close: @escaping () -> Void) {
+        self.appState = appState
+        self.onOpenMain = onOpenMain
+        self.dismiss = dismiss
+        self.close = close
+        _today = State(initialValue: appState.lastTodayInsights ?? .empty)
+        _week = State(initialValue: appState.lastWeekInsights ?? .empty)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -271,19 +283,33 @@ private struct InsightsPane: View {
         }
         .task(id: range) {
             while !Task.isCancelled {
-                reload()
-                try? await Task.sleep(for: .seconds(5))
+                await load()
+                // The week's numbers barely move; today's do.
+                try? await Task.sleep(for: .seconds(range == .week ? 30 : 5))
             }
         }
     }
 
-    private func reload() {
-        now = .now
-        let context = appState.container.mainContext
+    /// Builds off the main thread (`StatsStore`); only the result lands here.
+    private func load() async {
+        let at = Date.now
         switch range {
-        case .today: today = MenuInsightsBuilder.today(context: context, now: now)
-        case .week:  week = MenuInsightsBuilder.week(context: context, streak: appState.currentStreak, now: now)
+        case .today:
+            let fresh = await appState.stats.today(now: at)
+            guard !Task.isCancelled else { return }
+            today = fresh
+            appState.lastTodayInsights = fresh
+        case .week:
+            let fresh = await appState.stats.week(streak: appState.menuStats.streak, now: at)
+            guard !Task.isCancelled else { return }
+            week = fresh
+            appState.lastWeekInsights = fresh
         }
+        now = at
+    }
+
+    private func reload() {
+        Task { await load() }
     }
 
     // Today
@@ -316,8 +342,14 @@ private struct InsightsPane: View {
                     sectionLabel("Sessions").padding(.bottom, 2)
                     ForEach(today.sessions.prefix(4)) { summary in
                         SessionRow(summary: summary, now: now,
-                                   onRename: { appState.sessionManager.rename(summary.session, to: $0); reload() },
-                                   onDelete: { appState.sessionManager.delete(summary.session); reload() })
+                                   onRename: { name in
+                                       if let session = appState.session(summary.modelID) { appState.sessionManager.rename(session, to: name) }
+                                       reload()
+                                   },
+                                   onDelete: {
+                                       if let session = appState.session(summary.modelID) { appState.sessionManager.delete(session) }
+                                       reload()
+                                   })
                     }
                 }
             }
@@ -681,6 +713,7 @@ struct AppsPane: View {
 
     @State private var rows: [UsageRow] = []
     @State private var rules: [AppRule] = []
+    @State private var loadedRows = false
     @State private var query = ""
     @State private var filter: Classification?
     @State private var newSite = ""
@@ -789,11 +822,18 @@ struct AppsPane: View {
         .task { reload() }
     }
 
+    /// Apps by time build off the main thread; until they arrive the pane
+    /// shows the last ones.
     private func reload() {
-        let now = Date.now
-        rows = MenuInsightsBuilder.usageRows(context: appState.container.mainContext,
-                                             from: Calendar.current.startOfDay(for: now), to: now, limit: 40)
         rules = appState.userRules()
+        if !loadedRows, let cached = appState.lastUsageRows { rows = cached }
+        let now = Date.now
+        Task {
+            let fresh = await appState.stats.usageRows(from: Calendar.current.startOfDay(for: now), to: now, limit: 40)
+            rows = fresh
+            loadedRows = true
+            appState.lastUsageRows = fresh
+        }
     }
 
     private func add() {

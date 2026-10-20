@@ -23,7 +23,6 @@ enum Persistence {
     }
 
     /// Fetch with error logging.
-    @MainActor
     static func fetch<T>(_ context: ModelContext, _ descriptor: FetchDescriptor<T>, file: StaticString = #file, line: UInt = #line) -> [T] {
         do {
             return try context.fetch(descriptor)
@@ -62,7 +61,6 @@ enum Persistence {
     }
 
     /// Fetch count with error logging.
-    @MainActor
     static func fetchCount<T>(_ context: ModelContext, _ descriptor: FetchDescriptor<T>, file: StaticString = #file, line: UInt = #line) -> Int {
         do {
             return try context.fetchCount(descriptor)

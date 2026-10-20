@@ -25,6 +25,9 @@ final class Classifier {
 
     func invalidate() {
         lastFetch = nil
+        // Rules changed (and setOverride back-fills past events): totals the
+        // stats store kept for past days are out of date.
+        NotificationCenter.default.post(name: .activityTotalsChanged, object: nil)
     }
 
     /// Persist a user override for a given bundle ID or host. Replaces any

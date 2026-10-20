@@ -4,7 +4,7 @@ import SwiftData
 /// Aggregates `ActivityEvent` rows into the shapes the Reports view needs.
 /// The view holds a single instance and asks for fresh data when it appears
 /// or when the user opens a different session.
-@MainActor
+/// Plain reads of a context: safe on any thread that owns that context.
 struct ReportBuilder {
     let context: ModelContext
 
