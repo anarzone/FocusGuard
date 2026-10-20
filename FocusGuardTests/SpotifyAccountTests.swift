@@ -80,6 +80,41 @@ final class SpotifyAccountTests: XCTestCase {
         XCTAssertNil(albums.first?.imageURL)
     }
 
+    func testPlaylistSongsReadTheNewAndOldShapes() throws {
+        let json = """
+            {"items":[
+              {"item":{"uri":"spotify:track:aaa111","name":"Awake","duration_ms":280500,"artists":[{"name":"Tycho"}]}},
+              {"track":{"uri":"spotify:track:bbb222","name":"Dive","duration_ms":300000,"artists":[{"name":"Tycho"},{"name":"X"}]}},
+              {"item":{"uri":"spotify:local:Artist:Album:Song:200","name":"Local file","duration_ms":200000}},
+              {"item":{"uri":"spotify:episode:ccc333","name":"Deep work, episode 4","duration_ms":1800000,"show":{"name":"Focus Pod"}}},
+              null],
+             "next":null}
+            """
+        let page = try JSONDecoder().decode(SpotifyAccount.Page<SpotifyAccount.APIPlaylistItem>.self, from: Data(json.utf8))
+        let tracks = page.items.compactMap { $0?.playable?.track }
+        XCTAssertTrue(page.hasItems)
+        XCTAssertNil(page.next)
+        XCTAssertEqual(tracks.map(\.title), ["Awake", "Dive", "Deep work, episode 4"])
+        XCTAssertEqual(tracks[0].duration, 280.5, accuracy: 0.01)
+        XCTAssertEqual(tracks[1].artist, "Tycho, X")
+        XCTAssertEqual(tracks[2].artist, "Focus Pod")
+    }
+
+    func testAPlaylistWithItsSongsLeftOutIsTold() throws {
+        // Spotify leaves the songs out of playlists the user doesn't own.
+        let page = try JSONDecoder().decode(SpotifyAccount.Page<SpotifyAccount.APIPlaylistItem>.self,
+                                            from: Data(#"{"next":null}"#.utf8))
+        XCTAssertFalse(page.hasItems)
+    }
+
+    func testSongsNeedSignInWhenSignedOut() async {
+        let account = SpotifyAccount(clientID: "abc123", keychain: MemoryStore())
+        let music = FocusMusic(defaults: UserDefaults(suiteName: "SpotifyAccountTests-\(UUID().uuidString)")!,
+                               spotifyAccount: account)
+        let list = await music.tracks(of: "spotify:playlist:37i9dQZF1DWWQRwui0ExPn")
+        XCTAssertEqual(list, .needsSignIn)
+    }
+
     // MARK: - Account state
 
     final class MemoryStore: TokenStore {

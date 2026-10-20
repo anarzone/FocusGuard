@@ -18,13 +18,16 @@ enum AppleMusicLibrary {
 
     static func uri(for persistentID: String) -> String { uriPrefix + persistentID }
 
+    static func isPersistentID(_ id: String) -> Bool {
+        !id.isEmpty && id.count <= 32 && id.allSatisfy(\.isHexDigit)
+    }
+
     /// The persistent ID in a saved playlist's id, if it's a well-formed one
     /// (hex only, so it can't break out of a script).
     static func persistentID(from uri: String) -> String? {
         guard uri.hasPrefix(uriPrefix) else { return nil }
         let id = String(uri.dropFirst(uriPrefix.count))
-        guard !id.isEmpty, id.count <= 32, id.allSatisfy(\.isHexDigit) else { return nil }
-        return id
+        return isPersistentID(id) ? id : nil
     }
 
     // MARK: - Playlists
@@ -80,6 +83,51 @@ enum AppleMusicLibrary {
         return playlists.filter { playlist in
             let name = playlist.name.lowercased()
             return words.allSatisfy { name.contains($0) }
+        }
+    }
+
+    // MARK: - Songs
+
+    /// Persistent ID, name, artist and seconds per line, tab-separated. Each
+    /// property comes back for every song in one Apple event.
+    static func tracksScript(persistentID: String) -> String {
+        """
+        tell application "Music"
+            set p to (first user playlist whose persistent ID is "\(persistentID)")
+            set ids to persistent ID of tracks of p
+            set nms to name of tracks of p
+            set ars to artist of tracks of p
+            set durs to duration of tracks of p
+        end tell
+        set out to {}
+        repeat with i from 1 to count of ids
+            set end of out to (item i of ids) & tab & (item i of nms) & tab & (item i of ars) & tab & ((item i of durs) as text)
+        end repeat
+        set AppleScript's text item delimiters to linefeed
+        return out as text
+        """
+    }
+
+    @MainActor
+    static func tracks(persistentID: String, using player: MusicPlayer) async -> TrackList {
+        guard isPersistentID(persistentID) else { return .failed }
+        if !player.isRunning {
+            await player.launchInBackground()
+            try? await Task.sleep(for: .seconds(2))
+        }
+        switch await AppleScript.run(tracksScript(persistentID: persistentID)) {
+        case .output(let text): return .tracks(parseTracks(text))
+        case .notAuthorized: return .notAuthorized
+        case .data, .failed: return .failed
+        }
+    }
+
+    static func parseTracks(_ text: String) -> [PlaylistTrack] {
+        text.split(whereSeparator: \.isNewline).compactMap { line in
+            let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            guard parts.count >= 4, isPersistentID(parts[0]), !parts[1].isEmpty else { return nil }
+            let seconds = Double(parts[3].replacingOccurrences(of: ",", with: ".")) ?? 0
+            return PlaylistTrack(id: parts[0], title: parts[1], artist: parts[2], duration: seconds)
         }
     }
 

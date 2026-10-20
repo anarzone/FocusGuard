@@ -13,8 +13,9 @@ import Observation
 final class FocusMusic {
     let spotify = MusicPlayer(service: .spotify)
     let appleMusic = MusicPlayer(service: .appleMusic)
-    /// Spotify Web API sign-in, for search and the user's own playlists.
-    let spotifyAccount = SpotifyAccount()
+    /// Spotify Web API sign-in, for search, the user's own playlists and
+    /// playlist songs.
+    let spotifyAccount: SpotifyAccount
 
     private(set) var playlists: [SavedPlaylist] = []
     /// The playlist sessions start with; nil means no music.
@@ -41,8 +42,12 @@ final class FocusMusic {
 
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    /// Songs per playlist, kept for a few minutes so reopening is instant.
+    @ObservationIgnored private var trackCache: [String: (at: Date, list: TrackList)] = [:]
+
+    init(defaults: UserDefaults = .standard, spotifyAccount: SpotifyAccount? = nil) {
         self.defaults = defaults
+        self.spotifyAccount = spotifyAccount ?? SpotifyAccount()
         service = defaults.string(forKey: SettingsKeys.Music.service).flatMap(MusicService.init(rawValue:))
             ?? (NSWorkspace.shared.urlForApplication(withBundleIdentifier: MusicService.spotify.bundleID) != nil
                 ? .spotify : .appleMusic)
@@ -146,6 +151,29 @@ final class FocusMusic {
         player(for: service).play(uri)
     }
 
+    /// The songs of a saved or found playlist or album.
+    func tracks(of uri: String) async -> TrackList {
+        if let cached = trackCache[uri], Date().timeIntervalSince(cached.at) < 300 { return cached.list }
+        let list: TrackList
+        switch MusicService.of(uri: uri) {
+        case .spotify:
+            list = await spotifyAccount.tracks(of: uri)
+        case .appleMusic:
+            guard let id = AppleMusicLibrary.persistentID(from: uri) else { return .failed }
+            list = await AppleMusicLibrary.tracks(persistentID: id, using: appleMusic)
+        }
+        if case .tracks = list { trackCache[uri] = (.now, list) }
+        return list
+    }
+
+    /// Plays one song of a playlist, then the rest of it. During a session
+    /// it becomes the session's music.
+    func play(track trackID: String, in uri: String, inSession: Bool) {
+        let service = MusicService.of(uri: uri)
+        if inSession { sessionService = service }
+        player(for: service).play(track: trackID, in: uri)
+    }
+
     /// Paused by the user or because they stepped away.
     func sessionPaused() {
         guard let sessionService else { return }
@@ -198,6 +226,13 @@ enum SpotifyLink {
         let id = parts[1]
         guard !id.isEmpty, id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else { return nil }
         return "spotify:\(parts[0]):\(id)"
+    }
+
+    /// A song or podcast episode URI, safe to put in a script.
+    static func isPlayableItem(_ uri: String) -> Bool {
+        let parts = uri.split(separator: ":", omittingEmptySubsequences: false)
+        return parts.count == 3 && parts[0] == "spotify" && (parts[1] == "track" || parts[1] == "episode")
+            && !parts[2].isEmpty && parts[2].allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
     }
 
     static func webURL(for uri: String) -> URL? {

@@ -135,12 +135,65 @@ final class FocusMusicTests: XCTestCase {
                        MusicScripts.tell(.appleMusic, MusicScripts.setRepeat(true, .appleMusic)),
                        MusicScripts.tell(.appleMusic, "set sound volume to 40"),
                        MusicScripts.tell(.appleMusic, "set player position to 12.0"),
-                       AppleMusicLibrary.listScript]
+                       AppleMusicLibrary.listScript,
+                       AppleMusicLibrary.tracksScript(persistentID: "A1B2C3"),
+                       MusicScripts.play(track: "D4E5F6", in: "applemusic:playlist:A1B2C3", on: .appleMusic) ?? ""]
         for source in scripts {
             let script = try XCTUnwrap(NSAppleScript(source: source))
             var error: NSDictionary?
             XCTAssertTrue(script.compileAndReturnError(&error), "\(source)\n\(String(describing: error))")
         }
+    }
+
+    /// Same check against Spotify's dictionary, where Spotify is installed.
+    func testSpotifyScriptsCompile() throws {
+        try XCTSkipIf(NSWorkspace.shared.urlForApplication(withBundleIdentifier: MusicService.spotify.bundleID) == nil,
+                      "Spotify isn't installed")
+        let scripts = [MusicScripts.read(.spotify), MusicScripts.state(.spotify),
+                       MusicScripts.play("spotify:playlist:37i9dQZF1DWWQRwui0ExPn", on: .spotify) ?? "",
+                       MusicScripts.play(track: "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+                                         in: "spotify:playlist:37i9dQZF1DWWQRwui0ExPn", on: .spotify) ?? "",
+                       MusicScripts.tell(.spotify, MusicScripts.toggleShuffle(.spotify)),
+                       MusicScripts.tell(.spotify, MusicScripts.setRepeat(true, .spotify))]
+        for source in scripts {
+            let script = try XCTUnwrap(NSAppleScript(source: source))
+            var error: NSDictionary?
+            XCTAssertTrue(script.compileAndReturnError(&error), "\(source)\n\(String(describing: error))")
+        }
+    }
+
+    // MARK: - Playlist songs
+
+    func testMusicSongListsParseAndBadLinesAreSkipped() {
+        let text = "D4E5F60718293A4B\tAwake\tTycho\t280,5\nNOTHEX\tBroken\tX\t10\n0011AABB\tUntitled\t\t0"
+        let tracks = AppleMusicLibrary.parseTracks(text)
+        XCTAssertEqual(tracks.map(\.title), ["Awake", "Untitled"])
+        XCTAssertEqual(tracks.first?.duration ?? 0, 280.5, accuracy: 0.01)
+        XCTAssertEqual(tracks.last?.artist, "")
+    }
+
+    func testPlayingASongInItsPlaylistOnlyTakesWellFormedIds() {
+        XCTAssertEqual(MusicScripts.play(track: "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+                                         in: "spotify:playlist:37i9dQZF1DWWQRwui0ExPn", on: .spotify),
+                       "tell application \"Spotify\" to play track \"spotify:track:4uLU6hMCjMI75M1A2tKUQC\" "
+                       + "in context \"spotify:playlist:37i9dQZF1DWWQRwui0ExPn\"")
+        XCTAssertNil(MusicScripts.play(track: "spotify:track:abc\" to quit", in: "spotify:playlist:x1", on: .spotify))
+        XCTAssertNil(MusicScripts.play(track: "spotify:local:a:b:c:1", in: "spotify:playlist:x1", on: .spotify))
+        XCTAssertNotNil(MusicScripts.play(track: "spotify:episode:abc123", in: "spotify:playlist:x1", on: .spotify))
+        XCTAssertNil(MusicScripts.play(track: "ZZZ", in: "applemusic:playlist:A1B2", on: .appleMusic))
+        XCTAssertNil(MusicScripts.play(track: "D4E5", in: "spotify:playlist:x1", on: .appleMusic))
+    }
+
+    func testReadsCarryTheSongIdToMarkItInTheList() throws {
+        let output = ["playing", "Awake", "Tycho", "Awake", "", "280000", "3", "false", "false", "50",
+                      "spotify:track:4uLU6hMCjMI75M1A2tKUQC"].joined(separator: "\t")
+        XCTAssertEqual(try XCTUnwrap(MusicScripts.parse(output, readAt: .now)).trackID, "spotify:track:4uLU6hMCjMI75M1A2tKUQC")
+    }
+
+    func testPlaylistLengthReadsInHoursAndMinutes() {
+        XCTAssertEqual(PlaylistDetail.length(42 * 60), "42 min")
+        XCTAssertEqual(PlaylistDetail.length(72 * 60 + 20), "1 hr 12 min")
+        XCTAssertNil(PlaylistDetail.length(0))
     }
 
     // MARK: - Saved playlists

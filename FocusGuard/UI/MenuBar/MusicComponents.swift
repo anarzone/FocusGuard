@@ -492,6 +492,8 @@ struct PlaylistList: View {
     @State private var spotifyMine: [SpotifyAccount.Item]?
     @State private var spotifyResults: [SpotifyAccount.Item]?
     @State private var searching = false
+    /// A playlist opened to show its songs, in place of the list.
+    @State private var opened: PlaylistRef?
     @FocusState private var searchFocused: Bool
     @FocusState private var linkFocused: Bool
 
@@ -503,6 +505,22 @@ struct PlaylistList: View {
     private var canSearch: Bool { service == .appleMusic || account.isConfigured }
 
     var body: some View {
+        if let opened {
+            PlaylistDetail(music: music, ref: opened, inSession: inSession) {
+                withAnimation(.snappy(duration: 0.22)) { self.opened = nil }
+            }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+        } else {
+            list
+                .transition(.move(edge: .leading).combined(with: .opacity))
+        }
+    }
+
+    private func openPlaylist(_ ref: PlaylistRef) {
+        withAnimation(.snappy(duration: 0.22)) { opened = ref }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Playlists")
@@ -551,6 +569,7 @@ struct PlaylistList: View {
         .onChange(of: service) {
             query = ""
             adding = false
+            opened = nil
         }
     }
 
@@ -569,6 +588,7 @@ struct PlaylistList: View {
                     isFocus: music.selectedURI == playlist.uri,
                     isPlaying: music.player.lastStartedURI == playlist.uri && music.player.nowPlaying?.isPlaying == true,
                     play: { music.play(playlist.uri, inSession: inSession) },
+                    open: { openPlaylist(PlaylistRef(uri: playlist.uri, title: playlist.title, imageURL: playlist.imageURL)) },
                     toggleFocus: {
                         let picking = music.selectedURI != playlist.uri
                         withAnimation(.snappy(duration: 0.2)) { music.select(picking ? playlist.uri : nil) }
@@ -655,6 +675,7 @@ struct PlaylistList: View {
         let pinned = music.isPinned(playlist.uri)
         return BrowseRow(title: playlist.name, subtitle: nil, imageURL: nil, pinned: pinned,
                          play: { music.play(playlist.uri, inSession: inSession) },
+                         open: { openPlaylist(PlaylistRef(uri: playlist.uri, title: playlist.name, imageURL: nil)) },
                          togglePin: { if pinned { music.remove(playlist.uri) } else { music.pin(playlist) } })
     }
 
@@ -662,6 +683,7 @@ struct PlaylistList: View {
         let pinned = music.isPinned(item.uri)
         return BrowseRow(title: item.name, subtitle: item.subtitle, imageURL: item.imageURL, pinned: pinned,
                          play: { music.play(item.uri, inSession: inSession) },
+                         open: { openPlaylist(PlaylistRef(uri: item.uri, title: item.name, imageURL: item.imageURL)) },
                          togglePin: { if pinned { music.remove(item.uri) } else { music.pin(item) } })
     }
 
@@ -893,24 +915,16 @@ struct BrowseRow: View {
     let imageURL: URL?
     let pinned: Bool
     let play: () -> Void
+    let open: () -> Void
     let togglePin: () -> Void
 
     @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: play) {
+            CoverPlayButton(imageURL: imageURL, size: 32, showPlay: hovering, title: title, play: play)
+            Button(action: open) {
                 HStack(spacing: 10) {
-                    if let imageURL {
-                        PlaylistCover(url: imageURL, size: 32)
-                    } else {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Theme.control)
-                            .frame(width: 32, height: 32)
-                            .overlay(Image(systemName: "music.note.list")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary))
-                    }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title)
                             .font(.system(size: 13))
@@ -927,7 +941,7 @@ struct BrowseRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Play \(title)")
+            .help("Show the songs in \(title)")
 
             Button {
                 withAnimation(.snappy(duration: 0.2)) { togglePin() }
@@ -942,6 +956,11 @@ struct BrowseRow: View {
             .opacity(pinned || hovering ? 1 : 0.5)
             .help(pinned ? "Unpin" : "Pin to your playlists")
             .accessibilityLabel(pinned ? "Unpin \(title)" : "Pin \(title)")
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
@@ -957,6 +976,7 @@ struct PlaylistRow: View {
     let isFocus: Bool
     let isPlaying: Bool
     let play: () -> Void
+    let open: () -> Void
     let toggleFocus: () -> Void
     let remove: () -> Void
 
@@ -964,18 +984,10 @@ struct PlaylistRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: play) {
+            CoverPlayButton(imageURL: playlist.imageURL, size: 38, showPlay: hovering && !isPlaying,
+                            title: playlist.title, play: play)
+            Button(action: open) {
                 HStack(spacing: 10) {
-                    PlaylistCover(url: playlist.imageURL, size: 38)
-                        .overlay {
-                            if hovering && !isPlaying {
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(.black.opacity(0.35))
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(playlist.title)
                             .font(.system(size: 13, weight: isPlaying ? .semibold : .regular))
@@ -991,9 +1003,14 @@ struct PlaylistRow: View {
             }
             .buttonStyle(.plain)
             .help(playlist.title)
-            .accessibilityLabel("Play \(playlist.title)")
+            .accessibilityLabel("Show the songs in \(playlist.title)")
 
             SessionsPill(isOn: isFocus, visible: isFocus || hovering, action: toggleFocus)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
@@ -1001,6 +1018,7 @@ struct PlaylistRow: View {
         .onHover { hovering = $0 }
         .contextMenu {
             Button("Play now", action: play)
+            Button("Show songs", action: open)
             Button(isFocus ? "Don't play with sessions" : "Play with sessions", action: toggleFocus)
             Divider()
             Button("Remove \(playlist.title)", role: .destructive, action: remove)
@@ -1018,6 +1036,272 @@ struct PlaylistRow: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+/// A playlist or album to show the songs of.
+struct PlaylistRef: Equatable {
+    let uri: String
+    let title: String
+    let imageURL: URL?
+
+    var kind: String { uri.contains(":album:") ? "Album" : "Playlist" }
+}
+
+/// A cover that plays its playlist when clicked, with a play mark on hover.
+struct CoverPlayButton: View {
+    let imageURL: URL?
+    let size: CGFloat
+    let showPlay: Bool
+    let title: String
+    let play: () -> Void
+
+    var body: some View {
+        Button(action: play) {
+            Group {
+                if let imageURL {
+                    PlaylistCover(url: imageURL, size: size)
+                } else {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Theme.control)
+                        .frame(width: size, height: size)
+                        .overlay(Image(systemName: "music.note.list")
+                            .font(.system(size: size * 0.36))
+                            .foregroundStyle(.secondary))
+                }
+            }
+            .overlay {
+                if showPlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(.black.opacity(0.35))
+                    Image(systemName: "play.fill")
+                        .font(.system(size: size * 0.34, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Play \(title)")
+        .accessibilityLabel("Play \(title)")
+    }
+}
+
+/// A playlist's songs, opened from the list: cover, name and count with
+/// Play and Sessions (or Pin), then the numbered songs. Click a song to
+/// play it and the rest of the playlist after it; the one playing is
+/// marked.
+struct PlaylistDetail: View {
+    @Bindable var music: FocusMusic
+    let ref: PlaylistRef
+    let inSession: Bool
+    let back: () -> Void
+
+    @State private var list: TrackList?
+    @State private var hovered: String?
+
+    /// `songs` shows a list straight away (previews); the view loads its own.
+    init(music: FocusMusic, ref: PlaylistRef, inSession: Bool, songs: TrackList? = nil, back: @escaping () -> Void) {
+        self.music = music
+        self.ref = ref
+        self.inSession = inSession
+        self.back = back
+        _list = State(initialValue: songs)
+    }
+
+    private var service: MusicService { MusicService.of(uri: ref.uri) }
+    private var playingID: String? {
+        let player = music.player(for: service)
+        return player.lastStartedURI == ref.uri ? player.nowPlaying?.trackID : nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button(action: back) {
+                Label("Playlists", systemImage: "chevron.left")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.focus)
+            }
+            .buttonStyle(.plain)
+
+            HStack(alignment: .top, spacing: 12) {
+                PlaylistCover(url: ref.imageURL, size: 64)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(ref.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(countLine)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Button {
+                            music.play(ref.uri, inSession: inSession)
+                        } label: {
+                            Label("Play", systemImage: "play.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .frame(height: 22)
+                                .background(Capsule().fill(Theme.focusFill))
+                        }
+                        .buttonStyle(.plain)
+                        if music.isPinned(ref.uri) {
+                            SessionsPill(isOn: music.selectedURI == ref.uri, visible: true) {
+                                let picking = music.selectedURI != ref.uri
+                                withAnimation(.snappy(duration: 0.2)) { music.select(picking ? ref.uri : nil) }
+                                if picking { music.player(for: service).requestPermission() }
+                            }
+                        } else {
+                            Button {
+                                withAnimation(.snappy(duration: 0.2)) { pin() }
+                            } label: {
+                                Label("Pin", systemImage: "pin")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Theme.focus)
+                                    .padding(.horizontal, 10)
+                                    .frame(height: 22)
+                                    .background(Capsule().strokeBorder(Theme.separator, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+                Spacer(minLength: 0)
+            }
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 1) {
+                    content
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 120, idealHeight: 150, maxHeight: .infinity, alignment: .top)
+        }
+        .task(id: "\(ref.uri)|\(music.spotifyAccount.isSignedIn)") {
+            list = await music.tracks(of: ref.uri)
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch list {
+        case nil:
+            ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 12)
+        case .tracks(let tracks) where tracks.isEmpty:
+            note("No songs in this \(ref.kind.lowercased()).")
+        case .tracks(let tracks):
+            ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
+                trackRow(index + 1, track)
+            }
+        case .notShared:
+            note("Spotify only shows the songs of playlists you made or collaborate on. Play still plays this one.")
+        case .needsSignIn:
+            note("Sign in to Spotify to see the songs. Play works without it.")
+            if !music.spotifyAccount.signingIn {
+                Button("Sign in with Spotify") { Task { await music.spotifyAccount.signIn() } }
+                    .font(.system(size: 11))
+                    .padding(.horizontal, 6)
+            }
+        case .notAuthorized:
+            note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
+        case .failed:
+            note("Couldn't load the songs.")
+            Button("Try again") {
+                Task {
+                    list = nil
+                    list = await music.tracks(of: ref.uri)
+                }
+            }
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+        }
+    }
+
+    private func trackRow(_ number: Int, _ track: PlaylistTrack) -> some View {
+        let playing = track.id == playingID
+        let isHovered = hovered == track.id
+        return Button {
+            music.play(track: track.id, in: ref.uri, inSession: inSession)
+        } label: {
+            HStack(spacing: 10) {
+                Group {
+                    if playing {
+                        Image(systemName: "waveform")
+                            .symbolEffect(.variableColor.iterative, isActive: music.player(for: service).nowPlaying?.isPlaying == true)
+                            .foregroundStyle(Theme.focus)
+                    } else if isHovered {
+                        Image(systemName: "play.fill")
+                            .foregroundStyle(.primary)
+                    } else {
+                        Text("\(number)")
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .font(.system(size: 11, weight: .medium).monospacedDigit())
+                .frame(width: 22, alignment: .trailing)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(track.title)
+                        .font(.system(size: 12.5, weight: playing ? .semibold : .regular))
+                        .foregroundStyle(playing ? Theme.focus : Color.primary)
+                        .lineLimit(1)
+                    if !track.artist.isEmpty {
+                        Text(track.artist)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 4)
+                if track.duration > 0 {
+                    Text(SeekMath.label(track.duration))
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(isHovered ? Theme.control : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 ? track.id : (hovered == track.id ? nil : hovered) }
+        .help("Play \(track.title)")
+        .accessibilityLabel("\(track.title), \(track.artist)\(playing ? ", playing" : "")")
+    }
+
+    private var countLine: String {
+        guard case .tracks(let tracks) = list else { return ref.kind }
+        let songs = tracks.count == 1 ? "1 song" : "\(tracks.count) songs"
+        let total = tracks.reduce(0) { $0 + $1.duration }
+        return [ref.kind, songs, PlaylistDetail.length(total)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// "1 hr 12 min", "42 min"; nil when unknown.
+    static func length(_ seconds: TimeInterval) -> String? {
+        let minutes = Int((seconds / 60).rounded())
+        guard minutes > 0 else { return nil }
+        return minutes >= 60 ? "\(minutes / 60) hr \(minutes % 60) min" : "\(minutes) min"
+    }
+
+    private func pin() {
+        switch service {
+        case .spotify:
+            music.pin(SpotifyAccount.Item(uri: ref.uri, name: ref.title, subtitle: ref.kind, imageURL: ref.imageURL))
+        case .appleMusic:
+            if let id = AppleMusicLibrary.persistentID(from: ref.uri) {
+                music.pin(AppleMusicLibrary.Playlist(persistentID: id, name: ref.title))
+            }
+        }
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 6)
     }
 }
 

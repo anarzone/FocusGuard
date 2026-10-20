@@ -52,6 +52,9 @@ struct NowPlaying: Equatable {
     var repeating = false
     /// 0–100.
     var volume = 50
+    /// Spotify's `spotify:track:…` or Music's persistent ID, to mark the
+    /// playing song in a list.
+    var trackID = ""
     var readAt: Date
 
     /// Where the track is now, counting on from the last read while playing.
@@ -166,6 +169,20 @@ final class MusicPlayer {
         }
     }
 
+    /// Plays one song of a saved playlist or album, then the rest of it.
+    func play(track trackID: String, in contextURI: String) {
+        guard let script = MusicScripts.play(track: trackID, in: contextURI, on: service) else { return }
+        lastStartedURI = contextURI
+        Task {
+            if !isRunning {
+                await launchInBackground()
+                try? await Task.sleep(for: .seconds(2))
+            }
+            apply(await AppleScript.run(script))
+            settle()
+        }
+    }
+
     func pause() { command("pause") }
     func resume() { command("play") }
     func togglePlayPause() {
@@ -255,7 +272,7 @@ enum MusicScripts {
     }
 
     /// Fields joined by tabs: state, name, artist, album, artwork URL,
-    /// duration, position, shuffling, repeating, volume. Apple Music has no
+    /// duration, position, shuffling, repeating, volume, track id. Apple Music has no
     /// artwork URL (it's fetched as data separately) and reports duration in
     /// seconds; Spotify in milliseconds.
     static func read(_ service: MusicService) -> String {
@@ -266,14 +283,15 @@ enum MusicScripts {
             fields = """
                 (player state as text) & tab & (name of t) & tab & (artist of t) & tab & (album of t) ¬
                     & tab & (artwork url of t) & tab & (duration of t) & tab & (player position as text) ¬
-                    & tab & (shuffling as text) & tab & (repeating as text) & tab & (sound volume as text)
+                    & tab & (shuffling as text) & tab & (repeating as text) & tab & (sound volume as text) ¬
+                    & tab & (id of t)
                 """
         case .appleMusic:
             fields = """
                 (player state as text) & tab & (name of t) & tab & (artist of t) & tab & (album of t) ¬
                     & tab & "" & tab & (duration of t as text) & tab & (player position as text) ¬
                     & tab & (shuffle enabled as text) & tab & ((song repeat is not off) as text) ¬
-                    & tab & (sound volume as text)
+                    & tab & (sound volume as text) & tab & (persistent ID of t)
                 """
         }
         return """
@@ -314,6 +332,21 @@ enum MusicScripts {
         }
     }
 
+    /// Plays one song of a saved playlist or album, carrying on through the
+    /// rest of it. Nil unless both ids are well formed.
+    static func play(track trackID: String, in contextURI: String, on service: MusicService) -> String? {
+        switch service {
+        case .spotify:
+            guard SpotifyLink.isPlayableItem(trackID), SpotifyLink.webURL(for: contextURI) != nil else { return nil }
+            return tell(service, "play track \"\(trackID)\" in context \"\(contextURI)\"")
+        case .appleMusic:
+            guard let playlist = AppleMusicLibrary.persistentID(from: contextURI),
+                  AppleMusicLibrary.isPersistentID(trackID) else { return nil }
+            return tell(service, "play (first track of (first user playlist whose persistent ID is \"\(playlist)\") "
+                        + "whose persistent ID is \"\(trackID)\")")
+        }
+    }
+
     static func toggleShuffle(_ service: MusicService) -> String {
         service == .spotify ? "set shuffling to not shuffling" : "set shuffle enabled to not shuffle enabled"
     }
@@ -339,6 +372,7 @@ enum MusicScripts {
             track.repeating = fields[8] == "true"
             track.volume = Int(fields[9]) ?? track.volume
         }
+        if fields.count >= 11 { track.trackID = fields[10] }
         return track
     }
 }
