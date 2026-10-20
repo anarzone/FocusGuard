@@ -86,29 +86,33 @@ struct MenuBarView: View {
 
     // MARK: - Header
 
+    /// Buttons and title on one row, the subtitle on its own row below so it
+    /// never truncates. The music button sits on the left, the side its pane
+    /// opens from; the other panes' buttons on the right.
     private func header(for phase: MenuPhase) -> some View {
         let (glyph, tint, title, subtitle) = headerContent(for: phase)
-        return HStack(spacing: 10) {
-            StatusGlyphView(state: glyph, tint: tint, size: 22)
-            VStack(alignment: .leading, spacing: 1) {
+        let hasMusic = !appState.music.availableServices.isEmpty
+        return VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 8) {
+                if hasMusic {
+                    MusicButton(isOpen: $musicOpen, isPlaying: appState.music.player.nowPlaying?.isPlaying == true)
+                }
+                StatusGlyphView(state: glyph, tint: tint, size: 20)
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                Spacer(minLength: 4)
+                PaneButtons(open: $openPane)
             }
-            .accessibilityElement(children: .combine)
-            Spacer(minLength: 0)
-            if !appState.music.availableServices.isEmpty {
-                MusicButton(isOpen: $musicOpen, isPlaying: appState.music.player.nowPlaying?.isPlaying == true)
-            }
-            PaneButtons(open: $openPane)
+            Text(subtitle)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .padding(.leading, (hasMusic ? 36 : 0) + 28)
         }
-        .padding(.leading, 10)
+        .padding(.leading, hasMusic ? 4 : 10)
         .padding(.trailing, 4)
-        .padding(.top, 8)
+        .padding(.top, 6)
         .padding(.bottom, 4)
     }
 

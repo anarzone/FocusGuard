@@ -86,7 +86,14 @@ final class FocusMusic {
     func pin(_ item: SpotifyAccount.Item) {
         guard !isPinned(item.uri), SpotifyLink.uri(from: item.uri) != nil else { return }
         playlists.append(SavedPlaylist(uri: item.uri, title: item.name, imageURL: item.imageURL))
+        pickIfNoneChosen(item.uri)
         save()
+    }
+
+    /// With no session playlist yet, the first one pinned becomes it, so a
+    /// session plays something without a separate step.
+    private func pickIfNoneChosen(_ uri: String) {
+        if selectedURI == nil { selectedURI = uri }
     }
 
     /// Pins an Apple Music library playlist; its cover (the first track's
@@ -94,6 +101,7 @@ final class FocusMusic {
     func pin(_ playlist: AppleMusicLibrary.Playlist) {
         guard !isPinned(playlist.uri) else { return }
         playlists.append(SavedPlaylist(uri: playlist.uri, title: playlist.name, imageURL: nil))
+        pickIfNoneChosen(playlist.uri)
         save()
         Task {
             guard let cover = await AppleMusicLibrary.playlistArtwork(persistentID: playlist.persistentID),
