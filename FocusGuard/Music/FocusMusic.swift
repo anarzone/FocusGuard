@@ -13,6 +13,8 @@ import Observation
 final class FocusMusic {
     let spotify = MusicPlayer(service: .spotify)
     let appleMusic = MusicPlayer(service: .appleMusic)
+    /// Spotify Web API sign-in, for search and the user's own playlists.
+    let spotifyAccount = SpotifyAccount()
 
     private(set) var playlists: [SavedPlaylist] = []
     /// The playlist sessions start with; nil means no music.
@@ -78,6 +80,14 @@ final class FocusMusic {
     }
 
     func isPinned(_ uri: String) -> Bool { playlists.contains { $0.uri == uri } }
+
+    /// Pins a Spotify playlist or album found by search or in the user's
+    /// own playlists.
+    func pin(_ item: SpotifyAccount.Item) {
+        guard !isPinned(item.uri), SpotifyLink.uri(from: item.uri) != nil else { return }
+        playlists.append(SavedPlaylist(uri: item.uri, title: item.name, imageURL: item.imageURL))
+        save()
+    }
 
     /// Pins an Apple Music library playlist; its cover (the first track's
     /// artwork) follows once Music hands it over.

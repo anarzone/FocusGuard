@@ -37,6 +37,9 @@ targets:
       path: FocusGuard/Resources/Info.plist
       properties:
         CFBundleName: FocusGuard
+        # Spotify developer app for search (PKCE, no secret). Development mode:
+        # only accounts added in the Spotify dashboard can sign in.
+        SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         CFBundleDisplayName: FocusGuard
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -61,6 +64,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard
         PRODUCT_NAME: FocusGuard
+        # Public Client ID of FocusGuard's Spotify developer app; empty hides
+        # Spotify search and sign-in.
+        SPOTIFY_CLIENT_ID: ""
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
         # No ASSETCATALOG_COMPILER_APPICON_NAME: the asset catalog's AppIcon

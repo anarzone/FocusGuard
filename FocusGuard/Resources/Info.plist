@@ -40,5 +40,7 @@
 	<string>https://anarzone.github.io/FocusGuard/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>c/Nu7tCDIlzOcOYwu1F71xW8b1fuq5bPcFiO1IBApYs=</string>
+	<key>SpotifyClientID</key>
+	<string>$(SPOTIFY_CLIENT_ID)</string>
 </dict>
 </plist>
