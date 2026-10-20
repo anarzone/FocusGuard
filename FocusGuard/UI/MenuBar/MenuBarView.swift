@@ -17,6 +17,9 @@ struct MenuBarView: View {
     @State private var openPane: MenuPane?
     /// The music pane, slid out on the column's left.
     @State private var musicOpen = false
+    /// The column's height. The music pane is held to it, so the player
+    /// never makes the menu taller than the column and leaves space under it.
+    @State private var columnHeight: CGFloat = 0
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
@@ -32,6 +35,7 @@ struct MenuBarView: View {
                 MusicPane(music: appState.music, now: now, inSession: appState.sessionManager.currentSession != nil) {
                     musicOpen = false
                 }
+                .frame(height: columnHeight > 0 ? columnHeight : nil)
                 .transition(MenuPane.slide(from: .leading))
             }
 
@@ -57,6 +61,7 @@ struct MenuBarView: View {
             menuItems(for: phase)
         }
         .frame(width: 308)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { columnHeight = $0 }
 
             if let pane = openPane {
                 MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss) {
