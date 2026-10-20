@@ -16,7 +16,9 @@ import Security
 ///
 /// Sign-in is Authorization Code with PKCE (no secret in the app): the
 /// browser opens Spotify's consent page and comes back to a listener on
-/// 127.0.0.1 that only lives for the sign-in. The refresh token is kept in
+/// 127.0.0.1:47181 that only lives for the sign-in. (Spotify's docs allow
+/// registering a loopback address without a port, but its dashboard
+/// rejects one, so the registered redirect has this fixed port.) The refresh token is kept in
 /// the Keychain.
 @MainActor
 @Observable
@@ -40,6 +42,8 @@ final class SpotifyAccount {
     @ObservationIgnored private let keychain: TokenStore
 
     static let scopes = "playlist-read-private playlist-read-collaborative"
+    /// Must match the redirect URI registered for the Client ID.
+    static let redirectPort: UInt16 = 47181
 
     init(clientID: String? = SpotifyAccount.bundledClientID, keychain: TokenStore = KeychainTokenStore()) {
         self.clientID = clientID
@@ -67,7 +71,7 @@ final class SpotifyAccount {
         self.receiver = receiver
         defer { self.receiver = nil }
         do {
-            let port = try await receiver.start()
+            let port = try await receiver.start(port: Self.redirectPort)
             let redirect = "http://127.0.0.1:\(port)/callback"
             guard let url = PKCE.authorizeURL(clientID: clientID, redirect: redirect, verifier: verifier,
                                               state: state, scopes: Self.scopes) else { throw URLError(.badURL) }
@@ -312,9 +316,12 @@ final class LoopbackReceiver: @unchecked Sendable {
     private var early: Result<[String: String], Error>?
     private let queue = DispatchQueue(label: "com.anar.focusguard.spotify-signin")
 
-    func start() async throws -> UInt16 {
+    /// Listens on 127.0.0.1, on `port` or any free one if nil.
+    func start(port: UInt16? = nil) async throws -> UInt16 {
         let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: .any)
+        parameters.allowLocalEndpointReuse = true
+        let local = port.flatMap(NWEndpoint.Port.init(rawValue:)) ?? .any
+        parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: local)
         let listener = try NWListener(using: parameters)
         self.listener = listener
         return try await withCheckedThrowingContinuation { (ready: CheckedContinuation<UInt16, Error>) in
