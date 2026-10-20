@@ -135,11 +135,13 @@ struct NowRow: View {
                     Text(snapshot.appName)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
-                    Text(snapshot.detailLine)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    if let detail = snapshot.distinctDetail {
+                        Text(detail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 5) {

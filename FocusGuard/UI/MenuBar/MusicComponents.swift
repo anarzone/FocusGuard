@@ -59,11 +59,7 @@ struct MusicPane: View {
             }
 
             if music.availableServices.count > 1 {
-                Picker("Music app", selection: Binding(get: { music.service }, set: { music.show($0) })) {
-                    ForEach(music.availableServices) { Text($0.name).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                ServiceSwitch(services: music.availableServices, selected: music.service) { music.show($0) }
             }
 
             if music.player.notAuthorized {
@@ -116,7 +112,7 @@ struct MusicPane: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Text("Pick a playlist below to play it.")
+                Text("Pick a playlist below, or search for one.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -306,90 +302,151 @@ enum SeekMath {
     }
 }
 
-/// Spotify's volume, 0–100.
+/// The music app's volume, 0–100, drawn like the timeline: a thin bar
+/// that thickens under the pointer. Drag or click to set it.
 struct VolumeSlider: View {
     let volume: Int
     let onChange: (Int) -> Void
 
+    @State private var dragging: Int?
+    @State private var hovering = false
+
     var body: some View {
+        let shown = Double(dragging ?? volume) / 100
+        let active = hovering || dragging != nil
+
         HStack(spacing: 8) {
             Image(systemName: "speaker.fill")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
-            Slider(value: Binding(get: { Double(volume) }, set: { onChange(Int($0.rounded())) }), in: 0...100)
-                .controlSize(.small)
-                .tint(Theme.focus)
-                .accessibilityLabel("Spotify volume")
+            GeometryReader { geo in
+                let width = geo.size.width
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.control)
+                    Capsule().fill(Theme.focus.opacity(active ? 1 : 0.75)).frame(width: width * shown)
+                }
+                .frame(height: active ? 6 : 4)
+                .overlay(alignment: .leading) {
+                    Circle()
+                        .fill(.white)
+                        .overlay(Circle().strokeBorder(Theme.focus, lineWidth: 2))
+                        .frame(width: 12, height: 12)
+                        .offset(x: width * shown - 6)
+                        .opacity(active ? 1 : 0)
+                }
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let level = Int((min(1, max(0, value.location.x / max(1, width))) * 100).rounded())
+                            dragging = level
+                            onChange(level)
+                        }
+                        .onEnded { _ in dragging = nil }
+                )
+            }
+            .frame(height: 14)
+            .takesActivatingClick()
+            .onHover { hovering = $0 }
             Image(systemName: "speaker.wave.3.fill")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
         }
+        .animation(.snappy(duration: 0.15), value: active)
+        .accessibilityElement()
+        .accessibilityLabel("Volume")
+        .accessibilityValue("\(volume) percent")
+        .accessibilityAdjustableAction { direction in
+            onChange(min(100, max(0, volume + (direction == .increment ? 10 : -10))))
+        }
+    }
+}
+
+/// Spotify / Apple Music, full width, the picked one raised off the track.
+struct ServiceSwitch: View {
+    let services: [MusicService]
+    let selected: MusicService
+    let pick: (MusicService) -> Void
+
+    @Namespace private var namespace
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(services) { service in
+                let isSelected = service == selected
+                Button {
+                    withAnimation(.snappy(duration: 0.22)) { pick(service) }
+                } label: {
+                    Text(service.name)
+                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 24)
+                        .background {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Theme.segment)
+                                    .shadow(color: .black.opacity(0.12), radius: 1.5, y: 0.5)
+                                    .matchedGeometryEffect(id: "selected", in: namespace)
+                            }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .padding(2)
+        .background(Capsule().fill(Theme.control))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Music app")
     }
 }
 
 // MARK: - Playlists
 
-/// The pinned playlists for the app on show. Click one to play it now; the
-/// target button marks the one sessions start with; right-click for more.
-/// Spotify playlists are added from a share link; Apple Music ones are
-/// browsed and searched from the library and pinned in one click.
+/// Pinned playlists on top, then — with an empty search — the user's own:
+/// their Spotify playlists (once signed in) or their Music library. Typing
+/// searches Spotify or the library right there; pin a result to keep it.
+/// Click any row to play it; "Sessions" marks the one sessions start with.
 struct PlaylistList: View {
     @Bindable var music: FocusMusic
     let inSession: Bool
 
-    @State private var browsing = false
+    @State private var query = ""
     @State private var adding = false
     @State private var link = ""
     @State private var problem: String?
     @State private var saving = false
-    @FocusState private var fieldFocused: Bool
+    @State private var library: [AppleMusicLibrary.Playlist]?
+    @State private var libraryState: LibraryState = .idle
+    @State private var spotifyMine: [SpotifyAccount.Item]?
+    @State private var spotifyResults: [SpotifyAccount.Item]?
+    @State private var searching = false
+    @FocusState private var searchFocused: Bool
+    @FocusState private var linkFocused: Bool
+
+    enum LibraryState { case idle, loading, loaded, notAuthorized, failed }
+
+    private var account: SpotifyAccount { music.spotifyAccount }
+    private var service: MusicService { music.service }
+    private var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSearch: Bool { service == .appleMusic || account.isConfigured }
 
     var body: some View {
-        if browsing {
-            let done = { withAnimation(.snappy(duration: 0.2)) { browsing = false } }
-            if music.service == .appleMusic {
-                LibraryBrowser(music: music, done: done)
-            } else {
-                SpotifyBrowser(music: music, account: music.spotifyAccount, done: done)
-            }
-        } else {
-            pinnedList
-        }
-    }
-
-    private var pinnedList: some View {
-        let pinned = music.playlists(for: music.service)
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Playlists")
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
-                if music.service == .appleMusic {
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { browsing = true }
-                    } label: {
-                        Label("Browse library", systemImage: "magnifyingglass")
-                            .font(.system(size: 11))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Theme.focus)
-                } else {
-                    if music.spotifyAccount.isConfigured && !adding {
-                        Button {
-                            withAnimation(.snappy(duration: 0.2)) { browsing = true }
-                        } label: {
-                            Label("Search", systemImage: "magnifyingglass")
-                                .font(.system(size: 11))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(Theme.focus)
-                    }
+                if service == .spotify {
                     Button {
                         withAnimation(.snappy(duration: 0.2)) { adding.toggle() }
                         problem = nil
-                        if adding { focusField() }
+                        if adding { focus($linkFocused) }
                     } label: {
-                        Label(adding ? "Cancel" : "Link", systemImage: adding ? "xmark" : "link")
+                        Label(adding ? "Cancel" : "Add link", systemImage: adding ? "xmark" : "link")
                             .font(.system(size: 11))
                     }
                     .buttonStyle(.plain)
@@ -398,39 +455,173 @@ struct PlaylistList: View {
                 }
             }
 
-            if adding && music.service == .spotify {
+            if adding && service == .spotify {
                 addRow
             }
 
-            if pinned.isEmpty && !adding {
-                Text(music.service == .appleMusic
-                     ? "Browse your library and pin playlists to play them here and with your sessions."
-                     : "Add a Spotify playlist to play it here and with your sessions.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            if canSearch {
+                searchField
             }
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 2) {
-                    ForEach(pinned) { playlist in
-                        PlaylistRow(
-                            playlist: playlist,
-                            isFocus: music.selectedURI == playlist.uri,
-                            isPlaying: music.player.lastStartedURI == playlist.uri && music.player.nowPlaying?.isPlaying == true,
-                            play: { music.play(playlist.uri, inSession: inSession) },
-                            toggleFocus: {
-                                let picking = music.selectedURI != playlist.uri
-                                withAnimation(.snappy(duration: 0.2)) { music.select(picking ? playlist.uri : nil) }
-                                if picking { music.player(for: playlist.service).requestPermission() }
-                            },
-                            remove: { withAnimation(.snappy(duration: 0.2)) { music.remove(playlist.uri) } }
-                        )
+                VStack(alignment: .leading, spacing: 2) {
+                    if trimmedQuery.isEmpty {
+                        pinnedSection
+                        librarySection
+                    } else {
+                        resultsSection
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            // A modest ideal height so a long library doesn't stretch the
+            // menu; the list fills whatever height the menu has.
+            .frame(minHeight: 120, idealHeight: 150, maxHeight: .infinity, alignment: .top)
         }
+        .task(id: "\(service.rawValue)|\(account.isSignedIn)") { await loadLibrary() }
+        .task(id: "\(service.rawValue)|\(trimmedQuery)") { await searchSpotify() }
+        .onChange(of: service) {
+            query = ""
+            adding = false
+        }
+    }
+
+    // MARK: Sections
+
+    @ViewBuilder private var pinnedSection: some View {
+        let pinned = music.playlists(for: service)
+        if pinned.isEmpty {
+            note(service == .appleMusic
+                 ? "Pin playlists from your library below to keep them here."
+                 : "Pin playlists from your own or from search, or add one by link.")
+        } else {
+            ForEach(pinned) { playlist in
+                PlaylistRow(
+                    playlist: playlist,
+                    isFocus: music.selectedURI == playlist.uri,
+                    isPlaying: music.player.lastStartedURI == playlist.uri && music.player.nowPlaying?.isPlaying == true,
+                    play: { music.play(playlist.uri, inSession: inSession) },
+                    toggleFocus: {
+                        let picking = music.selectedURI != playlist.uri
+                        withAnimation(.snappy(duration: 0.2)) { music.select(picking ? playlist.uri : nil) }
+                        if picking { music.player(for: playlist.service).requestPermission() }
+                    },
+                    remove: { withAnimation(.snappy(duration: 0.2)) { music.remove(playlist.uri) } }
+                )
+            }
+            if music.selectedURI == nil {
+                note("Nothing plays with your sessions yet. Choose Sessions on a playlist.")
+            }
+        }
+    }
+
+    @ViewBuilder private var librarySection: some View {
+        switch service {
+        case .appleMusic:
+            sectionHeader("Your library")
+            switch libraryState {
+            case .idle:
+                actionRow("Show your Music library", systemImage: "music.note.list") {
+                    Task { await loadLibrary(launching: true) }
+                }
+            case .loading:
+                ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 6)
+            case .notAuthorized:
+                note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
+            case .failed:
+                note("Couldn't read your Music library. Is the Music app signed in?")
+            case .loaded:
+                let rest = (library ?? []).filter { !music.isPinned($0.uri) }
+                if rest.isEmpty {
+                    note(library?.isEmpty == true ? "No playlists in your library yet." : "Everything in your library is pinned.")
+                }
+                ForEach(rest) { appleRow($0) }
+            }
+        case .spotify:
+            if account.isConfigured {
+                sectionHeader("Your Spotify playlists") { accountMenu }
+                if account.isSignedIn {
+                    spotifyProblems
+                    let rest = (spotifyMine ?? []).filter { !music.isPinned($0.uri) }
+                    if spotifyMine == nil && account.problem == nil {
+                        ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 6)
+                    } else if rest.isEmpty && account.problem == nil {
+                        note(spotifyMine?.isEmpty == true ? "You haven't made or followed any playlists yet." : "All your playlists are pinned.")
+                    }
+                    ForEach(rest) { spotifyRow($0) }
+                } else {
+                    signInCard
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var resultsSection: some View {
+        switch service {
+        case .appleMusic:
+            if library == nil {
+                actionRow("Show your Music library to search it", systemImage: "music.note.list") {
+                    Task { await loadLibrary(launching: true) }
+                }
+            } else {
+                let results = AppleMusicLibrary.filter(library ?? [], by: trimmedQuery)
+                if results.isEmpty { note("No playlists match “\(trimmedQuery)”.") }
+                ForEach(results) { appleRow($0) }
+            }
+        case .spotify:
+            if account.isSignedIn {
+                spotifyProblems
+                if let results = spotifyResults {
+                    if results.isEmpty && !searching { note("Nothing on Spotify matches “\(trimmedQuery)”.") }
+                    ForEach(results) { spotifyRow($0) }
+                }
+            } else {
+                signInCard
+            }
+        }
+    }
+
+    // MARK: Rows
+
+    private func appleRow(_ playlist: AppleMusicLibrary.Playlist) -> some View {
+        let pinned = music.isPinned(playlist.uri)
+        return BrowseRow(title: playlist.name, subtitle: nil, imageURL: nil, pinned: pinned,
+                         play: { music.play(playlist.uri, inSession: inSession) },
+                         togglePin: { if pinned { music.remove(playlist.uri) } else { music.pin(playlist) } })
+    }
+
+    private func spotifyRow(_ item: SpotifyAccount.Item) -> some View {
+        let pinned = music.isPinned(item.uri)
+        return BrowseRow(title: item.name, subtitle: item.subtitle, imageURL: item.imageURL, pinned: pinned,
+                         play: { music.play(item.uri, inSession: inSession) },
+                         togglePin: { if pinned { music.remove(item.uri) } else { music.pin(item) } })
+    }
+
+    // MARK: Pieces
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            TextField(service == .appleMusic ? "Search your library" : "Search Spotify", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+                .focused($searchFocused)
+            if searching {
+                ProgressView().controlSize(.mini)
+            } else if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.control))
+        .onTapGesture { focus($searchFocused) }
     }
 
     private var addRow: some View {
@@ -439,7 +630,7 @@ struct PlaylistList: View {
                 TextField("Paste a playlist link", text: $link)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12))
-                    .focused($fieldFocused)
+                    .focused($linkFocused)
                     .onSubmit(save)
                 Button(saving ? "Adding…" : "Add", action: save)
                     .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty || saving)
@@ -449,6 +640,156 @@ struct PlaylistList: View {
                 .foregroundStyle(problem == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Theme.distractionInk))
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private var signInCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sign in to search Spotify and see your own playlists. Playing music doesn't need it.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if account.signingIn {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Finish signing in in your browser…")
+                        .font(.system(size: 11))
+                    Spacer()
+                    Button("Cancel") { account.cancelSignIn() }
+                        .font(.system(size: 11))
+                }
+            } else {
+                Button {
+                    Task { await account.signIn() }
+                } label: {
+                    Text("Sign in with Spotify")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(Capsule().fill(Theme.focusFill))
+                }
+                .buttonStyle(.plain)
+            }
+            if account.problem == .signInFailed {
+                note("Signing in didn't work. Try again.")
+            }
+            Text("Spotify only opens search to a few approved accounts. Adding playlists by link works for everyone.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder private var spotifyProblems: some View {
+        if account.problem == .notAllowed {
+            note("Spotify hasn't approved this account for FocusGuard's search. You can still add playlists by link.")
+        } else if account.problem == .requestFailed {
+            note("Couldn't reach Spotify. Check your connection.")
+        }
+    }
+
+    private var accountMenu: some View {
+        Menu {
+            Button("Sign out of Spotify", role: .destructive) {
+                account.signOut()
+                spotifyMine = nil
+                spotifyResults = nil
+            }
+        } label: {
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .opacity(account.isSignedIn ? 1 : 0)
+        .disabled(!account.isSignedIn)
+        .help("Spotify account")
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        sectionHeader(title) { EmptyView() }
+    }
+
+    private func sectionHeader<Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Spacer()
+            trailing()
+        }
+        .padding(.top, 10)
+        .padding(.bottom, 2)
+        .padding(.horizontal, 6)
+    }
+
+    private func actionRow(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.focus)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+    }
+
+    // MARK: Loading
+
+    /// Reads the user's own playlists. Music is only opened for it when the
+    /// user asks (`launching`); otherwise the library loads if Music is open.
+    private func loadLibrary(launching: Bool = false) async {
+        switch service {
+        case .appleMusic:
+            guard launching || music.appleMusic.isRunning else {
+                if library == nil { libraryState = .idle }
+                return
+            }
+            libraryState = .loading
+            switch await AppleMusicLibrary.playlists(using: music.appleMusic) {
+            case .playlists(let playlists):
+                library = playlists.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                libraryState = .loaded
+            case .notAuthorized: libraryState = .notAuthorized
+            case .failed: libraryState = .failed
+            }
+        case .spotify:
+            guard account.isSignedIn else {
+                spotifyMine = nil
+                return
+            }
+            if let mine = await account.myPlaylists() { spotifyMine = mine }
+        }
+    }
+
+    /// Typing pauses briefly before searching, so each keystroke isn't a request.
+    private func searchSpotify() async {
+        guard service == .spotify, account.isSignedIn, !trimmedQuery.isEmpty else {
+            searching = false
+            spotifyResults = nil
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(400))
+        guard !Task.isCancelled else { return }
+        searching = true
+        let found = await account.search(trimmedQuery)
+        guard !Task.isCancelled else { return }
+        searching = false
+        if let found { spotifyResults = found }
     }
 
     private func save() {
@@ -470,122 +811,14 @@ struct PlaylistList: View {
 
     /// The menu opens without activating FocusGuard; typing needs it active
     /// and the menu's window key.
-    private func focusField() {
+    private func focus(_ field: FocusState<Bool>.Binding) {
         NSApp.activate()
         NSApp.windows.first { $0.isVisible && $0.level == .popUpMenu }?.makeKey()
-        DispatchQueue.main.async { fieldFocused = true }
+        DispatchQueue.main.async { field.wrappedValue = true }
     }
 }
 
-/// Apple Music: the user's library playlists with a search field. The pin
-/// button adds one to the pinned list (or takes it off); clicking a row
-/// plays it.
-struct LibraryBrowser: View {
-    @Bindable var music: FocusMusic
-    let done: () -> Void
-
-    @State private var library: [AppleMusicLibrary.Playlist] = []
-    @State private var state: LoadState = .loading
-    @State private var query = ""
-    @FocusState private var searchFocused: Bool
-
-    enum LoadState { case loading, loaded, notAuthorized, failed }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Your library")
-                    .font(.system(size: 12, weight: .semibold))
-                Spacer()
-                Button("Done", action: done)
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.focus)
-            }
-
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                TextField("Search playlists", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .focused($searchFocused)
-                if !query.isEmpty {
-                    Button { query = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear search")
-                }
-            }
-            .padding(.horizontal, 8)
-            .frame(height: 26)
-            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.control))
-            .onTapGesture { focusSearch() }
-
-            switch state {
-            case .loading:
-                ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.top, 8)
-            case .notAuthorized:
-                note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
-            case .failed:
-                note("Couldn't read your Music library. Is the Music app signed in?")
-            case .loaded:
-                let results = AppleMusicLibrary.filter(library, by: query)
-                if results.isEmpty {
-                    note(library.isEmpty ? "No playlists in your library yet." : "No playlists match “\(query)”.")
-                }
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 2) {
-                        ForEach(results) { playlist in
-                            row(playlist)
-                        }
-                    }
-                }
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .transition(.opacity)
-        .task { await load() }
-    }
-
-    private func row(_ playlist: AppleMusicLibrary.Playlist) -> some View {
-        let pinned = music.isPinned(playlist.uri)
-        return BrowseRow(title: playlist.name, subtitle: nil, imageURL: nil, pinned: pinned,
-                         play: { music.play(playlist.uri, inSession: false) },
-                         togglePin: { if pinned { music.remove(playlist.uri) } else { music.pin(playlist) } })
-    }
-
-    private func note(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private func load() async {
-        state = .loading
-        switch await AppleMusicLibrary.playlists(using: music.appleMusic) {
-        case .playlists(let playlists):
-            library = playlists.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            state = .loaded
-        case .notAuthorized: state = .notAuthorized
-        case .failed: state = .failed
-        }
-    }
-
-    /// The menu opens without activating FocusGuard; typing needs it active
-    /// and the menu's window key.
-    private func focusSearch() {
-        NSApp.activate()
-        NSApp.windows.first { $0.isVisible && $0.level == .popUpMenu }?.makeKey()
-        DispatchQueue.main.async { searchFocused = true }
-    }
-}
-
-/// A browse or search result: click to play, pin to keep it in the list.
+/// A library or search result: click to play, pin to keep it in the list.
 struct BrowseRow: View {
     let title: String
     let subtitle: String?
@@ -593,6 +826,8 @@ struct BrowseRow: View {
     let pinned: Bool
     let play: () -> Void
     let togglePin: () -> Void
+
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -636,185 +871,19 @@ struct BrowseRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .opacity(pinned || hovering ? 1 : 0.5)
             .help(pinned ? "Unpin" : "Pin to your playlists")
             .accessibilityLabel(pinned ? "Unpin \(title)" : "Pin \(title)")
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(hovering ? Theme.control : .clear))
+        .onHover { hovering = $0 }
     }
 }
 
-/// Spotify: sign in once, then search Spotify for playlists and albums, or
-/// (with an empty search) see the playlists you made or follow. Pin to keep
-/// one, click to play it.
-struct SpotifyBrowser: View {
-    @Bindable var music: FocusMusic
-    @Bindable var account: SpotifyAccount
-    let done: () -> Void
-
-    @State private var query = ""
-    @State private var results: [SpotifyAccount.Item]?
-    @State private var loading = false
-    @FocusState private var searchFocused: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Spotify")
-                    .font(.system(size: 12, weight: .semibold))
-                Spacer()
-                if account.isSignedIn {
-                    Menu {
-                        Button("Sign out of Spotify", role: .destructive) {
-                            account.signOut()
-                            results = nil
-                        }
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                            .font(.system(size: 12))
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
-                    .help("Spotify account")
-                }
-                Button("Done", action: done)
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.focus)
-            }
-
-            if account.isSignedIn {
-                searchField
-                content
-            } else {
-                signIn
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .transition(.opacity)
-        .task(id: "\(account.isSignedIn)|\(query)") { await load() }
-    }
-
-    private var signIn: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Sign in to search Spotify and see your own playlists. Playing music doesn't need it.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if account.signingIn {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Finish signing in in your browser…")
-                        .font(.system(size: 11))
-                    Spacer()
-                    Button("Cancel") { account.cancelSignIn() }
-                        .font(.system(size: 11))
-                }
-            } else {
-                Button {
-                    Task { await account.signIn() }
-                } label: {
-                    Text("Sign in with Spotify")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 28)
-                        .background(Capsule().fill(Theme.focusFill))
-                }
-                .buttonStyle(.plain)
-            }
-            if account.problem == .signInFailed {
-                problemNote("Signing in didn't work. Try again.")
-            }
-            Text("Search runs through FocusGuard's Spotify developer app, which Spotify only opens to a few approved accounts. Adding playlists by link works for everyone.")
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            TextField("Search Spotify", text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .focused($searchFocused)
-            if loading {
-                ProgressView().controlSize(.mini)
-            } else if !query.isEmpty {
-                Button { query = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: 26)
-        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.control))
-        .onTapGesture { focusSearch() }
-    }
-
-    @ViewBuilder private var content: some View {
-        if account.problem == .notAllowed {
-            problemNote("Spotify hasn't approved this account for FocusGuard's search. You can still add playlists by link.")
-        } else if account.problem == .requestFailed && results == nil {
-            problemNote("Couldn't reach Spotify. Check your connection.")
-        }
-        if let results {
-            Text(query.trimmingCharacters(in: .whitespaces).isEmpty ? "Your playlists" : "Playlists and albums")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            if results.isEmpty && !loading {
-                problemNote(query.isEmpty ? "You haven't made or followed any playlists yet." : "Nothing on Spotify matches “\(query)”.")
-            }
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 2) {
-                    ForEach(results) { item in
-                        let pinned = music.isPinned(item.uri)
-                        BrowseRow(title: item.name, subtitle: item.subtitle, imageURL: item.imageURL, pinned: pinned,
-                                  play: { music.play(item.uri, inSession: false) },
-                                  togglePin: { if pinned { music.remove(item.uri) } else { music.pin(item) } })
-                    }
-                }
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
-        }
-    }
-
-    private func problemNote(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// Typing pauses briefly before searching, so each keystroke isn't a request.
-    private func load() async {
-        guard account.isSignedIn else { return }
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        if !trimmed.isEmpty {
-            try? await Task.sleep(for: .milliseconds(400))
-            guard !Task.isCancelled else { return }
-        }
-        loading = true
-        let found = trimmed.isEmpty ? await account.myPlaylists() : await account.search(trimmed)
-        guard !Task.isCancelled else { return }
-        loading = false
-        if let found { results = found }
-    }
-
-    private func focusSearch() {
-        NSApp.activate()
-        NSApp.windows.first { $0.isVisible && $0.level == .popUpMenu }?.makeKey()
-        DispatchQueue.main.async { searchFocused = true }
-    }
-}
-
+/// A pinned playlist. Click to play it; the Sessions pill marks the one a
+/// session starts with; right-click for the rest.
 struct PlaylistRow: View {
     let playlist: SavedPlaylist
     let isFocus: Bool
@@ -831,43 +900,32 @@ struct PlaylistRow: View {
                 HStack(spacing: 10) {
                     PlaylistCover(url: playlist.imageURL, size: 38)
                         .overlay {
-                            if hovering || isPlaying {
+                            if hovering && !isPlaying {
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                                     .fill(.black.opacity(0.35))
-                                Image(systemName: isPlaying ? "waveform" : "play.fill")
+                                Image(systemName: "play.fill")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(.white)
-                                    .symbolEffect(.variableColor.iterative, isActive: isPlaying)
                             }
                         }
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(playlist.title)
                             .font(.system(size: 13, weight: isPlaying ? .semibold : .regular))
-                            .foregroundStyle(isPlaying ? Theme.focus : Color.primary)
-                            .lineLimit(1)
-                        Text(isFocus ? "Plays with sessions" : (playlist.uri.contains(":album:") ? "Album" : "Playlist"))
-                            .font(.system(size: 11))
-                            .foregroundStyle(isFocus ? AnyShapeStyle(Theme.focus) : AnyShapeStyle(.secondary))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        subtitle
                     }
                     Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help(playlist.title)
             .accessibilityLabel("Play \(playlist.title)")
 
-            Button(action: toggleFocus) {
-                Image(systemName: isFocus ? "target" : "scope")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isFocus ? Theme.focus : Color.secondary)
-                    .frame(width: 28, height: 28)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .opacity(isFocus || hovering ? 1 : 0.35)
-            .help(isFocus ? "Stop playing it with sessions" : "Play it when a session starts")
-            .accessibilityLabel(isFocus ? "Plays with sessions" : "Play with sessions")
-            .accessibilityAddTraits(isFocus ? .isSelected : [])
+            SessionsPill(isOn: isFocus, visible: isFocus || hovering, action: toggleFocus)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
@@ -879,6 +937,49 @@ struct PlaylistRow: View {
             Divider()
             Button("Remove \(playlist.title)", role: .destructive, action: remove)
         }
+    }
+
+    @ViewBuilder private var subtitle: some View {
+        if isPlaying {
+            Label("Playing", systemImage: "waveform")
+                .symbolEffect(.variableColor.iterative)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.focus)
+        } else {
+            Text(playlist.uri.contains(":album:") ? "Album" : "Playlist")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// "Sessions": on for the playlist a session starts with. Shown on hover
+/// for the others.
+struct SessionsPill: View {
+    let isOn: Bool
+    let visible: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: isOn ? "checkmark" : "plus")
+                    .font(.system(size: 8, weight: .bold))
+                Text("Sessions")
+                    .font(.system(size: 10.5, weight: .semibold))
+            }
+            .foregroundStyle(isOn ? Theme.focus : Color.secondary)
+            .padding(.horizontal, 8)
+            .frame(height: 20)
+            .background(Capsule().fill(isOn ? Theme.focusTint : Color.clear))
+            .overlay(Capsule().strokeBorder(isOn ? Color.clear : Theme.separator, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .opacity(visible ? 1 : 0)
+        .help(isOn ? "Plays when a session starts. Click to stop." : "Play this when a session starts")
+        .accessibilityLabel(isOn ? "Plays with sessions" : "Play with sessions")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 

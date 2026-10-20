@@ -454,7 +454,8 @@ struct DayStripView: View, Animatable {
         let dayStart = calendar.startOfDay(for: now)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let previewEnd = previewMinutes > 0 ? min(dayEnd, now.addingTimeInterval(previewMinutes * 60)) : nil
-        let window = DayStrip.window(dayStart: dayStart, firstActivity: spans.first?.start,
+        let firstToday = spans.first { $0.start >= dayStart.addingTimeInterval(DayStrip.dayStartsAtHour * 3600) }
+        let window = DayStrip.window(dayStart: dayStart, firstActivity: firstToday?.start,
                                      until: max(now, previewEnd ?? now), calendar: calendar)
 
         Canvas { context, size in
@@ -518,12 +519,17 @@ struct DayStripView: View, Animatable {
 }
 
 enum DayStrip {
+    /// Activity before this hour is the night before running late, not the
+    /// start of today, so it doesn't stretch the strip back to midnight.
+    static let dayStartsAtHour: Double = 4
+
     /// 8 AM to 6 PM, stretched to the hour to cover the day's first activity
-    /// and `until` (now, or the end of the session being set up). Never past
-    /// midnight.
+    /// (from 4 AM on) and `until` (now, or the end of the session being set
+    /// up). Never past midnight.
     static func window(dayStart: Date, firstActivity: Date?, until: Date, calendar: Calendar) -> DateInterval {
         func hours(_ date: Date) -> Double { date.timeIntervalSince(dayStart) / 3600 }
-        let startHour = min(8, firstActivity.map { floor(hours($0)) } ?? 8)
+        let morning = firstActivity.map(hours).flatMap { $0 >= dayStartsAtHour ? floor($0) : nil }
+        let startHour = min(8, morning ?? 8)
         let endHour = min(24, max(18, ceil(hours(until))))
         let start = calendar.date(byAdding: .hour, value: Int(max(0, startHour)), to: dayStart) ?? dayStart
         let end = calendar.date(byAdding: .hour, value: Int(endHour), to: dayStart) ?? until

@@ -115,4 +115,15 @@ final class SpotifyAccountTests: XCTestCase {
         XCTAssertEqual(music.playlists.map(\.title), ["lofi beats"])
         XCTAssertEqual(music.playlists.first?.service, .spotify)
     }
+
+    func testTheFirstPinBecomesTheSessionPlaylistButLaterOnesDont() {
+        let defaults = UserDefaults(suiteName: "SpotifyAccountTests-\(UUID().uuidString)")!
+        let music = FocusMusic(defaults: defaults)
+        music.pin(SpotifyAccount.Item(uri: "spotify:playlist:aaa111", name: "First", subtitle: "", imageURL: nil))
+        music.pin(AppleMusicLibrary.Playlist(persistentID: "ABC123", name: "Second"))
+        XCTAssertEqual(music.selected?.title, "First")
+        music.select(nil)
+        music.pin(SpotifyAccount.Item(uri: "spotify:playlist:bbb222", name: "Third", subtitle: "", imageURL: nil))
+        XCTAssertEqual(music.selected?.title, "Third")
+    }
 }

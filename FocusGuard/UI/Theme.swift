@@ -67,6 +67,11 @@ enum Theme {
         light: Color.black.opacity(0.06),
         dark:  Color.white.opacity(0.08)
     )
+    /// The picked segment of a switch, raised off its track.
+    static let segment = dynamicColor(
+        light: Color.white,
+        dark:  Color.white.opacity(0.2)
+    )
     /// Circular control platters and secondary capsules.
     static let control = dynamicColor(
         light: Color.black.opacity(0.07),
