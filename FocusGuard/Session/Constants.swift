@@ -76,6 +76,7 @@ enum SettingsKeys {
     enum Music {
         static let playlists = "music.playlists"
         static let selected  = "music.selectedPlaylist"
+        static let service   = "music.service"
     }
 
     enum Calendar {

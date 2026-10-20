@@ -2,43 +2,67 @@ import AppKit
 import Foundation
 import Observation
 
-/// Focus music: the Spotify playlists the user saved, which one plays with
-/// sessions, and keeping Spotify in step with the session (start, pause,
-/// resume, end).
+/// Focus music: the playlists the user pinned (from Spotify or Apple
+/// Music), which one plays with sessions, and keeping the music app in step
+/// with the session (start, pause, resume, end).
 ///
 /// It only ever pauses or resumes music it started itself, so music the user
 /// put on without a focus playlist picked is never touched.
 @MainActor
 @Observable
 final class FocusMusic {
-    let spotify = SpotifyPlayer()
+    let spotify = MusicPlayer(service: .spotify)
+    let appleMusic = MusicPlayer(service: .appleMusic)
 
     private(set) var playlists: [SavedPlaylist] = []
     /// The playlist sessions start with; nil means no music.
     private(set) var selectedURI: String?
-    /// True while the music playing is the session's.
-    private(set) var sessionOwnsPlayback = false
+    /// The app whose music is the session's, while it is.
+    private(set) var sessionService: MusicService?
+    /// The app the music pane shows.
+    private(set) var service: MusicService
 
+    var sessionOwnsPlayback: Bool { sessionService != nil }
     var selected: SavedPlaylist? { playlists.first { $0.uri == selectedURI } }
+    /// The player the music pane shows.
+    var player: MusicPlayer { player(for: service) }
+    /// Apps installed on this Mac, Spotify first. Apple Music ships with macOS.
+    var availableServices: [MusicService] { MusicService.allCases.filter { player(for: $0).isInstalled } }
+
+    func player(for service: MusicService) -> MusicPlayer {
+        service == .spotify ? spotify : appleMusic
+    }
+
+    func playlists(for service: MusicService) -> [SavedPlaylist] {
+        playlists.filter { $0.service == service }
+    }
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        service = defaults.string(forKey: SettingsKeys.Music.service).flatMap(MusicService.init(rawValue:))
+            ?? (NSWorkspace.shared.urlForApplication(withBundleIdentifier: MusicService.spotify.bundleID) != nil
+                ? .spotify : .appleMusic)
         if let data = defaults.data(forKey: SettingsKeys.Music.playlists),
            let saved = try? JSONDecoder().decode([SavedPlaylist].self, from: data) {
             playlists = saved
         }
         selectedURI = defaults.string(forKey: SettingsKeys.Music.selected)
-        if selected == nil { selectedURI = nil }
+        if playlists.first(where: { $0.uri == selectedURI }) == nil { selectedURI = nil }
+    }
+
+    func show(_ service: MusicService) {
+        self.service = service
+        defaults.set(service.rawValue, forKey: SettingsKeys.Music.service)
     }
 
     // MARK: - Playlists
 
     enum AddResult: Equatable { case added, alreadySaved, notALink }
 
-    /// Saves the playlist or album a share link points to, named and with
-    /// its cover from Spotify's public link preview, and picks it.
+    /// Saves the Spotify playlist or album a share link points to, named and
+    /// with its cover from Spotify's public link preview, and picks it.
     func add(link: String) async -> AddResult {
         guard let uri = SpotifyLink.uri(from: link) else { return .notALink }
         if playlists.contains(where: { $0.uri == uri }) {
@@ -51,6 +75,22 @@ final class FocusMusic {
                                        imageURL: preview?.thumbnail))
         select(uri)
         return .added
+    }
+
+    func isPinned(_ uri: String) -> Bool { playlists.contains { $0.uri == uri } }
+
+    /// Pins an Apple Music library playlist; its cover (the first track's
+    /// artwork) follows once Music hands it over.
+    func pin(_ playlist: AppleMusicLibrary.Playlist) {
+        guard !isPinned(playlist.uri) else { return }
+        playlists.append(SavedPlaylist(uri: playlist.uri, title: playlist.name, imageURL: nil))
+        save()
+        Task {
+            guard let cover = await AppleMusicLibrary.playlistArtwork(persistentID: playlist.persistentID),
+                  let index = playlists.firstIndex(where: { $0.uri == playlist.uri }) else { return }
+            playlists[index].imageURL = cover
+            save()
+        }
     }
 
     func remove(_ uri: String) {
@@ -75,45 +115,47 @@ final class FocusMusic {
     // MARK: - Session boundaries
 
     func sessionStarted() {
-        guard let uri = selected?.uri, spotify.isInstalled else { return }
-        sessionOwnsPlayback = true
-        spotify.play(uri)
+        guard let playlist = selected, player(for: playlist.service).isInstalled else { return }
+        sessionService = playlist.service
+        player(for: playlist.service).play(playlist.uri)
     }
 
     /// Plays a saved playlist now. During a session it becomes the
     /// session's music, paused and stopped with it.
     func play(_ uri: String, inSession: Bool) {
-        if inSession { sessionOwnsPlayback = true }
-        spotify.play(uri)
+        let service = MusicService.of(uri: uri)
+        if inSession { sessionService = service }
+        player(for: service).play(uri)
     }
 
     /// Paused by the user or because they stepped away.
     func sessionPaused() {
-        guard sessionOwnsPlayback else { return }
-        spotify.pause()
+        guard let sessionService else { return }
+        player(for: sessionService).pause()
     }
 
     func sessionResumed() {
-        guard sessionOwnsPlayback else { return }
-        spotify.resume()
+        guard let sessionService else { return }
+        player(for: sessionService).resume()
     }
 
     /// Breaks are quiet: the session's music stops when it ends.
     func sessionEnded() {
-        guard sessionOwnsPlayback else { return }
-        sessionOwnsPlayback = false
-        spotify.pause()
+        guard let service = sessionService else { return }
+        sessionService = nil
+        player(for: service).pause()
     }
 }
 
-/// A Spotify playlist or album saved for focus music.
+/// A playlist or album pinned for focus music.
 struct SavedPlaylist: Codable, Equatable, Identifiable {
-    /// `spotify:playlist:…` or `spotify:album:…`.
+    /// `spotify:playlist:…`, `spotify:album:…` or `applemusic:playlist:…`.
     let uri: String
     var title: String
     var imageURL: URL?
 
     var id: String { uri }
+    var service: MusicService { MusicService.of(uri: uri) }
 }
 
 /// Spotify share links ↔ URIs, and the public link preview (oEmbed) that

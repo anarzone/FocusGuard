@@ -27,7 +27,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify.</string>
+	<string>FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify or Apple Music.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
 	<key>NSCalendarsUsageDescription</key>

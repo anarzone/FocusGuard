@@ -45,11 +45,11 @@ struct MusicPane: View {
         VStack(alignment: .leading, spacing: 14) {
             PaneTitle(title: "Music", close: close) {
                 Button {
-                    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: SpotifyPlayer.bundleID) {
+                    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: music.service.bundleID) {
                         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
                     }
                 } label: {
-                    Label("Open Spotify", systemImage: "arrow.up.forward.app")
+                    Label("Open \(music.service.name)", systemImage: "arrow.up.forward.app")
                         .font(.system(size: 11))
                         .padding(.horizontal, 9)
                         .frame(height: 22)
@@ -58,12 +58,20 @@ struct MusicPane: View {
                 .buttonStyle(.plain)
             }
 
-            if music.spotify.notAuthorized {
+            if music.availableServices.count > 1 {
+                Picker("Music app", selection: Binding(get: { music.service }, set: { music.show($0) })) {
+                    ForEach(music.availableServices) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            if music.player.notAuthorized {
                 permissionNote
             }
 
-            if let track = music.spotify.nowPlaying {
-                PlayerSection(track: track, context: context, now: now, player: music.spotify)
+            if let track = music.player.nowPlaying {
+                PlayerSection(track: track, context: context, now: now, player: music.player)
             } else {
                 idleSection
             }
@@ -81,7 +89,7 @@ struct MusicPane: View {
 
     /// The saved playlist FocusGuard started, if that's what's playing.
     private var context: String? {
-        music.playlists.first { $0.uri == music.spotify.lastStartedURI }?.title
+        music.playlists.first { $0.uri == music.player.lastStartedURI }?.title
     }
 
     private var idleSection: some View {
@@ -92,9 +100,9 @@ struct MusicPane: View {
                 .overlay(Image(systemName: "music.note")
                     .font(.system(size: 44))
                     .foregroundStyle(.tertiary))
-            Text(music.spotify.isRunning ? "Nothing playing" : "Spotify isn't open")
+            Text(music.player.isRunning ? "Nothing playing" : "\(music.service.name) isn't open")
                 .font(.system(size: 13, weight: .semibold))
-            if let focus = music.selected {
+            if let focus = music.selected, focus.service == music.service {
                 Button {
                     music.play(focus.uri, inSession: inSession)
                 } label: {
@@ -118,7 +126,7 @@ struct MusicPane: View {
 
     private var permissionNote: some View {
         HStack(spacing: 8) {
-            Text("FocusGuard isn't allowed to control Spotify.")
+            Text("FocusGuard isn't allowed to control \(music.service.name).")
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.distractionInk)
             Spacer(minLength: 0)
@@ -139,7 +147,7 @@ struct PlayerSection: View {
     let track: NowPlaying
     let context: String?
     let now: Date
-    let player: SpotifyPlayer
+    let player: MusicPlayer
 
     var body: some View {
         VStack(spacing: 12) {
@@ -321,12 +329,15 @@ struct VolumeSlider: View {
 
 // MARK: - Playlists
 
-/// The saved playlists. Click one to play it now; the target button marks
-/// the one sessions start with. Add from a share link; right-click for more.
+/// The pinned playlists for the app on show. Click one to play it now; the
+/// target button marks the one sessions start with; right-click for more.
+/// Spotify playlists are added from a share link; Apple Music ones are
+/// browsed and searched from the library and pinned in one click.
 struct PlaylistList: View {
     @Bindable var music: FocusMusic
     let inSession: Bool
 
+    @State private var browsing = false
     @State private var adding = false
     @State private var link = ""
     @State private var problem: String?
@@ -334,29 +345,53 @@ struct PlaylistList: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        if browsing {
+            LibraryBrowser(music: music) {
+                withAnimation(.snappy(duration: 0.2)) { browsing = false }
+            }
+        } else {
+            pinnedList
+        }
+    }
+
+    private var pinnedList: some View {
+        let pinned = music.playlists(for: music.service)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Playlists")
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Button {
-                    withAnimation(.snappy(duration: 0.2)) { adding.toggle() }
-                    problem = nil
-                    if adding { focusField() }
-                } label: {
-                    Label(adding ? "Cancel" : "Add", systemImage: adding ? "xmark" : "plus")
-                        .font(.system(size: 11))
+                if music.service == .appleMusic {
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { browsing = true }
+                    } label: {
+                        Label("Browse library", systemImage: "magnifyingglass")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.focus)
+                } else {
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { adding.toggle() }
+                        problem = nil
+                        if adding { focusField() }
+                    } label: {
+                        Label(adding ? "Cancel" : "Add", systemImage: adding ? "xmark" : "plus")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.focus)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Theme.focus)
             }
 
-            if adding {
+            if adding && music.service == .spotify {
                 addRow
             }
 
-            if music.playlists.isEmpty && !adding {
-                Text("Add a Spotify playlist to play it here and with your sessions.")
+            if pinned.isEmpty && !adding {
+                Text(music.service == .appleMusic
+                     ? "Browse your library and pin playlists to play them here and with your sessions."
+                     : "Add a Spotify playlist to play it here and with your sessions.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -364,16 +399,16 @@ struct PlaylistList: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 2) {
-                    ForEach(music.playlists) { playlist in
+                    ForEach(pinned) { playlist in
                         PlaylistRow(
                             playlist: playlist,
                             isFocus: music.selectedURI == playlist.uri,
-                            isPlaying: music.spotify.lastStartedURI == playlist.uri && music.spotify.nowPlaying?.isPlaying == true,
+                            isPlaying: music.player.lastStartedURI == playlist.uri && music.player.nowPlaying?.isPlaying == true,
                             play: { music.play(playlist.uri, inSession: inSession) },
                             toggleFocus: {
                                 let picking = music.selectedURI != playlist.uri
                                 withAnimation(.snappy(duration: 0.2)) { music.select(picking ? playlist.uri : nil) }
-                                if picking { music.spotify.requestPermission() }
+                                if picking { music.player(for: playlist.service).requestPermission() }
                             },
                             remove: { withAnimation(.snappy(duration: 0.2)) { music.remove(playlist.uri) } }
                         )
@@ -425,6 +460,149 @@ struct PlaylistList: View {
         NSApp.activate()
         NSApp.windows.first { $0.isVisible && $0.level == .popUpMenu }?.makeKey()
         DispatchQueue.main.async { fieldFocused = true }
+    }
+}
+
+/// Apple Music: the user's library playlists with a search field. The pin
+/// button adds one to the pinned list (or takes it off); clicking a row
+/// plays it.
+struct LibraryBrowser: View {
+    @Bindable var music: FocusMusic
+    let done: () -> Void
+
+    @State private var library: [AppleMusicLibrary.Playlist] = []
+    @State private var state: LoadState = .loading
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+
+    enum LoadState { case loading, loaded, notAuthorized, failed }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Your library")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Button("Done", action: done)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.focus)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                TextField("Search playlists", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .focused($searchFocused)
+                if !query.isEmpty {
+                    Button { query = "" } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
+                }
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.control))
+            .onTapGesture { focusSearch() }
+
+            switch state {
+            case .loading:
+                ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.top, 8)
+            case .notAuthorized:
+                note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
+            case .failed:
+                note("Couldn't read your Music library. Is the Music app signed in?")
+            case .loaded:
+                let results = AppleMusicLibrary.filter(library, by: query)
+                if results.isEmpty {
+                    note(library.isEmpty ? "No playlists in your library yet." : "No playlists match “\(query)”.")
+                }
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 2) {
+                        ForEach(results) { playlist in
+                            row(playlist)
+                        }
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .transition(.opacity)
+        .task { await load() }
+    }
+
+    private func row(_ playlist: AppleMusicLibrary.Playlist) -> some View {
+        let pinned = music.isPinned(playlist.uri)
+        return HStack(spacing: 10) {
+            Button {
+                music.play(playlist.uri, inSession: false)
+            } label: {
+                HStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Theme.control)
+                        .frame(width: 30, height: 30)
+                        .overlay(Image(systemName: "music.note.list")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary))
+                    Text(playlist.name)
+                        .font(.system(size: 13))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Play \(playlist.name)")
+
+            Button {
+                withAnimation(.snappy(duration: 0.2)) {
+                    if pinned { music.remove(playlist.uri) } else { music.pin(playlist) }
+                }
+            } label: {
+                Image(systemName: pinned ? "pin.fill" : "pin")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(pinned ? Theme.focus : Color.secondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(pinned ? "Unpin" : "Pin to your playlists")
+            .accessibilityLabel(pinned ? "Unpin \(playlist.name)" : "Pin \(playlist.name)")
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func load() async {
+        state = .loading
+        switch await AppleMusicLibrary.playlists(using: music.appleMusic) {
+        case .playlists(let playlists):
+            library = playlists.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            state = .loaded
+        case .notAuthorized: state = .notAuthorized
+        case .failed: state = .failed
+        }
+    }
+
+    /// The menu opens without activating FocusGuard; typing needs it active
+    /// and the menu's window key.
+    private func focusSearch() {
+        NSApp.activate()
+        NSApp.windows.first { $0.isVisible && $0.level == .popUpMenu }?.makeKey()
+        DispatchQueue.main.async { searchFocused = true }
     }
 }
 
