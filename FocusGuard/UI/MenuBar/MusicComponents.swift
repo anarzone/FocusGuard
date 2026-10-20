@@ -4,10 +4,16 @@ import SwiftUI
 // MARK: - Header button
 
 /// Opens the music pane on the menu's left. Shows a moving waveform while
-/// Spotify plays, so music is visible without taking room in the column.
+/// music plays, so it's visible without taking room in the column, and
+/// hovering it shows what's playing.
 struct MusicButton: View {
     @Binding var isOpen: Bool
-    let isPlaying: Bool
+    let track: NowPlaying?
+
+    @State private var showingTrack = false
+    @State private var hoverTask: Task<Void, Never>?
+
+    private var isPlaying: Bool { track?.isPlaying == true }
 
     var body: some View {
         Button {
@@ -22,9 +28,71 @@ struct MusicButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(isOpen ? "Close music" : "Music")
+        .help(track == nil ? (isOpen ? "Close music" : "Music") : "")
+        .onHover(perform: hover)
+        .overlay(alignment: .topLeading) {
+            // With the pane open the track is already on screen.
+            if showingTrack, !isOpen, let track {
+                NowPlayingBubble(track: track)
+                    .offset(y: 34)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.snappy(duration: 0.18), value: showingTrack)
         .accessibilityLabel("Music")
+        .accessibilityValue(track.map { "\($0.isPlaying ? "Playing" : "Paused"): \($0.summary)" } ?? "")
         .accessibilityAddTraits(isOpen ? .isSelected : [])
+    }
+
+    /// A short pause before showing, so passing over the button doesn't flash it.
+    private func hover(_ inside: Bool) {
+        hoverTask?.cancel()
+        guard inside else {
+            showingTrack = false
+            return
+        }
+        hoverTask = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            showingTrack = true
+        }
+    }
+}
+
+/// What's playing, under the header's music button on hover: artwork,
+/// song and artist, and whether it's paused.
+struct NowPlayingBubble: View {
+    let track: NowPlaying
+
+    var body: some View {
+        HStack(spacing: 9) {
+            PlaylistCover(url: track.artworkURL, size: 30)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(track.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(maxWidth: 190, alignment: .leading)
+                HStack(spacing: 4) {
+                    if !track.isPlaying {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 8))
+                    }
+                    Text(track.artist)
+                        .lineLimit(1)
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: 190, alignment: .leading)
+            }
+        }
+        .padding(.leading, 6)
+        .padding(.trailing, 10)
+        .padding(.vertical, 6)
+        .fixedSize()
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.windowCard))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
     }
 }
 

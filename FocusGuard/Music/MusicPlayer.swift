@@ -60,6 +60,9 @@ struct NowPlaying: Equatable {
         return min(duration, position + max(0, now.timeIntervalSince(readAt)))
     }
 
+    /// "Awake by Tycho", for VoiceOver and anywhere a line will do.
+    var summary: String { artist.isEmpty ? title : "\(title) by \(artist)" }
+
     /// Same track, for knowing when to fetch new artwork.
     var trackKey: String { "\(title)\t\(artist)\t\(album)" }
 }

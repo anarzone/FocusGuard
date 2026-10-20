@@ -37,6 +37,7 @@ struct MenuBarView: View {
 
         VStack(alignment: .leading, spacing: 6) {
             header(for: phase)
+                .zIndex(1)   // the music button's now-playing bubble sits over the modules below
 
             if !permissions.allGranted {
                 permissionModule
@@ -95,7 +96,7 @@ struct MenuBarView: View {
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 8) {
                 if hasMusic {
-                    MusicButton(isOpen: $musicOpen, isPlaying: appState.music.player.nowPlaying?.isPlaying == true)
+                    MusicButton(isOpen: $musicOpen, track: appState.music.player.nowPlaying)
                 }
                 StatusGlyphView(state: glyph, tint: tint, size: 20)
                 Text(title)
@@ -104,6 +105,7 @@ struct MenuBarView: View {
                 Spacer(minLength: 4)
                 PaneButtons(open: $openPane)
             }
+            .zIndex(1)
             Text(subtitle)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)

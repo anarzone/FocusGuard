@@ -62,6 +62,14 @@ final class FocusMusicTests: XCTestCase {
         XCTAssertEqual(SeekMath.label(3725), "1:02:05")
     }
 
+    func testTrackSummaryReadsAsSongByArtist() {
+        var track = NowPlaying(title: "Awake", artist: "Tycho", album: "Awake", artworkURL: nil,
+                               duration: 280, position: 0, isPlaying: true, readAt: .now)
+        XCTAssertEqual(track.summary, "Awake by Tycho")
+        track.artist = ""
+        XCTAssertEqual(track.summary, "Awake")
+    }
+
     func testStoppedOrEmptyMeansNothingPlaying() {
         XCTAssertNil(MusicScripts.parse("stopped", readAt: .now))
         XCTAssertNil(MusicScripts.parse("", readAt: .now))
