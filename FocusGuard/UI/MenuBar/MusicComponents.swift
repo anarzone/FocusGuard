@@ -17,7 +17,7 @@ struct MusicButton: View {
 
     var body: some View {
         Button {
-            withAnimation(.snappy(duration: 0.22)) { isOpen.toggle() }
+            isOpen.toggle()   // not animated: see MenuPane.slide
         } label: {
             Image(systemName: isPlaying ? "waveform" : "music.note")
                 .font(.system(size: 12, weight: .semibold))

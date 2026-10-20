@@ -30,9 +30,9 @@ struct MenuBarView: View {
         HStack(alignment: .top, spacing: 6) {
             if musicOpen {
                 MusicPane(music: appState.music, now: now, inSession: appState.sessionManager.currentSession != nil) {
-                    withAnimation(.snappy(duration: 0.22)) { musicOpen = false }
+                    musicOpen = false
                 }
-                .transition(.move(edge: .leading).combined(with: .opacity))
+                .transition(MenuPane.slide(from: .leading))
             }
 
         VStack(alignment: .leading, spacing: 6) {
@@ -60,9 +60,9 @@ struct MenuBarView: View {
 
             if let pane = openPane {
                 MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss) {
-                    withAnimation(.snappy(duration: 0.22)) { openPane = nil }
+                    openPane = nil
                 }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
+                .transition(MenuPane.slide(from: .trailing))
             }
         }
         .padding(6)
