@@ -82,6 +82,9 @@ struct MenuBarView: View {
             if let owner = music.sessionService, owner != music.service {
                 music.player(for: owner).refresh()
             }
+            if musicOpen && music.service == .spotify {
+                music.refreshSpotifyContext()
+            }
         }
     }
 

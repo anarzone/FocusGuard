@@ -40,15 +40,32 @@ final class SpotifyAccount {
     @ObservationIgnored private var accessToken: (value: String, expires: Date)?
     @ObservationIgnored private var receiver: LoopbackReceiver?
     @ObservationIgnored private let keychain: TokenStore
+    @ObservationIgnored private let defaults: UserDefaults
+    /// The permissions Spotify actually granted, from the last token.
+    private(set) var grantedScopes: Set<String>
 
-    static let scopes = "playlist-read-private playlist-read-collaborative"
+    /// Playlists for "Your playlists" and songs; playback state for what's
+    /// playing, its playlist and up next; playback control for Play.
+    static let scopes = "playlist-read-private playlist-read-collaborative "
+        + "user-read-currently-playing user-read-playback-state user-modify-playback-state"
+    static let grantedScopesKey = "spotify.grantedScopes"
+
+    /// Can see what's playing (its playlist, up next) and start playback.
+    var hasPlaybackAccess: Bool {
+        grantedScopes.isSuperset(of: ["user-read-playback-state", "user-modify-playback-state"])
+    }
+    /// Signed in before playback access was asked for: one more sign-in adds it.
+    var needsMoreAccess: Bool { isSignedIn && !hasPlaybackAccess }
     /// Must match the redirect URI registered for the Client ID.
     static let redirectPort: UInt16 = 47181
 
-    init(clientID: String? = SpotifyAccount.bundledClientID, keychain: TokenStore = KeychainTokenStore()) {
+    init(clientID: String? = SpotifyAccount.bundledClientID, keychain: TokenStore = KeychainTokenStore(),
+         defaults: UserDefaults = .standard) {
         self.clientID = clientID
         self.keychain = keychain
+        self.defaults = defaults
         self.isSignedIn = clientID != nil && keychain.read() != nil
+        self.grantedScopes = Set(defaults.stringArray(forKey: Self.grantedScopesKey) ?? [])
     }
 
     nonisolated static var bundledClientID: String? {
@@ -104,6 +121,8 @@ final class SpotifyAccount {
         accessToken = nil
         isSignedIn = false
         problem = nil
+        grantedScopes = []
+        defaults.removeObject(forKey: Self.grantedScopesKey)
     }
 
     // MARK: - Requests
@@ -170,6 +189,81 @@ final class SpotifyAccount {
         return .tracks(tracks)
     }
 
+    // MARK: - Playback (Premium)
+
+    /// What Spotify is playing and from where, on any of the user's devices.
+    struct Playback: Equatable {
+        /// The playlist or album it's playing from; nil for a single song or radio.
+        let contextURI: String?
+        let trackURI: String?
+        let isPlaying: Bool
+    }
+
+    struct APIPlayback: Decodable {
+        struct Context: Decodable { let uri: String? }
+        let is_playing: Bool?
+        let context: Context?
+        let item: APITrack?
+
+        var playback: Playback {
+            // Only playlists and albums: an artist page or radio isn't one the pane shows.
+            Playback(contextURI: context?.uri.flatMap { SpotifyLink.uri(from: $0) },
+                     trackURI: item?.uri, isPlaying: is_playing ?? false)
+        }
+    }
+
+    struct APIQueue: Decodable {
+        let currently_playing: APITrack?
+        let queue: [APITrack?]?
+    }
+
+    /// Nil when it couldn't be read; a nil context when nothing is playing.
+    func currentPlayback() async -> Playback? {
+        guard hasPlaybackAccess else { return nil }
+        switch await fetch("me/player/currently-playing", query: [:]) as Fetch<APIPlayback> {
+        case .ok(let state): return state.playback
+        case .status(204): return Playback(contextURI: nil, trackURI: nil, isPlaying: false)
+        case .status, .failed: return nil
+        }
+    }
+
+    /// What plays next (Spotify shares about 20), whatever the playlist.
+    func upNext() async -> [PlaylistTrack]? {
+        guard hasPlaybackAccess else { return nil }
+        guard case .ok(let result) = await fetch("me/player/queue", query: [:]) as Fetch<APIQueue> else { return nil }
+        return (result.queue ?? []).compactMap { $0?.track }
+    }
+
+    /// Starts a playlist or album on the active Spotify device, from
+    /// `trackURI` if given. False when there's no active device or access,
+    /// so the caller can fall back to the app.
+    func play(context uri: String, startingAt trackURI: String?) async -> Bool {
+        guard hasPlaybackAccess, SpotifyLink.webURL(for: uri) != nil,
+              let body = SpotifyAccount.playBody(context: uri, startingAt: trackURI) else { return false }
+        return await send("PUT", "me/player/play", body: body).map { (200..<300).contains($0) } ?? false
+    }
+
+    static func playBody(context uri: String, startingAt trackURI: String?) -> Data? {
+        var body: [String: Any] = ["context_uri": uri]
+        if let trackURI, SpotifyLink.isPlayableItem(trackURI) { body["offset"] = ["uri": trackURI] }
+        return try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
+    }
+
+    /// A Web API write; the HTTP status, or nil if it never got an answer.
+    private func send(_ method: String, _ path: String, body: Data) async -> Int? {
+        guard let token = await validAccessToken(),
+              let url = URL(string: "https://api.spotify.com/v1/" + path) else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return nil }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        if status == 401 { accessToken = nil }
+        return status
+    }
+
     private struct TrackPage {
         let tracks: [PlaylistTrack]
         let more: Bool
@@ -232,6 +326,10 @@ final class SpotifyAccount {
         accessToken = (tokens.accessToken, .now.addingTimeInterval(TimeInterval(tokens.expiresIn)))
         // Spotify may rotate the refresh token; keep the newest.
         if let refresh = tokens.refreshToken { keychain.write(refresh) }
+        if let scope = tokens.scope {
+            grantedScopes = Set(scope.split(separator: " ").map(String.init))
+            defaults.set(Array(grantedScopes).sorted(), forKey: Self.grantedScopesKey)
+        }
         isSignedIn = true
     }
 
@@ -251,11 +349,14 @@ final class SpotifyAccount {
         let accessToken: String
         let refreshToken: String?
         let expiresIn: Int
+        /// Space-separated permissions granted.
+        let scope: String?
 
         enum CodingKeys: String, CodingKey {
             case accessToken = "access_token"
             case refreshToken = "refresh_token"
             case expiresIn = "expires_in"
+            case scope
         }
     }
 

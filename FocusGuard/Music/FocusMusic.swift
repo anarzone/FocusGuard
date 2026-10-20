@@ -26,6 +26,10 @@ final class FocusMusic {
     private(set) var service: MusicService
 
     var sessionOwnsPlayback: Bool { sessionService != nil }
+    /// The playlist or album Spotify says it's playing from (Web API), so
+    /// the pane knows even for music started in Spotify or before a relaunch.
+    private(set) var spotifyContext: String?
+    @ObservationIgnored private var lastContextCheck: Date = .distantPast
     var selected: SavedPlaylist? { playlists.first { $0.uri == selectedURI } }
     /// The player the music pane shows.
     var player: MusicPlayer { player(for: service) }
@@ -140,7 +144,7 @@ final class FocusMusic {
     func sessionStarted() {
         guard let playlist = selected, player(for: playlist.service).isInstalled else { return }
         sessionService = playlist.service
-        player(for: playlist.service).play(playlist.uri)
+        start(playlist.uri, track: nil)
     }
 
     /// Plays a saved playlist now. During a session it becomes the
@@ -148,7 +152,45 @@ final class FocusMusic {
     func play(_ uri: String, inSession: Bool) {
         let service = MusicService.of(uri: uri)
         if inSession { sessionService = service }
-        player(for: service).play(uri)
+        start(uri, track: nil)
+    }
+
+    /// The playlist or album playing in `service`, as best known.
+    func playingContext(for service: MusicService) -> String? {
+        let player = player(for: service)
+        guard player.nowPlaying != nil else { return nil }
+        return service == .spotify ? (spotifyContext ?? player.lastStartedURI) : player.lastStartedURI
+    }
+
+    /// Asks Spotify what it's playing from, at most every 5 s, while it runs.
+    func refreshSpotifyContext() {
+        guard spotifyAccount.hasPlaybackAccess, spotify.isRunning,
+              Date().timeIntervalSince(lastContextCheck) >= 5 else { return }
+        lastContextCheck = .now
+        Task {
+            if let playback = await spotifyAccount.currentPlayback() { spotifyContext = playback.contextURI }
+        }
+    }
+
+    /// Starts a playlist (from a song, if given). Spotify goes through the
+    /// Web API when signed in with playback access, which plays any playlist
+    /// on the active device; otherwise, or with no active device, the app.
+    private func start(_ uri: String, track: String?) {
+        let service = MusicService.of(uri: uri)
+        guard service == .spotify, spotifyAccount.hasPlaybackAccess, spotify.isRunning else {
+            if let track { player(for: service).play(track: track, in: uri) } else { player(for: service).play(uri) }
+            return
+        }
+        spotifyContext = uri
+        Task {
+            if await spotifyAccount.play(context: uri, startingAt: track) {
+                spotify.noteStarted(uri)
+            } else if let track {
+                spotify.play(track: track, in: uri)
+            } else {
+                spotify.play(uri)
+            }
+        }
     }
 
     /// The songs of a saved or found playlist or album.
@@ -171,7 +213,7 @@ final class FocusMusic {
     func play(track trackID: String, in uri: String, inSession: Bool) {
         let service = MusicService.of(uri: uri)
         if inSession { sessionService = service }
-        player(for: service).play(track: trackID, in: uri)
+        start(uri, track: trackID)
     }
 
     /// Paused by the user or because they stepped away.
