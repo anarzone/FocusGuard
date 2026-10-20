@@ -74,8 +74,11 @@ struct MenuBarView: View {
         .preference(key: MenuLeadingExtensionKey.self, value: musicOpen ? MusicPane.width + 6 : 0)
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
+        .onAppear { appState.refreshMenuStats(force: true) }
         .onReceive(ticker) { tick in
             now = tick
+            // Never waits: the numbers come back from StatsStore.
+            appState.refreshMenuStats()
             // Follow Spotify while the music pane is open, and in a session for
             // the header's playing indicator.
             let music = appState.music
@@ -129,7 +132,7 @@ struct MenuBarView: View {
     private func headerContent(for phase: MenuPhase) -> (StatusGlyphState, Color, String, String) {
         switch phase {
         case .ready:
-            let streak = appState.currentStreak
+            let streak = appState.menuStats.streak
             return (.ready, Theme.focus, "FocusGuard",
                     streak >= 2 ? "\(streak)-day streak · ready when you are" : "Ready when you are")
 
@@ -184,7 +187,7 @@ struct MenuBarView: View {
 
     /// Today so far on a timeline, with where the session being set up would land.
     private var todayModule: some View {
-        let focus = appState.todayBreakdown.focus
+        let focus = appState.menuStats.today.focus
         let progress = FocusGoal.progress(focusSecondsToday: focus)
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -202,7 +205,7 @@ struct MenuBarView: View {
             }
             .accessibilityElement(children: .combine)
 
-            DayStripView(spans: appState.todaySpans(now: now), now: now, previewMinutes: Double(minutes))
+            DayStripView(spans: appState.menuStats.spans, now: now, previewMinutes: Double(minutes))
                 .animation(.spring(response: 0.32, dampingFraction: 0.88), value: minutes)
         }
         .menuModule()
@@ -279,7 +282,7 @@ struct MenuBarView: View {
             .padding(.top, 4)
             .menuModule()
 
-            ZoneModule(runs: runs, bestToday: appState.bestZoneToday(now: now), drifting: drift != nil)
+            ZoneModule(runs: runs, bestToday: appState.menuStats.bestZone, drifting: drift != nil)
 
             HStack(spacing: 6) {
                 if isPaused {
@@ -545,7 +548,7 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             MenuSeparator().padding(.top, 2)
             if case .ready = phase {} else {
-                Text("Today · \(formatMinutes(appState.todayBreakdown.focus)) focused")
+                Text("Today · \(formatMinutes(appState.menuStats.today.focus)) focused")
                     .font(.system(size: 13))
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 10)

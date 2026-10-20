@@ -10,27 +10,31 @@ import SwiftData
 ///
 /// Weekend grace: by default Sat/Sun are skipped during the walk-back so a
 /// weekend off doesn't reset a weekday streak. User can opt out in Settings.
-@MainActor
 struct StreakCalculator {
     let context: ModelContext
 
-    func currentStreak(now: Date = .now, calendar: Calendar = .current) -> Int {
-        let weekendsCount = UserDefaults.standard.bool(forKey: SettingsKeys.Goal.weekendsCount)
-        let goalSeconds = FocusGoal.dailySeconds
+    static let lookbackDays = 60
 
+    func currentStreak(now: Date = .now, calendar: Calendar = .current) -> Int {
         // Pull last 60 days of daily totals at most. ReportBuilder handles
         // the per-day bucketing including events that span midnight.
-        let lookbackDays = 60
-        let lookbackStart = calendar.date(byAdding: .day, value: -lookbackDays, to: calendar.startOfDay(for: now)) ?? now
+        let lookbackStart = calendar.date(byAdding: .day, value: -Self.lookbackDays, to: calendar.startOfDay(for: now)) ?? now
         let endOfYesterday = calendar.startOfDay(for: now)
         let totals = ReportBuilder(context: context).dailyTotals(
             from: lookbackStart,
             to: endOfYesterday,
             classification: .focus
         )
+        return Self.streak(focusByDay: Dictionary(uniqueKeysWithValues: totals.map { ($0.date, $0.seconds) }),
+                           now: now, calendar: calendar)
+    }
 
-        // Map for O(1) lookup by day-start.
-        let byDay = Dictionary(uniqueKeysWithValues: totals.map { ($0.date, $0.seconds) })
+    /// The streak from focus seconds per day-start, walking back from
+    /// yesterday (StatsStore passes the days it already has).
+    static func streak(focusByDay byDay: [Date: TimeInterval], now: Date = .now, calendar: Calendar = .current) -> Int {
+        let weekendsCount = UserDefaults.standard.bool(forKey: SettingsKeys.Goal.weekendsCount)
+        let goalSeconds = FocusGoal.dailySeconds
+        let lookbackStart = calendar.date(byAdding: .day, value: -lookbackDays, to: calendar.startOfDay(for: now)) ?? now
 
         var streak = 0
         var cursor = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))

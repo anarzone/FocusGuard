@@ -333,8 +333,14 @@ struct TodayPage: View {
                 VStack(spacing: 2) {
                     ForEach(data.sessions) { summary in
                         SessionRow(summary: summary, now: now,
-                                   onRename: { appState.sessionManager.rename(summary.session, to: $0); reload() },
-                                   onDelete: { appState.sessionManager.delete(summary.session); reload() })
+                                   onRename: { name in
+                                       if let session = appState.session(summary.modelID) { appState.sessionManager.rename(session, to: name) }
+                                       reload()
+                                   },
+                                   onDelete: {
+                                       if let session = appState.session(summary.modelID) { appState.sessionManager.delete(session) }
+                                       reload()
+                                   })
                     }
                 }
             }

@@ -9,6 +9,7 @@ enum DataEraser {
     /// Today's activity and today's finished sessions. A running session is
     /// kept (its tracked events are still removed).
     static func deleteToday(appState: AppState, now: Date = .now) {
+        defer { NotificationCenter.default.post(name: .activityTotalsChanged, object: nil) }
         let context = appState.container.mainContext
         let dayStart = Calendar.current.startOfDay(for: now)
         let running = appState.sessionManager.currentSession?.id
@@ -28,6 +29,7 @@ enum DataEraser {
     /// Everything: activity, sessions and rules. Default rules are re-seeded
     /// so classification keeps working.
     static func eraseAll(appState: AppState) {
+        defer { NotificationCenter.default.post(name: .activityTotalsChanged, object: nil) }
         let context = appState.container.mainContext
         if appState.sessionManager.currentSession != nil {
             appState.sessionManager.stopSession(status: .abandoned)

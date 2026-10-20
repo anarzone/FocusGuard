@@ -22,6 +22,18 @@ final class AppState {
     let updater: UpdaterController
     let insights = AIInsightsViewModel()
     let music = FocusMusic()
+    /// Reads the store off the main thread for everything the menu shows.
+    let stats: StatsStore
+    /// The menu's numbers, refreshed in the background (`refreshMenuStats`);
+    /// the menu only reads these.
+    private(set) var menuStats = MenuStats()
+    /// Insights as last loaded, so the pane opens on them instead of empty.
+    var lastTodayInsights: TodayInsights?
+    var lastWeekInsights: WeekInsights?
+    var lastUsageRows: [UsageRow]?
+    @ObservationIgnored private var menuStatsAt: Date = .distantPast
+    @ObservationIgnored private var streakAt: Date = .distantPast
+    @ObservationIgnored private var refreshingMenuStats = false
     /// Summary of the session that just ended. The menu shows it until the
     /// user starts a break or another session, or it goes stale.
     var recap: SessionRecap?
@@ -44,6 +56,12 @@ final class AppState {
         }
 
         let context = container.mainContext
+        let stats = StatsStore(container: container)
+        self.stats = stats
+        // Reclassified or erased events: the stats store's past-day totals are stale.
+        NotificationCenter.default.addObserver(forName: .activityTotalsChanged, object: nil, queue: .main) { _ in
+            Task { await stats.forgetPastDays() }
+        }
         DefaultTitleOptOut.seedIfNeeded(in: context)
         DefaultRules.seedIfNeeded(in: context)
 
@@ -179,6 +197,47 @@ final class AppState {
                 RetentionPolicy.prune(context: self.container.mainContext)
             }
         }
+    }
+
+    /// Refreshes `menuStats` in the background, at most every 5 s (the
+    /// streak every 5 min). The menu calls this every tick; it never waits.
+    func refreshMenuStats(force: Bool = false) {
+        let now = Date()
+        if force { prefetchPanes(now: now) }
+        guard !refreshingMenuStats, force || now.timeIntervalSince(menuStatsAt) >= 5 else { return }
+        refreshingMenuStats = true
+        let includeStreak = force || now.timeIntervalSince(streakAt) >= 300
+        Task {
+            let update = await stats.menuStats(now: now, includeStreak: includeStreak)
+            var next = menuStats
+            next.today = update.today
+            next.spans = update.spans
+            next.bestZone = update.bestZone
+            if let streak = update.streak {
+                next.streak = streak
+                streakAt = now
+            }
+            if next != menuStats { menuStats = next }
+            menuStatsAt = now
+            refreshingMenuStats = false
+        }
+    }
+
+    /// Loads Insights and Apps & sites in the background the first time the
+    /// menu opens, so even their first opening slides in with data.
+    private func prefetchPanes(now: Date) {
+        guard lastTodayInsights == nil || lastUsageRows == nil else { return }
+        Task {
+            if lastTodayInsights == nil { lastTodayInsights = await stats.today(now: now) }
+            if lastUsageRows == nil {
+                lastUsageRows = await stats.usageRows(from: Calendar.current.startOfDay(for: now), to: now, limit: 40)
+            }
+        }
+    }
+
+    /// A session from a summary built off the main thread.
+    func session(_ id: PersistentIdentifier) -> Session? {
+        container.mainContext.model(for: id) as? Session
     }
 
     /// Computed: total seconds tracked today across all events.

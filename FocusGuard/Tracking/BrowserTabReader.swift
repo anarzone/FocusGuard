@@ -19,7 +19,7 @@ import Foundation
 /// UserDefaults so we don't re-prompt on every launch.
 @MainActor
 final class BrowserTabReader {
-    static let browserBundleIDs: Set<String> = [
+    nonisolated static let browserBundleIDs: Set<String> = [
         "com.google.Chrome",
         "com.google.Chrome.canary",
         "com.google.Chrome.beta",
@@ -34,7 +34,7 @@ final class BrowserTabReader {
         "com.operasoftware.Opera",
     ]
 
-    static func isBrowser(bundleIdentifier: String) -> Bool {
+    nonisolated static func isBrowser(bundleIdentifier: String) -> Bool {
         browserBundleIDs.contains(bundleIdentifier)
     }
 
