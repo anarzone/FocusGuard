@@ -153,7 +153,7 @@ struct MusicPane: View {
 
     /// The saved playlist FocusGuard started, if that's what's playing.
     private var context: String? {
-        music.playlists.first { $0.uri == music.player.lastStartedURI }?.title
+        music.playlists.first { $0.uri == music.playingContext(for: music.service) }?.title
     }
 
     private var idleSection: some View {
@@ -586,7 +586,7 @@ struct PlaylistList: View {
                 PlaylistRow(
                     playlist: playlist,
                     isFocus: music.selectedURI == playlist.uri,
-                    isPlaying: music.player.lastStartedURI == playlist.uri && music.player.nowPlaying?.isPlaying == true,
+                    isPlaying: music.playingContext(for: service) == playlist.uri && music.player.nowPlaying?.isPlaying == true,
                     play: { music.play(playlist.uri, inSession: inSession) },
                     open: { openPlaylist(PlaylistRef(uri: playlist.uri, title: playlist.title, imageURL: playlist.imageURL)) },
                     toggleFocus: {
@@ -628,6 +628,19 @@ struct PlaylistList: View {
         case .spotify:
             if account.isConfigured {
                 sectionHeader("Your Spotify playlists") { accountMenu }
+                if account.needsMoreAccess {
+                    HStack(spacing: 8) {
+                        Text("Sign in again so FocusGuard can see what Spotify is playing and start playlists reliably.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Sign in") { Task { await account.signIn() } }
+                            .font(.system(size: 11))
+                            .disabled(account.signingIn)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                }
                 if account.isSignedIn {
                     spotifyProblems
                     let rest = (spotifyMine ?? []).filter { !music.isPinned($0.uri) }
@@ -1099,6 +1112,8 @@ struct PlaylistDetail: View {
 
     @State private var list: TrackList?
     @State private var hovered: String?
+    /// For a playlist Spotify won't list: what's coming up while it plays.
+    @State private var upNext: [PlaylistTrack]?
 
     /// `songs` shows a list straight away (previews); the view loads its own.
     init(music: FocusMusic, ref: PlaylistRef, inSession: Bool, songs: TrackList? = nil, back: @escaping () -> Void) {
@@ -1110,9 +1125,9 @@ struct PlaylistDetail: View {
     }
 
     private var service: MusicService { MusicService.of(uri: ref.uri) }
+    private var isPlayingThis: Bool { music.playingContext(for: service) == ref.uri }
     private var playingID: String? {
-        let player = music.player(for: service)
-        return player.lastStartedURI == ref.uri ? player.nowPlaying?.trackID : nil
+        isPlayingThis ? music.player(for: service).nowPlaying?.trackID : nil
     }
 
     var body: some View {
@@ -1182,6 +1197,14 @@ struct PlaylistDetail: View {
         .task(id: "\(ref.uri)|\(music.spotifyAccount.isSignedIn)") {
             list = await music.tracks(of: ref.uri)
         }
+        // Up next changes with every song; re-read it when the song does.
+        .task(id: "\(ref.uri)|\(isPlayingThis)|\(playingID ?? "")|\(list == .notShared)") {
+            guard list == .notShared, isPlayingThis else {
+                upNext = nil
+                return
+            }
+            upNext = await music.spotifyAccount.upNext()
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -1195,7 +1218,7 @@ struct PlaylistDetail: View {
                 trackRow(index + 1, track)
             }
         case .notShared:
-            note("Spotify only shows the songs of playlists you made or collaborate on. Play still plays this one.")
+            notSharedContent
         case .needsSignIn:
             note("Sign in to Spotify to see the songs. Play works without it.")
             if !music.spotifyAccount.signingIn {
@@ -1218,7 +1241,46 @@ struct PlaylistDetail: View {
         }
     }
 
-    private func trackRow(_ number: Int, _ track: PlaylistTrack) -> some View {
+    /// Spotify won't list a playlist the user doesn't own, but while it
+    /// plays, the song and what's queued after it can be shown.
+    @ViewBuilder private var notSharedContent: some View {
+        let account = music.spotifyAccount
+        if isPlayingThis, let current = music.spotify.nowPlaying {
+            sectionLabel("Now playing")
+            trackRow(nil, PlaylistTrack(id: current.trackID, title: current.title, artist: current.artist,
+                                        duration: current.duration))
+            if let upNext, !upNext.isEmpty {
+                sectionLabel("Up next")
+                ForEach(Array(upNext.prefix(20).enumerated()), id: \.offset) { index, track in
+                    trackRow(index + 1, track)
+                }
+            }
+            note("Spotify only lists every song of playlists you made, so this shows what's coming up.")
+        } else if account.needsMoreAccess {
+            note("Spotify only lists every song of playlists you made. Sign in again to see what's playing and up next while this one plays.")
+            reconsentButton
+        } else {
+            note("Spotify only lists every song of playlists you made. Play it to see what's coming up.")
+        }
+    }
+
+    private var reconsentButton: some View {
+        Button("Sign in again") { Task { await music.spotifyAccount.signIn() } }
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+            .disabled(music.spotifyAccount.signingIn)
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+    }
+
+    private func trackRow(_ number: Int?, _ track: PlaylistTrack) -> some View {
         let playing = track.id == playingID
         let isHovered = hovered == track.id
         return Button {
@@ -1233,7 +1295,7 @@ struct PlaylistDetail: View {
                     } else if isHovered {
                         Image(systemName: "play.fill")
                             .foregroundStyle(.primary)
-                    } else {
+                    } else if let number {
                         Text("\(number)")
                             .foregroundStyle(.tertiary)
                     }

@@ -115,6 +115,68 @@ final class SpotifyAccountTests: XCTestCase {
         XCTAssertEqual(list, .needsSignIn)
     }
 
+    // MARK: - Playback
+
+    private func suite() -> UserDefaults {
+        let name = "SpotifyAccountTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: name) }
+        return defaults
+    }
+
+    func testAnOlderSignInIsAskedForPlaybackAccessOnce() {
+        let older = SpotifyAccount(clientID: "abc123", keychain: MemoryStore("refresh"), defaults: suite())
+        XCTAssertTrue(older.needsMoreAccess)
+        XCTAssertFalse(older.hasPlaybackAccess)
+
+        let defaults = suite()
+        defaults.set(SpotifyAccount.scopes.split(separator: " ").map(String.init), forKey: SpotifyAccount.grantedScopesKey)
+        let current = SpotifyAccount(clientID: "abc123", keychain: MemoryStore("refresh"), defaults: defaults)
+        XCTAssertTrue(current.hasPlaybackAccess)
+        XCTAssertFalse(current.needsMoreAccess)
+
+        current.signOut()
+        XCTAssertFalse(current.hasPlaybackAccess)
+        XCTAssertNil(defaults.stringArray(forKey: SpotifyAccount.grantedScopesKey))
+    }
+
+    func testTokensCarryTheGrantedScope() throws {
+        let json = #"{"access_token":"a","refresh_token":"r","expires_in":3600,"scope":"user-read-playback-state playlist-read-private"}"#
+        let tokens = try JSONDecoder().decode(SpotifyAccount.Tokens.self, from: Data(json.utf8))
+        XCTAssertEqual(tokens.scope, "user-read-playback-state playlist-read-private")
+    }
+
+    func testPlayRequestStartsTheContextFromASong() throws {
+        let body = try XCTUnwrap(SpotifyAccount.playBody(context: "spotify:playlist:abc123", startingAt: "spotify:track:t1"))
+        XCTAssertEqual(String(decoding: body, as: UTF8.self),
+                       #"{"context_uri":"spotify:playlist:abc123","offset":{"uri":"spotify:track:t1"}}"#)
+        let whole = try XCTUnwrap(SpotifyAccount.playBody(context: "spotify:album:xyz", startingAt: "not a uri"))
+        XCTAssertEqual(String(decoding: whole, as: UTF8.self), #"{"context_uri":"spotify:album:xyz"}"#)
+    }
+
+    func testWhatsPlayingKnowsItsPlaylist() throws {
+        let json = #"{"is_playing":true,"context":{"uri":"spotify:playlist:37i9dQZF1DWWQRwui0ExPn"},"item":{"uri":"spotify:track:t1","name":"Symmetry"}}"#
+        let state = try JSONDecoder().decode(SpotifyAccount.APIPlayback.self, from: Data(json.utf8)).playback
+        XCTAssertEqual(state.contextURI, "spotify:playlist:37i9dQZF1DWWQRwui0ExPn")
+        XCTAssertEqual(state.trackURI, "spotify:track:t1")
+        XCTAssertTrue(state.isPlaying)
+
+        // An artist page or radio isn't a playlist FocusGuard can show.
+        let artist = #"{"is_playing":false,"context":{"uri":"spotify:artist:abc"},"item":null}"#
+        XCTAssertNil(try JSONDecoder().decode(SpotifyAccount.APIPlayback.self, from: Data(artist.utf8)).playback.contextURI)
+    }
+
+    func testUpNextSkipsNullsAndLocalFiles() throws {
+        let json = """
+            {"currently_playing":{"uri":"spotify:track:t1","name":"Symmetry"},
+             "queue":[{"uri":"spotify:track:t2","name":"Drift","duration_ms":200000,"artists":[{"name":"early lights"}]},
+                      null,
+                      {"uri":"spotify:local:a:b:c:1","name":"Local"}]}
+            """
+        let queue = try JSONDecoder().decode(SpotifyAccount.APIQueue.self, from: Data(json.utf8))
+        XCTAssertEqual((queue.queue ?? []).compactMap { $0?.track }.map(\.title), ["Drift"])
+    }
+
     // MARK: - Account state
 
     final class MemoryStore: TokenStore {

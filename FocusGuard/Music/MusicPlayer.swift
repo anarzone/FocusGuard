@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import os
 
 /// The music apps FocusGuard can drive. Both are controlled over AppleScript:
 /// free, no account or API key, and they play whatever the user's own app
@@ -181,6 +182,12 @@ final class MusicPlayer {
             apply(await AppleScript.run(script))
             settle()
         }
+    }
+
+    /// Something else (the Web API) started `uri`: remember it and catch up.
+    func noteStarted(_ uri: String) {
+        lastStartedURI = uri
+        settle()
     }
 
     func pause() { command("pause") }
@@ -394,12 +401,18 @@ enum AppleScript {
         }
     }
 
+    private static let logger = Logger(subsystem: "com.anar.focusguard", category: "applescript")
+
     nonisolated private static func execute(_ source: String) -> Result {
         guard let script = NSAppleScript(source: source) else { return .failed }
         var error: NSDictionary?
         let descriptor = script.executeAndReturnError(&error)
         if let error {
             let code = (error[NSAppleScript.errorNumber] as? Int) ?? 0
+            let message = error[NSAppleScript.errorMessage] as? String ?? ""
+            // Shows in Console under FocusGuard › applescript, e.g. when a
+            // music app quietly refuses a command.
+            logger.error("Script failed (\(code, privacy: .public)): \(message, privacy: .public) — \(source.prefix(80), privacy: .public)")
             // -1743/-1744: not allowed to send Apple events to that app.
             return code == -1743 || code == -1744 ? .notAuthorized : .failed
         }
