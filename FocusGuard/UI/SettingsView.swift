@@ -15,7 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .sessions:   return "Sessions"
         case .escalation: return "Escalation"
         case .rules:      return "Rules"
-        case .ai:         return "AI"
+        case .ai:         return "AI tips"
         case .privacy:    return "Privacy"
         case .about:      return "About"
         }
@@ -221,46 +221,6 @@ struct SettingsGeneralPane: View {
     }
 }
 
-// MARK: - Placeholder for the panes we haven't fleshed out yet
-
-struct SettingsPlaceholderPane: View {
-    let pane: SettingsPane
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(pane.label)
-                    .font(.system(size: 26, weight: .bold))
-                    .kerning(-0.5)
-                Text("This pane lands in a later phase. The Hero Numeric variant uses General as its showcase pane.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Theme.separator, style: StrokeStyle(lineWidth: 0.5, dash: [4, 4]))
-                    .background(
-                        RoundedRectangle(cornerRadius: 10).fill(Theme.fill3)
-                    )
-                    .frame(height: 200)
-                    .overlay {
-                        VStack(spacing: 8) {
-                            Image(systemName: pane.glyph)
-                                .font(.system(size: 28))
-                                .foregroundStyle(pane.tint)
-                            Text("Coming soon")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.top, 16)
-            }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
 struct SettingsAboutPane: View {
     @ObservedObject var updater: UpdaterController
 
@@ -296,7 +256,7 @@ struct SettingsAboutPane: View {
             .font(.system(size: 11.5))
             .foregroundStyle(.secondary)
 
-            Text("Your activity data stays on this Mac. FocusGuard only reaches the network to check for app updates — and, if you turn on AI Insights, to send an aggregated summary when you click Generate.")
+            Text(PrivacyStatement.network)
                 .font(.system(size: 11.5))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)

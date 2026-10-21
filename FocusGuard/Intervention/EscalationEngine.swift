@@ -5,7 +5,7 @@ import Foundation
 /// - 0..silenceThreshold: log only (no action)
 /// - silenceThreshold..notifyThreshold: still silent
 /// - >= notifyThreshold: send a motivational notification (throttled)
-/// - >= blockThreshold: (Phase 5 full) trigger block overlay — not yet wired
+/// - >= blockThreshold: show the block overlay
 ///
 /// Streak resets the moment the user goes back to a non-distraction activity
 /// or stops the session.
@@ -16,7 +16,7 @@ final class EscalationEngine {
     var silenceThreshold: TimeInterval = 10
     /// At this many seconds we send a notification (once per cooldown).
     var notifyThreshold: TimeInterval = 30
-    /// At this many seconds we'd show the block overlay (not implemented yet).
+    /// At this many seconds we show the block overlay.
     var blockThreshold: TimeInterval = 90
     /// Minimum seconds between notifications for the same streak.
     var notifyCooldown: TimeInterval = 60

@@ -12,7 +12,7 @@ enum MainTab: Hashable, CaseIterable {
         switch self {
         case .home:     return "Today"
         case .reports:  return "Reports"
-        case .apps:     return "Apps & Sites"
+        case .apps:     return "Apps & sites"
         case .settings: return "Settings"
         }
     }
@@ -313,14 +313,14 @@ struct WindowStat: View {
     }
 }
 
-// MARK: - Apps & Sites page
+// MARK: - Apps & sites page
 
 private struct AppsPage: View {
     @Bindable var appState: AppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: "Apps & Sites",
+            PageHeader(title: "Apps & sites",
                        subtitle: "Decide what counts as focus. Changes also update past reports.") { EmptyView() }
             WindowCard {
                 AppsPane(appState: appState, close: nil, listHeight: nil)

@@ -519,7 +519,7 @@ private struct InsightPanel: View {
         if !AISettings.isAvailable {
             EmptyView()
         } else if !insights.isConfigured {
-            Text("Add an AI provider in Settings → AI for personal tips. Only a summary is sent, never window titles.")
+            Text("Add an AI provider in Settings → AI tips for personal tips. Only a summary is sent, never window titles.")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         } else {

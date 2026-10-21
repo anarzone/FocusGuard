@@ -1,11 +1,10 @@
 import Foundation
 import Security
 
-/// Minimal Keychain wrapper for the AI credentials (API keys / subscription
-/// tokens). This is the first secure-storage code in the app — everything else
-/// is local SwiftData / UserDefaults. Secrets are stored as generic passwords
-/// under a single service, keyed by `account`, so each provider+auth-mode can
-/// hold its own value without clobbering the others.
+/// Minimal Keychain wrapper for the AI API keys. Everything else the app
+/// stores is local SwiftData / UserDefaults. Keys are stored as generic
+/// passwords under a single service, keyed by `account`, so each provider
+/// holds its own key without clobbering the others.
 enum KeychainStore {
     private static let service = "com.anar.focusguard.ai"
 

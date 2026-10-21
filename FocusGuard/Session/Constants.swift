@@ -38,14 +38,6 @@ enum Constants {
         static let lookAheadHours: Double = 12
     }
 
-    enum Layout {
-        static let popoverWidth: CGFloat = 360
-        static let mainWindowWidth: CGFloat = 920
-        static let mainWindowHeight: CGFloat = 620
-        static let mainWindowMinWidth: CGFloat = 880
-        static let mainWindowMinHeight: CGFloat = 580
-    }
-
     enum SessionDurations {
         static let presets = [25, 50, 90]
         static let customMin = 5
@@ -65,7 +57,8 @@ enum SettingsKeys {
     static let retentionDays         = "retentionDays"
     static let browserAutomationDenied = "browserAutomationDenied"
     /// When true, keep .regular activation policy permanently so a Dock icon
-    /// is always visible. Default false (menu-bar-only).
+    /// is always visible. Defaults to true; off means menu-bar only while no
+    /// window is open.
     static let showInDock            = "ui.showInDock"
 
     enum Session {
@@ -111,17 +104,16 @@ enum SettingsKeys {
         static let strictMode = "breaks.strictMode"
     }
 
-    /// AI focus-insights settings. Non-secret config lives here; the API key /
-    /// subscription token is stored in the Keychain (see KeychainStore), never
-    /// in UserDefaults.
+    /// AI tips settings. Non-secret config lives here; the API key is stored
+    /// in the Keychain (see KeychainStore), never in UserDefaults.
     enum AI {
         static let enabled        = "ai.enabled"
         static let provider       = "ai.provider"        // ProviderKind.rawValue
         static let model          = "ai.model"
         static let baseURL        = "ai.baseURL"         // OpenAI-compatible only
         // Cache the last successful connection test so reopening the pane shows
-        // "Connected" without re-hitting the API (subscription tokens are
-        // rate-limited hard — repeated auto-tests cause 429s).
+        // "Connected" without re-hitting the API (repeated auto-tests can run
+        // into rate limits).
         static let lastOKAccount  = "ai.lastVerifiedAccount"
         static let lastOKAt       = "ai.lastVerifiedAt"  // timeIntervalSince1970
     }
