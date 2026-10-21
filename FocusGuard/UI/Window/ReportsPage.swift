@@ -461,7 +461,8 @@ private struct FocusHeatmap: View {
 
 // MARK: - Insight panel
 
-/// Plain-language highlights, plus on-demand AI tips when a provider is set up.
+/// Plain-language highlights, plus on-demand AI tips when a provider is set up
+/// (and the app offers AI at all).
 private struct InsightPanel: View {
     @ObservedObject var insights: AIInsightsViewModel
     let highlights: [String]
@@ -515,7 +516,9 @@ private struct InsightPanel: View {
 
     @ViewBuilder
     private var aiContent: some View {
-        if !insights.isConfigured {
+        if !AISettings.isAvailable {
+            EmptyView()
+        } else if !insights.isConfigured {
             Text("Add an AI provider in Settings → AI for personal tips. Only a summary is sent, never window titles.")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
