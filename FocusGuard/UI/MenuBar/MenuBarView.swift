@@ -22,6 +22,7 @@ struct MenuBarView: View {
     /// The column's height. The music pane is held to it, so the player
     /// never makes the menu taller than the column and leaves space under it.
     @State private var columnHeight: CGFloat = 0
+    @ReduceMotion private var reduceMotion
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
@@ -38,7 +39,7 @@ struct MenuBarView: View {
                     musicOpen = false
                 }
                 .frame(height: columnHeight > 0 ? columnHeight : nil)
-                .transition(MenuPane.slide(from: .leading))
+                .transition(MenuPane.slide(from: .leading, reduceMotion: reduceMotion))
             }
 
         VStack(alignment: .leading, spacing: 6) {
@@ -69,7 +70,7 @@ struct MenuBarView: View {
                 MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss) {
                     openPane = nil
                 }
-                .transition(MenuPane.slide(from: .trailing))
+                .transition(MenuPane.slide(from: .trailing, reduceMotion: reduceMotion))
             }
         }
         .padding(6)
@@ -537,8 +538,10 @@ struct MenuBarView: View {
                 ControlPlatter(systemImage: "plus", title: "5 more min") {
                     appState.breakManager.extend(byMinutes: 5)
                 }
-                ControlPlatter(systemImage: "stop.fill", title: "End break") {
-                    appState.breakManager.skip()
+                if appState.breakManager.canEndEarly {
+                    ControlPlatter(systemImage: "stop.fill", title: "End break") {
+                        appState.breakManager.skip()
+                    }
                 }
             }
             .padding(.vertical, 4)

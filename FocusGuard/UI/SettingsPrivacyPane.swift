@@ -89,7 +89,7 @@ struct SettingsPrivacyPane: View {
                 groupCard {
                     row(
                         title: "Stored on this Mac",
-                        help: "\(stats.sessionCount) sessions · \(stats.eventCount) activity events · \(stats.fileSizeText)"
+                        help: "\(counted(stats.sessionCount, "session")) · \(counted(stats.eventCount, "activity event")) · \(stats.fileSizeText)"
                     ) {
                         Button("Reveal in Finder") { revealInFinder() }
                     }

@@ -1,5 +1,10 @@
 import SwiftUI
 
+extension Notification.Name {
+    /// Switch the open main window to the `MainTab` in `object`.
+    static let selectMainTab = Notification.Name("FocusGuard.selectMainTab")
+}
+
 enum MainTab: Hashable, CaseIterable {
     case home, reports, apps, settings
 
@@ -57,6 +62,9 @@ struct MainWindowView: View {
         .background(Theme.windowBackground)
         .ignoresSafeArea()
         .frame(minWidth: 980, minHeight: 640)
+        .onReceive(NotificationCenter.default.publisher(for: .selectMainTab)) { note in
+            if let requested = note.object as? MainTab { tab = requested }
+        }
     }
 }
 
@@ -146,7 +154,9 @@ private struct SessionCard: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            roundButton("stop.fill", "End break") { appState.breakManager.skip() }
+            if appState.breakManager.canEndEarly {
+                roundButton("stop.fill", "End break") { appState.breakManager.skip() }
+            }
         } else if let session = appState.sessionManager.currentSession {
             let elapsed = appState.sessionManager.runningSeconds(for: session, now: now)
             let planned = session.plannedDurationMinutes.map { Double($0 * 60) }

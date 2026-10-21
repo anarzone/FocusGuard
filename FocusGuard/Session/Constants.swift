@@ -106,8 +106,8 @@ enum SettingsKeys {
     }
 
     enum Breaks {
-        /// When true, the break overlay can't be skipped or hidden — only
-        /// extended. (Future use; not yet wired into the overlay.)
+        /// When true, a break can't be ended early or its overlay hidden —
+        /// only extended.
         static let strictMode = "breaks.strictMode"
     }
 

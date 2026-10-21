@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
     private let onboarding = OnboardingWindowController()
     private var mainWindow: NSWindow?
-    private var mainWindowTab: MainTab?
     /// Tracks whether the user has interacted with the app since launch.
     /// Used to decide whether the main window should auto-open on first launch
     /// (Finder click) vs stay hidden (login startup).
@@ -130,21 +129,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// the UI to come up. Default behavior is "do nothing"; we override to
     /// open the main window on the Home tab.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        openMainWindow(tab: .home)
+        openMainWindow()
         return false   // we handled the reopen ourselves
     }
 
-    /// Opens (or brings to front) the standalone window with the requested tab.
+    /// Opens (or brings to front) the standalone window, on `tab` if one is
+    /// asked for (otherwise where it was, or Today when it's new).
     /// Created lazily; kept alive after close so reopening is instant.
     /// Switches the app to `.regular` activation policy so it shows in the
     /// Dock and Cmd+Tab. Closing the window switches back to `.accessory`,
     /// which hides the Dock icon — the app stays running in the menu bar.
-    func openMainWindow(tab: MainTab = .home) {
+    func openMainWindow(tab: MainTab? = nil) {
         // Show in Dock + Cmd+Tab while a window is up.
         NSApp.setActivationPolicy(.regular)
 
         if mainWindow == nil {
-            let view = MainWindowView(appState: appState, initialTab: tab)
+            let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
             hosting.preferredContentSize = NSSize(width: 1160, height: 760)
 
@@ -174,13 +174,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
 
             mainWindow = window
-            mainWindowTab = tab
-        } else if let existingTab = mainWindowTab, existingTab != tab {
-            // Window already exists; rebuild rootView with the requested tab.
-            let view = MainWindowView(appState: appState, initialTab: tab)
-            let hosting = NSHostingController(rootView: view)
-            mainWindow?.contentViewController = hosting
-            mainWindowTab = tab
+        } else if let tab {
+            // Already open: switch tabs in place, whatever the user last picked.
+            NotificationCenter.default.post(name: .selectMainTab, object: tab)
         }
 
         mainWindow?.makeKeyAndOrderFront(nil)

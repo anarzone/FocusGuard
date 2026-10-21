@@ -89,7 +89,7 @@ final class MenuBarController: NSObject {
               let button = statusItem.button else { return }
         if state != renderedGlyph || pulse {
             let frames: [GlyphStyle]
-            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            if Motion.isReduced {
                 frames = []
             } else if pulse {
                 frames = GlyphAnimation.pulse(from: renderedGlyph, to: state)

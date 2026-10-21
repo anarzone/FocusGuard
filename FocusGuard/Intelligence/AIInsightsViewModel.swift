@@ -21,10 +21,11 @@ final class AIInsightsViewModel: ObservableObject {
         self.session = session
     }
 
-    /// True when AI is enabled and a secret is configured — gates the button.
+    /// True when AI is enabled and requests can go out (a key is saved, or
+    /// the server is local) — gates the button.
     var isConfigured: Bool {
         let settings = AISettings.load()
-        return settings.enabled && settings.hasSecret
+        return settings.enabled && settings.hasCredential
     }
 
     func generate(

@@ -72,6 +72,7 @@ enum DataExporter {
     private struct ExportRoot: Codable {
         let exportedAt: Date
         let appVersion: String
+        let appBuild: String
         let sessions: [SessionDTO]
         let events: [EventDTO]
     }
@@ -97,8 +98,17 @@ enum DataExporter {
     }
 
     @MainActor
-    private static func buildJSON(context: ModelContext, from: Date? = nil, to: Date? = nil) throws -> Data {
-        let sessions = (try? context.fetch(FetchDescriptor<Session>())) ?? []
+    static func buildJSON(context: ModelContext, from: Date? = nil, to: Date? = nil,
+                          info: [String: Any]? = Bundle.main.infoDictionary) throws -> Data {
+        let sessions: [Session] = {
+            if let from, let to {
+                let started = (try? context.fetch(FetchDescriptor<Session>(
+                    predicate: #Predicate { $0.startedAt < to }
+                ))) ?? []
+                return started.filter { overlaps(startedAt: $0.startedAt, endedAt: $0.endedAt, from: from, to: to) }
+            }
+            return (try? context.fetch(FetchDescriptor<Session>())) ?? []
+        }()
         let events: [ActivityEvent] = {
             if let from, let to {
                 return (try? context.fetch(FetchDescriptor<ActivityEvent>(
@@ -135,7 +145,8 @@ enum DataExporter {
 
         let root = ExportRoot(
             exportedAt: .now,
-            appVersion: "0.1.0",
+            appVersion: info?["CFBundleShortVersionString"] as? String ?? "unknown",
+            appBuild: info?["CFBundleVersion"] as? String ?? "unknown",
             sessions: sessionDTOs,
             events: eventDTOs
         )
@@ -144,6 +155,12 @@ enum DataExporter {
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(root)
+    }
+
+    /// Whether a session falls in the export range: it started before the
+    /// range ends and hadn't ended before it began (a running one counts).
+    static func overlaps(startedAt: Date, endedAt: Date?, from: Date, to: Date) -> Bool {
+        startedAt < to && (endedAt ?? .distantFuture) >= from
     }
 
     // MARK: - CSV

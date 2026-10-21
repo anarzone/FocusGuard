@@ -70,11 +70,20 @@ struct AISettings: Equatable {
     /// Whether a usable API key is present for the current selection.
     var hasSecret: Bool { KeychainStore.has(account: keychainAccount) }
 
+    /// An OpenAI-compatible server on this Mac, which usually needs no key.
+    var isLocalEndpoint: Bool {
+        provider == .openAICompatible && OpenAIProvider.isLocal(baseURL)
+    }
+
+    /// Whether requests can go out: a key is saved, or the server is local.
+    var hasCredential: Bool { isLocalEndpoint || hasSecret }
+
     /// Builds the concrete provider for the current settings + stored key.
-    /// Returns nil only when no key is stored (surface as missingCredential).
+    /// Returns nil only when a key is needed and none is stored (surface as
+    /// missingCredential).
     func makeProvider(session: URLSession = .shared) -> LLMProvider? {
         let key = KeychainStore.get(account: keychainAccount) ?? ""
-        guard !key.isEmpty else { return nil }
+        guard !key.isEmpty || isLocalEndpoint else { return nil }
         switch provider {
         case .anthropic:
             return AnthropicProvider(model: model, apiKey: key, session: session)

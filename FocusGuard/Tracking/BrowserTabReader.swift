@@ -16,7 +16,9 @@ import Foundation
 ///
 /// Permission model: NSAppleEventsUsageDescription is set in Info.plist. macOS
 /// prompts the first time we send to each browser. Denials are remembered in
-/// UserDefaults so we don't re-prompt on every launch.
+/// UserDefaults, and a denied browser is only tried again every few minutes
+/// (macOS doesn't prompt again; it just answers), so access granted later in
+/// System Settings is picked up without a relaunch.
 @MainActor
 final class BrowserTabReader {
     nonisolated static let browserBundleIDs: Set<String> = [
@@ -51,9 +53,12 @@ final class BrowserTabReader {
 
     /// Bundle ids the user denied automation access for. Persisted across launches.
     private var deniedAutomation: Set<String> {
-        get { Set(UserDefaults.standard.stringArray(forKey: "browserAutomationDenied") ?? []) }
-        set { UserDefaults.standard.set(Array(newValue), forKey: "browserAutomationDenied") }
+        get { Set(UserDefaults.standard.stringArray(forKey: SettingsKeys.browserAutomationDenied) ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: SettingsKeys.browserAutomationDenied) }
     }
+    /// When each denied browser was last refused, this launch.
+    private var deniedAt: [String: Date] = [:]
+    nonisolated static let deniedRetryInterval: TimeInterval = 5 * 60
 
     private let scriptQueue = AppleScriptQueue.shared
 
@@ -64,11 +69,12 @@ final class BrowserTabReader {
     /// for a given browser returns nil; the next call (after the script
     /// finishes ~100ms later) returns the URL.
     func currentURL(forBundleId bundleId: String) -> String? {
-        if deniedAutomation.contains(bundleId) {
+        let now = Date()
+        if deniedAutomation.contains(bundleId),
+           !Self.shouldRetryDenied(lastDenied: deniedAt[bundleId], now: now) {
             return nil
         }
 
-        let now = Date()
         let isStale: Bool
         if let last = lastFetchAttempt[bundleId] {
             isStale = now.timeIntervalSince(last) >= cacheTTL
@@ -86,8 +92,17 @@ final class BrowserTabReader {
 
     func resetAutomationDenials() {
         deniedAutomation = []
+        deniedAt.removeAll()
         fetchedURL.removeAll()
         lastFetchAttempt.removeAll()
+    }
+
+    /// Whether to ask a denied browser again: once per launch, then every
+    /// `deniedRetryInterval`.
+    nonisolated static func shouldRetryDenied(lastDenied: Date?, now: Date,
+                                              interval: TimeInterval = deniedRetryInterval) -> Bool {
+        guard let lastDenied else { return true }
+        return now.timeIntervalSince(lastDenied) >= interval
     }
 
     // MARK: - Background fetch
@@ -107,10 +122,15 @@ final class BrowserTabReader {
                 switch result {
                 case .url(let url):
                     self.fetchedURL[bundleId] = url
+                    if self.deniedAutomation.contains(bundleId) {
+                        self.deniedAutomation.remove(bundleId)
+                        self.deniedAt[bundleId] = nil
+                    }
                 case .denied:
                     var denied = self.deniedAutomation
                     denied.insert(bundleId)
                     self.deniedAutomation = denied
+                    self.deniedAt[bundleId] = Date()
                     self.fetchedURL[bundleId] = nil
                 case .error:
                     self.fetchedURL[bundleId] = nil

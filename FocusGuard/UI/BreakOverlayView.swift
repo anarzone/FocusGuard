@@ -12,7 +12,7 @@ struct BreakOverlayView: View {
 
     @AppStorage(SettingsKeys.Breaks.strictMode) private var strictMode = false
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ReduceMotion private var reduceMotion
 
     private static let tips: [String] = [
         "Stand up and look at something 20 feet away.",

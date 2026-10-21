@@ -16,19 +16,25 @@ enum OnboardingState {
 
 /// First-run window: welcome, permissions, setup. Opens on first launch and
 /// from any "Set up…" button; every step can be revisited later in Settings.
+/// Closing it any way counts as done, so it doesn't greet the user again.
 @MainActor
 final class OnboardingWindowController {
     private var window: NSWindow?
+    private var closeObserver: NSObjectProtocol?
 
     func show(appState: AppState, startAt step: OnboardingView.Step = .welcome) {
+        let view = OnboardingView(appState: appState, step: step) { [weak self] in self?.close() }
+        let hosting = NSHostingController(rootView: view)
+        hosting.sizingOptions = []   // the window sets the size; content fills it, title bar included
         if let window {
+            // Already open: start over at the step asked for.
+            let frame = window.frame
+            window.contentViewController = hosting
+            window.setFrame(frame, display: true)
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let view = OnboardingView(appState: appState, step: step) { [weak self] in self?.close() }
-        let hosting = NSHostingController(rootView: view)
-        hosting.sizingOptions = []   // the window sets the size; content fills it, title bar included
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 880, height: 580),
             styleMask: [.titled, .closable, .fullSizeContentView],
@@ -42,16 +48,28 @@ final class OnboardingWindowController {
         window.isReleasedWhenClosed = false
         window.setFrame(NSRect(x: 0, y: 0, width: 880, height: 580), display: false)
         window.center()
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.didClose() }
+        }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
     }
 
     func close() {
-        OnboardingState.isCompleted = true
         let closing = window
-        window = nil
+        didClose()
         DispatchQueue.main.async { closing?.close() }
+    }
+
+    /// The window is going away, by a button or its close box.
+    private func didClose() {
+        OnboardingState.isCompleted = true
+        if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
+        closeObserver = nil
+        window = nil
     }
 }
 
@@ -205,7 +223,7 @@ private struct WelcomeStep: View {
 /// The shield filling up, and how it looks in the menu bar.
 private struct WelcomeVisual: View {
     @State private var fill: Double = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ReduceMotion private var reduceMotion
 
     var body: some View {
         VStack(spacing: 22) {
@@ -373,7 +391,9 @@ private struct SetupStep: View {
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var goalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
-    @State private var drift: DriftResponse = DriftResponse.current ?? .standard
+    /// Nil when the escalation settings were tuned by hand: none is shown
+    /// as picked, and nothing is applied unless the user picks one.
+    @State private var drift: DriftResponse? = DriftResponse.current
     @State private var launchAtLogin = LoginItemController.isEnabled
 
     var body: some View {
@@ -390,7 +410,7 @@ private struct SetupStep: View {
                 HStack {
                     Text("Daily focus goal").font(.system(size: 14, weight: .semibold))
                     Spacer()
-                    Stepper(value: $goalMinutes, in: 15...720, step: 15) {
+                    Stepper(value: $goalMinutes, in: FocusGoal.range, step: 15) {
                         Text(FocusGoal.format(minutes: goalMinutes))
                             .font(.system(size: 15, weight: .semibold).monospacedDigit())
                     }
@@ -433,6 +453,10 @@ private struct SetupStep: View {
                             .accessibilityAddTraits(drift == option ? .isSelected : [])
                         }
                     }
+                    if drift == nil {
+                        Text("You've set your own timings in Settings. Pick one to replace them.")
+                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
                 }
                 HStack {
                     Text("Open at login").font(.system(size: 14, weight: .semibold))
@@ -446,10 +470,6 @@ private struct SetupStep: View {
                 }
             }
             .padding(.top, 20)
-        }
-        .onAppear {
-            // Make the highlighted preset the active one, as shown.
-            if DriftResponse.current == nil { drift.apply(to: appState.escalationEngine) }
         }
     }
 }

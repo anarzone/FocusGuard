@@ -124,7 +124,7 @@ struct TodayPage: View {
                     GridRow {
                         WindowStat(label: "Sessions", value: "\(data.sessions.count)", detail: sessionsDetail)
                         WindowStat(label: isToday ? "Streak" : "Goal",
-                                   value: isToday ? "\(appState.currentStreak) days" : (data.goalProgress >= 1 ? "Met" : "Missed"),
+                                   value: isToday ? counted(appState.currentStreak, "day") : (data.goalProgress >= 1 ? "Met" : "Missed"),
                                    detail: isToday ? "goal met in a row" : "\(Int((data.goalProgress * 100).rounded()))% of goal")
                     }
                 }
@@ -244,7 +244,9 @@ struct TodayPage: View {
             }
             HStack(spacing: 8) {
                 pill("5 more min") { appState.breakManager.extend(byMinutes: 5) }
-                pill("End break") { appState.breakManager.skip() }
+                if appState.breakManager.canEndEarly {
+                    pill("End break") { appState.breakManager.skip() }
+                }
             }
         }
     }

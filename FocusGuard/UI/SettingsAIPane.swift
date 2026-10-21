@@ -40,7 +40,7 @@ struct SettingsAIPane: View {
                                 persist()
                                 // Feedback on enable — but reuse a recent cached
                                 // result instead of always hitting the API.
-                                if on && secretSaved {
+                                if on && canConnect {
                                     if recentlyVerified { testResult = .success } else { runTest() }
                                 } else {
                                     testResult = nil
@@ -70,7 +70,7 @@ struct SettingsAIPane: View {
             refreshSecretState()
             // Show the cached "Connected" result without a network call. We do
             // NOT auto-test on every appear — that previously spammed the API.
-            if settings.enabled && secretSaved && recentlyVerified { testResult = .success }
+            if settings.enabled && canConnect && recentlyVerified { testResult = .success }
         }
     }
 
@@ -82,7 +82,7 @@ struct SettingsAIPane: View {
         if !settings.enabled {
             return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI insights are off.")
         }
-        if !secretSaved {
+        if !canConnect {
             return Status(symbol: "key.fill", color: Theme.warning,
                           text: "On — add your API key below to start.")
         }
@@ -92,6 +92,9 @@ struct SettingsAIPane: View {
                           text: "Connected to \(settings.provider.label). Use “Generate insights” on Reports.")
         case .failure(let message):
             return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
+        case nil where !secretSaved:
+            return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
+                          text: "Local server — no API key needed. Run Test to verify.")
         case nil:
             return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
                           text: "API key saved (\(settings.provider.label)). Run Test to verify.")
@@ -180,7 +183,7 @@ struct SettingsAIPane: View {
                     if testing { ProgressView().controlSize(.small) }
                     testResultBadge
                     Button("Test", action: runTest)
-                        .disabled(testing || !secretSaved)
+                        .disabled(testing || !canConnect)
                 }
             }
         }
@@ -238,9 +241,15 @@ struct SettingsAIPane: View {
         switch settings.provider {
         case .anthropic:        return "A key from console.anthropic.com (sk-ant-…). Stored only in your Keychain."
         case .openAI:           return "An OpenAI API key (sk-…). Stored only in your Keychain."
-        case .openAICompatible: return "The API key for your endpoint. Stored only in your Keychain."
+        case .openAICompatible:
+            return settings.isLocalEndpoint
+                ? "Not needed for a server on this Mac, like Ollama. Stored only in your Keychain."
+                : "The API key for your endpoint. Stored only in your Keychain."
         }
     }
+
+    /// A key is saved, or the endpoint is a local server that needs none.
+    private var canConnect: Bool { secretSaved || settings.isLocalEndpoint }
 
     private var examplePayload: String {
         FocusSummaryBuilder.summary(.init(
