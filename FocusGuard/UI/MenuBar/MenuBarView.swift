@@ -10,6 +10,8 @@ struct MenuBarView: View {
     var onOpenMain: (MainTab) -> Void = { _ in }
     var dismiss: () -> Void = {}
 
+    /// The recap whose length seeded `minutes`, so it's only done once.
+    @State private var seededRecap: Date?
     /// Length of the next session, set on the dial or the ruler.
     @State private var minutes: Int = 50
     @State private var now: Date = .now
@@ -440,22 +442,44 @@ struct MenuBarView: View {
             }
             .menuModule()
 
-            Text("Up next")
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.top, 6)
+            HStack {
+                Text("Up next")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                // Back to the ready screen and its dial now, instead of
+                // waiting for the recap to go stale.
+                Button("Done") { appState.recap = nil }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.focus)
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
 
             VStack(spacing: 6) {
                 CapsuleButton(title: "Take a \(recap.suggestedBreakMinutes)-minute break", prominent: true) {
                     appState.startBreak(durationMinutes: recap.suggestedBreakMinutes)
                 }
-                CapsuleButton(title: "Another \(recap.nextSessionMinutes) minutes", prominent: false) {
-                    appState.sessionManager.startSession(label: recap.label, plannedDurationMinutes: recap.nextSessionMinutes)
+                // Any length for the next one, on the same ruler as the ready screen.
+                LengthRuler(minutes: $minutes)
+                    .padding(.top, 6)
+                CapsuleButton(title: "Start \(lengthText(minutes))", prominent: false) {
+                    lastSessionMinutes = minutes
+                    appState.sessionManager.startSession(label: recap.label, plannedDurationMinutes: minutes)
                 }
             }
             .padding(.horizontal, 4)
+            .onAppear { seedNextLength(from: recap) }
         }
+    }
+
+    /// The recap's ruler starts on the length of the session just finished,
+    /// once per recap, so reopening the menu keeps what the user dragged to.
+    private func seedNextLength(from recap: SessionRecap) {
+        guard seededRecap != recap.startedAt else { return }
+        seededRecap = recap.startedAt
+        minutes = min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, recap.nextSessionMinutes))
     }
 
     private func stat(_ title: String, _ value: String) -> some View {
