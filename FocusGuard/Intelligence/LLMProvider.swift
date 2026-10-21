@@ -20,14 +20,13 @@ enum LLMError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingCredential:
-            return "No API key or token is set for the selected provider."
+            return "No API key is set for the selected provider."
         case .badURL:
             return "The provider endpoint URL is invalid."
         case .http(let status, let body):
-            // Rate limiting is common with subscription tokens (much stricter
-            // limits than API keys) — give an actionable message rather than raw JSON.
+            // Give an actionable message for rate limiting rather than raw JSON.
             if status == 429 {
-                return "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again. Subscription tokens have much lower limits than API keys."
+                return "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again."
             }
             // Otherwise surface the provider's own error — usually actionable
             // (bad key, model not found). Trim so the UI stays sane.

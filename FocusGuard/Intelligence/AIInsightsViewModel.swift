@@ -39,7 +39,7 @@ final class AIInsightsViewModel: ObservableObject {
         task?.cancel()
         let settings = AISettings.load()
         guard AISettings.isAvailable, settings.enabled else {
-            state = .failed("AI insights are turned off. Enable them in Settings → AI.")
+            state = .failed("AI tips are turned off. Turn them on in Settings → AI tips.")
             return
         }
         guard let provider = settings.makeProvider(session: session) else {

@@ -196,9 +196,9 @@ private struct WelcomeStep: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 10)
             VStack(alignment: .leading, spacing: 18) {
-                feature("play.fill", "Start from the shield", "Click the shield in the menu bar and pick 25, 50 or 90 minutes. It fills as you go.")
+                feature("play.fill", "Start from the shield", "Click the shield in the menu bar, turn the dial to any length and start. It fills as you go.")
                 feature("exclamationmark.shield", "Gentle nudges when you drift", "Wander to a distracting site and you'll get a nudge, then a pause screen if you stay.")
-                feature("lock", "Everything stays on this Mac", "Your activity is stored locally. Nothing is uploaded unless you turn on AI tips.")
+                feature("lock", "Your activity stays on this Mac", PrivacyStatement.short)
             }
             .padding(.top, 26)
         }

@@ -164,6 +164,8 @@ func kindColor(_ classification: Classification) -> Color {
     }
 }
 
+/// The one name for each category, wherever it's shown. (Time spent in
+/// distracting apps is "Drifted" in charts.)
 func categoryName(_ classification: Classification) -> String {
     switch classification {
     case .focus:       return "Focus"
@@ -744,9 +746,9 @@ struct AppsPane: View {
 
             HStack(spacing: 6) {
                 filterChip(nil, "All")
-                filterChip(.focus, "Focus \(count(.focus))")
-                filterChip(.neutral, "Neutral \(count(.neutral))")
-                filterChip(.distraction, "Distracting \(count(.distraction))")
+                filterChip(.focus, "\(categoryName(.focus)) \(count(.focus))")
+                filterChip(.neutral, "\(categoryName(.neutral)) \(count(.neutral))")
+                filterChip(.distraction, "\(categoryName(.distraction)) \(count(.distraction))")
             }
 
             ScrollView {
@@ -928,9 +930,9 @@ struct CategoryPicker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            segment(.focus, "Focus", fill: Theme.focusFill, text: .white)
-            segment(.neutral, "Neutral", fill: Theme.cardBackground, text: .primary)
-            segment(.distraction, "Distr.", fill: Theme.distraction, text: .black)
+            segment(.focus, fill: Theme.focusFill, text: .white)
+            segment(.neutral, fill: Theme.cardBackground, text: .primary)
+            segment(.distraction, fill: Theme.distraction, text: .black)
         }
         .padding(2)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.control))
@@ -938,15 +940,15 @@ struct CategoryPicker: View {
         .accessibilityLabel("Category")
     }
 
-    private func segment(_ value: Classification, _ title: String, fill: Color, text: Color) -> some View {
+    private func segment(_ value: Classification, fill: Color, text: Color) -> some View {
         let on = selection == value
         return Button { if !on { onChange(value) } } label: {
-            Text(title)
+            Text(categoryName(value))
                 .font(.system(size: 11, weight: on ? .semibold : .regular))
                 .lineLimit(1)
                 .fixedSize()
                 .foregroundStyle(on ? text : .secondary)
-                .padding(.horizontal, 7)
+                .padding(.horizontal, 6)
                 .padding(.vertical, 3)
                 .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? fill : .clear))
                 .contentShape(Rectangle())

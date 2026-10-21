@@ -55,9 +55,9 @@ struct SettingsRulesPane: View {
             // Class filter
             Picker("", selection: $filter) {
                 Text("All").tag(Classification?.none)
-                Text("Focus").tag(Classification?.some(.focus))
-                Text("Neutral").tag(Classification?.some(.neutral))
-                Text("Distraction").tag(Classification?.some(.distraction))
+                Text(categoryName(.focus)).tag(Classification?.some(.focus))
+                Text(categoryName(.neutral)).tag(Classification?.some(.neutral))
+                Text(categoryName(.distraction)).tag(Classification?.some(.distraction))
             }
             .labelsHidden()
             .pickerStyle(.segmented)
@@ -119,9 +119,9 @@ struct SettingsRulesPane: View {
                     appState.classifier.invalidate()
                 }
             )) {
-                Text("Focus").tag(Classification.focus)
-                Text("Neutral").tag(Classification.neutral)
-                Text("Distraction").tag(Classification.distraction)
+                Text(categoryName(.focus)).tag(Classification.focus)
+                Text(categoryName(.neutral)).tag(Classification.neutral)
+                Text(categoryName(.distraction)).tag(Classification.distraction)
             }
             .labelsHidden()
             .pickerStyle(.menu)
@@ -236,9 +236,9 @@ struct AddRuleSheet: View {
                     .tracking(0.4)
                     .foregroundStyle(.secondary)
                 Picker("", selection: $classification) {
-                    Text("Focus").tag(Classification.focus)
-                    Text("Neutral").tag(Classification.neutral)
-                    Text("Distraction").tag(Classification.distraction)
+                    Text(categoryName(.focus)).tag(Classification.focus)
+                    Text(categoryName(.neutral)).tag(Classification.neutral)
+                    Text(categoryName(.distraction)).tag(Classification.distraction)
                 }
                 .labelsHidden()
                 .pickerStyle(.segmented)
@@ -295,7 +295,7 @@ struct AddRuleSheet: View {
     private var hint: String {
         switch matchKind {
         case .bundleId:   return "Exact bundle identifier."
-        case .host:       return "Substring match against the URL host. Matches www subdomains."
+        case .host:       return "Matches the site and its subdomains: youtube.com covers m.youtube.com too."
         case .titleRegex: return "Case-insensitive regular expression matched against the window title."
         }
     }

@@ -146,7 +146,7 @@ struct NowRow: View {
                 Spacer(minLength: 0)
                 HStack(spacing: 5) {
                     Circle().fill(color(snapshot.classification)).frame(width: 7, height: 7)
-                    Text(label(snapshot.classification))
+                    Text(categoryName(snapshot.classification))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -172,13 +172,6 @@ struct NowRow: View {
         }
     }
 
-    private func label(_ c: Classification) -> String {
-        switch c {
-        case .focus:       return "Focus"
-        case .neutral:     return "Neutral"
-        case .distraction: return "Distracting"
-        }
-    }
 }
 
 // MARK: - Session ring

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings → AI. Configures the optional, opt-in focus-insights feature:
+/// Settings → AI tips. Configures the optional, opt-in AI tips feature:
 /// provider, model, credentials (stored in the Keychain), and a connection
 /// test. Mirrors the layout helpers used by the other settings panes.
 struct SettingsAIPane: View {
@@ -20,7 +20,7 @@ struct SettingsAIPane: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("AI Insights")
+                Text("AI tips")
                     .font(.system(size: 26, weight: .bold))
                     .kerning(-0.5)
                 Text("Optional AI coaching from your focus data. Off by default.")
@@ -32,8 +32,8 @@ struct SettingsAIPane: View {
 
                 sectionHeader("Enable", topPad: 20)
                 groupCard {
-                    settingsRow(title: "Generate AI insights",
-                                help: "Adds a “Generate insights” button to Reports. Data is sent only when you click it.") {
+                    settingsRow(title: "Offer AI tips",
+                                help: "Adds a “Get AI tips” button to Reports. Data is sent only when you click it.") {
                         Toggle("", isOn: $settings.enabled)
                             .toggleStyle(.switch).labelsHidden()
                             .onChange(of: settings.enabled) { _, on in
@@ -80,7 +80,7 @@ struct SettingsAIPane: View {
 
     private var status: Status {
         if !settings.enabled {
-            return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI insights are off.")
+            return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI tips are off.")
         }
         if !canConnect {
             return Status(symbol: "key.fill", color: Theme.warning,
@@ -89,7 +89,7 @@ struct SettingsAIPane: View {
         switch testResult {
         case .success:
             return Status(symbol: "checkmark.seal.fill", color: Theme.focus,
-                          text: "Connected to \(settings.provider.label). Use “Generate insights” on Reports.")
+                          text: "Connected to \(settings.provider.label). Use “Get AI tips” on Reports.")
         case .failure(let message):
             return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
         case nil where !secretSaved:
@@ -178,7 +178,7 @@ struct SettingsAIPane: View {
 
             Rectangle().fill(Theme.separator).frame(height: 0.5)
             settingsRow(title: "Test connection",
-                        help: "Sends a one-token request to verify the credential.") {
+                        help: "Sends a tiny request to check that the key works.") {
                 HStack(spacing: 8) {
                     if testing { ProgressView().controlSize(.small) }
                     testResultBadge
