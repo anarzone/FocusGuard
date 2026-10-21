@@ -47,7 +47,7 @@ struct SettingsSessionsPane: View {
                             Text(FocusGoal.format(minutes: dailyGoalMinutes))
                                 .font(.system(size: 13).monospacedDigit())
                                 .frame(width: 60, alignment: .trailing)
-                            Stepper("", value: $dailyGoalMinutes, in: 30...480, step: 15)
+                            Stepper("", value: $dailyGoalMinutes, in: FocusGoal.range, step: 15)
                                 .labelsHidden()
                                 .fixedSize()
                         }

@@ -502,6 +502,7 @@ struct PlaylistList: View {
     @State private var searching = false
     /// A playlist opened to show its songs, in place of the list.
     @State private var opened: PlaylistRef?
+    @ReduceMotion private var reduceMotion
     @FocusState private var searchFocused: Bool
     @FocusState private var linkFocused: Bool
 
@@ -517,10 +518,10 @@ struct PlaylistList: View {
             PlaylistDetail(music: music, ref: opened, inSession: inSession) {
                 withAnimation(.snappy(duration: 0.22)) { self.opened = nil }
             }
-            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .transition(Motion.transition(.move(edge: .trailing).combined(with: .opacity), reduced: reduceMotion))
         } else {
             list
-                .transition(.move(edge: .leading).combined(with: .opacity))
+                .transition(Motion.transition(.move(edge: .leading).combined(with: .opacity), reduced: reduceMotion))
         }
     }
 
@@ -750,7 +751,7 @@ struct PlaylistList: View {
                 .font(.system(size: 11))
                 .foregroundStyle(problem == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Theme.distractionInk))
         }
-        .transition(.opacity.combined(with: .move(edge: .top)))
+        .transition(Motion.transition(.opacity.combined(with: .move(edge: .top)), reduced: reduceMotion))
     }
 
     private var signInCard: some View {

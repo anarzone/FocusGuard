@@ -46,8 +46,11 @@ final class CalendarAutostartCoordinator {
     private var timer: Timer?
     private var changeObserver: NSObjectProtocol?
     /// EKEvent identifier for the calendar event that triggered the currently
-    /// active session, if any. Lets us know which session is "ours" to stop.
+    /// active session, if any, so it isn't started twice.
     private var activeAutostartEventId: String?
+    /// The session that event started. Only that one is "ours" to stop: if
+    /// the user ended it and started their own, theirs keeps running.
+    private var startedSessionID: UUID?
 
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
@@ -178,6 +181,7 @@ final class CalendarAutostartCoordinator {
         // Don't auto-stop a session if the user disabled the feature mid-session;
         // they can stop it manually if they want.
         activeAutostartEventId = nil
+        startedSessionID = nil
     }
 
     /// Single evaluation pass — called on tick and on calendar change.
@@ -232,12 +236,20 @@ final class CalendarAutostartCoordinator {
             plannedDurationMinutes: minutes
         )
         activeAutostartEventId = event.eventIdentifier
+        startedSessionID = sessionManager.currentSession?.id
     }
 
     private func stopSessionIfOurs(sessionManager: SessionManager) {
-        if activeAutostartEventId != nil, sessionManager.currentSession != nil {
+        if Self.isOurs(startedSessionID: startedSessionID, current: sessionManager.currentSession?.id) {
             sessionManager.stopSession()
         }
         activeAutostartEventId = nil
+        startedSessionID = nil
+    }
+
+    /// Whether the running session is the one the calendar started.
+    nonisolated static func isOurs(startedSessionID: UUID?, current: UUID?) -> Bool {
+        guard let startedSessionID else { return false }
+        return current == startedSessionID
     }
 }

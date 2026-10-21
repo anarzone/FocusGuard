@@ -29,9 +29,10 @@ enum MenuPane: String, CaseIterable, Identifiable {
     /// on the state change: the window resizes and shifts in one step, so the
     /// column has to land in its new place at once (an animated layout would
     /// slide it while the window had already moved, and it would jump). Only
-    /// the pane itself slides and fades in.
-    static func slide(from edge: Edge) -> AnyTransition {
-        AnyTransition.move(edge: edge).combined(with: .opacity).animation(.snappy(duration: 0.22))
+    /// the pane itself slides and fades in (or only fades, with reduced motion).
+    static func slide(from edge: Edge, reduceMotion: Bool = false) -> AnyTransition {
+        Motion.transition(.move(edge: edge).combined(with: .opacity), reduced: reduceMotion)
+            .animation(.snappy(duration: 0.22))
     }
 }
 
@@ -148,6 +149,11 @@ func formatDuration(_ seconds: TimeInterval) -> String {
     if h == 0 { return "\(m)m" }
     if m == 0 { return "\(h)h" }
     return "\(h)h \(m)m"
+}
+
+/// "1 day", "3 days": a count with its noun in the right number.
+func counted(_ count: Int, _ noun: String, plural: String? = nil) -> String {
+    "\(count) \(count == 1 ? noun : plural ?? noun + "s")"
 }
 
 func kindColor(_ classification: Classification) -> Color {
@@ -383,7 +389,7 @@ private struct InsightsPane: View {
                 StatTile(label: "Focused", value: formatDuration(week.focused), detail: weekDelta)
                 StatTile(label: "Focus rate", value: "\(Int((week.focusRate * 100).rounded()))%",
                          detail: week.bestDay.map { "Best day: \($0.formatted(.dateTime.weekday(.abbreviated)))" } ?? "this week")
-                StatTile(label: "Streak", value: week.streak == 1 ? "1 day" : "\(week.streak) days",
+                StatTile(label: "Streak", value: counted(week.streak, "day"),
                          detail: "goal met")
             }
 
@@ -608,7 +614,7 @@ struct DayTimelineView: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel("Day timeline: \(insights.sessions.count) sessions, \(formatDuration(insights.focused)) focused")
+        .accessibilityLabel("Day timeline: \(counted(insights.sessions.count, "session")), \(formatDuration(insights.focused)) focused")
     }
 }
 
@@ -991,7 +997,7 @@ private struct QuickSettingsPane: View {
                 }
                 divider
                 row("Daily focus goal") {
-                    Stepper(value: $goalMinutes, in: 15...720, step: 15) {
+                    Stepper(value: $goalMinutes, in: FocusGoal.range, step: 15) {
                         Text(FocusGoal.format(minutes: goalMinutes))
                             .font(.system(size: 12, weight: .semibold).monospacedDigit())
                     }

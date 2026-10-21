@@ -3,6 +3,9 @@ import Foundation
 /// User-configurable daily focus goal. Stored in UserDefaults so the popover
 /// hero, Reports view, and end-of-day summary all read from one place.
 enum FocusGoal {
+    /// What every goal stepper allows: 15 minutes to 12 hours.
+    static let range = 15...720
+
     /// The user's daily focus goal in minutes. Defaults to 240 (4 hours).
     static var dailyMinutes: Int {
         get {

@@ -35,6 +35,16 @@ final class BreakManager {
 
     var isOnBreak: Bool { current != nil }
 
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    /// False with strict breaks on (Settings › Sessions): a break then runs
+    /// to the end, so nothing offers to end it early.
+    var canEndEarly: Bool { !defaults.bool(forKey: SettingsKeys.Breaks.strictMode) }
+
     func startBreak(durationMinutes: Int) {
         guard current == nil else { return }
         current = BreakState(
@@ -51,9 +61,9 @@ final class BreakManager {
         current = state
     }
 
-    /// User pressed "Skip break". Cancels the break.
+    /// User pressed "End break". Cancels the break, unless breaks are strict.
     func skip() {
-        guard current != nil else { return }
+        guard current != nil, canEndEarly else { return }
         current = nil
         onBreakEnded?()
     }

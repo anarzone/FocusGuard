@@ -227,6 +227,7 @@ extension AppState {
             sessionLabel: session.label ?? "your session",
             timeline: timeline,
             progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
+            elapsed: elapsed,
             timeLeft: left,
             endsAt: left.map { now.addingTimeInterval($0) },
             awaySince: escalationEngine.currentStreakStartedAt,
@@ -238,11 +239,19 @@ extension AppState {
     /// Bring back the last app the user was focused in; failing that, just
     /// hide the distraction.
     func backToWork() {
-        if let id = tracker.lastFocusBundleId,
-           let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first {
-            app.activate()
-        } else {
-            NSWorkspace.shared.frontmostApplication?.hide()
+        let target = BackToWork.target(
+            lastFocus: tracker.lastFocusBundleId,
+            isRunning: { !NSRunningApplication.runningApplications(withBundleIdentifier: $0).isEmpty },
+            distraction: tracker.currentSnapshot?.bundleIdentifier,
+            selfId: ActivityTracker.selfBundleId
+        )
+        switch target {
+        case .activate(let id):
+            NSRunningApplication.runningApplications(withBundleIdentifier: id).first?.activate()
+        case .hide(let id):
+            NSRunningApplication.runningApplications(withBundleIdentifier: id).forEach { $0.hide() }
+        case .none:
+            break
         }
     }
 
@@ -250,5 +259,21 @@ extension AppState {
     func allowCurrentDriftForSession() {
         guard let snapshot = tracker.currentSnapshot else { return }
         escalationEngine.allowForSession(snapshot)
+    }
+}
+
+/// What "Back to work" does. The menu or block screen is frontmost when it's
+/// pressed, so "the frontmost app" would be FocusGuard: go by what the
+/// tracker saw instead, and never hide FocusGuard itself.
+enum BackToWork: Equatable {
+    case activate(String)
+    case hide(String)
+    case none
+
+    static func target(lastFocus: String?, isRunning: (String) -> Bool,
+                       distraction: String?, selfId: String) -> BackToWork {
+        if let id = lastFocus, id != selfId, isRunning(id) { return .activate(id) }
+        if let id = distraction, id != selfId { return .hide(id) }
+        return .none
     }
 }

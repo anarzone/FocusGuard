@@ -5,6 +5,8 @@ struct BlockContext {
     let sessionLabel: String
     let timeline: SessionTimeline
     let progress: Double
+    /// Time spent in the session so far, pauses left out.
+    let elapsed: TimeInterval
     /// Nil for open-ended sessions.
     let timeLeft: TimeInterval?
     let endsAt: Date?
@@ -81,10 +83,12 @@ struct BlockOverlayView: View {
             if let context {
                 SessionRingView(timeline: context.timeline, progress: context.progress, size: 236, lineWidth: 15) {
                     VStack(spacing: 2) {
-                        Text(SessionClock.format(context.timeLeft ?? 0))
+                        // Open-ended sessions have nothing to count down: show
+                        // how far in you are instead.
+                        Text(SessionClock.format(context.timeLeft ?? context.elapsed))
                             .font(.system(size: 48, weight: .semibold).monospacedDigit())
-                            .contentTransition(.numericText(countsDown: true))
-                        Text(context.timeLeft == nil ? "open-ended session" : "left in this session")
+                            .contentTransition(.numericText(countsDown: context.timeLeft != nil))
+                        Text(context.timeLeft == nil ? "into this session" : "left in this session")
                             .font(.system(size: 13))
                             .foregroundStyle(.white.opacity(0.7))
                     }
@@ -92,7 +96,7 @@ struct BlockOverlayView: View {
                 .padding(.top, 34)
 
                 if context.zoneBefore >= 60 {
-                    Text("You were \(Int(context.zoneBefore / 60)) minutes in the zone before this. Pick it back up.")
+                    Text("You were \(counted(Int(context.zoneBefore / 60), "minute")) in the zone before this. Pick it back up.")
                         .font(.system(size: 14))
                         .foregroundStyle(.white.opacity(0.62))
                         .padding(.top, 18)
@@ -170,7 +174,7 @@ struct BlockOverlayView: View {
             .buttonStyle(.plain)
             .disabled(!canOverride)
             .keyboardShortcut(.defaultAction)
-            .accessibilityLabel(canOverride ? "Let me through for 2 minutes" : "Let me through, available in \(countdown) seconds")
+            .accessibilityLabel(canOverride ? "Let me through for 2 minutes" : "Let me through, available in \(counted(countdown, "second"))")
         }
     }
 
