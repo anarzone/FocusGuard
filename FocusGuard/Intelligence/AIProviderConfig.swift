@@ -28,6 +28,11 @@ enum ProviderKind: String, CaseIterable, Identifiable, Sendable {
 /// the secret (an API key) is fetched from the Keychain on demand via
 /// `keychainAccount`. All providers authenticate with an API key.
 struct AISettings: Equatable {
+    /// Whether the app offers AI insights at all. Off for now: no Settings →
+    /// AI tab and no AI tips in Reports. Saved settings and keys are kept, so
+    /// turning this back on picks up where the user left off.
+    static let isAvailable = false
+
     var enabled: Bool
     var provider: ProviderKind
     var model: String

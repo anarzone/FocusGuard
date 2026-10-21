@@ -4,6 +4,11 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general, sessions, escalation, rules, ai, privacy, about
     var id: String { rawValue }
 
+    /// The panes in the sidebar: AI only while the app offers it.
+    static var visible: [SettingsPane] {
+        allCases.filter { $0 != .ai || AISettings.isAvailable }
+    }
+
     var label: String {
         switch self {
         case .general:    return "General"
@@ -72,7 +77,7 @@ struct SettingsView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsPane.allCases) { p in
+            ForEach(SettingsPane.visible) { p in
                 Button {
                     pane = p
                 } label: {

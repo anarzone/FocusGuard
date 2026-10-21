@@ -24,6 +24,7 @@ final class AIInsightsViewModel: ObservableObject {
     /// True when AI is enabled and requests can go out (a key is saved, or
     /// the server is local) — gates the button.
     var isConfigured: Bool {
+        guard AISettings.isAvailable else { return false }
         let settings = AISettings.load()
         return settings.enabled && settings.hasCredential
     }
@@ -37,7 +38,7 @@ final class AIInsightsViewModel: ObservableObject {
     ) {
         task?.cancel()
         let settings = AISettings.load()
-        guard settings.enabled else {
+        guard AISettings.isAvailable, settings.enabled else {
             state = .failed("AI insights are turned off. Enable them in Settings → AI.")
             return
         }
