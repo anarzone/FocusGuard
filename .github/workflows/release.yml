@@ -161,16 +161,12 @@ jobs:
             -allowProvisioningUpdates \
             build
 
-      - name: Bundle authoritative icns + re-sign
+      - name: Re-sign
         env:
           APPLE_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
         run: |
           APP="build/release/Build/Products/Release/FocusGuard.app"
           [ -d "$APP" ] || { echo "Build did not produce $APP" >&2; exit 1; }
-
-          if [ -f "FocusGuard/Resources/AppIcon.icns" ]; then
-            cp "FocusGuard/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-          fi
 
           codesign --force --sign "$APPLE_SIGN_IDENTITY" \
             --keychain "$KEYCHAIN_PATH" \

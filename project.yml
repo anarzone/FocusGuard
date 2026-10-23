@@ -29,8 +29,6 @@ targets:
     platform: macOS
     sources:
       - path: FocusGuard
-      - path: FocusGuard/Resources/AppIcon.icns
-        buildPhase: resources
     dependencies:
       - package: Sparkle
     info:
@@ -49,7 +47,10 @@ targets:
         CFBundlePackageType: APPL
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true                # menu bar app, no Dock icon
-        CFBundleIconFile: AppIcon        # references AppIcon.icns we bundle directly
+        # AppIcon.icon (Icon Composer): Assets.car for macOS 26, plus a
+        # generated AppIcon.icns for earlier versions.
+        CFBundleIconName: AppIcon
+        CFBundleIconFile: AppIcon
         NSHumanReadableCopyright: ""
         NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify or Apple Music."
         NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword."
@@ -69,9 +70,10 @@ targets:
         SPOTIFY_CLIENT_ID: 9c64a61db436412583b7a2285acf92e1
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
-        # No ASSETCATALOG_COMPILER_APPICON_NAME: the asset catalog's AppIcon
-        # compiler emits an incomplete .icns (missing chunks ic08/09/10/14).
-        # We bundle a complete iconutil-built AppIcon.icns directly instead.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Without "all", the AppIcon.icns made for macOS 14-15 only has the
+        # 16/32/128/256 px images, so Finder and Quick Look blur large sizes.
+        ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR: all
 
   FocusGuardTests:
     type: bundle.unit-test
