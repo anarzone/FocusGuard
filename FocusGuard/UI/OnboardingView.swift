@@ -176,7 +176,7 @@ struct OnboardingView: View {
 
     private func startFirstSession() {
         let minutes = UserDefaults.standard.object(forKey: SessionDefaultsKey.durationMinutes) as? Int ?? 50
-        let label = UserDefaults.standard.string(forKey: SessionDefaultsKey.label) ?? "Deep work"
+        let label = UserDefaults.standard.string(forKey: SessionDefaultsKey.label) ?? ""
         appState.sessionManager.startSession(label: label.isEmpty ? nil : label, plannedDurationMinutes: minutes)
         onFinish()
     }

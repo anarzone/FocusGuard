@@ -6,7 +6,11 @@ final class Session {
     @Attribute(.unique) var id: UUID
     var startedAt: Date
     var endedAt: Date?
+    /// The user's own name for the session; nil means automatic.
     var label: String?
+    /// The name it earned when it ended, e.g. "Steady Deep Dive"
+    /// (see `SessionNamer`). Shown when `label` is nil.
+    var autoName: String?
     var statusRaw: Int
     /// Planned length in minutes; nil means open-ended. SessionManager auto-stops
     /// the session when elapsed time reaches this value.

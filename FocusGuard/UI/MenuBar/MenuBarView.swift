@@ -23,7 +23,7 @@ struct MenuBarView: View {
     /// never makes the menu taller than the column and leaves space under it.
     @State private var columnHeight: CGFloat = 0
     @ReduceMotion private var reduceMotion
-    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
+    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
@@ -148,7 +148,7 @@ struct MenuBarView: View {
                     "\(recap.label) · \(clock(recap.startedAt))–\(clock(recap.endedAt))")
 
         case .session(let session, let drift):
-            let label = session.label ?? "Focus session"
+            let label = session.displayName
             let planned = session.plannedDurationMinutes
             let elapsed = appState.sessionManager.runningSeconds(for: session, now: now)
 
@@ -467,7 +467,7 @@ struct MenuBarView: View {
                     .padding(.top, 6)
                 CapsuleButton(title: "Start \(lengthText(minutes))", prominent: false) {
                     lastSessionMinutes = minutes
-                    appState.sessionManager.startSession(label: recap.label, plannedDurationMinutes: minutes)
+                    appState.sessionManager.startSession(label: recap.session.label, plannedDurationMinutes: minutes)
                 }
             }
             .padding(.horizontal, 4)

@@ -203,7 +203,7 @@ enum MenuInsightsBuilder {
         return SessionSummary(
             id: session.id,
             modelID: session.persistentModelID,
-            label: session.label ?? "Focus session",
+            label: session.displayName,
             start: session.startedAt,
             end: end,
             minutes: Int(running / 60),
