@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="10 10 80 80">
+  <defs>
+    <clipPath id="shield">
+      <path d="M50 22 L72.3 31.2 V47.4 C72.3 60.9 63.1 72.8 50 78 C36.9 72.8 27.7 60.9 27.7 47.4 V31.2 Z" stroke="#000" stroke-width="3" stroke-linejoin="round"/>
+    </clipPath>
+    <linearGradient id="indigo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8073FF"/>
+      <stop offset="1" stop-color="#5040E4"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#shield)">
+    <path d="M20 46 C31 42.7 41 49.1 52 45.9 S71 42.7 82 45.1 V84 H20 Z" fill="url(#indigo)"/>
+  </g>
+</svg>
