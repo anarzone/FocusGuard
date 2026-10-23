@@ -61,7 +61,7 @@ struct SessionRecap {
     init(session: Session, bestZoneToday: TimeInterval) {
         let endedAt = session.endedAt ?? .now
         let running = max(0, endedAt.timeIntervalSince(session.startedAt) - session.pausedSeconds)
-        label = session.label ?? "Focus session"
+        label = session.displayName
         startedAt = session.startedAt
         self.endedAt = endedAt
         plannedMinutes = session.plannedDurationMinutes
@@ -224,7 +224,7 @@ extension AppState {
             NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
         }
         return BlockContext(
-            sessionLabel: session.label ?? "your session",
+            sessionLabel: session.displayName,
             timeline: timeline,
             progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
             elapsed: elapsed,

@@ -168,7 +168,7 @@ struct TodayPage: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Circle().fill(Theme.focus).frame(width: 8, height: 8)
-                Text("\(session.label ?? "Focus session") · \(paused ? "paused" : "now")")
+                Text("\(session.displayName) · \(paused ? "paused" : "now")")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
                 if let left, !paused {
@@ -253,7 +253,7 @@ struct TodayPage: View {
 
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
-    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
+    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
 
     private var startNow: some View {
         let chosen = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes

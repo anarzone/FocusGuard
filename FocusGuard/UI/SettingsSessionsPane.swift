@@ -11,7 +11,7 @@ struct SettingsSessionsPane: View {
     @Bindable var appState: AppState
 
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
-    @AppStorage(SessionDefaultsKey.label)           private var defaultLabel  = "Deep work"
+    @AppStorage(SessionDefaultsKey.label)           private var defaultLabel  = ""
 
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
@@ -75,9 +75,9 @@ struct SettingsSessionsPane: View {
                         .frame(width: 110)
                     }
                     Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    row(title: "Default label",
-                        help: "Shown in reports next to each session.") {
-                        TextField("Deep work", text: $defaultLabel)
+                    row(title: "Session name",
+                        help: "Leave empty to name each session from how it went, like “Steady Deep Dive” or “Comeback Run”. Anything you type here is used for every session instead.") {
+                        TextField("Automatic", text: $defaultLabel)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 200)
                     }

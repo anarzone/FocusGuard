@@ -123,7 +123,7 @@ enum DataExporter {
                 id: s.id.uuidString,
                 startedAt: s.startedAt,
                 endedAt: s.endedAt,
-                label: s.label,
+                label: s.label ?? s.autoName,
                 status: statusName(s.status),
                 plannedDurationMinutes: s.plannedDurationMinutes,
                 pausedSeconds: s.pausedSeconds

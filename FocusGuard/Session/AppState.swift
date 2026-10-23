@@ -152,7 +152,7 @@ final class AppState {
             let focusMin = Int(breakdown.focus / 60)
             let pct = Int((breakdown.focusPercent * 100).rounded())
             self.notificationPresenter.presentSessionComplete(
-                label: session.label,
+                label: session.displayName,
                 focusMinutes: focusMin,
                 focusPercent: pct
             )

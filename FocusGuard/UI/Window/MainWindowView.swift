@@ -129,7 +129,7 @@ private struct SessionCard: View {
     @State private var now = Date.now
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
-    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = "Deep work"
+    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -170,7 +170,7 @@ private struct SessionCard: View {
             .frame(width: 30, height: 30)
             .padding(2)
             VStack(alignment: .leading, spacing: 1) {
-                Text(session.label ?? "Focus session").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                Text(session.displayName).font(.system(size: 12, weight: .semibold)).lineLimit(1)
                 Text(paused ? "Paused" : planned.map { "\(Int((max(0, $0 - elapsed) / 60).rounded(.up))) min left" } ?? "\(Int(elapsed / 60)) min")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }

@@ -21,6 +21,7 @@ final class SessionManager {
         self.context = context
         self.tracker = tracker
         reconcileLeftoverSessionsOnLaunch()
+        nameEarlierSessions()
     }
 
     func startSession(label: String? = nil, plannedDurationMinutes: Int? = nil) {
@@ -52,6 +53,30 @@ final class SessionManager {
         }
         session.endedAt = date
         session.status = status
+        session.autoName = SessionNamer.name(for: session, endedAt: date)
+    }
+
+    /// Every session used to be labelled with the "Deep work" default.
+    static let oldDefaultLabel = "Deep work"
+
+    /// Names finished sessions that have no automatic name yet — the ones
+    /// from before automatic names — and drops the old default label (from
+    /// them and from the setting) so those names show. Sessions ended since
+    /// are named in `close`, so after the first launch this finds nothing.
+    private func nameEarlierSessions() {
+        let unnamed = Persistence.fetch(context, FetchDescriptor<Session>(
+            predicate: #Predicate { $0.endedAt != nil && $0.autoName == nil }
+        ))
+        guard !unnamed.isEmpty else { return }
+        for session in unnamed {
+            session.autoName = SessionNamer.name(for: session)
+            if session.label == Self.oldDefaultLabel { session.label = nil }
+        }
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: SessionDefaultsKey.label) == Self.oldDefaultLabel {
+            defaults.set("", forKey: SessionDefaultsKey.label)
+        }
+        Persistence.save(context)
     }
 
     /// - Parameter date: when the pause began; idle auto-pause backdates it
@@ -74,9 +99,12 @@ final class SessionManager {
         onSessionPauseChanged?(false)
     }
 
+    /// An empty name, or the automatic one left as it was, keeps the
+    /// session on its automatic name.
     func rename(_ session: Session, to label: String) {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        session.label = trimmed.isEmpty ? nil : trimmed
+        let automatic = session.autoName ?? SessionNamer.liveName(startedAt: session.startedAt)
+        session.label = (trimmed.isEmpty || trimmed == automatic) ? nil : trimmed
         Persistence.save(context)
     }
 
