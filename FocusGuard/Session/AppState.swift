@@ -209,6 +209,9 @@ final class AppState {
                 RetentionPolicy.prune(context: self.container.mainContext)
             }
         }
+
+        // Shortcuts, Siri, Spotlight and the Focus filter act on this state.
+        SurfaceHost.appState = self
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the
