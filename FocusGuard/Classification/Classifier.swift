@@ -39,8 +39,12 @@ final class Classifier {
     /// classifications doesn't accumulate dead rows. Higher priority (300)
     /// than the default 200 to ensure user overrides win cleanly. Returns
     /// false when Strict's lock refuses to unblock it.
+    ///
+    /// A part-of-a-site override (`urlPrefix`, "host/path") gets 310, so it
+    /// wins over its whole site's.
     @discardableResult
-    func setOverride(bundleId: String? = nil, host: String? = nil, classification: Classification) -> Bool {
+    func setOverride(bundleId: String? = nil, host: String? = nil, urlPrefix: String? = nil,
+                     classification: Classification) -> Bool {
         let pattern: String
         let kind: RuleMatchKind
         if let bundleId, !bundleId.isEmpty {
@@ -49,10 +53,14 @@ final class Classifier {
         } else if let host, !host.isEmpty {
             pattern = host
             kind = .host
+        } else if let urlPrefix, !urlPrefix.isEmpty {
+            pattern = urlPrefix.lowercased()
+            kind = .urlPrefix
         } else {
             return false
         }
         if classification != .distraction, isBlockListLocked(), isBlocked(pattern, kind) { return false }
+        let priority = kind == .urlPrefix ? 310 : 300
 
         let kindRaw = kind.rawValue
         let descriptor = FetchDescriptor<AppRule>(
@@ -61,14 +69,14 @@ final class Classifier {
         let existing = (try? context.fetch(descriptor)) ?? []
         for rule in existing {
             rule.classification = classification
-            rule.priority = 300
+            rule.priority = priority
         }
         if existing.isEmpty {
             context.insert(AppRule(
                 pattern: pattern,
                 matchKind: kind,
                 classification: classification,
-                priority: 300
+                priority: priority
             ))
         }
 
@@ -96,6 +104,14 @@ final class Classifier {
                     e.classificationRaw = raw
                 }
             }
+        case .urlPrefix:
+            let urlDescriptor = FetchDescriptor<ActivityEvent>(
+                predicate: #Predicate { $0.url != nil }
+            )
+            let events = (try? context.fetch(urlDescriptor)) ?? []
+            for e in events where e.url.map({ Self.url($0, matchesPrefix: pattern) }) == true {
+                e.classificationRaw = raw
+            }
         case .titleRegex:
             break
         }
@@ -109,12 +125,19 @@ final class Classifier {
     func isBlocked(_ pattern: String, _ kind: RuleMatchKind) -> Bool {
         switch kind {
         case .bundleId:   return classify(bundleId: pattern, windowTitle: nil, url: nil) == .distraction
-        case .host:       return classify(bundleId: "", windowTitle: nil, url: "https://\(pattern)") == .distraction
+        case .host, .urlPrefix:
+            return classify(bundleId: "", windowTitle: nil, url: "https://\(pattern)") == .distraction
         case .titleRegex: return false
         }
     }
 
     func classify(bundleId: String, windowTitle: String?, url: String?) -> Classification {
+        matchingRule(bundleId: bundleId, windowTitle: windowTitle, url: url)?.classification ?? .neutral
+    }
+
+    /// The rule that decides this activity, highest priority first; nil
+    /// means the neutral default.
+    func matchingRule(bundleId: String, windowTitle: String?, url: String?) -> AppRule? {
         if shouldRefresh { refresh() }
 
         let host = url.flatMap { URL(string: $0)?.host?.lowercased() }
@@ -123,22 +146,27 @@ final class Classifier {
             let pattern = rule.pattern
             switch rule.matchKind {
             case .bundleId:
-                if bundleId == pattern { return rule.classification }
+                if bundleId == pattern { return rule }
 
             case .host:
                 if let host, Self.host(host, matches: pattern) {
-                    return rule.classification
+                    return rule
                 }
 
             case .titleRegex:
                 if let title = windowTitle,
                    let regex = compiledTitlePatterns[pattern] ?? nil,
                    (try? regex.firstMatch(in: title)) != nil {
-                    return rule.classification
+                    return rule
+                }
+
+            case .urlPrefix:
+                if let url, Self.url(url, matchesPrefix: pattern) {
+                    return rule
                 }
             }
         }
-        return .neutral
+        return nil
     }
 
     // MARK: - Private
@@ -179,6 +207,25 @@ final class Classifier {
         guard !p.isEmpty else { return false }
         let h = host.lowercased()
         return h == p || h.hasSuffix("." + p)
+    }
+
+    /// A part-of-a-site pattern ("youtube.com/shorts") matches its host the
+    /// way a site rule does, then the path on whole segments: `/shorts` and
+    /// `/shorts/abc`, not `/shortsale`.
+    static func url(_ url: String, matchesPrefix pattern: String) -> Bool {
+        var p = pattern.lowercased().trimmingCharacters(in: .whitespaces)
+        if let schemeEnd = p.range(of: "://") { p = String(p[schemeEnd.upperBound...]) }
+        guard let slash = p.firstIndex(of: "/") else {
+            return URL(string: url)?.host.map { host($0, matches: p) } ?? false
+        }
+        let hostPattern = String(p[..<slash])
+        var pathPattern = String(p[slash...])
+        while pathPattern.count > 1, pathPattern.hasSuffix("/") { pathPattern.removeLast() }
+        guard let components = URLComponents(string: url),
+              let urlHost = components.host, host(urlHost, matches: hostPattern) else { return false }
+        let path = components.path.lowercased()
+        if pathPattern == "/" { return true }
+        return path == pathPattern || path.hasPrefix(pathPattern + "/")
     }
 
     /// Case-insensitive title pattern, or nil when it isn't valid.

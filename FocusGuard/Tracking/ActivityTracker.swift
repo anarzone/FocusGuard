@@ -63,6 +63,11 @@ final class ActivityTracker {
     /// enforce planned-duration auto-stop and to feed the escalation engine.
     var onTick: (() -> Void)?
 
+    /// The browser extension's report for a browser, nil when none is
+    /// connected for it (set by AppState). Used instead of AppleScript when
+    /// present: no Automation prompt, and titles without Screen Recording.
+    var extensionTab: ((_ bundleId: String) -> ExtensionTab?)?
+
     private let context: ModelContext
     private let inspector: WindowInspector
     private let browserReader: BrowserTabReader
@@ -186,12 +191,18 @@ final class ActivityTracker {
         }
 
         let appName = app.localizedName ?? bundleId
+        let extensionTab = extensionTab?(bundleId)
         let title: String? = optOutCache.isOptedOut(bundleId)
             ? nil
-            : inspector.frontmostWindowTitle(forPID: app.processIdentifier)
-        let url: String? = BrowserTabReader.isBrowser(bundleIdentifier: bundleId)
-            ? browserReader.currentURL(forBundleId: bundleId)
-            : nil
+            : extensionTab?.title ?? inspector.frontmostWindowTitle(forPID: app.processIdentifier)
+        let url: String?
+        if let extensionTab {
+            url = extensionTab.url
+        } else if BrowserTabReader.isBrowser(bundleIdentifier: bundleId) {
+            url = browserReader.currentURL(forBundleId: bundleId)
+        } else {
+            url = nil
+        }
         let classification = classifier.classify(bundleId: bundleId, windowTitle: title, url: url)
         let now = Date()
         if classification == .focus {

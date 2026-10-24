@@ -29,3 +29,7 @@ Package.resolved
 # xcodebuild code-coverage profile droppings
 *.profraw
 *.profdata
+
+# Browser extension
+node_modules/
+smoke-shots/
