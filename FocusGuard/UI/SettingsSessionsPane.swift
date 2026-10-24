@@ -7,339 +7,308 @@ enum SessionDefaultsKey {
     static let label           = "session.defaultLabel"
 }
 
+/// Sessions: how they're named, the defaults, what happens when you drift
+/// (the old Escalation pane), breaks, and starting on their own.
 struct SettingsSessionsPane: View {
     @Bindable var appState: AppState
 
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
-    @AppStorage(SessionDefaultsKey.label)           private var defaultLabel  = ""
+    @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
+    @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var goalMinutes = GoalDefaults.dailyFocusMinutes
+    @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
+    @AppStorage(SettingsKeys.Breaks.strictMode) private var breakStrictMode = false
+    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
+    @AppStorage(HabitSettings.meetingAwareness) private var meetingAwareness = true
 
-    @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var dailyGoalMinutes = GoalDefaults.dailyFocusMinutes
-    @AppStorage(SettingsKeys.Goal.weekendsCount)     private var weekendsCount    = false
-
-    @AppStorage(SettingsKeys.Breaks.strictMode)             private var breakStrictMode = false
-
-    @AppStorage(SettingsKeys.SystemFocus.enabled)    private var systemFocusEnabled = false
-    @AppStorage(SettingsKeys.SystemFocus.startName)  private var startShortcutName = ""
-    @AppStorage(SettingsKeys.SystemFocus.endName)    private var endShortcutName   = ""
-
-    @State private var availableShortcuts: [String] = []
-    @State private var showingStarterPack = false
-
-    @AppStorage("calendarAutostart.enabled") private var calendarEnabled = false
-    @AppStorage("calendarAutostart.keyword") private var calendarKeyword = "focus"
+    @State private var preset: DriftResponse? = DriftResponse.current
+    @State private var showingTimings = false
+    @State private var namesOn = true
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Sessions")
-                    .font(.system(size: 26, weight: .bold))
-                    .kerning(-0.5)
-                Text("Defaults applied when you press Start without specifying a duration.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-
-                sectionHeader("Daily goal", topPad: 24)
-                groupCard {
-                    row(title: "Daily focus goal",
-                        help: "Drives the progress bar in the popover and the end-of-day summary notification.") {
-                        HStack(spacing: 8) {
-                            Text(FocusGoal.format(minutes: dailyGoalMinutes))
-                                .font(.system(size: 13).monospacedDigit())
-                                .frame(width: 60, alignment: .trailing)
-                            Stepper("", value: $dailyGoalMinutes, in: FocusGoal.range, step: 15)
-                                .labelsHidden()
-                                .fixedSize()
-                        }
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    row(title: "Weekends count toward streak",
-                        help: "When off, Saturday and Sunday are skipped during streak calculation so a quiet weekend doesn't break a weekday streak.") {
-                        Toggle("", isOn: $weekendsCount)
-                            .toggleStyle(.switch).labelsHidden()
-                    }
-                }
-
-                sectionHeader("Defaults", topPad: 24)
-                groupCard {
-                    row(title: "Default duration",
-                        help: "Used when you press Start without picking a length.") {
-                        Picker("", selection: $defaultMinutes) {
-                            Text("25 min").tag(25)
-                            Text("50 min").tag(50)
-                            Text("90 min").tag(90)
-                            Text("120 min").tag(120)
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(width: 110)
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    row(title: "Session name",
-                        help: "Leave empty to name each session from how it went, like “Steady Deep Dive” or “Comeback Run”. Anything you type here is used for every session instead.") {
-                        TextField("Automatic", text: $defaultLabel)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 200)
-                    }
-                }
-
-                sectionHeader("Breaks", topPad: 24)
-                groupCard {
-                    row(title: "Strict mode (no skipping)",
-                        help: "When on, the break overlay can only be extended — Skip and Hide are disabled. Helps if you tend to skip your way through every break.") {
-                        Toggle("", isOn: $breakStrictMode)
-                            .toggleStyle(.switch).labelsHidden()
-                    }
-                }
-
-                sectionHeader("System Focus", topPad: 24)
-                groupCard {
-                    row(title: "Run a Shortcut on session start/end",
-                        help: "Create one or two Shortcuts in the Shortcuts app — for example, one to enable a Focus mode and one to clear it. We'll run them at session boundaries. Leave a name blank to skip that side.") {
-                        Toggle("", isOn: $systemFocusEnabled)
-                            .toggleStyle(.switch).labelsHidden()
-                    }
-                    if systemFocusEnabled {
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "On session start", help: shortcutHelp(startShortcutName)) {
-                            shortcutPicker(selection: $startShortcutName)
-                        }
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "On session end", help: shortcutHelp(endShortcutName)) {
-                            shortcutPicker(selection: $endShortcutName)
-                        }
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "Don't see your shortcut?",
-                            help: "Pick from a starter pack — built-in modes (Work, DND, Reading) plus a Deep Work combo. macOS doesn't allow apps to install Shortcuts silently, so each one takes about 30 seconds to set up the first time.") {
-                            Button("Starter pack…") { showingStarterPack = true }
-                        }
-                    }
-                }
-                .task {
-                    if let list = await SystemFocusBridge.availableShortcuts() {
-                        availableShortcuts = list
-                    }
-                }
-                .sheet(isPresented: $showingStarterPack) {
-                    StarterPackSheet(installed: availableShortcuts) {
-                        // Reload the installed list after the sheet closes —
-                        // user may have added shortcuts.
-                        Task {
-                            if let list = await SystemFocusBridge.availableShortcuts() {
-                                availableShortcuts = list
-                            }
-                        }
-                    }
-                }
-
-                sectionHeader("Calendar autostart", topPad: 24)
-                groupCard {
-                    row(title: "Autostart on calendar event",
-                        help: "Auto-create a focus session when a calendar event matching the keyword starts. Auto-stops when the event ends.") {
-                        Toggle("", isOn: calendarEnabledBinding)
-                            .toggleStyle(.switch).labelsHidden()
-                    }
-                    if calendarEnabled {
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        row(title: "Match keyword",
-                            help: "Calendar events whose title contains this keyword (case-insensitive) trigger a session.") {
-                            TextField("focus", text: $calendarKeyword)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(width: 160)
-                                .onSubmit { /* persisted via AppStorage */ }
-                        }
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        nextMatchRow
-                    }
-                    if !appState.calendarAutostart.hasCalendarAccess && calendarEnabled {
-                        Rectangle().fill(Theme.separator).frame(height: 0.5)
-                        calendarPermissionRow
-                    }
-                }
+        SettingsColumns {
+            namesSection
+            defaultsSection
+        } right: {
+            driftSection
+            SettingsSection("Breaks") {
+                SettingsToggle(title: "Strict breaks", detail: "No ending a break early", isOn: $breakStrictMode)
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            SettingsSection("Starting and calls") {
+                SettingsToggle(title: "Offer a session when you're already focused",
+                               detail: "After 5 focused minutes outside a session. It counts from when you began",
+                               isOn: $autoStartOffer)
+                SettingsDivider()
+                SettingsToggle(title: "Calls never count as drift",
+                               detail: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls",
+                               isOn: $meetingAwareness)
+            }
+        }
+        .onAppear { namesOn = defaultLabel.isEmpty }
+        .sheet(isPresented: $showingTimings, onDismiss: { preset = DriftResponse.current }) {
+            DriftTimingsSheet(appState: appState)
         }
     }
 
-    // MARK: - Calendar binding & next-match row
+    // MARK: - Names
 
-    private var calendarEnabledBinding: Binding<Bool> {
-        Binding(
-            get: { calendarEnabled },
-            set: { newValue in
-                if newValue {
-                    calendarEnabled = true
-                    appState.calendarAutostart.enabled = true
-                    // Always fire requestAccess on enable. For .notDetermined
-                    // state EventKit pops the system prompt; for .denied it's
-                    // a silent no-op (and the logger captures the call so we
-                    // can see what happened). Either way the warning row
-                    // re-renders correctly afterwards.
-                    Task {
-                        _ = await appState.calendarAutostart.requestAccess()
-                    }
-                } else {
-                    calendarEnabled = false
-                    appState.calendarAutostart.enabled = false
-                }
-            }
-        )
-    }
-
-    /// Apple's URL scheme for the Calendar privacy pane has rotated multiple
-    /// times. We try each known variant; the first one that the system
-    /// recognises wins. As a last resort just open System Settings — the
-    /// user is one click away from Privacy & Security → Calendars.
-    private func openCalendarPrivacySettings() {
-        let candidates = [
-            // Sonoma / Sequoia / Tahoe with the per-pane bundle id.
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Calendars",
-            // Older "preference" host that some macOS builds still accept.
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars",
-        ]
-        for str in candidates {
-            if let url = URL(string: str), NSWorkspace.shared.open(url) {
-                NSWorkspace.shared.activateFileViewerSelecting([])  // make sure it comes to front
-                return
-            }
-        }
-        // Final fallback: just launch System Settings.
-        let url = URL(fileURLWithPath: "/System/Applications/System Settings.app")
-        NSWorkspace.shared.open(url)
-    }
-
-    /// Permission state of the EventKit grant, with copy + button that match
-    /// the actual state. Avoids the "access denied" message after a fresh
-    /// install / TCC reset when the user never actually denied anything.
-    @ViewBuilder
-    private var calendarPermissionRow: some View {
-        switch appState.calendarAutostart.accessState {
-        case .notDetermined:
-            row(title: "Calendar access not granted yet",
-                help: "Click Grant to ask for access. macOS will show a permission prompt; if it doesn't, we open System Settings → Privacy & Security → Calendars as a fallback.") {
-                Button("Grant access") {
-                    Task {
-                        _ = await appState.calendarAutostart.requestAccess()
-                        // If the request didn't move us into authorized OR
-                        // denied (e.g. macOS suppressed the prompt for some
-                        // reason), open System Settings so the user has a
-                        // direct path forward.
-                        if appState.calendarAutostart.accessState == .notDetermined {
-                            openCalendarPrivacySettings()
-                        }
-                    }
-                }
-            }
-        case .denied:
-            row(title: "Calendar access denied",
-                help: "macOS won't re-prompt after a denial. Grant access in System Settings → Privacy & Security → Calendars, then return here.") {
-                Button("Open Settings") { openCalendarPrivacySettings() }
-            }
-        case .authorized:
-            EmptyView()
-        }
-    }
-
-    @ViewBuilder
-    private var nextMatchRow: some View {
-        if let title = appState.calendarAutostart.nextMatchTitle,
-           let start = appState.calendarAutostart.nextMatchStart {
-            row(title: "Next match",
-                help: nextMatchHelp(start: start)) {
-                Text(title)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: 200, alignment: .trailing)
-            }
-        } else {
-            row(title: "Next match",
-                help: "No upcoming events containing the keyword in the next 12 hours.") {
-                Text("—")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    private func nextMatchHelp(start: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        let timeStr = formatter.string(from: start)
-        let now = Date()
-        if start <= now { return "Currently active." }
-        let interval = Int(start.timeIntervalSince(now))
-        let mins = interval / 60
-        if mins < 60 { return "Starts at \(timeStr) (in \(mins)m)." }
-        let hours = mins / 60
-        let remain = mins % 60
-        return "Starts at \(timeStr) (in \(hours)h \(remain)m)."
-    }
-
-    /// Dropdown of installed Shortcuts plus a "(none)" option. We list real
-    /// shortcut names so the user can't typo a name into oblivion.
-    @ViewBuilder
-    private func shortcutPicker(selection: Binding<String>) -> some View {
-        Picker("", selection: selection) {
-            Text("(none)").tag("")
-            ForEach(availableShortcuts, id: \.self) { name in
-                Text(name).tag(name)
-            }
-        }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .frame(width: 220)
-    }
-
-    private func shortcutHelp(_ name: String) -> String {
-        if name.isEmpty { return "Nothing will run on this side." }
-        if availableShortcuts.isEmpty { return "Reading installed Shortcuts…" }
-        if !availableShortcuts.contains(name) {
-            return "“\(name)” isn't installed. Create it in the Shortcuts app, then reopen Settings."
-        }
-        return "Will run “\(name)” via the Shortcuts CLI."
-    }
-
-    @ViewBuilder
-    private func sectionHeader(_ title: String, topPad: CGFloat = 24) -> some View {
-        Text(title.uppercased())
-            .font(.system(size: 11, weight: .semibold))
-            .tracking(0.4)
-            .foregroundStyle(.secondary)
-            .padding(.top, topPad)
-            .padding(.bottom, 8)
-    }
-
-    @ViewBuilder
-    private func groupCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
-            .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.separator, lineWidth: 0.5))
-    }
-
-    @ViewBuilder
-    private func row<Right: View>(
-        title: String,
-        help: String? = nil,
-        @ViewBuilder right: () -> Right
-    ) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13))
-                if let help {
-                    Text(help)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.secondary)
+    private var namesSection: some View {
+        SettingsSection("Names") {
+            SettingsToggle(title: "Name sessions automatically",
+                           detail: "From how the focus went and how long it ran",
+                           isOn: Binding(get: { namesOn }, set: { on in
+                               namesOn = on
+                               if on { defaultLabel = "" }
+                           }))
+            SettingsDivider()
+            if namesOn {
+                VStack(alignment: .leading, spacing: 10) {
+                    FlowChips(items: [SessionNamer.Pattern.lockedIn, .steady, .slowStart, .comeback, .fading, .bumpy, .wandering]
+                        .map(\.rawValue))
+                    Text("Sprint, under 20 min · Run, under 45 · Deep Dive, up to 90 · Marathon")
+                        .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    Text("So a 50-minute session that drifted early and finished strong is a Comeback Deep Dive. While it runs it's Morning, Afternoon, Evening or Late-night focus. Rename any session from Today.")
+                        .font(.system(size: 12)).foregroundStyle(Theme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            } else {
+                SettingsRow(title: "Name every session", detail: "Used for every session instead") {
+                    TextField("Deep work", text: $defaultLabel)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 180)
+                }
             }
-            Spacer()
-            right()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+    }
+
+    // MARK: - Defaults
+
+    private var defaultsSection: some View {
+        SettingsSection("Defaults") {
+            SettingsRow(title: "Usual length") {
+                Picker("Usual length", selection: $defaultMinutes) {
+                    ForEach([25, 45, 50, 60, 90, 120], id: \.self) { Text("\($0) minutes").tag($0) }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize()
+            }
+            SettingsDivider()
+            SettingsRow(title: "Daily focus goal") {
+                HStack(spacing: 0) {
+                    Button { goalMinutes = max(FocusGoal.range.lowerBound, goalMinutes - 15) } label: {
+                        Text("−").frame(width: 26, height: 26).contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("Lower goal")
+                    Text(FocusGoal.format(minutes: goalMinutes))
+                        .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                        .frame(minWidth: 50)
+                    Button { goalMinutes = min(FocusGoal.range.upperBound, goalMinutes + 15) } label: {
+                        Text("+").frame(width: 26, height: 26).contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("Raise goal")
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.primaryText)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.inset))
+            }
+            SettingsDivider()
+            SettingsToggle(title: "Weekends count toward the streak", isOn: $weekendsCount)
+        }
+    }
+
+    // MARK: - When you drift
+
+    private var driftSection: some View {
+        SettingsSection("When you drift") {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(DriftResponse.allCases) { response in
+                    presetCard(response)
+                }
+                if preset == nil {
+                    Text("You've tuned the timings by hand. Pick a preset to go back to one.")
+                        .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                }
+                if appState.isStrictLocked {
+                    Text("Strict stays on until this session ends.")
+                        .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                }
+                Button("Fine-tune the timings…") { showingTimings = true }
+                    .buttonStyle(.textLink)
+                    .disabled(appState.isStrictLocked)
+            }
+            .padding(12)
+        }
+    }
+
+    private func presetCard(_ response: DriftResponse) -> some View {
+        let picked = preset == response
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return Button {
+            if appState.setDriftResponse(response) { preset = response }
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Circle()
+                    .strokeBorder(picked ? Theme.focus : Theme.lockedStroke, lineWidth: picked ? 5 : 1.5)
+                    .frame(width: 16, height: 16)
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(response.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.primaryText)
+                    Text(Self.summary(response))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .background(shape.fill(picked ? Theme.focus.opacity(0.07) : Theme.inset))
+            .overlay(shape.strokeBorder(picked ? Theme.focus : .clear, lineWidth: 1.5))
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .disabled(appState.isStrictLocked && !picked)
+        .accessibilityAddTraits(picked ? .isSelected : [])
+    }
+
+    /// What each preset does, passes included (coordinator rulings).
+    static func summary(_ response: DriftResponse) -> String {
+        switch response {
+        case .gentle:   return "Nudge after 1 min, pause screen after 3 min. Let me through right away, for 2 minutes."
+        case .standard: return "Nudge after 30 s, pause screen after 90 s. Let me through after a 5-second wait, for 2 minutes."
+        case .strict:   return "Pause screen as soon as you drift. No passes; “It's for work” unlocks after a 10-second wait."
+        }
+    }
+}
+
+/// Small grey chips that wrap onto more lines.
+struct FlowChips: View {
+    let items: [String]
+
+    var body: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(items, id: \.self) { item in
+                Text(item)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.bodyText)
+                    .padding(.horizontal, 8)
+                    .frame(height: 22)
+                    .background(Capsule().fill(Theme.chip))
+            }
+        }
+    }
+}
+
+/// Lays children out left to right, wrapping when the row is full.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? 400, subviews: subviews)
+        let height = rows.last.map { $0.y + $0.height } ?? 0
+        return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.items {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+        }
+    }
+
+    private struct Row { var items: [Int] = []; var y: CGFloat = 0; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = [Row()]
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].items.isEmpty, rows[rows.count - 1].width + spacing + size.width > width {
+                let last = rows[rows.count - 1]
+                rows.append(Row(y: last.y + last.height + spacing))
+            }
+            var row = rows[rows.count - 1]
+            row.width += (row.items.isEmpty ? 0 : spacing) + size.width
+            row.height = max(row.height, size.height)
+            row.items.append(index)
+            rows[rows.count - 1] = row
+        }
+        return rows
+    }
+}
+
+// MARK: - Fine-tune
+
+/// The escalation timings, by hand. Changing them leaves the preset as
+/// "tuned by hand" until one is picked again.
+struct DriftTimingsSheet: View {
+    @Bindable var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @AppStorage(SettingsKeys.Escalation.silenceThreshold) private var silence = Constants.Escalation.defaultSilenceSeconds
+    @AppStorage(SettingsKeys.Escalation.notifyThreshold) private var notify = Constants.Escalation.defaultNotifySeconds
+    @AppStorage(SettingsKeys.Escalation.blockThreshold) private var block = Constants.Escalation.defaultBlockSeconds
+    @AppStorage(SettingsKeys.Escalation.cooldown) private var cooldown = Constants.Escalation.defaultCooldownSeconds
+    @AppStorage(SettingsKeys.Escalation.notificationsEnabled) private var nudges = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Fine-tune the timings")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(Theme.primaryText)
+            SettingsSection("Stages") {
+                stepper("Ignore drift shorter than", value: $silence, range: 0...300, step: 5,
+                        detail: "Still logged, just no nudge")
+                SettingsDivider()
+                SettingsToggle(title: "Nudge with a notification", isOn: $nudges)
+                SettingsDivider()
+                stepper("Nudge after", value: $notify, range: 5...600, step: 5, detail: nil).disabled(!nudges)
+                SettingsDivider()
+                stepper("Nudge again after", value: $cooldown, range: 15...600, step: 15, detail: "For the same drift").disabled(!nudges)
+                SettingsDivider()
+                stepper("Pause screen after", value: $block, range: 10...900, step: 10, detail: nil)
+            }
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.capsule(.primary, height: 32))
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(22)
+        .frame(width: 460)
+        .background(Theme.windowBackground)
+        .onChange(of: [silence, notify, block, cooldown]) { apply() }
+    }
+
+    private func stepper(_ title: String, value: Binding<Int>, range: ClosedRange<Int>, step: Int,
+                         detail: String?) -> some View {
+        SettingsRow(title: title, detail: detail) {
+            Stepper(value: value, in: range, step: step) {
+                Text(Self.seconds(value.wrappedValue))
+                    .font(.system(size: 12).monospacedDigit())
+                    .frame(width: 56, alignment: .trailing)
+            }
+        }
+    }
+
+    private func apply() {
+        let engine = appState.escalationEngine
+        engine.silenceThreshold = TimeInterval(silence)
+        engine.notifyThreshold = TimeInterval(notify)
+        engine.notifyCooldown = TimeInterval(cooldown)
+        engine.blockThreshold = TimeInterval(block)
+    }
+
+    /// "30 s", "1 min 30 s", "3 min".
+    static func seconds(_ value: Int) -> String {
+        if value < 60 { return "\(value) s" }
+        let m = value / 60, s = value % 60
+        return s == 0 ? "\(m) min" : "\(m) min \(s) s"
     }
 }

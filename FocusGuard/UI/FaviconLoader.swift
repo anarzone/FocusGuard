@@ -44,6 +44,8 @@ final class FaviconLoader: ObservableObject {
 
     private func fetchIfNeeded(host: String) {
         guard !inFlight.contains(host), !missing.contains(host) else { return }
+        // Settings › Privacy & data can turn fetching off; icons already saved still show.
+        guard UserDefaults.standard.object(forKey: "privacy.siteIcons") as? Bool ?? true else { return }
         inFlight.insert(host)
         Task {
             // Fetch returns Data (Sendable) instead of NSImage so the result

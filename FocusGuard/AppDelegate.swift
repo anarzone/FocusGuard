@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSClassFromString("XCTestCase") != nil { return }
 
         appState = AppState()
+        AppAppearance.applyStored()
         // Starts the trial's reminder and end-of-trial timer.
         Entitlements.shared.refresh()
         menuBarController = MenuBarController(
@@ -169,10 +170,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            hosting.preferredContentSize = NSSize(width: 1160, height: 760)
+            hosting.preferredContentSize = NSSize(width: 1200, height: 720)
 
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 1160, height: 760),
+                contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false

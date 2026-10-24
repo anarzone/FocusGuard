@@ -214,6 +214,7 @@ final class AppState {
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
         wireNotifications()
+        tabPause.isEnabled = defaults.object(forKey: SettingsWindowKey.pauseTab) as? Bool ?? true
         tracker.start()
         bridge.start(appState: self)
         setupAutoPauseObservers()

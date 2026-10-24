@@ -60,6 +60,8 @@ struct ReportBucket: Identifiable, Equatable {
     var drift: TimeInterval = 0
     var other: TimeInterval = 0
     let isFuture: Bool
+    /// Before the first day the plan's history reaches (Free keeps 30 days).
+    var isLocked = false
 
     var total: TimeInterval { focus + drift + other }
 }
@@ -90,19 +92,26 @@ struct ReportData {
 
 @MainActor
 enum ReportDataBuilder {
+    /// - Parameter notBefore: the first moment the plan's history reaches
+    ///   (`Entitlements.historyStart`); nothing earlier is read or compared.
     static func build(period: ReportPeriod, offset: Int, context: ModelContext,
-                      now: Date = .now, calendar: Calendar = .current) -> ReportData {
+                      now: Date = .now, calendar: Calendar = .current, notBefore: Date? = nil) -> ReportData {
         let interval = period.interval(offset: offset, now: now, calendar: calendar)
         let until = min(interval.end, now)
         let previousInterval = period.interval(offset: offset + 1, now: now, calendar: calendar)
+        let floor = notBefore ?? .distantPast
+        let start = min(max(interval.start, floor), interval.end)
         // Compare like with like: the same stretch of the previous period.
-        let previousUntil = previousInterval.start.addingTimeInterval(until.timeIntervalSince(interval.start))
+        let previousStart = previousInterval.start.addingTimeInterval(start.timeIntervalSince(interval.start))
+        let previousUntil = min(previousInterval.start.addingTimeInterval(until.timeIntervalSince(interval.start)),
+                                previousInterval.end)
 
         let reports = ReportBuilder(context: context)
-        let breakdown = reports.breakdown(from: interval.start, to: until)
-        let previous = reports.breakdown(from: previousInterval.start, to: min(previousUntil, previousInterval.end))
+        let breakdown = reports.breakdown(from: start, to: until)
+        let previous = previousStart >= floor
+            ? reports.breakdown(from: previousStart, to: previousUntil)
+            : BreakdownSnapshot(focus: 0, neutral: 0, distraction: 0)
 
-        let start = interval.start
         let end = interval.end
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= start && $0.startedAt < end },
@@ -111,6 +120,9 @@ enum ReportDataBuilder {
         let events = Persistence.fetch(context, descriptor)
 
         var buckets = bucketIntervals(period: period, interval: interval, events: events, now: now, calendar: calendar)
+        for index in buckets.indices where buckets[index].interval.end <= start {
+            buckets[index].isLocked = true
+        }
         var heat = Array(repeating: Array(repeating: TimeInterval(0), count: 24), count: 7)
         var activeHours: [Int] = []
 
