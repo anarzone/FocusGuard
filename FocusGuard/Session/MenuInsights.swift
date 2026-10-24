@@ -12,8 +12,11 @@ struct UsageRow: Identifiable, Equatable {
     let host: String?
     let seconds: TimeInterval
     let classification: Classification
+    /// Of `seconds`, the time inside sessions.
+    var inSession: TimeInterval = 0
 
     var isSite: Bool { host != nil }
+    var outsideSession: TimeInterval { max(0, seconds - inSession) }
 }
 
 /// A session from today, for the Insights list.
@@ -51,6 +54,11 @@ struct TodayInsights {
     let activity: [DaySpan]
     let sessionSpans: [DateInterval]
     let topApps: [UsageRow]
+    /// The day split into time inside sessions and between them.
+    var inSessions = BreakdownSnapshot.zero
+    var betweenSessions = BreakdownSnapshot.zero
+    /// One plain sentence about the day, when there's something to say.
+    var takeaway: String?
 
     static let empty = TodayInsights(
         focused: 0, goalProgress: 0, focusRate: 0, averageFocusRate: nil, sessions: [],
@@ -70,9 +78,19 @@ struct WeekInsights {
     let bestDay: Date?
     let streak: Int
     let topDistractions: [UsageRow]
+    /// The week's first day; earlier weeks can be shown too.
+    var weekStart: Date = .distantPast
+    /// The best day's focus rate, 0...1.
+    var bestDayRate: Double?
+    /// One plain sentence about the week, when there's something to say.
+    var takeaway: String?
 
     static let empty = WeekInsights(days: [], todayIndex: 0, focused: 0, focusedLastWeek: 0,
                                     focusRate: 0, bestDay: nil, streak: 0, topDistractions: [])
+}
+
+extension BreakdownSnapshot {
+    static let zero = BreakdownSnapshot(focus: 0, neutral: 0, distraction: 0)
 }
 
 /// Builds the menu panes' data from the store. Cheap enough to run every few
@@ -125,34 +143,105 @@ enum MenuInsightsBuilder {
         let windowStart = calendar.date(byAdding: .hour, value: startHour, to: dayStart) ?? dayStart
         let windowEnd = calendar.date(byAdding: .hour, value: endHour, to: dayStart) ?? now
 
+        let split = split(events, from: dayStart, to: until)
+        let goalProgress = FocusGoal.progress(focusSecondsToday: breakdown.focus)
         return TodayInsights(
             focused: breakdown.focus,
-            goalProgress: FocusGoal.progress(focusSecondsToday: breakdown.focus),
+            goalProgress: goalProgress,
             focusRate: breakdown.focusRate,
             averageFocusRate: average,
             sessions: sessions,
             window: DateInterval(start: windowStart, end: max(windowEnd, windowStart.addingTimeInterval(3600))),
             activity: activity,
             sessionSpans: sessions.map { DateInterval(start: $0.start, end: max($0.start, $0.end ?? until)) },
-            topApps: usageRows(context: context, from: dayStart, to: until, limit: 4)
+            topApps: usageRows(context: context, from: dayStart, to: until, limit: 5),
+            inSessions: split.inSessions,
+            betweenSessions: split.between,
+            takeaway: todayTakeaway(focused: breakdown.focus, goalProgress: goalProgress,
+                                    inSessions: split.inSessions, between: split.between)
         )
     }
 
+    /// Time inside sessions and between them, clipped to the range.
+    static func split(_ events: [ActivityEvent], from: Date, to: Date)
+        -> (inSessions: BreakdownSnapshot, between: BreakdownSnapshot) {
+        var inside = ClassificationTally(), between = ClassificationTally()
+        for event in events {
+            let seconds = max(0, min(event.endedAt, to).timeIntervalSince(max(event.startedAt, from)))
+            guard seconds > 0 else { continue }
+            if event.session != nil {
+                inside.add(seconds, event.classification ?? .neutral)
+            } else {
+                between.add(seconds, event.classification ?? .neutral)
+            }
+        }
+        func snapshot(_ t: ClassificationTally) -> BreakdownSnapshot {
+            BreakdownSnapshot(focus: t.focus, neutral: t.neutral, distraction: t.distraction)
+        }
+        return (snapshot(inside), snapshot(between))
+    }
+
+    /// The one thing worth saying about today, in a sentence.
+    static func todayTakeaway(focused: TimeInterval, goalProgress: Double,
+                              inSessions: BreakdownSnapshot, between: BreakdownSnapshot) -> String? {
+        let drift = inSessions.distraction + between.distraction
+        if drift >= 10 * 60 {
+            let share = between.distraction / drift
+            if share >= 0.6 {
+                return "Most of today's drift came between sessions: \(formatDuration(between.distraction)) of \(formatDuration(drift))."
+            }
+            if share <= 0.4 {
+                return "Most of today's drift came in sessions: \(formatDuration(inSessions.distraction)) of \(formatDuration(drift))."
+            }
+        }
+        let rated: (BreakdownSnapshot) -> Bool = { $0.focus + $0.distraction >= 10 * 60 }
+        if rated(inSessions), rated(between), inSessions.focusRate - between.focusRate >= 0.15 {
+            return "Sessions help: a \(FocusRate.percent(focused: inSessions.focus, drifted: inSessions.distraction))% "
+                + "focus rate in them, \(FocusRate.percent(focused: between.focus, drifted: between.distraction))% between."
+        }
+        if goalProgress >= 1 {
+            return "Goal met: \(formatDuration(focused)) focused today."
+        }
+        if focused >= 60 {
+            return "\(formatDuration(focused)) focused so far, \(Int((goalProgress * 100).rounded()))% of your goal."
+        }
+        return nil
+    }
+
     static func week(context: ModelContext, streak: Int, now: Date = .now, calendar: Calendar = .current) -> WeekInsights {
-        guard let week = calendar.dateInterval(of: .weekOfYear, for: now) else { return .empty }
+        week(context: context, streak: streak, containing: now, now: now, calendar: calendar)
+    }
+
+    /// The week holding `date`: this week up to now, or a whole earlier week.
+    static func week(context: ModelContext, streak: Int, containing date: Date, now: Date = .now,
+                     calendar: Calendar = .current) -> WeekInsights {
+        guard let week = calendar.dateInterval(of: .weekOfYear, for: min(date, now)) else { return .empty }
+        let until = min(now, week.end)
         let reports = ReportBuilder(context: context)
         let days = reports.dailyBreakdowns(from: week.start, to: week.end, calendar: calendar)
-        let todayIndex = calendar.dateComponents([.day], from: week.start, to: calendar.startOfDay(for: now)).day ?? 0
+        let todayIndex = calendar.dateComponents([.day], from: week.start,
+                                                 to: calendar.startOfDay(for: until.addingTimeInterval(-1))).day ?? 0
 
-        let soFar = reports.breakdown(from: week.start, to: now)
+        let soFar = reports.breakdown(from: week.start, to: until)
         let lastWeekStart = calendar.date(byAdding: .day, value: -7, to: week.start) ?? week.start
-        let lastWeek = reports.breakdown(from: lastWeekStart, to: lastWeekStart.addingTimeInterval(now.timeIntervalSince(week.start)))
+        let lastWeek = reports.breakdown(from: lastWeekStart, to: lastWeekStart.addingTimeInterval(until.timeIntervalSince(week.start)))
 
         let best = days.prefix(todayIndex + 1).filter { $0.focus > 0 }.max { $0.focus < $1.focus }
 
-        let distractions = usageRows(context: context, from: week.start, to: now, limit: 40)
+        let distractions = usageRows(context: context, from: week.start, to: until, limit: 40)
             .filter { $0.classification == .distraction }
             .prefix(3)
+
+        let weekStart = week.start
+        let driftEvents = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= weekStart && $0.startedAt < until }
+        )).filter { $0.classification == .distraction }
+        var driftByHour = [TimeInterval](repeating: 0, count: 24)
+        for event in driftEvents {
+            let seconds = max(0, min(event.endedAt, until).timeIntervalSince(max(event.startedAt, week.start)))
+            driftByHour[calendar.component(.hour, from: event.startedAt)] += seconds
+        }
+        let activeDays = days.prefix(todayIndex + 1).filter { $0.focus > 0 }.count
 
         return WeekInsights(
             days: days,
@@ -162,8 +251,82 @@ enum MenuInsightsBuilder {
             focusRate: soFar.focusRate,
             bestDay: best?.date,
             streak: streak,
-            topDistractions: Array(distractions)
+            topDistractions: Array(distractions),
+            weekStart: week.start,
+            bestDayRate: best?.focusRate,
+            takeaway: weekTakeaway(bestDay: activeDays >= 2 ? best?.date : nil, driftByHour: driftByHour,
+                                   topDistraction: distractions.first, calendar: calendar)
         )
+    }
+
+    /// The best day, when the drift lands, and what most of it is.
+    static func weekTakeaway(bestDay: Date?, driftByHour: [TimeInterval], topDistraction: UsageRow?,
+                             calendar: Calendar = .current) -> String? {
+        var parts: [String] = []
+        if let bestDay {
+            parts.append("\(bestDay.formatted(.dateTime.weekday(.wide))) was your best day.")
+        }
+        let drift = driftByHour.reduce(0, +)
+        guard drift >= 10 * 60 else { return parts.isEmpty ? nil : parts.joined(separator: " ") }
+
+        let lateHour = [17, 15, 12].first { hour in driftByHour[hour...].reduce(0, +) / drift >= 0.6 }
+        let share = topDistraction.map { $0.seconds / drift } ?? 0
+        let portion: String? = switch share {
+        case 0.9...:      "nearly all"
+        case 0.6..<0.9:   "most"
+        case 0.45..<0.6:  "half"
+        case 0.3..<0.45:  "a third"
+        default:          nil
+        }
+        let at = lateHour.flatMap { calendar.date(bySettingHour: $0, minute: 0, second: 0, of: .now) }
+            .map { $0.formatted(date: .omitted, time: .shortened) }
+        switch (at, portion, topDistraction?.name) {
+        case let (at?, portion?, name?):
+            parts.append("Most drift lands after \(at), and \(name) is \(portion) of it.")
+        case let (at?, _, _):
+            parts.append("Most drift lands after \(at).")
+        case let (nil, portion?, name?):
+            parts.append("\(name) is \(portion) of your drift.")
+        default:
+            break
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    /// Apps and sites used in a stretch, most time first, with the time
+    /// inside sessions split out. Browsers are split into their sites.
+    static func appUsage(context: ModelContext, from: Date, to: Date, limit: Int) -> [UsageRow] {
+        struct Entry {
+            var name: String
+            var bundleId: String
+            var host: String?
+            var tally = ClassificationTally()
+            var inSession: TimeInterval = 0
+        }
+        let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
+        ))
+        var entries: [String: Entry] = [:]
+        for event in events {
+            let seconds = max(0, min(event.endedAt, to).timeIntervalSince(max(event.startedAt, from)))
+            guard seconds > 0 else { continue }
+            var host = BrowserTabReader.isBrowser(bundleIdentifier: event.bundleIdentifier)
+                ? event.url.flatMap { URL(string: $0)?.host?.lowercased() } : nil
+            if let h = host, h.hasPrefix("www.") { host = String(h.dropFirst(4)) }
+            let key = host ?? event.bundleIdentifier
+            var entry = entries[key] ?? Entry(name: host ?? event.appName, bundleId: event.bundleIdentifier, host: host)
+            entry.tally.add(seconds, event.classification ?? .neutral)
+            if event.session != nil { entry.inSession += seconds }
+            entries[key] = entry
+        }
+        return entries
+            .map { key, e in
+                UsageRow(id: key, name: e.name, bundleId: e.bundleId, host: e.host, seconds: e.tally.total,
+                         classification: e.tally.dominant, inSession: e.inSession)
+            }
+            .sorted { $0.seconds > $1.seconds }
+            .prefix(limit)
+            .map { $0 }
     }
 
     /// Apps and browser sites by time. Browsers are split into their sites so
@@ -252,6 +415,43 @@ extension AppState {
         } else {
             classifier.setOverride(bundleId: row.bundleId, classification: classification)
         }
+    }
+
+    /// Not sorted yet: no rule, built-in or the user's, says what it is.
+    func isUnsorted(_ row: UsageRow) -> Bool {
+        guard row.bundleId != ActivityTracker.selfBundleId else { return false }
+        if let host = row.host {
+            return classifier.matchingRule(bundleId: "", windowTitle: nil, url: "https://\(host)/") == nil
+        }
+        return classifier.matchingRule(bundleId: row.bundleId, windowTitle: nil, url: nil) == nil
+    }
+
+    /// Undoes a sort: removes the user's rule for the app or site and puts
+    /// its past activity back to what the remaining rules say.
+    func clearCategory(for row: UsageRow) {
+        let pattern = row.host ?? row.bundleId
+        let kind: RuleMatchKind = row.host == nil ? .bundleId : .host
+        guard let rule = userRules().first(where: { $0.pattern == pattern && $0.matchKind == kind }),
+              !(isStrictLocked && rule.classification == .distraction) else { return }
+        let context = container.mainContext
+        context.delete(rule)
+        Persistence.save(context)
+        classifier.invalidate()
+
+        let events: [ActivityEvent]
+        if let host = row.host {
+            events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(predicate: #Predicate { $0.url != nil }))
+                .filter { $0.url.flatMap { URL(string: $0)?.host?.lowercased() }.map { Classifier.host($0, matches: host) } == true }
+        } else {
+            events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+                predicate: #Predicate { $0.bundleIdentifier == pattern }
+            ))
+        }
+        for event in events {
+            event.classification = classifier.classify(bundleId: event.bundleIdentifier, windowTitle: event.windowTitle, url: event.url)
+        }
+        Persistence.save(context)
+        classifier.invalidate()
     }
 
     /// Adds a site rule from whatever the user typed: a host, or a URL.

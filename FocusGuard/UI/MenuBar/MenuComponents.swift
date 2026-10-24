@@ -35,6 +35,8 @@ extension View {
 enum MenuPalette {
     /// Secondary buttons on a tinted module: white over the tint.
     static let onTint = Theme.segment.opacity(0.72)
+    /// A side pane's surface, lighter than the column's modules.
+    static let pane = Theme.module.opacity(0.8)
 }
 
 // MARK: - Buttons

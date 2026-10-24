@@ -1,17 +1,23 @@
 import SwiftUI
 
 /// The side panes that slide out next to the session column, so reports,
-/// rules and common settings never need the main window.
+/// rules and common settings never need the main window. The Pro panes
+/// (debrief, coach) open from rows, not from the header.
 enum MenuPane: String, CaseIterable, Identifiable {
-    case insights, apps, settings
+    case insights, apps, settings, debrief, coach
 
     var id: String { rawValue }
+
+    /// The three with a button in the header.
+    static let header: [MenuPane] = [.insights, .apps, .settings]
 
     var title: String {
         switch self {
         case .insights: return "Insights"
         case .apps:     return "Apps & sites"
         case .settings: return "Quick settings"
+        case .debrief:  return "Debrief"
+        case .coach:    return "Weekly coach"
         }
     }
 
@@ -20,6 +26,7 @@ enum MenuPane: String, CaseIterable, Identifiable {
         case .insights: return "chart.bar.fill"
         case .apps:     return "square.grid.2x2.fill"
         case .settings: return "slider.horizontal.3"
+        case .debrief, .coach: return "sparkles"
         }
     }
 
@@ -42,7 +49,7 @@ struct PaneButtons: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(MenuPane.allCases) { pane in
+            ForEach(MenuPane.header) { pane in
                 let isOpen = open == pane
                 Button {
                     open = isOpen ? nil : pane   // not animated: see MenuPane.slide
@@ -63,31 +70,39 @@ struct PaneButtons: View {
     }
 }
 
-/// The pane container: title row with a close button, then content.
+/// The pane container: title row with a close button, then content, on a
+/// surface a step lighter than the column's modules.
 struct MenuPaneView: View {
     let pane: MenuPane
     @Bindable var appState: AppState
     let onOpenMain: (MainTab) -> Void
     let dismiss: () -> Void
+    /// Switches to another pane (Insights › Weekly coach).
+    var open: (MenuPane) -> Void = { _ in }
     let close: () -> Void
 
     var body: some View {
         Group {
             switch pane {
             case .insights:
-                InsightsPane(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close)
+                InsightsPane(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close, openPane: open)
             case .apps:
-                AppsPane(appState: appState, close: close)
+                MenuAppsPane(appState: appState, close: close)
             case .settings:
                 QuickSettingsPane(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close)
+            case .debrief:
+                // Filled in by Pro AI later; only reachable with FeatureFlags.proAI on.
+                DebriefPane(debrief: nil, close: close)
+            case .coach:
+                CoachPane(note: nil, close: close, seeWeek: { open(.insights) })
             }
         }
         .padding(.horizontal, 14)
         .padding(.top, 12)
-        .padding(.bottom, 14)
+        .padding(.bottom, 12)
         .frame(width: MenuPane.width, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.module))
+        .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(MenuPalette.pane))
         .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
     }
 }
@@ -105,16 +120,7 @@ struct PaneTitle<Trailing: View>: View {
                 .font(.system(size: 15, weight: .semibold))
             Spacer(minLength: 0)
             trailing()
-            Button(action: close) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 22, height: 22)
-                    .background(Circle().fill(Theme.control))
-            }
-            .buttonStyle(.plain)
-            .help("Close")
-            .accessibilityLabel("Close \(title)")
+            RoundIconButton(systemImage: "xmark", label: "Close \(title)", action: close)
         }
     }
 }
@@ -239,234 +245,15 @@ struct UsageBarRow: View {
     }
 }
 
-// MARK: - Insights
-
-private enum InsightsRange: String, CaseIterable, Identifiable {
-    case today = "Today", week = "Week"
-    var id: String { rawValue }
-}
-
-private struct InsightsPane: View {
-    @Bindable var appState: AppState
-    let onOpenMain: (MainTab) -> Void
-    let dismiss: () -> Void
-    let close: () -> Void
-
-    @State private var range: InsightsRange = .today
-    @State private var today: TodayInsights
-    @State private var week: WeekInsights
-    @State private var now: Date = .now
-
-    /// Opens on the last results, so nothing pops in or resizes while the
-    /// pane slides in; fresh numbers arrive from `StatsStore` a moment later.
-    init(appState: AppState, onOpenMain: @escaping (MainTab) -> Void, dismiss: @escaping () -> Void,
-         close: @escaping () -> Void) {
-        self.appState = appState
-        self.onOpenMain = onOpenMain
-        self.dismiss = dismiss
-        self.close = close
-        _today = State(initialValue: appState.lastTodayInsights ?? .empty)
-        _week = State(initialValue: appState.lastWeekInsights ?? .empty)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            PaneTitle(title: "Insights", close: close) {
-                Picker("Range", selection: $range) {
-                    ForEach(InsightsRange.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.small)
-                .fixedSize()
-            }
-
-            switch range {
-            case .today: todayContent
-            case .week:  weekContent
-            }
-
-            Spacer(minLength: 0)
-            footer
-        }
-        .task(id: range) {
-            while !Task.isCancelled {
-                await load()
-                // The week's numbers barely move; today's do.
-                try? await Task.sleep(for: .seconds(range == .week ? 30 : 5))
-            }
-        }
-    }
-
-    /// Builds off the main thread (`StatsStore`); only the result lands here.
-    private func load() async {
-        let at = Date.now
-        switch range {
-        case .today:
-            let fresh = await appState.stats.today(now: at)
-            guard !Task.isCancelled else { return }
-            today = fresh
-            appState.lastTodayInsights = fresh
-        case .week:
-            let fresh = await appState.stats.week(streak: appState.menuStats.streak, now: at)
-            guard !Task.isCancelled else { return }
-            week = fresh
-            appState.lastWeekInsights = fresh
-        }
-        now = at
-    }
-
-    private func reload() {
-        Task { await load() }
-    }
-
-    // Today
-
-    private var todayContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 6) {
-                StatTile(label: "Focused", value: formatDuration(today.focused),
-                         detail: "\(Int((today.goalProgress * 100).rounded()))% of goal")
-                StatTile(label: "Focus rate", value: "\(Int((today.focusRate * 100).rounded()))%",
-                         detail: rateDelta)
-                StatTile(label: "Sessions", value: "\(today.sessions.count)",
-                         detail: today.sessions.contains(where: \.isRunning) ? "1 running" : "today")
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    sectionLabel("Your day")
-                    Spacer()
-                    Text("Sessions on top, activity below")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                DayTimelineView(insights: today, now: now)
-                    .frame(height: 62)
-            }
-
-            if !today.sessions.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    sectionLabel("Sessions").padding(.bottom, 2)
-                    ForEach(today.sessions.prefix(4)) { summary in
-                        SessionRow(summary: summary, now: now,
-                                   onRename: { name in
-                                       if let session = appState.session(summary.modelID) { appState.sessionManager.rename(session, to: name) }
-                                       reload()
-                                   },
-                                   onDelete: {
-                                       if let session = appState.session(summary.modelID) { appState.sessionManager.delete(session) }
-                                       reload()
-                                   })
-                    }
-                }
-            }
-
-            if !today.topApps.isEmpty {
-                VStack(alignment: .leading, spacing: 7) {
-                    sectionLabel("Top apps & sites today")
-                    let maxSeconds = today.topApps.map(\.seconds).max() ?? 1
-                    ForEach(today.topApps) { row in
-                        UsageBarRow(row: row, maxSeconds: maxSeconds) { c in
-                            appState.setCategory(c, for: row)
-                            reload()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var rateDelta: String {
-        guard let avg = today.averageFocusRate, today.focused > 0 else { return "today" }
-        let delta = Int(((today.focusRate - avg) * 100).rounded())
-        return delta == 0 ? "same as avg" : "\(delta > 0 ? "+" : "−")\(abs(delta)) pts vs avg"
-    }
-
-    // Week
-
-    private var weekContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 6) {
-                StatTile(label: "Focused", value: formatDuration(week.focused), detail: weekDelta)
-                StatTile(label: "Focus rate", value: "\(Int((week.focusRate * 100).rounded()))%",
-                         detail: week.bestDay.map { "Best day: \($0.formatted(.dateTime.weekday(.abbreviated)))" } ?? "this week")
-                StatTile(label: "Streak", value: counted(week.streak, "day"),
-                         detail: "goal met")
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
-                    sectionLabel("Per day")
-                    Spacer(minLength: 0)
-                    legendSwatch(Theme.focus, "Focused")
-                    legendSwatch(Theme.distraction, "Drifted")
-                    legendSwatch(Theme.other, "Other")
-                }
-                WeekChartView(insights: week, goalMinutes: FocusGoal.dailyMinutes)
-                    .frame(height: 156)
-            }
-
-            if !week.topDistractions.isEmpty {
-                VStack(alignment: .leading, spacing: 7) {
-                    sectionLabel("Top distractions")
-                    let maxSeconds = week.topDistractions.map(\.seconds).max() ?? 1
-                    ForEach(week.topDistractions) { row in
-                        UsageBarRow(row: row, maxSeconds: maxSeconds)
-                    }
-                }
-            }
-        }
-    }
-
-    private var weekDelta: String {
-        guard week.focusedLastWeek > 60 else { return "no data last week" }
-        let delta = week.focused - week.focusedLastWeek
-        return "\(delta >= 0 ? "+" : "−")\(formatDuration(abs(delta))) vs last week"
-    }
-
-    private func legendSwatch(_ color: Color, _ title: String) -> some View {
-        HStack(spacing: 4) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text(title)
-        }
-        .font(.system(size: 11))
-    }
-
-    private var footer: some View {
-        HStack {
-            if range == .week {
-                Button {
-                    dismiss()
-                    NSApp.activate(ignoringOtherApps: true)
-                    let start = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start
-                    DataExporter.export(.csv, container: appState.container, from: start, to: .now)
-                } label: {
-                    Label("Export CSV", systemImage: "square.and.arrow.down")
-                        .font(.system(size: 12))
-                        .padding(.horizontal, 12)
-                        .frame(height: 28)
-                        .background(Capsule().fill(Theme.control))
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-            Button("Open full report ›") {
-                dismiss()
-                onOpenMain(.reports)
-            }
-            .buttonStyle(.plain)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Theme.focus)
-        }
-    }
-}
+// MARK: - Sessions
 
 /// A session in the Insights list. Hover shows rename and delete; the running
 /// session can't be deleted from here.
 struct SessionRow: View {
     let summary: SessionSummary
     let now: Date
+    /// Replaces the running session's minutes ("named when it ends").
+    var runningDetail: String?
     let onRename: (String) -> Void
     let onDelete: () -> Void
 
@@ -536,6 +323,7 @@ struct SessionRow: View {
     private var subtitle: String {
         let start = summary.start.formatted(date: .omitted, time: .shortened)
         if summary.isRunning {
+            if let runningDetail { return "\(start)–now · \(runningDetail)" }
             let planned = summary.plannedMinutes.map { " of \($0)" } ?? ""
             return "\(start) – now · \(summary.minutes)\(planned) min"
         }
@@ -617,96 +405,6 @@ struct DayTimelineView: View {
         }
         .accessibilityElement()
         .accessibilityLabel("Day timeline: \(counted(insights.sessions.count, "session")), \(formatDuration(insights.focused)) focused")
-    }
-}
-
-/// Stacked bars per day of the week against the daily goal, with a hover tooltip.
-private struct WeekChartView: View {
-    let insights: WeekInsights
-    let goalMinutes: Int
-
-    @State private var hovered: Int?
-
-    var body: some View {
-        let days = insights.days
-        let maxMinutes = max(Double(goalMinutes) * 1.25, days.map { $0.total / 60 }.max() ?? 0)
-
-        GeometryReader { geo in
-            let plotHeight = geo.size.height - 18
-            let step = geo.size.width / CGFloat(max(1, days.count))
-            let barWidth = min(28, step * 0.6)
-            let scale = plotHeight / CGFloat(maxMinutes)
-
-            ZStack(alignment: .topLeading) {
-                Canvas { context, _ in
-                    context.fill(Path(CGRect(x: 0, y: plotHeight, width: geo.size.width, height: 1)),
-                                 with: .color(.primary.opacity(0.18)))
-                    for (i, day) in days.enumerated() {
-                        let x = CGFloat(i) * step + (step - barWidth) / 2
-                        if i > insights.todayIndex {
-                            let h = CGFloat(goalMinutes) * scale
-                            context.stroke(Path(CGRect(x: x, y: plotHeight - h, width: barWidth, height: h)),
-                                           with: .color(.primary.opacity(0.14)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                            continue
-                        }
-                        var y = plotHeight
-                        let parts: [(TimeInterval, Color)] = [(day.focus, Theme.focus), (day.distraction, Theme.distraction), (day.neutral, Theme.other)]
-                        let lastIndex = parts.lastIndex { $0.0 > 0 }
-                        for (k, part) in parts.enumerated() where part.0 > 0 {
-                            let h = CGFloat(part.0 / 60) * scale
-                            let isTop = k == lastIndex
-                            let rect = CGRect(x: x, y: y - h, width: barWidth, height: max(0, h - (isTop ? 0 : 2)))
-                            let path = isTop
-                                ? Path(roundedRect: rect, cornerRadii: RectangleCornerRadii(topLeading: 4, topTrailing: 4))
-                                : Path(rect)
-                            context.fill(path, with: .color(part.1.opacity(hovered == nil || hovered == i ? 1 : 0.45)))
-                            y -= h
-                        }
-                    }
-                    let gy = plotHeight - CGFloat(goalMinutes) * scale
-                    var goal = Path()
-                    goal.move(to: CGPoint(x: 0, y: gy))
-                    goal.addLine(to: CGPoint(x: geo.size.width, y: gy))
-                    context.stroke(goal, with: .color(.secondary), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-
-                    for (i, day) in days.enumerated() {
-                        let label = Text(day.date.formatted(.dateTime.weekday(.narrow)))
-                            .font(.system(size: 10, weight: i == insights.todayIndex ? .semibold : .regular))
-                            .foregroundStyle(i == insights.todayIndex ? Color.primary : Color.secondary)
-                        context.draw(label, at: CGPoint(x: CGFloat(i) * step + step / 2, y: plotHeight + 10))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let p):
-                        let i = Int(p.x / step)
-                        hovered = (0...insights.todayIndex).contains(i) ? i : nil
-                    case .ended:
-                        hovered = nil
-                    }
-                }
-
-                if let i = hovered, i < days.count {
-                    let day = days[i]
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(day.date.formatted(.dateTime.weekday(.wide))).fontWeight(.semibold)
-                        Text("\(formatDuration(day.focus)) focused · \(day.total > 0 ? Int((day.focus / day.total * 100).rounded()) : 0)%")
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.system(size: 11))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 9).fill(.regularMaterial))
-                    .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
-                    .fixedSize()
-                    .offset(x: min(max(0, CGFloat(i) * step + step / 2 - 60), geo.size.width - 130), y: 0)
-                    .allowsHitTesting(false)
-                }
-            }
-        }
-        .accessibilityElement()
-        .accessibilityLabel("Focus per day this week: \(formatDuration(insights.focused)) so far, goal \(FocusGoal.format(minutes: goalMinutes)) a day")
     }
 }
 
@@ -956,234 +654,5 @@ struct CategoryPicker: View {
         .buttonStyle(.plain)
         .accessibilityLabel(categoryName(value))
         .accessibilityAddTraits(on ? .isSelected : [])
-    }
-}
-
-// MARK: - Quick settings
-
-private struct QuickSettingsPane: View {
-    @Bindable var appState: AppState
-    let onOpenMain: (MainTab) -> Void
-    let dismiss: () -> Void
-    let close: () -> Void
-
-    @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
-    @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
-    @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var goalMinutes = GoalDefaults.dailyFocusMinutes
-    @AppStorage(SettingsKeys.retentionDays) private var retentionDays = 365
-    /// Master switch, shared with Settings → General.
-    @AppStorage(SettingsKeys.showNotifications) private var showNotifications = true
-    @AppStorage(SettingsKeys.menuBarShowTime) private var menuBarShowTime = true
-
-    @State private var drift: DriftResponse? = DriftResponse.current
-    @State private var launchAtLogin = LoginItemController.isEnabled
-    @State private var confirm: Confirm?
-
-    private enum Confirm { case today, all }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            PaneTitle(title: "Quick settings", close: close) { EmptyView() }
-                .padding(.bottom, 6)
-
-            caption("Sessions")
-            group {
-                row("Default length") {
-                    Picker("Default length", selection: Binding(
-                        get: { defaultMinutes },
-                        set: { defaultMinutes = $0; lastSessionMinutes = $0 }
-                    )) {
-                        ForEach(lengthChoices, id: \.self) { Text("\($0)").tag($0) }
-                    }
-                    .pickerStyle(.segmented).labelsHidden().controlSize(.small).fixedSize()
-                }
-                divider
-                row("Daily focus goal") {
-                    Stepper(value: $goalMinutes, in: FocusGoal.range, step: 15) {
-                        Text(FocusGoal.format(minutes: goalMinutes))
-                            .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                    }
-                    .controlSize(.small)
-                }
-            }
-
-            caption("When you drift")
-            group {
-                VStack(alignment: .leading, spacing: 6) {
-                    Picker("Response", selection: Binding(
-                        get: { drift },
-                        set: { value in
-                            if let value, appState.setDriftResponse(value) { drift = value }
-                        }
-                    )) {
-                        ForEach(DriftResponse.allCases) { Text($0.title).tag(Optional($0)) }
-                    }
-                    .pickerStyle(.segmented).labelsHidden().controlSize(.small)
-                    .frame(maxWidth: .infinity)
-                    .disabled(appState.isStrictLocked)
-                    Text(appState.isStrictLocked ? "Strict stays on until this session ends"
-                         : drift?.summary ?? "Custom — tuned in Settings → Escalation")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                divider
-                row("Start sessions from calendar",
-                    detail: appState.calendarAutostart.hasCalendarAccess ? nil : "Needs calendar access — set up in Settings") {
-                    Toggle("", isOn: Binding(
-                        get: { appState.calendarAutostart.enabled },
-                        set: { appState.calendarAutostart.enabled = $0 }
-                    ))
-                    .toggleStyle(.switch).labelsHidden().controlSize(.mini)
-                    .disabled(!appState.calendarAutostart.hasCalendarAccess)
-                }
-                divider
-                row("Launch at login") {
-                    Toggle("", isOn: Binding(
-                        get: { launchAtLogin },
-                        set: { LoginItemController.setEnabled($0); launchAtLogin = LoginItemController.isEnabled }
-                    ))
-                    .toggleStyle(.switch).labelsHidden().controlSize(.mini)
-                }
-                divider
-                row("Notifications", detail: "Nudges, session updates, daily wrap-up") {
-                    Toggle("", isOn: $showNotifications)
-                        .toggleStyle(.switch).labelsHidden().controlSize(.mini)
-                }
-                divider
-                row("Show time in menu bar", detail: "Minutes left, like “24m”") {
-                    Toggle("", isOn: $menuBarShowTime)
-                        .toggleStyle(.switch).labelsHidden().controlSize(.mini)
-                }
-            }
-
-            caption("Permissions")
-            group {
-                permissionRow("Screen Recording", appState.permissions.screenRecording) { appState.permissions.requestScreenRecording() }
-                divider
-                permissionRow("Notifications", appState.permissions.notifications) {
-                    Task { await appState.permissions.requestNotifications() }
-                }
-            }
-
-            caption("Data")
-            group {
-                row("Keep history") {
-                    Picker("Keep history", selection: $retentionDays) {
-                        ForEach(RetentionPolicy.choices, id: \.days) { Text($0.label).tag($0.days) }
-                    }
-                    .labelsHidden().controlSize(.small).fixedSize()
-                }
-                divider
-                destructiveRow(.today, "Delete today's activity…",
-                               confirmText: "Delete everything tracked today?") {
-                    DataEraser.deleteToday(appState: appState)
-                }
-                divider
-                destructiveRow(.all, "Erase all FocusGuard data…",
-                               confirmText: "Erase all history, sessions and rules?") {
-                    DataEraser.eraseAll(appState: appState)
-                }
-            }
-
-            Spacer(minLength: 6)
-            HStack {
-                Text("Changes save instantly.").font(.system(size: 11)).foregroundStyle(.secondary)
-                Spacer()
-                Button("All settings ›") {
-                    dismiss()
-                    onOpenMain(.settings)
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Theme.focus)
-            }
-        }
-        .task { await appState.permissions.refresh() }
-    }
-
-    private var lengthChoices: [Int] {
-        [25, 50, 90].contains(defaultMinutes) ? [25, 50, 90] : [25, 50, 90, defaultMinutes].sorted()
-    }
-
-    private func caption(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 4)
-            .padding(.top, 4)
-    }
-
-    private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { content() }
-            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.cardBackground))
-    }
-
-    private var divider: some View {
-        Rectangle().fill(Theme.separator).frame(height: 0.5).padding(.leading, 12)
-    }
-
-    private func row<Control: View>(_ title: String, detail: String? = nil, @ViewBuilder control: () -> Control) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 12))
-                if let detail {
-                    Text(detail).font(.system(size: 11)).foregroundStyle(.secondary)
-                }
-            }
-            Spacer(minLength: 4)
-            control()
-        }
-        .padding(.horizontal, 12)
-        .frame(minHeight: 32)
-        .padding(.vertical, 2)
-    }
-
-    private func permissionRow(_ title: String, _ status: PermissionStatus, request: @escaping () -> Void) -> some View {
-        row(title) {
-            if status == .granted {
-                Label("Allowed", systemImage: "checkmark")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            } else {
-                Button("Allow…", action: request)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.mini)
-                    .tint(Theme.focusFill)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func destructiveRow(_ kind: Confirm, _ title: String, confirmText: String, action: @escaping () -> Void) -> some View {
-        if confirm == kind {
-            HStack(spacing: 8) {
-                Text(confirmText).font(.system(size: 12)).lineLimit(2)
-                Spacer(minLength: 4)
-                Button("Cancel") { confirm = nil }.controlSize(.small)
-                Button("Delete", role: .destructive) {
-                    action()
-                    confirm = nil
-                }
-                .controlSize(.small)
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-        } else {
-            Button {
-                confirm = kind
-            } label: {
-                Text(title)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-        }
     }
 }
