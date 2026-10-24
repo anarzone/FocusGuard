@@ -25,5 +25,13 @@
          false within ~20ms without changing authorizationStatus. -->
     <key>com.apple.security.personal-information.calendars</key>
     <true/>
+
+    <!-- Shared folder with the widget extension (snapshot + widget taps).
+         Team-ID prefixed, so macOS needs no provisioning profile for it;
+         must match FocusGuardWidgets.entitlements and SurfaceStore. -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>JVK43S5CGA.com.anar.focusguard</string>
+    </array>
 </dict>
 </plist>

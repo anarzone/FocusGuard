@@ -24,10 +24,12 @@ struct FocusActions {
 
     /// The length the menu would start with: the last one used, else the
     /// default from Settings.
-    var usualMinutes: Int {
+    var usualMinutes: Int { Self.usualMinutes(defaults) }
+
+    static func usualMinutes(_ defaults: UserDefaults = .standard) -> Int {
         let last = defaults.integer(forKey: SurfaceKeys.lastSessionMinutes)
         let fallback = defaults.object(forKey: SessionDefaultsKey.durationMinutes) as? Int ?? 50
-        return Self.clamp(last > 0 ? last : fallback)
+        return clamp(last > 0 ? last : fallback)
     }
 
     static func clamp(_ minutes: Int) -> Int {
@@ -155,10 +157,19 @@ struct FocusActions {
     }
 }
 
-/// Where intents find the running app.
+/// Where intents find the running app, and what keeps the widgets current.
 @MainActor
 enum SurfaceHost {
     static weak var appState: AppState?
+    private static var coordinator: SurfacesCoordinator?
+
+    /// Called once the app state is up.
+    static func attach(_ appState: AppState) {
+        self.appState = appState
+        guard coordinator == nil, let store = SurfaceStore.shared else { return }
+        coordinator = SurfacesCoordinator(appState: appState, store: store)
+        coordinator?.start()
+    }
 
     /// The app state, waiting up to five seconds for launch to finish.
     static func ready() async throws -> AppState {

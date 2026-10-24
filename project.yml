@@ -29,8 +29,11 @@ targets:
     platform: macOS
     sources:
       - path: FocusGuard
+      - path: FocusGuardShared
     dependencies:
       - package: Sparkle
+      # Desktop widgets and the Control Center control (PlugIns/).
+      - target: FocusGuardWidgets
     info:
       path: FocusGuard/Resources/Info.plist
       properties:
@@ -74,6 +77,36 @@ targets:
         # Without "all", the AppIcon.icns made for macOS 14-15 only has the
         # 16/32/128/256 px images, so Finder and Quick Look blur large sizes.
         ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR: all
+
+  # Sandboxed, as WidgetKit requires. It reads the snapshot the app writes
+  # to the shared App Group folder and sends taps back through it. A
+  # Team-ID prefixed group needs no provisioning profile on macOS, so the
+  # free signing team builds and runs it.
+  FocusGuardWidgets:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: FocusGuardWidgets
+      - path: FocusGuardShared
+    info:
+      path: FocusGuardWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: FocusGuard
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: FocusGuardWidgets/FocusGuardWidgets.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [JVK43S5CGA.com.anar.focusguard]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.widgets
+        PRODUCT_NAME: FocusGuardWidgets
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
 
   FocusGuardTests:
     type: bundle.unit-test
