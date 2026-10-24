@@ -30,6 +30,9 @@ struct MenuBarView: View {
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     /// The picker opens on the last length the user started with.
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
+    /// What the next session is for (Pro AI, behind `FeatureFlags.proAI`).
+    @AppStorage(SessionGoal.key) private var sessionGoal = ""
+    var entitlements: Entitlements = .shared
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -70,7 +73,8 @@ struct MenuBarView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { columnHeight = $0 }
 
             if let pane = openPane {
-                MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss) {
+                MenuPaneView(pane: pane, appState: appState, onOpenMain: onOpenMain, dismiss: dismiss,
+                             open: { openPane = $0 }) {
                     openPane = nil
                 }
                 .transition(MenuPane.slide(from: .trailing, reduceMotion: reduceMotion))
@@ -216,6 +220,16 @@ struct MenuBarView: View {
                         .padding(.horizontal, 4)
                 }
             } else {
+                if FeatureFlags.proAI {
+                    if entitlements.isUnlocked(.debrief) {
+                        SessionGoalField(goal: $sessionGoal)
+                    } else {
+                        LockedProRow(feature: .debrief, title: "Add a goal for this session",
+                                     detail: "Say what the session is for. When it ends, the debrief checks whether you got there.",
+                                     systemImage: "scope")
+                    }
+                }
+
                 LengthModule(minutes: $minutes, now: now)
 
                 CapsuleButton(title: "Start \(lengthText(minutes)) of focus", prominent: true) { start() }
@@ -302,6 +316,9 @@ struct MenuBarView: View {
             }
 
             VStack(spacing: 12) {
+                if FeatureFlags.proAI, entitlements.isUnlocked(.debrief), !sessionGoal.isEmpty {
+                    GoalLine(goal: sessionGoal)
+                }
                 SessionRingView(
                     timeline: timeline,
                     progress: SessionTimeline.progress(elapsed: elapsed, timeline: timeline),
@@ -440,6 +457,16 @@ struct MenuBarView: View {
             .fixedSize(horizontal: false, vertical: true)
             .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.module))
             .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
+
+            if FeatureFlags.proAI {
+                if entitlements.isUnlocked(.debrief) {
+                    ProRow(title: "Debrief is ready", detail: "What you did, where you drifted, a tip") { openPane = .debrief }
+                } else {
+                    LockedProRow(feature: .debrief, title: "Debrief this session",
+                                 detail: "What you did, where you drifted, and one thing to try next time.",
+                                 systemImage: "sparkles")
+                }
+            }
 
             HStack {
                 Text("Up next")

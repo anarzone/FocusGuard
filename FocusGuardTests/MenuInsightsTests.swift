@@ -120,4 +120,85 @@ final class MenuInsightsTests: XCTestCase {
         tally.add(1, .focus)
         XCTAssertEqual(tally.dominant, .focus)
     }
+
+    // MARK: - Redesigned panes
+
+    func testSplitSeparatesSessionTimeFromTheRest() {
+        let t = morning
+        let session = Session(startedAt: t, plannedDurationMinutes: 50)
+        context.insert(session)
+        let events = [
+            event(t, 600, .focus, session: session),
+            event(t.addingTimeInterval(600), 120, .distraction, session: session),
+            event(t.addingTimeInterval(1200), 300, .distraction),
+            event(t.addingTimeInterval(1500), 900, .neutral),
+        ]
+        let split = MenuInsightsBuilder.split(events, from: Calendar.current.startOfDay(for: t), to: t.addingTimeInterval(7200))
+        XCTAssertEqual(split.inSessions.focus, 600, accuracy: 0.5)
+        XCTAssertEqual(split.inSessions.distraction, 120, accuracy: 0.5)
+        XCTAssertEqual(split.between.distraction, 300, accuracy: 0.5)
+        XCTAssertEqual(split.between.neutral, 900, accuracy: 0.5)
+    }
+
+    func testTodayTakeawaySaysWhereTheDriftCameFrom() {
+        let inSessions = BreakdownSnapshot(focus: 111 * 60, neutral: 5 * 60, distraction: 10 * 60)
+        let between = BreakdownSnapshot(focus: 110 * 60, neutral: 190 * 60, distraction: 71 * 60)
+        XCTAssertEqual(MenuInsightsBuilder.todayTakeaway(focused: 221 * 60, goalProgress: 0.94, inSessions: inSessions, between: between),
+                       "Most of today's drift came between sessions: 1h 11m of 1h 21m.")
+    }
+
+    func testTodayTakeawayFallsBackToTheRateThenTheGoal() {
+        let inSessions = BreakdownSnapshot(focus: 60 * 60, neutral: 0, distraction: 3 * 60)
+        let between = BreakdownSnapshot(focus: 30 * 60, neutral: 0, distraction: 4 * 60)
+        XCTAssertEqual(MenuInsightsBuilder.todayTakeaway(focused: 90 * 60, goalProgress: 0.4, inSessions: inSessions, between: between),
+                       "1h 30m focused so far, 40% of your goal.")
+        let calm = BreakdownSnapshot(focus: 20 * 60, neutral: 0, distraction: 6 * 60)
+        XCTAssertEqual(MenuInsightsBuilder.todayTakeaway(focused: 90 * 60, goalProgress: 0.4, inSessions: inSessions, between: calm),
+                       "Sessions help: a 95% focus rate in them, 77% between.")
+        XCTAssertEqual(MenuInsightsBuilder.todayTakeaway(focused: 240 * 60, goalProgress: 1, inSessions: inSessions, between: .zero),
+                       "Goal met: 4h focused today.")
+        XCTAssertNil(MenuInsightsBuilder.todayTakeaway(focused: 0, goalProgress: 0, inSessions: .zero, between: .zero))
+    }
+
+    func testWeekTakeawayNamesTheBestDayAndWhenDriftLands() {
+        var hours = [TimeInterval](repeating: 0, count: 24)
+        hours[10] = 600
+        hours[16] = 2400
+        hours[20] = 1200
+        let x = UsageRow(id: "x.com", name: "x.com", bundleId: "com.apple.Safari", host: "x.com", seconds: 2100, classification: .distraction)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_GB")
+        let tuesday = calendar.date(from: DateComponents(year: 2026, month: 10, day: 20, hour: 12))!
+        let line = MenuInsightsBuilder.weekTakeaway(bestDay: tuesday, driftByHour: hours, topDistraction: x, calendar: calendar)
+        XCTAssertTrue(line?.hasPrefix("Tuesday was your best day. Most drift lands after ") == true, line ?? "nil")
+        XCTAssertTrue(line?.hasSuffix(", and x.com is half of it.") == true, line ?? "nil")
+        XCTAssertNil(MenuInsightsBuilder.weekTakeaway(bestDay: nil, driftByHour: [TimeInterval](repeating: 0, count: 24), topDistraction: nil))
+    }
+
+    func testAppUsageSplitsSessionTimeAndSites() {
+        let t = morning
+        let session = Session(startedAt: t, plannedDurationMinutes: 50)
+        context.insert(session)
+        event(t, 600, .focus, session: session)
+        event(t.addingTimeInterval(700), 300, .focus)
+        event(t.addingTimeInterval(1100), 240, .distraction, app: "Safari", bundle: "com.apple.Safari",
+              url: "https://www.x.com/home", session: session)
+        Persistence.save(context)
+
+        let rows = MenuInsightsBuilder.appUsage(context: context, from: t, to: t.addingTimeInterval(3600), limit: 10)
+        XCTAssertEqual(rows.map(\.name), ["Xcode", "x.com"])
+        XCTAssertEqual(rows[0].inSession, 600, accuracy: 0.5)
+        XCTAssertEqual(rows[0].outsideSession, 300, accuracy: 0.5)
+        XCTAssertEqual(rows[1].host, "x.com")
+        XCTAssertEqual(rows[1].classification, .distraction)
+    }
+
+    func testPresetRulesComeFromThePolicy() {
+        XCTAssertEqual(QuickSettingsPane.rules(.gentle),
+                       "Let me through right away, for 2 min · daily limits: 5 more min, up to 3 times a day")
+        XCTAssertEqual(QuickSettingsPane.rules(.standard),
+                       "Let me through after 5 s, for 2 min · daily limits: 5 more min once a day, after 5 s")
+        XCTAssertEqual(QuickSettingsPane.rules(.strict),
+                       "No Let me through · It’s for work after a 10 s wait · no extra time on daily limits")
+    }
 }

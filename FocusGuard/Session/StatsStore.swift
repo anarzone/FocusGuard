@@ -101,8 +101,18 @@ actor StatsStore {
         read { MenuInsightsBuilder.week(context: $0, streak: streak, now: now) }
     }
 
+    /// An earlier week, whole, or this one so far.
+    func week(streak: Int, containing date: Date, now: Date) -> WeekInsights {
+        read { MenuInsightsBuilder.week(context: $0, streak: streak, containing: date, now: now) }
+    }
+
     func usageRows(from: Date, to: Date, limit: Int) -> [UsageRow] {
         read { MenuInsightsBuilder.usageRows(context: $0, from: from, to: to, limit: limit) }
+    }
+
+    /// Apps and sites with the time inside sessions split out.
+    func appUsage(from: Date, to: Date, limit: Int) -> [UsageRow] {
+        read { MenuInsightsBuilder.appUsage(context: $0, from: from, to: to, limit: limit) }
     }
 }
 
