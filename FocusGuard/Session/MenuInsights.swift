@@ -262,7 +262,9 @@ extension AppState {
         return true
     }
 
+    /// Deletes a rule, unless Strict's lock keeps a blocked one until the session ends.
     func deleteRule(_ rule: AppRule) {
+        guard !(isStrictLocked && rule.classification == .distraction) else { return }
         let context = container.mainContext
         context.delete(rule)
         Persistence.save(context)

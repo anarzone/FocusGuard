@@ -10,7 +10,7 @@ protocol DistractionNotifier: AnyObject {
 }
 
 @MainActor
-class NotificationPresenter: DistractionNotifier {
+class NotificationPresenter: DistractionNotifier, LimitNotifying {
     /// What a notification is, for deciding whether settings allow it.
     enum Kind {
         /// The in-session "you've drifted" nudge. Silenced by either switch.
@@ -106,6 +106,17 @@ class NotificationPresenter: DistractionNotifier {
         content.interruptionLevel = .active
         content.categoryIdentifier = "driftPrompt"
         let request = UNNotificationRequest(identifier: "driftPrompt-\(host)", content: content, trigger: nil)
+        deliver(request, as: .general)
+    }
+
+    /// Five minutes before a daily limit runs out, while the user is on it.
+    func presentLimitWarning(name: String, minutesLeft: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "\(counted(minutesLeft, "minute")) left on \(name)"
+        content.body = "Your daily limit for \(name) runs out soon. It resets at midnight."
+        content.sound = nil
+        content.interruptionLevel = .active
+        let request = UNNotificationRequest(identifier: "limitWarning-\(name)", content: content, trigger: nil)
         deliver(request, as: .general)
     }
 

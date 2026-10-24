@@ -71,7 +71,7 @@ enum DriftResponse: String, CaseIterable, Identifiable {
         }
     }
 
-    private var values: (silence: Int, notify: Int, block: Int, strict: Bool) {
+    var values: (silence: Int, notify: Int, block: Int, strict: Bool) {
         switch self {
         case .gentle:   return (20, 60, 180, false)
         case .standard: return (Constants.Escalation.defaultSilenceSeconds,

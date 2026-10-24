@@ -100,6 +100,11 @@ struct SettingsRulesPane: View {
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.separator, lineWidth: 0.5))
     }
 
+    /// Strict keeps blocked rules until the session ends.
+    private func lockedByStrict(_ rule: AppRule) -> Bool {
+        appState.isStrictLocked && rule.classification == .distraction
+    }
+
     private func ruleRow(_ rule: AppRule) -> some View {
         HStack(spacing: 10) {
             classificationDot(rule.classification)
@@ -126,6 +131,7 @@ struct SettingsRulesPane: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(width: 130)
+            .disabled(lockedByStrict(rule))
 
             Button(role: .destructive) {
                 context.delete(rule)
@@ -137,6 +143,7 @@ struct SettingsRulesPane: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
+            .disabled(lockedByStrict(rule))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

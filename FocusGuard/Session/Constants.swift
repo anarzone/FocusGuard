@@ -24,11 +24,7 @@ enum Constants {
         static let defaultNotifySeconds   = 30
         static let defaultBlockSeconds    = 90
         static let defaultCooldownSeconds = 60
-        /// Seconds the user gets after pressing "Let me through" before we
-        /// can re-block on the same activity.
-        static let overrideGraceSeconds: TimeInterval = 120
-        /// Seconds the block-overlay countdown delays the override button.
-        static let blockOverrideCountdown = 5
+        // Pass length and the waits on the block screen: see `OverridePolicy`.
     }
 
     enum Calendar {

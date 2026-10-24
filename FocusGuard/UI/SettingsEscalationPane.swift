@@ -56,6 +56,12 @@ struct SettingsEscalationPane: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.top, 6)
+            if appState.isStrictLocked {
+                Text("Strict keeps these as they are until this session ends.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+            }
         }
     }
 
@@ -73,6 +79,7 @@ struct SettingsEscalationPane: View {
                 divider
                 blockThresholdRow
             }
+            .disabled(appState.isStrictLocked)
         }
     }
 
@@ -176,6 +183,7 @@ struct SettingsEscalationPane: View {
         ) {
             Toggle("", isOn: $strictMode)
                 .toggleStyle(.switch).labelsHidden()
+                .disabled(appState.isStrictLocked)
         }
     }
 
