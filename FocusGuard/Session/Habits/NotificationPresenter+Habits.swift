@@ -31,11 +31,11 @@ extension NotificationPresenter {
     }
 
     /// "You've been in Xcode 5 minutes" with "Start 50 minutes" and "Not now".
-    func presentAutoStartOffer(_ offer: AutoStartDetector.Offer) {
+    func presentAutoStartOffer(_ offer: AutoStartOffer, now: Date = .now) {
         let minutes = usualMinutes
         let request = Self.request(
             "autoStart",
-            title: offer.title,
+            title: offer.title(now: now),
             body: offer.body(),
             category: category(.autoStart, [(.startSession, "Start \(Self.plural(minutes, "minute"))"),
                                             (.notNow, "Not now")]),

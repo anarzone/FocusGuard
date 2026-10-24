@@ -8,9 +8,9 @@ final class AutoStartDetectorTests: XCTestCase {
     /// Feeds one sample a second from `from` to `to` seconds after t0.
     @discardableResult
     private func feed(_ app: String = "Xcode", _ classification: Classification = .focus,
-                      from: Int, to: Int, eligible: Bool = true) -> [AutoStartDetector.Offer] {
+                      from: Int, to: Int, eligible: Bool = true) -> [AutoStartOffer] {
         (from...to).compactMap {
-            detector.observe(.init(appName: app, classification: classification,
+            detector.observe(.init(appName: app, bundleId: "id.\(app)", classification: classification,
                                    at: t0.addingTimeInterval(TimeInterval($0)), eligible: eligible))
         }
     }
@@ -21,8 +21,10 @@ final class AutoStartDetectorTests: XCTestCase {
         XCTAssertEqual(offers.count, 1)
         let offer = offers[0]
         XCTAssertEqual(offer.since, t0)
-        XCTAssertEqual(offer.minutes, 5)
-        XCTAssertEqual(offer.title, "You've been in Xcode 5 minutes")
+        XCTAssertEqual(offer.bundleId, "id.Xcode")
+        XCTAssertEqual(offer.focusSeconds(now: t0.addingTimeInterval(300)), 300)
+        XCTAssertEqual(offer.title(now: t0.addingTimeInterval(300)), "You've been in Xcode 5 minutes")
+        XCTAssertEqual(offer.title(now: t0.addingTimeInterval(720)), "You've been in Xcode 12 minutes")
         let body = offer.body(locale: Locale(identifier: "en_GB"), calendar: Calendar(identifier: .gregorian))
         XCTAssertTrue(body.hasPrefix("Start a session? It counts from "), body)
         XCTAssertTrue(body.hasSuffix(", when you opened Xcode."), body)
@@ -36,8 +38,8 @@ final class AutoStartDetectorTests: XCTestCase {
         let offers = feed("Terminal", from: 145, to: 300)
         XCTAssertEqual(offers.count, 1)
         XCTAssertEqual(offers.first?.since, t0)
-        XCTAssertEqual(offers.first?.title, "You've been focused for 5 minutes")
-        XCTAssertEqual(offers.first?.app, "Xcode")
+        XCTAssertEqual(offers.first?.title(now: t0.addingTimeInterval(300)), "You've been focused for 5 minutes")
+        XCTAssertEqual(offers.first?.appNames, ["Xcode", "Terminal"])
     }
 
     func testALongerDetourEndsIt() {

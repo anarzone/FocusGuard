@@ -16,6 +16,7 @@ struct AutoStartDetector: Equatable {
     /// One tick of what the user is doing.
     struct Sample {
         let appName: String
+        var bundleId: String? = nil
         let classification: Classification
         let at: Date
         /// False in a session, on a break, away from the Mac or in a call.
@@ -27,31 +28,10 @@ struct AutoStartDetector: Equatable {
         let start: Date
         /// Focus apps used, in the order first seen.
         var apps: [String]
+        /// The first app's bundle id.
+        let bundleId: String?
         /// Already offered: one offer per stretch.
         var offered = false
-    }
-
-    /// What the offer says.
-    struct Offer: Equatable {
-        /// When the work began; a session started from the offer counts from here.
-        let since: Date
-        /// The app the work began in.
-        let app: String
-        /// Whether the whole stretch was in that one app.
-        let oneApp: Bool
-        let minutes: Int
-
-        /// "You've been in Xcode 5 minutes", or "You've been focused for 5
-        /// minutes" across several apps.
-        var title: String {
-            let length = NotificationPresenter.plural(minutes, "minute")
-            return oneApp ? "You've been in \(app) \(length)" : "You've been focused for \(length)"
-        }
-
-        /// "Start a session? It counts from 10:02, when you opened Xcode."
-        func body(locale: Locale = .current, calendar: Calendar = .current) -> String {
-            "Start a session? It counts from \(HabitFormat.time(since, locale: locale, calendar: calendar)), when you opened \(app)."
-        }
     }
 
     private(set) var stretch: Stretch?
@@ -62,7 +42,7 @@ struct AutoStartDetector: Equatable {
     private var lastSampleAt: Date?
 
     /// Feeds one tick; returns an offer the moment the stretch reaches the threshold.
-    mutating func observe(_ sample: Sample) -> Offer? {
+    mutating func observe(_ sample: Sample) -> AutoStartOffer? {
         if let last = lastSampleAt, sample.at.timeIntervalSince(last) > Self.maxTickGap { reset() }
         lastSampleAt = sample.at
         guard sample.eligible else { reset(); return nil }
@@ -80,16 +60,14 @@ struct AutoStartDetector: Equatable {
         blipStart = nil
         driftStart = nil
         guard var current = stretch else {
-            stretch = Stretch(start: sample.at, apps: [sample.appName])
+            stretch = Stretch(start: sample.at, apps: [sample.appName], bundleId: sample.bundleId)
             return nil
         }
         if !current.apps.contains(sample.appName) { current.apps.append(sample.appName) }
-        let elapsed = sample.at.timeIntervalSince(current.start)
-        var offer: Offer?
-        if !current.offered, elapsed >= Self.threshold {
+        var offer: AutoStartOffer?
+        if !current.offered, sample.at.timeIntervalSince(current.start) >= Self.threshold {
             current.offered = true
-            offer = Offer(since: current.start, app: current.apps.first ?? sample.appName,
-                          oneApp: current.apps.count == 1, minutes: Int(elapsed / 60))
+            offer = AutoStartOffer(since: current.start, appNames: current.apps, bundleId: current.bundleId)
         }
         stretch = current
         return offer
@@ -106,5 +84,36 @@ struct AutoStartDetector: Equatable {
         stretch = nil
         blipStart = nil
         driftStart = nil
+    }
+}
+
+/// The offer to start a session from focused work already under way. The
+/// notification and the menu show it; `HabitsCoordinator.autoStartOffer`
+/// holds it while that work goes on.
+struct AutoStartOffer: Equatable {
+    /// When the work began; a session started from the offer counts from here.
+    let since: Date
+    /// Focus apps used, in the order first seen.
+    let appNames: [String]
+    /// The first app's bundle id.
+    let bundleId: String?
+
+    /// Time since the work began, short blips included.
+    func focusSeconds(now: Date = .now) -> TimeInterval {
+        max(0, now.timeIntervalSince(since))
+    }
+
+    /// "You've been in Xcode 5 minutes", or "You've been focused for 5
+    /// minutes" across several apps.
+    func title(now: Date = .now) -> String {
+        let length = NotificationPresenter.plural(Int(focusSeconds(now: now) / 60), "minute")
+        guard appNames.count == 1, let app = appNames.first else { return "You've been focused for \(length)" }
+        return "You've been in \(app) \(length)"
+    }
+
+    /// "Start a session? It counts from 10:02, when you opened Xcode."
+    func body(locale: Locale = .current, calendar: Calendar = .current) -> String {
+        let time = HabitFormat.time(since, locale: locale, calendar: calendar)
+        return "Start a session? It counts from \(time), when you opened \(appNames.first ?? "it")."
     }
 }

@@ -46,6 +46,83 @@ final class HabitSessionTests: XCTestCase {
         XCTAssertLessThanOrEqual(try XCTUnwrap(manager.currentSession).startedAt, Date())
     }
 
+    /// A coordinator whose microphone reads `recording`, with the morning
+    /// and evening notifications off so nothing reads the real calendar.
+    private func habits(_ manager: SessionManager, _ tracker: ActivityTracker, _ context: ModelContext,
+                        defaults: UserDefaults = UserDefaults(suiteName: "HabitSessionTests-\(UUID().uuidString)")!,
+                        recording: @escaping () -> [String]) -> HabitsCoordinator {
+        defaults.set(false, forKey: HabitSettings.morningPlan)
+        defaults.set(false, forKey: HabitSettings.eveningWrapUp)
+        let presenter = NotificationPresenter(defaults: defaults, send: { _ in }, register: { _ in })
+        let habits = HabitsCoordinator(sessions: manager, breaks: BreakManager(), tracker: tracker,
+                                       presenter: presenter, context: context, defaults: defaults)
+        habits.readMicrophone = { front in
+            let ids = recording()
+            return .init(recording: ids, microphoneInUse: !ids.isEmpty, runningApps: [], frontURL: front)
+        }
+        return habits
+    }
+
+    func testPauseTillTheCallEndsResumesAfterIt() throws {
+        let context = try makeStore()
+        let tracker = ActivityTracker(context: context, optOutCache: TitleOptOutCache(context: context),
+                                      classifier: Classifier(context: context))
+        let manager = SessionManager(context: context, tracker: tracker)
+        var recording = ["us.zoom.CptHost"]
+        let habits = habits(manager, tracker, context) { recording }
+        manager.startSession(plannedDurationMinutes: 50)
+        let t0 = Date()
+
+        habits.tick(now: t0)
+        XCTAssertEqual(habits.currentCall?.appName, "Zoom")
+        XCTAssertEqual(habits.currentCall?.since, t0)
+        habits.pauseUntilCallEnds()
+        XCTAssertNotNil(manager.currentSession?.pausedAt)
+        XCTAssertTrue(habits.resumesAfterCall)
+
+        habits.tick(now: t0.addingTimeInterval(4))
+        XCTAssertNotNil(manager.currentSession?.pausedAt)
+        XCTAssertEqual(habits.currentCall?.since, t0)
+
+        recording = []
+        habits.tick(now: t0.addingTimeInterval(8))
+        XCTAssertNil(habits.currentCall)
+        XCTAssertNil(manager.currentSession?.pausedAt)
+        XCTAssertFalse(habits.resumesAfterCall)
+    }
+
+    func testResumingByHandDropsTheWaitForTheCall() throws {
+        let context = try makeStore()
+        let tracker = ActivityTracker(context: context, optOutCache: TitleOptOutCache(context: context),
+                                      classifier: Classifier(context: context))
+        let manager = SessionManager(context: context, tracker: tracker)
+        let habits = habits(manager, tracker, context) { ["com.apple.FaceTime"] }
+        manager.startSession(plannedDurationMinutes: 50)
+        habits.tick(now: Date())
+        habits.pauseUntilCallEnds()
+        manager.resumeSession()
+        habits.tick(now: Date().addingTimeInterval(4))
+        XCTAssertFalse(habits.resumesAfterCall)
+        XCTAssertNil(manager.currentSession?.pausedAt)
+    }
+
+    func testTheSwitchesTurnCallsAndOffersOff() throws {
+        let context = try makeStore()
+        let tracker = ActivityTracker(context: context, optOutCache: TitleOptOutCache(context: context),
+                                      classifier: Classifier(context: context))
+        let manager = SessionManager(context: context, tracker: tracker)
+        let defaults = UserDefaults(suiteName: "HabitSessionTests-\(UUID().uuidString)")!
+        let habits = habits(manager, tracker, context, defaults: defaults) { ["us.zoom.xos"] }
+        XCTAssertTrue(habits.isInCall(now: Date()))
+        defaults.set(false, forKey: HabitSettings.meetingAwareness)
+        XCTAssertFalse(habits.isInCall(now: Date().addingTimeInterval(4)))
+        XCTAssertNil(habits.currentCall)
+
+        habits.stopOfferingAutoStart()
+        XCTAssertEqual(defaults.object(forKey: HabitSettings.autoStartOffer) as? Bool, false)
+        XCTAssertNil(habits.autoStartOffer)
+    }
+
     func testNudgesWaitDuringACall() {
         let presenter = EscalationEngineTests.RecordingPresenter()
         let overlay = EscalationEngineTests.StubOverlay()

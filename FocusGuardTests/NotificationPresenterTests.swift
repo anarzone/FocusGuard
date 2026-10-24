@@ -36,7 +36,7 @@ final class NotificationPresenterTests: XCTestCase {
         presenter.presentDriftPrompt(host: "youtube.com")
         presenter.presentLimitWarning(name: "youtube.com", minutesLeft: 5, minutesToday: 30)
         presenter.presentEveningWrapUp(EveningWrapUp(focusedMinutes: 200, goalMinutes: 240, streak: 0, best: nil, tomorrowStart: nil))
-        presenter.presentAutoStartOffer(.init(since: .now, app: "Xcode", oneApp: true, minutes: 5))
+        presenter.presentAutoStartOffer(AutoStartOffer(since: Date().addingTimeInterval(-300), appNames: ["Xcode"], bundleId: nil))
         presenter.presentTrialEndingSoon(endsAt: .now)
     }
 

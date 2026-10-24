@@ -37,6 +37,18 @@ extension AppState {
         )
     }
 
+    /// The menu's "Start 50 min, counting these 12": the session counts
+    /// from when the offered work began. Nil minutes: the usual length.
+    func acceptAutoStartOffer(minutes: Int? = nil, now: Date = .now) {
+        guard let offer = habits.autoStartOffer else { return }
+        perform(.startFromOffer(since: offer.since, minutes: minutes), now: now)
+    }
+
+    /// The menu's "Pause till it ends", during a call.
+    func pauseUntilCallEnds() {
+        habits.pauseUntilCallEnds()
+    }
+
     /// Carries out a notification's button.
     func perform(_ command: NotificationCommand, now: Date = .now) {
         let actions = FocusActions(sessions: sessionManager, breaks: breakManager,
@@ -57,9 +69,9 @@ extension AppState {
         case .startSession(let minutes):
             actions.start(minutes: minutes, now: now)
         case .startFromOffer(let since, let minutes):
-            actions.start(minutes: minutes, startedAt: habits.offerStart(since: since), now: now)
+            actions.start(minutes: minutes, startedAt: habits.takeAutoStartOffer(since: since), now: now)
         case .snoozeAutoStart:
-            habits.pauseOffers(now: now)
+            habits.dismissAutoStartOffer(now: now)
         case .planSessions(let slots):
             habits.plan(slots, now: now)
         case .openToday:

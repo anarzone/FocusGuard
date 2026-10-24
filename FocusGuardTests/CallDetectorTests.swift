@@ -9,34 +9,40 @@ final class CallDetectorTests: XCTestCase {
         .init(recording: recording, microphoneInUse: mic, runningApps: running, frontURL: front)
     }
 
+    private func call(_ reading: CallDetector.Reading) -> String? {
+        detector.update(reading)?.name
+    }
+
     func testACallAppRecordingIsACall() {
-        XCTAssertTrue(detector.update(reading(recording: ["us.zoom.xos"])))
-        XCTAssertTrue(detector.update(reading(recording: ["us.zoom.CptHost"])))
-        XCTAssertTrue(detector.update(reading(recording: ["com.microsoft.teams2"])))
-        XCTAssertTrue(detector.update(reading(recording: ["com.apple.avconferenced"])))
-        XCTAssertTrue(detector.update(reading(recording: ["com.tinyspeck.slackmacgap.helper"])))
+        XCTAssertEqual(call(reading(recording: ["us.zoom.xos"])), "Zoom")
+        XCTAssertEqual(detector.update(reading(recording: ["us.zoom.CptHost"])),
+                       .init(name: "Zoom", bundleId: "us.zoom.xos"))
+        XCTAssertEqual(call(reading(recording: ["com.microsoft.teams2"])), "Teams")
+        XCTAssertEqual(call(reading(recording: ["com.apple.avconferenced"])), "FaceTime")
+        XCTAssertEqual(call(reading(recording: ["com.tinyspeck.slackmacgap.helper"])), "Slack")
     }
 
     func testOtherRecordingIsNotACall() {
-        XCTAssertFalse(detector.update(reading(recording: ["com.apple.VoiceMemos"])))
-        XCTAssertFalse(detector.update(reading(recording: [], mic: false)))
+        XCTAssertNil(call(reading(recording: ["com.apple.VoiceMemos"])))
+        XCTAssertNil(call(reading(recording: [], mic: false)))
     }
 
     func testABrowserCallCountsOnceSeenInFront() {
         let chrome = ["com.google.Chrome.helper"]
-        XCTAssertFalse(detector.update(reading(recording: chrome, front: "https://www.youtube.com/")))
-        XCTAssertTrue(detector.update(reading(recording: chrome, front: "https://meet.google.com/abc-defg-hij")))
+        XCTAssertNil(call(reading(recording: chrome, front: "https://www.youtube.com/")))
+        XCTAssertEqual(detector.update(reading(recording: chrome, front: "https://meet.google.com/abc-defg-hij")),
+                       .init(name: "Google Meet", bundleId: nil))
         // Still a call with the Meet tab in the background.
-        XCTAssertTrue(detector.update(reading(recording: chrome, front: "https://x.com/home")))
+        XCTAssertEqual(call(reading(recording: chrome, front: "https://x.com/home")), "Google Meet")
         // The microphone goes quiet: the call is over, and so is the memory of it.
-        XCTAssertFalse(detector.update(reading(recording: [], mic: false)))
-        XCTAssertFalse(detector.update(reading(recording: chrome, front: "https://x.com/home")))
+        XCTAssertNil(call(reading(recording: [], mic: false)))
+        XCTAssertNil(call(reading(recording: chrome, front: "https://x.com/home")))
     }
 
     func testWithoutPerAppInfoAnOpenCallAppAndTheMicCount() {
-        XCTAssertTrue(detector.update(reading(recording: nil, running: ["us.zoom.xos", "com.apple.Safari"])))
-        XCTAssertFalse(detector.update(reading(recording: nil, running: ["com.apple.Safari"])))
-        XCTAssertFalse(detector.update(reading(recording: nil, mic: false, running: ["us.zoom.xos"])))
+        XCTAssertEqual(call(reading(recording: nil, running: ["us.zoom.xos", "com.apple.Safari"])), "Zoom")
+        XCTAssertNil(call(reading(recording: nil, running: ["com.apple.Safari"])))
+        XCTAssertNil(call(reading(recording: nil, mic: false, running: ["us.zoom.xos"])))
     }
 
     func testCallsAreNeutralByDefault() {

@@ -6,13 +6,30 @@ import SwiftData
 /// offer to start a session after a few focused minutes, and holding nudges
 /// during calls. Driven by the tracker's 1 s tick (`tick`); each habit has
 /// a switch in `HabitSettings`.
+/// The call in progress, for the menu.
+struct CallInfo: Equatable {
+    /// "Zoom", "FaceTime", "Google Meet".
+    let appName: String
+    /// Nil for a call in the browser.
+    let bundleId: String?
+    let since: Date
+}
+
 @MainActor
 @Observable
 final class HabitsCoordinator {
     /// Sessions the user planned from this morning's notification, earliest first.
     private(set) var plannedSlots: [Date] = []
-    /// Whether the user is in a call (with meeting awareness on).
-    private(set) var inCall = false
+    /// The offer to start a session from work already under way, from the
+    /// moment it's made until a session starts, that work ends, or it's
+    /// dismissed. The menu shows it beside the notification.
+    private(set) var autoStartOffer: AutoStartOffer?
+    /// The call in progress; nil with meeting awareness off.
+    private(set) var currentCall: CallInfo?
+    /// "Pause till it ends": the session resumes when the call does.
+    private(set) var resumesAfterCall = false
+
+    var inCall: Bool { currentCall != nil }
 
     @ObservationIgnored private let sessions: SessionManager
     @ObservationIgnored private let breaks: BreakManager
@@ -27,6 +44,17 @@ final class HabitsCoordinator {
     @ObservationIgnored private var dayChecksAt: Date = .distantPast
     @ObservationIgnored private var lastOfferAt: Date = .distantPast
     @ObservationIgnored private var offersPausedUntil: Date = .distantPast
+    /// Who's recording, given the page in front. Tests pass their own.
+    @ObservationIgnored var readMicrophone: (String?) -> CallDetector.Reading = { frontURL in
+        let recording = MicrophoneActivity.recordingProcesses()
+        return CallDetector.Reading(
+            recording: recording,
+            microphoneInUse: recording.map { !$0.isEmpty } ?? MicrophoneActivity.isInUse(),
+            runningApps: recording == nil
+                ? Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)) : [],
+            frontURL: frontURL
+        )
+    }
 
     /// At most one auto-start offer this often.
     nonisolated static let offerCooldown: TimeInterval = 30 * 60
@@ -53,7 +81,9 @@ final class HabitsCoordinator {
     }
 
     func tick(now: Date = .now) {
-        observeFocus(now: now, inCall: isInCall(now: now))
+        let calling = isInCall(now: now)
+        resumeAfterCallIfDue(calling: calling)
+        observeFocus(now: now, inCall: calling)
         offerPlannedSession(now: now)
         guard now.timeIntervalSince(dayChecksAt) >= 60 else { return }
         dayChecksAt = now
@@ -67,22 +97,36 @@ final class HabitsCoordinator {
     /// seconds; always false with meeting awareness off.
     func isInCall(now: Date = .now) -> Bool {
         guard HabitSettings.isOn(HabitSettings.meetingAwareness, defaults) else {
-            if inCall { inCall = false }
+            if currentCall != nil { currentCall = nil }
             return false
         }
         guard now.timeIntervalSince(callCheckedAt) >= Self.callCheckInterval else { return inCall }
         callCheckedAt = now
-        let recording = MicrophoneActivity.recordingProcesses()
-        let reading = CallDetector.Reading(
-            recording: recording,
-            microphoneInUse: recording.map { !$0.isEmpty } ?? MicrophoneActivity.isInUse(),
-            runningApps: recording == nil
-                ? Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier)) : [],
-            frontURL: tracker.isFrontmostSelf ? nil : tracker.currentSnapshot?.url
-        )
-        let next = calls.update(reading)
-        if next != inCall { inCall = next }
-        return next
+        let call = calls.update(readMicrophone(tracker.isFrontmostSelf ? nil : tracker.currentSnapshot?.url))
+        if call?.name != currentCall?.appName || call?.bundleId != currentCall?.bundleId {
+            currentCall = call.map { CallInfo(appName: $0.name, bundleId: $0.bundleId, since: now) }
+        }
+        return call != nil
+    }
+
+    /// "Pause till it ends", from the menu: pauses the running session,
+    /// and `tick` resumes it when the call is over.
+    func pauseUntilCallEnds() {
+        guard inCall, let session = sessions.currentSession, session.pausedAt == nil else { return }
+        sessions.pauseSession()
+        resumesAfterCall = true
+    }
+
+    private func resumeAfterCallIfDue(calling: Bool) {
+        guard resumesAfterCall else { return }
+        // The user resumed or ended the session themselves meanwhile.
+        guard let session = sessions.currentSession, session.pausedAt != nil else {
+            resumesAfterCall = false
+            return
+        }
+        guard !calling else { return }
+        resumesAfterCall = false
+        sessions.resumeSession()
     }
 
     // MARK: - Auto-start offer
@@ -92,28 +136,40 @@ final class HabitsCoordinator {
         let eligible = HabitSettings.isOn(HabitSettings.autoStartOffer, defaults)
             && sessions.currentSession == nil && !breaks.isOnBreak && !tracker.isAway && !inCall
         // FocusGuard's own windows show the last app's snapshot; they're a blip.
-        let sample = AutoStartDetector.Sample(appName: snapshot.appName,
+        let sample = AutoStartDetector.Sample(appName: snapshot.appName, bundleId: snapshot.bundleIdentifier,
                                               classification: tracker.isFrontmostSelf ? .neutral : snapshot.classification,
                                               at: now, eligible: eligible)
-        guard let offer = detector.observe(sample),
-              Self.mayOffer(now: now, lastOfferAt: lastOfferAt, pausedUntil: offersPausedUntil) else { return }
+        let offer = detector.observe(sample)
+        if let current = autoStartOffer, !detector.isOngoing(since: current.since) { autoStartOffer = nil }
+        guard let offer, Self.mayOffer(now: now, lastOfferAt: lastOfferAt, pausedUntil: offersPausedUntil) else { return }
         lastOfferAt = now
-        presenter.presentAutoStartOffer(offer)
+        autoStartOffer = offer
+        presenter.presentAutoStartOffer(offer, now: now)
     }
 
     nonisolated static func mayOffer(now: Date, lastOfferAt: Date, pausedUntil: Date) -> Bool {
         now >= pausedUntil && now.timeIntervalSince(lastOfferAt) >= offerCooldown
     }
 
-    /// "Not now": no offers for a while.
-    func pauseOffers(now: Date = .now) {
+    /// "Not now", in the menu or the notification: no offers for a while.
+    func dismissAutoStartOffer(now: Date = .now) {
+        autoStartOffer = nil
         offersPausedUntil = now.addingTimeInterval(Self.notNowPause)
     }
 
+    /// "Stop offering", in the menu: turns the habit off.
+    func stopOfferingAutoStart() {
+        defaults.set(false, forKey: HabitSettings.autoStartOffer)
+        autoStartOffer = nil
+        detector.reset()
+    }
+
     /// Where a session started from the offer begins: when that focus
-    /// began, while it's still going; otherwise now (nil).
-    func offerStart(since: Date) -> Date? {
-        detector.isOngoing(since: since) ? since : nil
+    /// began, while it's still going; otherwise now (nil). The offer is
+    /// taken either way.
+    func takeAutoStartOffer(since: Date) -> Date? {
+        autoStartOffer = nil
+        return detector.isOngoing(since: since) ? since : nil
     }
 
     // MARK: - Morning plan
