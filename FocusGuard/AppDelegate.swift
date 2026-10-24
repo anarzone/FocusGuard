@@ -78,6 +78,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        NotificationCenter.default.addObserver(forName: .openMainWindowFromExtension, object: nil, queue: .main) { [weak self] note in
+            let tab = note.object as? MainTab
+            Task { @MainActor in self?.openMainWindow(tab: tab) }
+        }
+
         // People who already have sessions on record were onboarded by the
         // old flow; don't greet them as new.
         if !OnboardingState.isCompleted,
@@ -138,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         appState?.tracker.flush()
+        appState?.extensionBridge.stop()
     }
 
     /// Fired when the user clicks the app in Finder or Dock while it's already

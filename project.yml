@@ -34,6 +34,14 @@ targets:
       - package: Sparkle
       # Desktop widgets and the Control Center control (PlugIns/).
       - target: FocusGuardWidgets
+      # Native-messaging host for the browser extension, in Contents/Helpers.
+      - target: FocusGuardBrowserHelper
+        embed: true
+        link: false
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
     info:
       path: FocusGuard/Resources/Info.plist
       properties:
@@ -110,6 +118,22 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.widgets
         PRODUCT_NAME: FocusGuardWidgets
         GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+
+  # Started by Chrome, Arc, Brave and Edge for the FocusGuard extension; relays
+  # its messages to the running app over a local socket (FocusGuard/Extension).
+  FocusGuardBrowserHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: FocusGuardBrowserHelper
+      - path: FocusGuard/Extension/NativeMessageFraming.swift
+    settings:
+      base:
+        PRODUCT_NAME: FocusGuardBrowserHelper
+        PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.browserhelper
+        # The app's entitlements (Apple Events, calendars) aren't for the helper.
+        CODE_SIGN_ENTITLEMENTS: ""
         SKIP_INSTALL: YES
 
   FocusGuardTests:

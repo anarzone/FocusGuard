@@ -1,0 +1,95 @@
+{
+  "type": "state",
+  "v": 1,
+  "app": {
+    "version": "1.0"
+  },
+  "plan": {
+    "tier": "pro",
+    "pro": true,
+    "features": {
+      "blockInBrowser": true,
+      "partsOfSites": true,
+      "youtubePerVideo": true,
+      "unlimitedLimits": true
+    }
+  },
+  "preset": "standard",
+  "policy": {
+    "allowsPass": true,
+    "passWaitSeconds": 5,
+    "passSeconds": 120,
+    "forWorkWaitSeconds": 0,
+    "locksDuringSession": false,
+    "extraTime": {
+      "minutes": 5,
+      "timesPerDay": 1,
+      "waitSeconds": 5
+    },
+    "limitChangesWaitForTomorrow": false
+  },
+  "today": {
+    "focusSeconds": 10080,
+    "goalMinutes": 240
+  },
+  "phase": "focusing",
+  "session": {
+    "name": "Evening focus",
+    "startedAt": 1793034000000,
+    "endsAt": 1793037000000,
+    "plannedMinutes": 50,
+    "elapsedSeconds": 1620,
+    "asOf": 1793035620000,
+    "paused": false,
+    "segments": [
+      [
+        "f",
+        720
+      ],
+      [
+        "o",
+        60
+      ],
+      [
+        "f",
+        660
+      ],
+      [
+        "d",
+        120
+      ],
+      [
+        "f",
+        60
+      ]
+    ],
+    "focusSeconds": 1440,
+    "driftSeconds": 120,
+    "otherSeconds": 60,
+    "stoppedVisits": 4,
+    "backTo": "Xcode"
+  },
+  "blocking": {
+    "pauseTab": true,
+    "sites": [
+      "instagram.com",
+      "news.ycombinator.com",
+      "reddit.com",
+      "x.com"
+    ],
+    "parts": [
+      "linkedin.com/feed",
+      "youtube.com/shorts"
+    ],
+    "limits": [],
+    "passes": [
+      {
+        "host": "x.com",
+        "until": 1793035700000
+      }
+    ],
+    "allowed": [
+      "github.com"
+    ]
+  }
+}

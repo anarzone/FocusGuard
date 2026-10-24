@@ -296,6 +296,7 @@ struct AddRuleSheet: View {
         case .bundleId:   return "com.jetbrains.PhpStorm"
         case .host:       return "youtube.com"
         case .titleRegex: return "(?i)slack"
+        case .urlPrefix:  return "youtube.com/shorts"
         }
     }
 
@@ -304,6 +305,7 @@ struct AddRuleSheet: View {
         case .bundleId:   return "Exact bundle identifier."
         case .host:       return "Matches the site and its subdomains: youtube.com covers m.youtube.com too."
         case .titleRegex: return "Case-insensitive regular expression matched against the window title."
+        case .urlPrefix:  return "A site and a path: youtube.com/shorts covers every Short, not the rest of YouTube."
         }
     }
 }
