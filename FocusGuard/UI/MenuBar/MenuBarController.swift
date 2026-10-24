@@ -103,16 +103,44 @@ final class MenuBarController: NSObject {
 
         if let label {
             button.imagePosition = .imageLeading
-            button.attributedTitle = NSAttributedString(string: " " + label.text, attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular),
-                .foregroundColor: label.dimmed ? NSColor.secondaryLabelColor : NSColor.labelColor,
-            ])
+            button.attributedTitle = Self.title(for: label)
             button.setAccessibilityLabel("\(state.accessibilityLabel), \(label.accessibilityText)")
         } else {
             button.imagePosition = .imageOnly
             button.attributedTitle = NSAttributedString(string: "")
             button.setAccessibilityLabel(state.accessibilityLabel)
         }
+    }
+
+    /// The label after the glyph, in the bar's own text colour. A pass gets
+    /// an orange dot in front ("● x.com 1:52"): orange never carries text.
+    static func title(for label: StatusLabel) -> NSAttributedString {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        let text = NSMutableAttributedString(string: " ")
+        if label.showsDot {
+            let dot = NSTextAttachment()
+            dot.image = passDot
+            dot.bounds = CGRect(x: 0, y: (font.capHeight - 6) / 2, width: 6, height: 6)
+            text.append(NSAttributedString(attachment: dot))
+            text.append(NSAttributedString(string: " "))
+        }
+        text.append(NSAttributedString(string: label.text))
+        text.addAttributes([
+            .font: font,
+            .foregroundColor: label.dimmed ? NSColor.secondaryLabelColor : NSColor.labelColor,
+        ], range: NSRange(location: 0, length: text.length))
+        return text
+    }
+
+    /// 6 pt orange dot, a little brighter on a dark menu bar.
+    private static let passDot = NSImage(size: NSSize(width: 6, height: 6), flipped: false) { rect in
+        NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                ? NSColor(srgbRed: 1, green: 146 / 255, blue: 48 / 255, alpha: 1)    // #FF9230
+                : NSColor(srgbRed: 1, green: 141 / 255, blue: 40 / 255, alpha: 1)    // #FF8D28
+        }.setFill()
+        NSBezierPath(ovalIn: rect).fill()
+        return true
     }
 
     /// Plays a one-off glyph animation, ending on the still glyph. A new
