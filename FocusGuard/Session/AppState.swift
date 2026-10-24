@@ -234,6 +234,8 @@ final class AppState {
         // Shortcuts, Siri, Spotlight, the Focus filter, the widgets and the
         // Control Center control act on this state.
         SurfaceHost.attach(self)
+        // "Share week" posts .openShareComposer.
+        ShareComposerWindow.shared.observe(self)
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the
