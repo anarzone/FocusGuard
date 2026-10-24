@@ -215,8 +215,9 @@ final class AppState {
             }
         }
 
-        // Shortcuts, Siri, Spotlight and the Focus filter act on this state.
-        SurfaceHost.appState = self
+        // Shortcuts, Siri, Spotlight, the Focus filter, the widgets and the
+        // Control Center control act on this state.
+        SurfaceHost.attach(self)
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the

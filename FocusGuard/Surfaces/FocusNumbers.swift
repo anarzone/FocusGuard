@@ -22,13 +22,8 @@ struct FocusSummary: Equatable {
 
     var tracked: TimeInterval { focused + drifted + other }
 
-    /// Focused ÷ (focused + drifted): other time neither helps nor hurts.
-    var focusRate: Double {
-        let counted = focused + drifted
-        return counted > 0 ? focused / counted : 0
-    }
-
-    var focusPercent: Int { Int((focusRate * 100).rounded()) }
+    var focusRate: Double { FocusRate.of(focused: focused, drifted: drifted) }
+    var focusPercent: Int { FocusRate.percent(focused: focused, drifted: drifted) }
 }
 
 enum FocusNumbers {
