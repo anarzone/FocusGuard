@@ -4,7 +4,7 @@ import Foundation
 /// word for the length — "Locked-in Deep Dive", "Comeback Run". A session
 /// that's still running can't be judged yet, so it goes by the time of day.
 enum SessionNamer {
-    /// How the focus went, judged on tracked time.
+    /// How the focus went, judged on the focus rate and where the drift fell.
     enum Pattern: String, CaseIterable {
         case lockedIn = "Locked-in"
         case slowStart = "Slow-start"
@@ -13,7 +13,8 @@ enum SessionNamer {
         case steady = "Steady"
         case bumpy = "Bumpy"
         case wandering = "Wandering"
-        /// Nothing was tracked (away from the Mac the whole time).
+        /// Nothing counted either way: away from the Mac, or only in
+        /// neutral apps.
         case quiet = "Quiet"
     }
 
@@ -50,21 +51,25 @@ enum SessionNamer {
     }
 
     /// Patterns about *when* the drifting happened come first: they say
-    /// more than the overall share. Focus share is focused / tracked time,
-    /// the same figure the session lists show as a percentage.
+    /// more than the overall rate. The rate is `FocusRate`, the same figure
+    /// the session lists show as a percentage; the thirds are thirds of
+    /// tracked time.
     static func pattern(of segments: [SessionTimeline.Segment]) -> Pattern {
+        func seconds(_ c: Classification) -> TimeInterval {
+            segments.filter { $0.classification == c }.reduce(0) { $0 + max(0, $1.seconds) }
+        }
+        let focus = seconds(.focus), drifted = seconds(.distraction)
+        guard focus + drifted >= 60 else { return .quiet }
         let total = segments.reduce(0) { $0 + max(0, $1.seconds) }
-        guard total >= 60 else { return .quiet }
-        let focus = segments.filter { $0.classification == .focus }.reduce(0) { $0 + max(0, $1.seconds) }
-        let share = focus / total
-        if share >= 0.9 { return .lockedIn }
+        let rate = FocusRate.of(focused: focus, drifted: drifted)
+        if rate >= 0.9 { return .lockedIn }
 
         let drift = driftShareByThird(segments, total: total)
         if drift[0] >= driftedThird, drift[1] <= cleanThird, drift[2] <= cleanThird { return .slowStart }
         if max(drift[0], drift[1]) >= driftedThird, drift[2] <= cleanThird { return .comeback }
         if drift[0] <= cleanThird, drift[2] >= driftedThird { return .fading }
 
-        switch share {
+        switch rate {
         case 0.75...: return .steady
         case 0.5...: return .bumpy
         default: return .wandering

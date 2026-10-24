@@ -90,6 +90,79 @@ enum Theme {
         dark:  Color(red: 38/255, green: 38/255, blue: 44/255)       // #26262C
     )
 
+    // MARK: - Text
+
+    static let primaryText = dynamicColor(
+        light: Color(red: 29/255, green: 29/255, blue: 31/255),      // #1D1D1F
+        dark:  Color(red: 245/255, green: 245/255, blue: 247/255)    // #F5F5F7
+    )
+    static let secondaryText = dynamicColor(
+        light: Color(red: 85/255, green: 85/255, blue: 94/255),      // #55555E
+        dark:  Color(red: 161/255, green: 161/255, blue: 170/255)    // #A1A1AA
+    )
+    /// Indigo for small text and links. Dark mode's `focus` is only 4.3:1
+    /// on a dark card, too faint for 11–13pt text.
+    static let link = dynamicColor(
+        light: Color(red: 75/255, green: 63/255, blue: 217/255),     // #4B3FD9
+        dark:  Color(red: 154/255, green: 163/255, blue: 255/255)    // #9AA3FF
+    )
+
+    // MARK: - Goal ring
+
+    /// Focus inside sessions. Same as `focus`.
+    static let goalInSession = focus
+    /// Focus between sessions: lighter in light mode, darker in dark, so
+    /// the two read apart by lightness, not only hue.
+    static let goalBetweenSessions = dynamicColor(
+        light: Color(red: 179/255, green: 173/255, blue: 250/255),   // #B3ADFA
+        dark:  Color(red: 74/255, green: 80/255, blue: 166/255)      // #4A50A6
+    )
+
+    // MARK: - Plan badges
+
+    static let proBadge = dynamicColor(
+        light: Color(red: 97/255, green: 85/255, blue: 245/255).opacity(0.14),
+        dark:  Color(red: 109/255, green: 124/255, blue: 255/255).opacity(0.24)
+    )
+    static let proBadgeText = dynamicColor(
+        light: Color(red: 75/255, green: 63/255, blue: 217/255),     // #4B3FD9
+        dark:  Color(red: 185/255, green: 192/255, blue: 255/255)    // #B9C0FF
+    )
+    static let freeBadge = dynamicColor(
+        light: Color.black.opacity(0.07),
+        dark:  Color.white.opacity(0.10)
+    )
+    static let freeBadgeText = dynamicColor(
+        light: Color(red: 58/255, green: 58/255, blue: 66/255),      // #3A3A42
+        dark:  Color(red: 209/255, green: 209/255, blue: 214/255)    // #D1D1D6
+    )
+
+    // MARK: - Kit
+
+    /// Behind a category chip's dot and label.
+    static let chip = dynamicColor(
+        light: Color.black.opacity(0.05),
+        dark:  Color.white.opacity(0.10)
+    )
+    /// A Pro feature a free user can't use yet: faint fill, dashed edge.
+    static let lockedFill = dynamicColor(
+        light: Color.white.opacity(0.36),
+        dark:  Color.white.opacity(0.04)
+    )
+    static let lockedStroke = dynamicColor(
+        light: Color.black.opacity(0.18),
+        dark:  Color.white.opacity(0.20)
+    )
+    /// Only for destroying things (Erase…), never for focus or drift.
+    static let destructive = dynamicColor(
+        light: Color(red: 196/255, green: 0/255, blue: 26/255),      // #C4001A
+        dark:  Color(red: 255/255, green: 105/255, blue: 97/255)     // #FF6961, 5.3:1 on cards
+    )
+    static let destructiveTint = dynamicColor(
+        light: Color(red: 196/255, green: 0/255, blue: 26/255).opacity(0.10),
+        dark:  Color(red: 255/255, green: 105/255, blue: 97/255).opacity(0.16)
+    )
+
     /// Outline of a minute that hasn't happened yet.
     static let gridFuture = dynamicColor(
         light: Color.black.opacity(0.13),

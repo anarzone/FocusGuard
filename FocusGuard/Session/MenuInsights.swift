@@ -27,7 +27,7 @@ struct SessionSummary: Identifiable {
     let end: Date?
     let minutes: Int
     let plannedMinutes: Int?
-    /// Focused share of tracked time, 0...1.
+    /// The session's focus rate, 0...1 (see `FocusRate`).
     let focusShare: Double
 
     var isRunning: Bool { end == nil }
@@ -96,8 +96,8 @@ enum MenuInsightsBuilder {
 
         let priorStart = calendar.date(byAdding: .day, value: -7, to: dayStart) ?? dayStart
         let prior = (knownPrior ?? reports.dailyBreakdowns(from: priorStart, to: dayStart, calendar: calendar))
-            .filter { $0.total > 60 }
-        let average = prior.isEmpty ? nil : prior.map { $0.focus / $0.total }.reduce(0, +) / Double(prior.count)
+            .filter { $0.focus + $0.distraction > 60 }
+        let average = prior.isEmpty ? nil : prior.map(\.focusRate).reduce(0, +) / Double(prior.count)
 
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= dayStart && $0.startedAt < dayEnd },
@@ -128,7 +128,7 @@ enum MenuInsightsBuilder {
         return TodayInsights(
             focused: breakdown.focus,
             goalProgress: FocusGoal.progress(focusSecondsToday: breakdown.focus),
-            focusRate: breakdown.focusPercent,
+            focusRate: breakdown.focusRate,
             averageFocusRate: average,
             sessions: sessions,
             window: DateInterval(start: windowStart, end: max(windowEnd, windowStart.addingTimeInterval(3600))),
@@ -159,7 +159,7 @@ enum MenuInsightsBuilder {
             todayIndex: max(0, min(days.count - 1, todayIndex)),
             focused: soFar.focus,
             focusedLastWeek: lastWeek.focus,
-            focusRate: soFar.focusPercent,
+            focusRate: soFar.focusRate,
             bestDay: best?.date,
             streak: streak,
             topDistractions: Array(distractions)
@@ -192,11 +192,14 @@ enum MenuInsightsBuilder {
     }
 
     static func summary(for session: Session, now: Date) -> SessionSummary {
-        var focus: TimeInterval = 0, total: TimeInterval = 0
+        var focus: TimeInterval = 0, drift: TimeInterval = 0
         for event in session.events {
             let seconds = max(0, event.duration) + 1
-            total += seconds
-            if event.classification == .focus { focus += seconds }
+            switch event.classification {
+            case .focus: focus += seconds
+            case .distraction: drift += seconds
+            default: break
+            }
         }
         let end = session.endedAt
         let running = max(0, (end ?? now).timeIntervalSince(session.startedAt) - session.pausedSeconds)
@@ -208,7 +211,7 @@ enum MenuInsightsBuilder {
             end: end,
             minutes: Int(running / 60),
             plannedMinutes: session.plannedDurationMinutes,
-            focusShare: total > 0 ? focus / total : 0
+            focusShare: FocusRate.of(focused: focus, drifted: drift)
         )
     }
 

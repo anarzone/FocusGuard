@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSClassFromString("XCTestCase") != nil { return }
 
         appState = AppState()
+        // Starts the trial's reminder and end-of-trial timer.
+        Entitlements.shared.refresh()
         menuBarController = MenuBarController(
             glyphProvider: { [appState = appState!] in appState.statusGlyphState },
             labelProvider: { [appState = appState!] in appState.statusLabel() },

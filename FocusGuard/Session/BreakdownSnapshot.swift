@@ -9,7 +9,7 @@ struct BreakdownSnapshot: Equatable {
 
     var total: TimeInterval { focus + neutral + distraction }
 
-    var focusPercent: Double {
-        total > 0 ? focus / total : 0
-    }
+    /// The focus rate, 0...1 (see `FocusRate`). The old name, kept for the
+    /// screens that still use it.
+    var focusPercent: Double { focusRate }
 }

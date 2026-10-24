@@ -32,9 +32,9 @@ struct SessionTimeline: Equatable {
     var otherCells: Int { cells.filter { $0 == .other }.count }
     var classifiedCells: Int { focusCells + driftCells + otherCells }
 
+    /// The focus rate in whole percent: other cells don't count.
     var focusPercent: Int {
-        guard classifiedCells > 0 else { return 0 }
-        return Int((Double(focusCells) / Double(classifiedCells) * 100).rounded())
+        FocusRate.percent(focused: Double(focusCells), drifted: Double(driftCells))
     }
 
     var longestFocusRunMinutes: Int {
