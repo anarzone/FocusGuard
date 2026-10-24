@@ -81,6 +81,8 @@ struct TodayWidgetView: View {
                 }
             }
             .frame(width: size, height: size)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(sessionLabel(s))
         case .onBreak:
             ZStack {
                 ProgressRing(progress: breakProgress(s), palette: palette, lineWidth: lineWidth)
@@ -93,7 +95,22 @@ struct TodayWidgetView: View {
                 }
             }
             .frame(width: size, height: size)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(s.onBreak.map { "On a break, back at \(SurfaceWords.clock($0.endsAt))" } ?? "On a break")
         }
+    }
+
+    private func sessionLabel(_ s: SurfaceSnapshot) -> String {
+        guard let session = s.session else { return "Focusing" }
+        var parts = [session.name]
+        if s.phase == .paused { parts.append("paused") }
+        if let left = s.timeLeft(at: entry.date) {
+            parts.append("\(SurfaceWords.minutesLeft(left)) left")
+        } else {
+            parts.append("\(Int(s.running(at: entry.date) / 60)) min so far")
+        }
+        parts.append("focused \(Int(session.focused / 60)) min, drifted \(Int(session.drifted / 60)) min")
+        return parts.joined(separator: ", ")
     }
 
     private func breakProgress(_ s: SurfaceSnapshot) -> Double {

@@ -26,6 +26,8 @@ final class SurfacesCoordinator {
     private var handled: [UUID] = []
     private var writing = false
     private var queued: (widgets: Bool, controls: Bool)?
+    /// The store's numbers as last read, for writing a tap's result at once.
+    private var lastNumbers: SurfaceStats.Numbers?
 
     static let widgetReloadInterval: TimeInterval = 10 * 60
 
@@ -131,14 +133,8 @@ final class SurfacesCoordinator {
         let goal = FocusGoal.dailySeconds
         Task {
             let numbers = await stats.read(now: now, goal: goal)
-            let snapshot = SurfaceSnapshotBuilder.make(
-                sessions: appState.sessionManager, breaks: appState.breakManager,
-                timeline: { appState.liveTimeline(for: $0, now: now) },
-                numbers: numbers, goal: goal,
-                usualMinutes: FocusActions.usualMinutes(),
-                handled: handled, now: now
-            )
-            try? store.write(snapshot)
+            lastNumbers = numbers
+            write(appState, numbers: numbers, goal: goal, now: now)
             if widgets {
                 WidgetCenter.shared.reloadAllTimelines()
                 lastWidgetReload = now
@@ -152,6 +148,17 @@ final class SurfacesCoordinator {
                 refresh(widgets: next.widgets, controls: next.controls)
             }
         }
+    }
+
+    private func write(_ appState: AppState, numbers: SurfaceStats.Numbers, goal: TimeInterval, now: Date) {
+        let snapshot = SurfaceSnapshotBuilder.make(
+            sessions: appState.sessionManager, breaks: appState.breakManager,
+            timeline: { appState.liveTimeline(for: $0, now: now) },
+            numbers: numbers, goal: goal,
+            usualMinutes: FocusActions.usualMinutes(),
+            handled: handled, now: now
+        )
+        try? store.write(snapshot)
     }
 
     // MARK: - Commands
@@ -169,6 +176,9 @@ final class SurfacesCoordinator {
         }
         handled = Array(handled.suffix(8))
         let now = Date()
+        // The widget waits on this: write the new state right away with the
+        // numbers already known, then refresh them.
+        if let lastNumbers { write(appState, numbers: lastNumbers, goal: FocusGoal.dailySeconds, now: now) }
         lastState = stateKey(now: now)
         lastMinute = shownMinute(now: now)
         refresh(widgets: true, controls: true)
