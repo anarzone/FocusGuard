@@ -6,6 +6,8 @@ extension Notification.Name {
     /// Show a sheet over the main window: `object` is a `WindowSheet`.
     /// Open the window first (`AppDelegate.openMainWindow`).
     static let presentWindowSheet = Notification.Name("FocusGuard.presentWindowSheet")
+    /// Open Apps & Sites on "Sort your apps".
+    static let openAppsSort = Notification.Name("FocusGuard.openAppsSort")
 }
 
 enum MainTab: Hashable, CaseIterable {
@@ -73,6 +75,7 @@ struct MainWindowView: View {
     @Bindable var appState: AppState
     @State private var tab: MainTab
     @State private var sheet: WindowSheet?
+    @State private var appsMode: AppsMode = .used
 
     init(appState: AppState, initialTab: MainTab = .home) {
         self._appState = Bindable(wrappedValue: appState)
@@ -98,6 +101,11 @@ struct MainWindowView: View {
         .onReceive(NotificationCenter.default.publisher(for: .selectMainTab)) { note in
             if let requested = note.object as? MainTab { tab = requested }
         }
+        .onChange(of: tab) { if tab != .apps && appsMode == .sort { appsMode = .used } }
+        .onReceive(NotificationCenter.default.publisher(for: .openAppsSort)) { _ in
+            appsMode = .sort
+            tab = .apps
+        }
         .onReceive(NotificationCenter.default.publisher(for: .presentWindowSheet)) { note in
             if let requested = note.object as? WindowSheet { sheet = requested }
         }
@@ -113,7 +121,7 @@ struct MainWindowView: View {
         case .workLog:
             WorkLogPage(appState: appState)
         case .apps:
-            AppsPage(appState: appState)
+            AppsSitesPage(appState: appState, mode: $appsMode)
         case .settings:
             SettingsView(appState: appState)
                 .padding(.top, 28)
@@ -289,25 +297,5 @@ private struct SidebarSessionCard: View {
         .buttonStyle(.plain)
         .help(label)
         .accessibilityLabel(label)
-    }
-}
-
-// MARK: - Apps & sites page
-
-private struct AppsPage: View {
-    @Bindable var appState: AppState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: "Apps & Sites",
-                       subtitle: "Decide what counts as focus. Changes also update past reports.") { EmptyView() }
-            WindowCard {
-                AppsPane(appState: appState, close: nil, listHeight: nil)
-            }
-            .frame(maxWidth: 720, maxHeight: .infinity, alignment: .top)
-        }
-        .padding(.leading, 16)
-        .padding(.trailing, 24)
-        .padding(.bottom, 24)
     }
 }

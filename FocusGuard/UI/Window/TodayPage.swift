@@ -828,7 +828,7 @@ private struct SetupCard: View {
             SetupStep(title: "Sort your apps",
                       detail: "Check FocusGuard's guesses in about 2 minutes.",
                       done: appsSorted,
-                      action: ("Sort now", { onNavigate(.apps) })),
+                      action: ("Sort now", { NotificationCenter.default.post(name: .openAppsSort, object: nil) })),
             SetupStep(title: "Start your first session",
                       detail: "It gets a name from how it goes, like Steady Deep Dive.",
                       done: false, action: nil),
