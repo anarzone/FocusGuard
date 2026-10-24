@@ -10,7 +10,7 @@ final class DailyLimitsEngineTests: XCTestCase {
 
     final class RecordingNotifier: LimitNotifying {
         var warnings: [(name: String, minutesLeft: Int)] = []
-        func presentLimitWarning(name: String, minutesLeft: Int) { warnings.append((name, minutesLeft)) }
+        func presentLimitWarning(name: String, minutesLeft: Int, minutesToday: Int) { warnings.append((name, minutesLeft)) }
     }
 
     private var container: ModelContainer!

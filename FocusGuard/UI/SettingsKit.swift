@@ -13,15 +13,6 @@ enum SettingsWindowKey {
     static let siteIcons = "privacy.siteIcons"
 }
 
-/// The habit switches the habits session reads (`HabitSettings` there).
-/// Same strings, so either side can land first. All default to on.
-enum WindowHabitKey {
-    static let morningPlan = "habits.morningPlan.enabled"
-    static let eveningWrapUp = "habits.eveningWrapUp.enabled"
-    static let autoStartOffer = "habits.autoStartOffer.enabled"
-    static let meetingAwareness = "habits.meetingAwareness.enabled"
-}
-
 // MARK: - Appearance
 
 /// System, Light or Dark for the whole app.

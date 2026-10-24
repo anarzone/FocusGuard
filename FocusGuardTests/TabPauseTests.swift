@@ -240,5 +240,52 @@ final class TabPauseTests: XCTestCase {
         let f = fields(try XCTUnwrap(pauser.pauses.first?.page))
         XCTAssertEqual(f["state"], "limit")
         XCTAssertNil(f["ends"])
+        XCTAssertNil(f["label"])
+        XCTAssertNil(f["start"])
+    }
+
+    // MARK: - The session on the page
+
+    func test_aSessionPause_namesTheSessionAndWhenItStarted() throws {
+        coordinator.blockShown(.session, snapshot: snap("https://x.com/home"), endsAt: Date(timeIntervalSince1970: 1_792_840_000),
+                               backTo: "Xcode", sessionLabel: "Evening focus & more",
+                               startedAt: Date(timeIntervalSince1970: 1_792_837_000))
+        let f = fields(try XCTUnwrap(pauser.pauses.first?.page))
+        XCTAssertEqual(f["label"], "Evening focus & more")
+        XCTAssertEqual(f["start"], "1792837000")
+        XCTAssertEqual(f["ends"], "1792840000")
+    }
+
+    func test_sessionOver_carriesWhatTheSessionWas() throws {
+        coordinator.summaryProvider = {
+            PausedSessionSummary(name: "Comeback Run", isAutomaticName: true,
+                                 startedAt: Date(timeIntervalSince1970: 1_792_837_000),
+                                 endedAt: Date(timeIntervalSince1970: 1_792_840_000),
+                                 focusMinutes: 44, driftMinutes: 2, otherMinutes: 4, focusPercent: 96)
+        }
+        let id = try XCTUnwrap(pause("https://x.com/a"))
+        coordinator.sessionEnded()
+        let f = fields(try XCTUnwrap(pauser.redirects.first { $0.id == id }?.url))
+        XCTAssertEqual(f["state"], "over")
+        XCTAssertEqual(f["name"], "Comeback Run")
+        XCTAssertEqual(f["auto"], "1")
+        XCTAssertEqual(f["end"], "1792840000")
+        XCTAssertEqual([f["focus"], f["drift"], f["other"], f["rate"]], ["44", "2", "4", "96"])
+    }
+
+    func test_summaryFields_onlyGoOnTheSessionOverPage() throws {
+        let summary = PausedSessionSummary(name: "Quiet Sprint", isAutomaticName: true, startedAt: .now, endedAt: .now,
+                                           focusMinutes: 1, driftMinutes: 0, otherMinutes: 0, focusPercent: 100)
+        let f = fields(PausedPage.url(base: base, for: tab(), state: .paused, summary: summary))
+        XCTAssertNil(f["name"])
+        XCTAssertNil(f["rate"])
+    }
+
+    func test_thePage_readsTheNewFields() throws {
+        let url = try XCTUnwrap(PausedPage.fileURL)
+        let html = try String(contentsOf: url, encoding: .utf8)
+        for field in ["p.label", "p.start", "p.name", "p.auto", "p.end", "p.focus", "p.drift", "p.other", "p.rate"] {
+            XCTAssertTrue(html.contains(field), field)
+        }
     }
 }

@@ -17,8 +17,8 @@ struct SettingsSessionsPane: View {
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var goalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
     @AppStorage(SettingsKeys.Breaks.strictMode) private var breakStrictMode = false
-    @AppStorage(WindowHabitKey.autoStartOffer) private var autoStartOffer = true
-    @AppStorage(WindowHabitKey.meetingAwareness) private var meetingAwareness = true
+    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
+    @AppStorage(HabitSettings.meetingAwareness) private var meetingAwareness = true
 
     @State private var preset: DriftResponse? = DriftResponse.current
     @State private var showingTimings = false

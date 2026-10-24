@@ -75,11 +75,4 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertEqual(AppAppearance.parse("purple"), .system)
         XCTAssertEqual(AppAppearance.parse(nil), .system)
     }
-
-    func testHabitKeysMatchTheSharedContract() {
-        XCTAssertEqual(WindowHabitKey.morningPlan, "habits.morningPlan.enabled")
-        XCTAssertEqual(WindowHabitKey.eveningWrapUp, "habits.eveningWrapUp.enabled")
-        XCTAssertEqual(WindowHabitKey.autoStartOffer, "habits.autoStartOffer.enabled")
-        XCTAssertEqual(WindowHabitKey.meetingAwareness, "habits.meetingAwareness.enabled")
-    }
 }

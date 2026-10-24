@@ -4,8 +4,9 @@ import SwiftData
 /// Notifications the daily limits send.
 @MainActor
 protocol LimitNotifying: AnyObject {
-    /// A limit is about to run out while the user is on it.
-    func presentLimitWarning(name: String, minutesLeft: Int)
+    /// A limit is about to run out while the user is on it. `minutesToday`
+    /// is today's whole allowance, extra time included.
+    func presentLimitWarning(name: String, minutesLeft: Int, minutesToday: Int)
 }
 
 /// Today's numbers for one daily limit.
@@ -121,7 +122,8 @@ final class DailyLimitsEngine {
             }
             if status.remaining <= Self.warnBefore, !warned.contains(limit.id) {
                 warned.insert(limit.id)
-                notifier.presentLimitWarning(name: limit.name, minutesLeft: Int((status.remaining / 60).rounded(.up)))
+                notifier.presentLimitWarning(name: limit.name, minutesLeft: Int((status.remaining / 60).rounded(.up)),
+                                             minutesToday: status.minutes + status.extraMinutes)
             }
         }
     }

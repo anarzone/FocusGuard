@@ -2,15 +2,15 @@ import AppKit
 import SwiftUI
 
 /// Notifications: nudges in a session and the habit notices of the day.
-/// The habit switches are the habits session's keys (`WindowHabitKey`).
+/// The habit switches are the habits session's (`HabitSettings`).
 struct SettingsNotificationsPane: View {
     @Bindable var appState: AppState
 
     @AppStorage(SettingsKeys.showNotifications) private var allowed = true
     @AppStorage(SettingsKeys.Escalation.notificationsEnabled) private var nudges = true
-    @AppStorage(WindowHabitKey.meetingAwareness) private var quietInCalls = true
-    @AppStorage(WindowHabitKey.morningPlan) private var morningPlan = true
-    @AppStorage(WindowHabitKey.eveningWrapUp) private var eveningWrapUp = true
+    @AppStorage(HabitSettings.meetingAwareness) private var quietInCalls = true
+    @AppStorage(HabitSettings.morningPlan) private var morningPlan = true
+    @AppStorage(HabitSettings.eveningWrapUp) private var eveningWrapUp = true
 
     var body: some View {
         SettingsColumns {
@@ -26,9 +26,13 @@ struct SettingsNotificationsPane: View {
             }
             .disabled(!allowed)
             SettingsSection("Your day") {
-                SettingsToggle(title: "Morning plan", detail: "Weekdays · your free time today and a first session", isOn: $morningPlan)
+                SettingsToggle(title: "Morning plan",
+                               detail: "Once a day from \(String(format: "%02d:00", HabitSchedule.morningHours.lowerBound)) · your free time and a first session",
+                               isOn: $morningPlan)
                 SettingsDivider()
-                SettingsToggle(title: "Evening wrap-up", detail: "How today went, and where to start tomorrow", isOn: $eveningWrapUp)
+                SettingsToggle(title: "Evening wrap-up",
+                               detail: "After \(String(format: "%02d:00", HabitSchedule.wrapUpHour)), once you've stopped · how today went",
+                               isOn: $eveningWrapUp)
             }
             .disabled(!allowed)
         } right: {

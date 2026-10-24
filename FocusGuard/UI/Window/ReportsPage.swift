@@ -12,10 +12,6 @@ struct ReportsPage: View {
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
     @Environment(\.openWindowSheet) private var openSheet
 
-    /// Same raw name as the habits session's `Notification.Name.openShareComposer`;
-    /// `object` is a `Date` in the week to share.
-    private static let shareComposer = Notification.Name("FocusGuard.openShareComposer")
-
     init(appState: AppState, period: ReportPeriod = .week) {
         self._appState = Bindable(wrappedValue: appState)
         self._period = State(initialValue: period)
@@ -73,7 +69,7 @@ struct ReportsPage: View {
             PeriodStepper(offset: $offset, unit: period.rawValue.lowercased(), maxOffset: maxOffset)
             if period == .week {
                 Button {
-                    NotificationCenter.default.post(name: Self.shareComposer, object: model.data.interval.start)
+                    NotificationCenter.default.post(name: .openShareComposer, object: model.data.interval.start)
                 } label: {
                     Label("Share week", systemImage: "square.and.arrow.up").labelStyle(.titleAndIcon)
                 }
