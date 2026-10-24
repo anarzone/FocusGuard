@@ -58,6 +58,10 @@ final class EscalationEngine {
     private let presenter: DistractionNotifier
     private let overlay: BlockOverlayPresenting
 
+    /// True while nudges should wait, such as during a call
+    /// (`HabitsCoordinator.isInCall`): drift isn't counted meanwhile.
+    @ObservationIgnored var holdsNudges: () -> Bool = { false }
+
     init(presenter: DistractionNotifier, overlay: BlockOverlayPresenting? = nil) {
         self.presenter = presenter
         self.overlay = overlay ?? BlockOverlayController()
@@ -84,7 +88,7 @@ final class EscalationEngine {
         }
 
         guard isInSession, snapshot.classification == .distraction,
-              !allowedThisSession.contains(key) else {
+              !allowedThisSession.contains(key), !holdsNudges() else {
             // Reset the streak on focus / neutral / no session.
             currentStreakStartedAt = nil
             lastNotifiedAt = nil
