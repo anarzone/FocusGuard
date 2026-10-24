@@ -202,6 +202,7 @@ final class AppState {
         blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
         blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }
         blockOverlay.onLetThrough = { [weak self] in self?.tabPause.letThrough() }
+        wireMoments(blockOverlay: blockOverlay)
 
         // Browser extension: its tab reports replace AppleScript while it's
         // connected; its block pages follow the preset, the daily limits and
