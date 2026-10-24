@@ -21,6 +21,8 @@ final class AppState {
     let patternDetector: PatternDetector
     let breakManager: BreakManager
     let breakOverlay: BreakOverlayController
+    /// Free "Pause the tab": the site's tab shows a calm page while it's blocked.
+    let tabPause = TabPauseCoordinator(pauser: AppleScriptTabPauser())
     let updater: UpdaterController
     let insights = AIInsightsViewModel()
     let music = FocusMusic()
@@ -153,6 +155,7 @@ final class AppState {
         }
         manager.onSessionEnded = { [weak engine, weak self] session in
             engine?.resetForSessionEnd()
+            self?.tabPause.sessionEnded()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
             self.music.sessionEnded()
@@ -192,6 +195,8 @@ final class AppState {
         classifier.isBlockListLocked = { [weak self] in self?.isStrictLocked ?? false }
         blockOverlay.onBackToWork = { [weak self] in self?.backToWork() }
         blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
+        blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }
+        blockOverlay.onLetThrough = { [weak self] in self?.tabPause.letThrough() }
 
         tracker.start()
         setupAutoPauseObservers()

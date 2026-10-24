@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Read in `applicationWillFinishLaunching`, while the launch Apple
     /// event is still the current one.
     private var launchedAsLoginItem = false
+    /// `focusguard://` links that arrived before AppState was up.
+    private var pendingRoutes: [FocusGuardURL] = []
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         launchedAsLoginItem = Self.isLoginItemLaunch(
@@ -90,6 +92,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onboarding.show(appState: appState)
             }
         }
+
+        pendingRoutes.forEach(appState.open)
+        pendingRoutes = []
+    }
+
+    /// `focusguard://` links (see `FocusGuardURL`), from the paused-tab page.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let routes = urls.compactMap(FocusGuardURL.init)
+        guard let appState else {
+            pendingRoutes += routes
+            return
+        }
+        routes.forEach(appState.open)
     }
 
     @objc private func applyDockPreference() {

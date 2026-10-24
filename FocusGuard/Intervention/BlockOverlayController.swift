@@ -92,6 +92,11 @@ class BlockOverlayController: BlockOverlayPresenting {
     var onBackToWork: (() -> Void)?
     /// "It's for work": exempt this site/app for the session; set by AppState.
     var onAllowForSession: (() -> Void)?
+    /// The screen came up; set by AppState (pauses the tab behind it).
+    var onPresent: ((BlockRequest) -> Void)?
+    /// The screen let the site through: a pass, "It's for work" or extra
+    /// time; set by AppState (puts the paused tab back).
+    var onLetThrough: (() -> Void)?
 
     func present(_ request: BlockRequest) {
         guard !isPresenting else { return }
@@ -105,6 +110,7 @@ class BlockOverlayController: BlockOverlayPresenting {
             onOverride: { [weak self] in
                 self?.dismiss()
                 self?.onOverride?()
+                self?.onLetThrough?()
             },
             onBackToWork: { [weak self] in
                 self?.dismiss()
@@ -113,11 +119,13 @@ class BlockOverlayController: BlockOverlayPresenting {
             onAllowForSession: { [weak self] in
                 self?.dismiss()
                 self?.onAllowForSession?()
+                self?.onLetThrough?()
             },
             onExtraTime: { [weak self] in
                 guard case .dailyLimit(let limit) = request.reason else { return }
                 self?.dismiss()
                 self?.onExtraTime?(limit.limitID)
+                self?.onLetThrough?()
             }
         )
 
@@ -127,6 +135,7 @@ class BlockOverlayController: BlockOverlayPresenting {
             window.makeKeyAndOrderFront(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
+        onPresent?(request)
     }
 
     /// Takes the screen down. Doesn't grant a pass: only the "Let me

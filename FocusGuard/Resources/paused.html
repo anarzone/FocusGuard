@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- No site name in the title: title rules must never match this page. -->
+<title>Paused · FocusGuard</title>
+<!-- FocusGuard's paused-tab page. It ships inside the app and is opened as
+     a file, so it works offline and loads nothing from the network. The app
+     passes everything in the fragment (#id=…&host=…&state=…) and changes the
+     fragment when the state changes; the buttons call the app through
+     focusguard:// links. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #F4F4F8;
+    --card: #FFFFFF;
+    --ink: #1D1D1F;
+    --muted: #6E6E73;
+    --line: rgba(0, 0, 0, 0.08);
+    --accent: #6155F5;
+    --accent-ink: #FFFFFF;
+    --quiet: rgba(0, 0, 0, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0E0E16;
+      --card: #1A1A24;
+      --ink: #F5F5F7;
+      --muted: #A1A1A8;
+      --line: rgba(255, 255, 255, 0.10);
+      --accent: #5E5CE6;
+      --quiet: rgba(255, 255, 255, 0.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    width: 100%;
+    max-width: 520px;
+    background: var(--card);
+    border: 0.5px solid var(--line);
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .brand svg { width: 16px; height: 16px; }
+  h1 {
+    font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 18px 0 8px;
+    overflow-wrap: anywhere;
+  }
+  p { margin: 0; color: var(--muted); }
+  .time {
+    margin-top: 22px;
+    font-size: 40px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .time-label { font-size: 13px; color: var(--muted); }
+  .actions {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 20px;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: 0;
+  }
+  .primary { background: var(--accent); color: var(--accent-ink); }
+  .secondary { background: var(--quiet); color: var(--ink); font-weight: 500; }
+  .button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .note { margin-top: 22px; font-size: 12px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main aria-live="polite">
+  <div class="brand">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2 2.6 3.1v4.3c0 3.4 2.3 6.2 5.4 7.4 3.1-1.2 5.4-4 5.4-7.4V3.1L8 1.2Z" fill="currentColor" opacity=".9"/></svg>
+    FocusGuard
+  </div>
+  <h1 id="title"></h1>
+  <p id="body"></p>
+  <div id="clock" hidden>
+    <div class="time" id="time"></div>
+    <div class="time-label" id="time-label">left in your session</div>
+  </div>
+  <div class="actions">
+    <a class="button primary" id="primary" href="#"></a>
+    <a class="button secondary" id="secondary" href="#"></a>
+  </div>
+  <p class="note" id="note">This page is part of FocusGuard on your Mac. Nothing on it goes online.</p>
+</main>
+<script>
+(function () {
+  "use strict";
+
+  function params() {
+    var out = {};
+    location.hash.replace(/^#/, "").split("&").forEach(function (pair) {
+      if (!pair) return;
+      var i = pair.indexOf("=");
+      var key = i < 0 ? pair : pair.slice(0, i);
+      var value = i < 0 ? "" : pair.slice(i + 1);
+      try { out[decodeURIComponent(key)] = decodeURIComponent(value.replace(/\+/g, " ")); } catch (e) {}
+    });
+    return out;
+  }
+
+  /** Only web pages can be reopened, never a script or file link. */
+  function safeWebURL(value) {
+    try {
+      var url = new URL(value);
+      return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+    } catch (e) { return null; }
+  }
+
+  function app(path, id) {
+    return "focusguard://" + path + (id ? "?id=" + encodeURIComponent(id) : "");
+  }
+
+  function setButton(el, label, href) {
+    if (!label || !href) { el.hidden = true; return; }
+    el.hidden = false;
+    el.textContent = label;
+    el.setAttribute("href", href);
+  }
+
+  function clock(seconds) {
+    var s = Math.max(0, Math.round(seconds));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    var mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+    return (h > 0 ? h + ":" : "") + mm + ":" + String(r).padStart(2, "0");
+  }
+
+  var timer = null;
+
+  function render() {
+    var p = params();
+    var host = p.host || "This site";
+    var back = p.back ? "Back to " + p.back : "Back to work";
+    var ends = Number(p.ends) || 0;
+    var state = p.state || "paused";
+    var left = ends ? ends - Date.now() / 1000 : null;
+
+    // If the app couldn't say the session ended (it quit), don't trap the tab.
+    if ((state === "paused" || state === "queued") && left !== null && left < -120) state = "over";
+
+    var title = document.getElementById("title");
+    var body = document.getElementById("body");
+    var primary = document.getElementById("primary");
+    var secondary = document.getElementById("secondary");
+    var showClock = left !== null && (state === "paused" || state === "queued");
+
+    if (state === "queued") {
+      title.textContent = host + " will reopen when your session ends";
+      body.textContent = "It comes back in this tab, right where you left it.";
+      setButton(primary, back, app("back"));
+      setButton(secondary, "Don’t reopen it", app("tab/keep-paused", p.id));
+    } else if (state === "over") {
+      title.textContent = "Your session is over";
+      body.textContent = host + " is still paused. Take a break first, or open it now.";
+      setButton(primary, "Take a 10-minute break", "focusguard://break?minutes=10");
+      var reopen = safeWebURL(p.url);
+      setButton(secondary, reopen ? "Reopen " + host : null, reopen);
+    } else if (state === "limit") {
+      title.textContent = host + " is paused for today";
+      var minutes = Number(p.minutes) || 0;
+      body.textContent = (minutes ? "You’ve used your " + minutes + " minutes. " : "") + "It opens again at midnight.";
+      setButton(primary, back, app("back"));
+      setButton(secondary, null, null);
+    } else {
+      title.textContent = host + " is paused while you focus";
+      body.textContent = ends ? "It’s here when your session ends." : "It’s here when your session ends, or reopen it after.";
+      setButton(primary, back, app("back"));
+      setButton(secondary, "Reopen after the session", app("tab/reopen-later", p.id));
+    }
+
+    document.getElementById("clock").hidden = !showClock;
+    if (showClock) {
+      document.getElementById("time").textContent = clock(left);
+      document.getElementById("time-label").textContent = left > 0 ? "left in your session" : "your session is ending";
+    }
+
+    clearTimeout(timer);
+    if (ends) timer = setTimeout(render, 1000);
+  }
+
+  window.addEventListener("hashchange", render);
+  render();
+})();
+</script>
+</body>
+</html>
