@@ -18,16 +18,29 @@ enum PausedPage {
 
     static var fileURL: URL? { Bundle.main.url(forResource: "paused", withExtension: "html") }
 
-    static func url(base: URL, for tab: PausedTab, state: State) -> URL {
+    static func url(base: URL, for tab: PausedTab, state: State, summary: PausedSessionSummary? = nil) -> URL {
         var fields: [(String, String)] = [
             ("id", tab.id),
             ("host", tab.host),
             ("url", tab.originalURL.absoluteString),
             ("state", state.rawValue),
         ]
-        if let ends = tab.endsAt { fields.append(("ends", String(Int(ends.timeIntervalSince1970)))) }
+        if let ends = tab.endsAt { fields.append(("ends", seconds(ends))) }
         if let back = tab.backTo { fields.append(("back", back)) }
         if case .limit(let minutes) = tab.reason { fields.append(("minutes", String(minutes))) }
+        if let label = tab.sessionLabel { fields.append(("label", label)) }
+        if let start = tab.startedAt { fields.append(("start", seconds(start))) }
+        if state == .over, let summary {
+            fields += [
+                ("name", summary.name),
+                ("auto", summary.isAutomaticName ? "1" : "0"),
+                ("end", seconds(summary.endedAt)),
+                ("focus", String(summary.focusMinutes)),
+                ("drift", String(summary.driftMinutes)),
+                ("other", String(summary.otherMinutes)),
+                ("rate", String(summary.focusPercent)),
+            ]
+        }
         let fragment = fields.map { "\($0)=\(encode($1))" }.joined(separator: "&")
         var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
         components?.percentEncodedFragment = fragment
@@ -38,6 +51,8 @@ enum PausedPage {
     /// or the AppleScript string they travel in.
     private static let unreserved = CharacterSet(charactersIn:
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+    private static func seconds(_ date: Date) -> String { String(Int(date.timeIntervalSince1970)) }
 
     private static func encode(_ value: String) -> String {
         value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
@@ -75,8 +90,25 @@ struct PausedTab: Equatable {
     let endsAt: Date?
     /// The app "Back to …" returns to.
     let backTo: String?
+    /// The session's name, for "Evening focus has 18 minutes left".
+    var sessionLabel: String? = nil
+    /// When the session started, for the page's progress bar.
+    var startedAt: Date? = nil
     /// "Reopen after the session" was picked.
     var reopensAfterSession = false
+}
+
+/// The session that ended, as the "session over" page shows it.
+struct PausedSessionSummary: Equatable {
+    let name: String
+    /// An automatic name ("Comeback Run"), not one the user typed.
+    let isAutomaticName: Bool
+    let startedAt: Date
+    let endedAt: Date
+    let focusMinutes: Int
+    let driftMinutes: Int
+    let otherMinutes: Int
+    let focusPercent: Int
 }
 
 /// Free "Pause the tab" (blocking level 1). When the block screen comes up
@@ -90,6 +122,8 @@ struct PausedTab: Equatable {
 final class TabPauseCoordinator {
     /// Off when another blocking level takes over (Pro, later).
     var isEnabled = true
+    /// The session that just ended, for the "session over" page; set by AppState.
+    var summaryProvider: (() -> PausedSessionSummary?)?
     /// Tabs paused and not yet reopened, by id.
     private(set) var tabs: [String: PausedTab] = [:]
     /// The tab paused for the block screen that's up now.
@@ -109,16 +143,19 @@ final class TabPauseCoordinator {
 
     /// The block screen came up over `snapshot`: pause its tab if it's a
     /// web page in a browser we can reach.
-    func blockShown(_ reason: PausedTab.Reason, snapshot: ActivitySnapshot?, endsAt: Date?, backTo: String?) {
+    func blockShown(_ reason: PausedTab.Reason, snapshot: ActivitySnapshot?, endsAt: Date?, backTo: String?,
+                    sessionLabel: String? = nil, startedAt: Date? = nil) {
         lastPausedID = nil
         guard isEnabled, let page, let snapshot, pauser.canPause(browser: snapshot.bundleIdentifier),
               let original = snapshot.url.flatMap(URL.init(string:)),
               ["http", "https"].contains(original.scheme?.lowercased() ?? ""),
               let host = BlockRequest.displayHost(snapshot.url) else { return }
 
+        let inSession = reason == .session
         let tab = PausedTab(id: PausedPage.newID(), browser: snapshot.bundleIdentifier, host: host,
                             originalURL: original, reason: reason,
-                            endsAt: reason == .session ? endsAt : nil, backTo: backTo)
+                            endsAt: inSession ? endsAt : nil, backTo: backTo,
+                            sessionLabel: inSession ? sessionLabel : nil, startedAt: inSession ? startedAt : nil)
         let state: PausedPage.State = reason == .session ? .paused : .limit
         lastPausedID = tab.id
         inFlight.insert(tab.id)
@@ -162,11 +199,13 @@ final class TabPauseCoordinator {
     /// The session ended: queued tabs reopen; the rest show "session over".
     func sessionEnded() {
         lastPausedID = nil
+        let summary = summaryProvider?()
         for tab in tabs.values where tab.reason == .session {
             if tab.reopensAfterSession {
                 pauser.redirectTab(showing: tab.id, in: tab.browser, to: tab.originalURL)
             } else if let page {
-                pauser.redirectTab(showing: tab.id, in: tab.browser, to: PausedPage.url(base: page, for: tab, state: .over))
+                pauser.redirectTab(showing: tab.id, in: tab.browser,
+                                   to: PausedPage.url(base: page, for: tab, state: .over, summary: summary))
             }
             tabs[tab.id] = nil
         }
