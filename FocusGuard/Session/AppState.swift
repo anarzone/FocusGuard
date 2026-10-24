@@ -15,6 +15,8 @@ final class AppState {
     let sessionManager: SessionManager
     let notificationPresenter: NotificationPresenter
     let escalationEngine: EscalationEngine
+    /// Daily limits on sites and apps, counted all day.
+    let limits: DailyLimitsEngine
     let calendarAutostart: CalendarAutostartCoordinator
     let patternDetector: PatternDetector
     let breakManager: BreakManager
@@ -46,6 +48,7 @@ final class AppState {
             ActivityEvent.self,
             TitleOptOut.self,
             AppRule.self,
+            DailyLimit.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
@@ -72,6 +75,8 @@ final class AppState {
         let presenter = NotificationPresenter()
         let blockOverlay = BlockOverlayController()
         let engine = EscalationEngine(presenter: presenter, overlay: blockOverlay)
+        let limits = DailyLimitsEngine(context: context, notifier: presenter, overlay: blockOverlay,
+                                       policy: { [weak engine] in engine?.policy ?? .standard })
 
         self.permissions = PermissionsCoordinator()
         self.optOutCache = cache
@@ -80,6 +85,7 @@ final class AppState {
         self.sessionManager = manager
         self.notificationPresenter = presenter
         self.escalationEngine = engine
+        self.limits = limits
         self.calendarAutostart = CalendarAutostartCoordinator(sessionManager: manager)
         self.patternDetector = PatternDetector(presenter: presenter)
         self.breakManager = BreakManager()
@@ -114,6 +120,10 @@ final class AppState {
             manager?.checkPlannedDuration()
             // Drive break expiration off the same tick.
             self?.breakManager.checkExpiration()
+            // Daily limits count all day, sessions and breaks included, and
+            // go first so a used-up limit can't be passed as a drift.
+            self?.limits.observe(snapshot: tracker?.currentSnapshot,
+                                 counting: tracker?.isFrontmostSelf == false && tracker?.isAway == false)
             if let snap = tracker?.currentSnapshot {
                 let inActiveSession = manager?.currentSession != nil
                     && manager?.currentSession?.pausedAt == nil
@@ -178,6 +188,8 @@ final class AppState {
 
         // The block screen reads the live session and acts on it.
         blockOverlay.contextProvider = { [weak self] in self?.blockContext() }
+        blockOverlay.backToAppProvider = { [weak self] in self?.backToAppName() }
+        classifier.isBlockListLocked = { [weak self] in self?.isStrictLocked ?? false }
         blockOverlay.onBackToWork = { [weak self] in self?.backToWork() }
         blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
 

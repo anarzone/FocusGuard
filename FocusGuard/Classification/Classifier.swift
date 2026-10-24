@@ -18,6 +18,10 @@ final class Classifier {
     private var lastFetch: Date?
     private let cacheTTL: TimeInterval = 30
 
+    /// True while Strict locks the blocked list (until the session ends):
+    /// nothing blocked can be unblocked then. Set by AppState.
+    @ObservationIgnored var isBlockListLocked: () -> Bool = { false }
+
     init(context: ModelContext) {
         self.context = context
         refresh()
@@ -33,8 +37,10 @@ final class Classifier {
     /// Persist a user override for a given bundle ID or host. Replaces any
     /// existing rule with the same pattern + match-kind so toggling between
     /// classifications doesn't accumulate dead rows. Higher priority (300)
-    /// than the default 200 to ensure user overrides win cleanly.
-    func setOverride(bundleId: String? = nil, host: String? = nil, classification: Classification) {
+    /// than the default 200 to ensure user overrides win cleanly. Returns
+    /// false when Strict's lock refuses to unblock it.
+    @discardableResult
+    func setOverride(bundleId: String? = nil, host: String? = nil, classification: Classification) -> Bool {
         let pattern: String
         let kind: RuleMatchKind
         if let bundleId, !bundleId.isEmpty {
@@ -44,8 +50,9 @@ final class Classifier {
             pattern = host
             kind = .host
         } else {
-            return
+            return false
         }
+        if classification != .distraction, isBlockListLocked(), isBlocked(pattern, kind) { return false }
 
         let kindRaw = kind.rawValue
         let descriptor = FetchDescriptor<AppRule>(
@@ -95,6 +102,16 @@ final class Classifier {
 
         try? context.save()
         invalidate()
+        return true
+    }
+
+    /// Whether this app or site is classified as a distraction right now.
+    func isBlocked(_ pattern: String, _ kind: RuleMatchKind) -> Bool {
+        switch kind {
+        case .bundleId:   return classify(bundleId: pattern, windowTitle: nil, url: nil) == .distraction
+        case .host:       return classify(bundleId: "", windowTitle: nil, url: "https://\(pattern)") == .distraction
+        case .titleRegex: return false
+        }
     }
 
     func classify(bundleId: String, windowTitle: String?, url: String?) -> Classification {

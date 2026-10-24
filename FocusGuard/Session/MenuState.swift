@@ -220,9 +220,6 @@ extension AppState {
         let timeline = liveTimeline(for: session, now: now)
         let elapsed = sessionManager.runningSeconds(for: session, now: now)
         let left = session.plannedDurationMinutes.map { max(0, Double($0 * 60) - elapsed) }
-        let backTo = tracker.lastFocusBundleId.flatMap {
-            NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
-        }
         return BlockContext(
             sessionLabel: session.displayName,
             timeline: timeline,
@@ -231,9 +228,15 @@ extension AppState {
             timeLeft: left,
             endsAt: left.map { now.addingTimeInterval($0) },
             awaySince: escalationEngine.currentStreakStartedAt,
-            zoneBefore: focusRuns(for: session, now: now).lastEnded,
-            backToAppName: backTo
+            zoneBefore: focusRuns(for: session, now: now).lastEnded
         )
+    }
+
+    /// Name of the app "Back to …" returns to, if it's still running.
+    func backToAppName() -> String? {
+        tracker.lastFocusBundleId.flatMap {
+            NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
+        }
     }
 
     /// Bring back the last app the user was focused in; failing that, just
@@ -253,6 +256,19 @@ extension AppState {
         case .none:
             break
         }
+    }
+
+    /// Strict locks the blocked list and the preset until the session ends.
+    var isStrictLocked: Bool {
+        sessionManager.currentSession != nil && escalationEngine.policy.locksDuringSession
+    }
+
+    /// Switches the preset, unless Strict has it locked. Returns whether it changed.
+    @discardableResult
+    func setDriftResponse(_ response: DriftResponse) -> Bool {
+        guard !isStrictLocked else { return false }
+        response.apply(to: escalationEngine)
+        return true
     }
 
     /// "It's for work" — stop nudging about this site / app until the session ends.

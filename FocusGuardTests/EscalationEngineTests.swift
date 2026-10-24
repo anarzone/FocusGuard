@@ -15,13 +15,19 @@ final class EscalationEngineTests: XCTestCase {
     }
 
     final class StubOverlay: BlockOverlayPresenting {
-        var presented = false
+        var current: BlockRequest?
+        var presented: Bool { current != nil }
+        var presentCount = 0
         var onOverride: (() -> Void)?
+        var onExtraTime: ((UUID) -> Void)?
         var isPresenting: Bool { presented }
-        func present(distractionAppName: String, bundleId: String, urlHost: String?, overrideSeconds: Int) {
-            presented = true
+        func present(_ request: BlockRequest) {
+            current = request
+            presentCount += 1
         }
-        func dismiss() { presented = false; onOverride?() }
+        func dismiss() { current = nil }
+        /// "Let me through", as the real block screen does it.
+        func letMeThrough() { dismiss(); onOverride?() }
     }
 
     var presenter: RecordingPresenter!

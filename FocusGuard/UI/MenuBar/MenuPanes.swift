@@ -1013,15 +1013,16 @@ private struct QuickSettingsPane: View {
                     Picker("Response", selection: Binding(
                         get: { drift },
                         set: { value in
-                            drift = value
-                            value?.apply(to: appState.escalationEngine)
+                            if let value, appState.setDriftResponse(value) { drift = value }
                         }
                     )) {
                         ForEach(DriftResponse.allCases) { Text($0.title).tag(Optional($0)) }
                     }
                     .pickerStyle(.segmented).labelsHidden().controlSize(.small)
                     .frame(maxWidth: .infinity)
-                    Text(drift?.summary ?? "Custom — tuned in Settings → Escalation")
+                    .disabled(appState.isStrictLocked)
+                    Text(appState.isStrictLocked ? "Strict stays on until this session ends"
+                         : drift?.summary ?? "Custom — tuned in Settings → Escalation")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
