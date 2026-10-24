@@ -171,7 +171,7 @@ final class Classifier {
     /// A site rule matches the host itself and its subdomains — `youtube.com`
     /// matches `m.youtube.com`, but not `notyoutube.com` or
     /// `youtube.com.example.net` (it used to be a plain substring check).
-    static func host(_ host: String, matches pattern: String) -> Bool {
+    nonisolated static func host(_ host: String, matches pattern: String) -> Bool {
         var p = pattern.lowercased().trimmingCharacters(in: .whitespaces)
         if let schemeEnd = p.range(of: "://") { p = String(p[schemeEnd.upperBound...]) }
         if let slash = p.firstIndex(of: "/") { p = String(p[..<slash]) }
