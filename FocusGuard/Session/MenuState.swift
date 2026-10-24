@@ -8,6 +8,8 @@ struct DriftInfo: Equatable {
     let snapshot: ActivitySnapshot
     /// When the block overlay takes over; nil in strict mode (it already has).
     let blocksAt: Date?
+    /// A browser tab gets paused rather than the screen blocked.
+    var pausesTab = false
 
     var displayName: String {
         let host = snapshot.url.flatMap { URL(string: $0)?.host }
@@ -15,16 +17,35 @@ struct DriftInfo: Equatable {
     }
 }
 
-/// The minutes beside the menu-bar icon.
+/// The minutes beside the menu-bar icon, or a running pass.
 struct StatusLabel: Equatable {
-    enum Kind: Equatable { case sessionLeft, sessionElapsed, breakLeft }
+    enum Kind: Equatable {
+        case sessionLeft, sessionElapsed, breakLeft
+        /// "Let me through" on this site or app: "x.com 1:52", after an orange dot.
+        case pass(name: String)
+    }
 
     let minutes: Int
     /// Paused sessions show their time dimmed.
     let dimmed: Bool
     let kind: Kind
+    /// Seconds left on a pass; the other kinds go by the minute.
+    var seconds = 0
+
+    static func pass(name: String, secondsLeft: Int) -> StatusLabel {
+        StatusLabel(minutes: 0, dimmed: false, kind: .pass(name: name), seconds: max(0, secondsLeft))
+    }
+
+    /// Drawn after an orange dot: orange never carries the text itself.
+    var showsDot: Bool {
+        if case .pass = kind { return true }
+        return false
+    }
 
     var text: String {
+        if case .pass(let name) = kind {
+            return "\(name) \(seconds / 60):\(String(format: "%02d", seconds % 60))"
+        }
         if minutes >= 60 { return "\(minutes / 60)h \(minutes % 60)m" }
         return "\(minutes)m"
     }
@@ -35,6 +56,25 @@ struct StatusLabel: Equatable {
         case .sessionLeft:    return "\(minutes) \(unit) left\(dimmed ? ", paused" : "")"
         case .sessionElapsed: return "\(minutes) \(unit) so far\(dimmed ? ", paused" : "")"
         case .breakLeft:      return "\(minutes) \(unit) of break left"
+        case .pass(let name):
+            let m = seconds / 60, s = seconds % 60
+            let parts = [m > 0 ? "\(m) \(m == 1 ? "minute" : "minutes")" : nil,
+                         s > 0 || m == 0 ? "\(s) \(s == 1 ? "second" : "seconds")" : nil]
+            return "\(name) allowed for \(parts.compactMap { $0 }.joined(separator: " "))"
+        }
+    }
+}
+
+extension AutoStartOffer {
+    /// Whole minutes counted so far, at least one.
+    func focusMinutes(now: Date = .now) -> Int { max(1, Int(focusSeconds(now: now) / 60)) }
+
+    /// "Xcode and Terminal", "Xcode, Terminal and Safari".
+    var appList: String {
+        switch appNames.count {
+        case 0:  return "focus apps"
+        case 1:  return appNames[0]
+        default: return appNames.dropLast().joined(separator: ", ") + " and " + (appNames.last ?? "")
         }
     }
 }
@@ -122,8 +162,12 @@ extension AppState {
 
     /// Minutes shown beside the menu-bar icon: left in a timed session or a
     /// break, elapsed in an open-ended one, dimmed while paused. Nil when
-    /// nothing is running or the user turned it off.
+    /// nothing is running or the user turned it off. A running pass shows
+    /// its site and time left instead, whatever the setting.
     func statusLabel(now: Date = .now) -> StatusLabel? {
+        if let pass = runningPass(now: now) {
+            return .pass(name: pass.name, secondsLeft: Int(pass.remaining(now: now).rounded(.up)))
+        }
         guard UserDefaults.standard.object(forKey: SettingsKeys.menuBarShowTime) as? Bool ?? true else { return nil }
         if let state = breakManager.current {
             return StatusLabel(minutes: Self.minutesRoundedUp(state.remaining(now: now)), dimmed: false, kind: .breakLeft)
@@ -152,6 +196,14 @@ extension AppState {
         seconds <= 0 ? 0 : Int((seconds / 60).rounded(.up))
     }
 
+    /// The "Let me through" pass in force, while a session runs.
+    func runningPass(now: Date = .now) -> EscalationEngine.Pass? {
+        guard breakManager.current == nil,
+              let session = sessionManager.currentSession, session.pausedAt == nil,
+              let pass = escalationEngine.activePass, pass.remaining(now: now) > 0 else { return nil }
+        return pass
+    }
+
     /// A drift counts once it outlasts the engine's silence window, so a
     /// two-second glance at a distracting tab doesn't flip the menu.
     func currentDrift(now: Date = .now) -> DriftInfo? {
@@ -162,7 +214,35 @@ extension AppState {
         let blocksAt = escalationEngine.strictMode
             ? nil
             : since.addingTimeInterval(escalationEngine.blockThreshold)
-        return DriftInfo(since: since, snapshot: snapshot, blocksAt: blocksAt)
+        let pausesTab = tabPause.isEnabled && snapshot.url != nil
+            && BrowserTabReader.isBrowser(bundleIdentifier: snapshot.bundleIdentifier)
+        return DriftInfo(since: since, snapshot: snapshot, blocksAt: blocksAt, pausesTab: pausesTab)
+    }
+
+    // MARK: - Daily limits
+
+    /// The daily limit the menu shows: the one on what's in front, else one
+    /// whose tab FocusGuard has paused and is in front now.
+    func menuLimit() -> LimitStatus? {
+        guard let snapshot = tracker.currentSnapshot else { return nil }
+        if let status = limits.status(for: snapshot) { return status }
+        guard let host = snapshot.url.flatMap(Self.pausedPageHost) else { return nil }
+        return limits.statuses.first { $0.isSite && Classifier.host(host, matches: $0.target) }
+    }
+
+    /// The site a paused-tab page stands in for, from its fragment
+    /// ("…/paused.html#id=…&host=youtube.com&…").
+    nonisolated static func pausedPageHost(_ url: String) -> String? {
+        guard url.hasPrefix("file:"), url.contains("paused.html"),
+              let fragment = URLComponents(string: url)?.fragment else { return nil }
+        let fields = fragment.split(separator: "&").map { $0.split(separator: "=", maxSplits: 1) }
+        guard let host = fields.first(where: { $0.first == "host" })?.last else { return nil }
+        return String(host).removingPercentEncoding
+    }
+
+    /// Whether the limit's site is a paused tab right now (or would be).
+    func limitPausesTab(_ status: LimitStatus) -> Bool {
+        status.isSite && tabPause.isEnabled
     }
 
     func liveTimeline(for session: Session, now: Date = .now) -> SessionTimeline {

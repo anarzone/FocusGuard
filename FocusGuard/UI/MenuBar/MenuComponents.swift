@@ -4,48 +4,90 @@ import SwiftUI
 
 /// Rounded module on the menu glass. Radius 13 sits concentric inside the
 /// panel's 18 with its 6pt inset. A tint turns it into a status module
-/// (drift, permissions) — tinted fill plus a matching hairline.
+/// (drift, permissions) — tinted fill plus a matching hairline. Raised
+/// modules (a call, a daily limit) sit a step brighter than the others.
 private struct MenuModule: ViewModifier {
     var tint: Color?
+    var raised = false
+    var padding = EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
         content
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(shape.fill(tint.map { $0.opacity(0.14) } ?? Theme.module))
-            .overlay(shape.strokeBorder(tint.map { $0.opacity(0.45) } ?? Theme.moduleStroke, lineWidth: 0.5))
+            .background(shape.fill(tint.map { $0.opacity(tintOpacity) } ?? (raised ? Theme.cardBackground : Theme.module)))
+            .overlay(shape.strokeBorder(tint.map { $0.opacity(0.4) } ?? Theme.moduleStroke, lineWidth: 0.5))
     }
+
+    /// Indigo offers sit lighter than the orange drift and limit modules.
+    private var tintOpacity: Double { tint == Theme.focus ? 0.10 : 0.14 }
 }
 
 extension View {
-    func menuModule(tint: Color? = nil) -> some View {
-        modifier(MenuModule(tint: tint))
+    func menuModule(tint: Color? = nil, raised: Bool = false,
+                    padding: EdgeInsets = EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)) -> some View {
+        modifier(MenuModule(tint: tint, raised: raised, padding: padding))
     }
+}
+
+/// Colours only the menu uses.
+enum MenuPalette {
+    /// Secondary buttons on a tinted module: white over the tint.
+    static let onTint = Theme.segment.opacity(0.72)
 }
 
 // MARK: - Buttons
 
 /// Full-width capsule. Prominent = the one accent-filled primary action.
+/// `fill` swaps the grey for another (white on a tinted module).
 struct CapsuleButton: View {
     let title: String
     var prominent: Bool
     var height: CGFloat = 36
+    var fill: Color?
+    var semibold: Bool?
+    let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: height < 30 ? 12 : 13, weight: semibold ?? prominent ? .semibold : .regular))
+                .monospacedDigit()
+                .foregroundStyle(prominent ? Color.white : Theme.primaryText)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .background(Capsule().fill(prominent ? Theme.focusFill : (fill ?? Theme.control)))
+                .contentShape(Capsule())
+                .opacity(isEnabled ? 1 : 0.6)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A small grey pill: "Done", "Start now", "Pause till it ends".
+struct PillButton: View {
+    let title: String
+    var height: CGFloat = 26
+    var fill: Color = Theme.control
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: prominent ? .semibold : .regular))
-                .foregroundStyle(prominent ? Color.white : Color.primary)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, height < 24 ? 10 : 12)
                 .frame(height: height)
-                .background(Capsule().fill(prominent ? Theme.focusFill : Theme.control))
+                .background(Capsule().fill(fill))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .fixedSize()
     }
 }
 
@@ -53,18 +95,21 @@ struct CapsuleButton: View {
 struct ControlPlatter: View {
     let systemImage: String
     let title: String
+    /// The one action that matters now (Resume): indigo, white glyph.
+    var prominent = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 6) {
+            VStack(spacing: 5) {
                 Image(systemName: systemImage)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(prominent ? Color.white : Theme.primaryText)
                     .frame(width: 40, height: 40)
-                    .background(Circle().fill(Theme.control))
+                    .background(Circle().fill(prominent ? Theme.focusFill : Theme.control))
                 Text(title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 11, weight: prominent ? .semibold : .regular))
+                    .foregroundStyle(Theme.primaryText)
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
@@ -120,58 +165,81 @@ struct MenuSeparator: View {
 // MARK: - Now row
 
 /// What's frontmost, and how it's classified. Dot + word, never colour alone.
+/// A site shows as itself ("youtube.com"), with the page title under it.
 struct NowRow: View {
     let snapshot: ActivitySnapshot?
+    /// Replaces the category on the right ("Counts outside the session").
+    var note: String?
+    /// The daily limit on what's in front, if it has run out.
+    var reachedLimit: LimitStatus?
 
     var body: some View {
         HStack(spacing: 10) {
             if let snapshot {
+                let glyphHost = reachedLimit?.isSite == true ? reachedLimit?.target : host
                 AppGlyph(
                     kind: AppGlyph.kind(forBundleId: snapshot.bundleIdentifier, name: snapshot.appName),
-                    bundleId: snapshot.bundleIdentifier,
-                    size: 30
+                    bundleId: glyphHost == nil ? snapshot.bundleIdentifier : nil,
+                    host: glyphHost,
+                    size: 28
                 )
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(snapshot.appName)
+                    Text(reachedLimit?.name ?? host ?? snapshot.appName)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
-                    if let detail = snapshot.distinctDetail {
+                    if let detail {
                         Text(detail)
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.secondaryText)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
                 }
                 Spacer(minLength: 0)
-                HStack(spacing: 5) {
-                    Circle().fill(color(snapshot.classification)).frame(width: 7, height: 7)
-                    Text(categoryName(snapshot.classification))
+                if let note {
+                    Text(note)
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.secondaryText)
+                        .lineLimit(1)
+                        .fixedSize()
+                } else {
+                    HStack(spacing: 5) {
+                        Circle().fill(reachedLimit == nil ? kindColor(snapshot.classification) : Theme.distraction)
+                            .frame(width: 7, height: 7)
+                        Text(reachedLimit == nil ? categoryName(snapshot.classification) : "Limit reached")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.primaryText.opacity(0.85))
+                    }
+                    .fixedSize()
                 }
             } else {
-                AppGlyph(kind: .generic, size: 30)
+                AppGlyph(kind: .generic, size: 28)
                 Text("Detecting…")
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.secondaryText)
                 Spacer(minLength: 0)
             }
         }
-        .padding(.horizontal, -2)
-        .padding(.vertical, -2)
-        .menuModule()
+        .menuModule(padding: EdgeInsets(top: 9, leading: 12, bottom: 9, trailing: 12))
         .accessibilityElement(children: .combine)
     }
 
-    private func color(_ c: Classification) -> Color {
-        switch c {
-        case .focus:       return Theme.focus
-        case .neutral:     return Theme.other
-        case .distraction: return Theme.distraction
-        }
+    /// The site's host for a browser tab, without "www.".
+    private var host: String? {
+        guard let snapshot, BrowserTabReader.isBrowser(bundleIdentifier: snapshot.bundleIdentifier),
+              let host = snapshot.url.flatMap({ URL(string: $0)?.host }) else { return nil }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
+    private var detail: String? {
+        guard let snapshot else { return nil }
+        if reachedLimit != nil { return "Paused by FocusGuard" }
+        if host != nil {
+            let title = snapshot.windowTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return title?.isEmpty == false ? title : nil
+        }
+        return snapshot.distinctDetail
+    }
 }
 
 // MARK: - Session ring
@@ -375,25 +443,34 @@ struct StretchSummary: View {
     }
 }
 
-/// Legend under the ring. Live sessions show the focus share on the right;
-/// the recap shows per-kind minute counts instead.
+/// Legend under the ring. Live sessions show the focus rate on the right;
+/// the recap centres per-kind minute counts instead.
 struct RingLegend: View {
     var counts: (focus: Int, drift: Int, other: Int)?
     var trailing: String?
 
     var body: some View {
-        HStack(spacing: 12) {
-            swatch(Theme.focus, "Focused", counts?.focus)
-            swatch(Theme.distraction, "Drifted", counts?.drift)
-            swatch(Theme.other, "Other", counts?.other)
-            Spacer(minLength: 0)
-            if let trailing {
+        HStack(spacing: 0) {
+            HStack(spacing: counts == nil ? 12 : 14) {
+                swatch(Theme.focus, "Focused", counts?.focus)
+                swatch(Theme.distraction, "Drifted", counts?.drift)
+                swatch(Theme.other, "Other", counts?.other)
+                if counts != nil {
+                    Text("min").foregroundStyle(Theme.secondaryText)
+                }
+            }
+            if counts == nil, let trailing {
+                Spacer(minLength: 8)
                 Text(trailing)
                     .fontWeight(.semibold)
-                    .monospacedDigit()
+                    .foregroundStyle(Theme.primaryText)
+                    .layoutPriority(1)
             }
         }
-        .font(.system(size: 11))
+        .font(.system(size: 11).monospacedDigit())
+        .foregroundStyle(Theme.primaryText.opacity(0.85))
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: counts == nil ? .leading : .center)
     }
 
     private func swatch(_ color: Color, _ title: String, _ count: Int?) -> some View {
@@ -406,55 +483,55 @@ struct RingLegend: View {
 
 // MARK: - In the zone
 
-/// Current unbroken focus run, measured against today's best.
+/// Current unbroken focus run, measured against today's best. Drifting
+/// shows where the run ended; paused, that it picks up again.
 struct ZoneModule: View {
     let runs: FocusRuns
     let bestToday: TimeInterval
     /// Drifting right now: the counter shows the reset.
     let drifting: Bool
+    var paused = false
 
     private var currentMinutes: Int { Int(runs.current / 60) }
     private var bestMinutes: Int { Int(max(bestToday, runs.longest) / 60) }
-    private var active: Bool { !drifting && runs.current > 0 }
+    private var active: Bool { !drifting && !paused && runs.current > 0 }
+    private var showsEnded: Bool { drifting && runs.lastEnded >= 60 }
 
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle().fill(active ? Theme.focusTint : Theme.control)
-                ZoneGlyph(color: active ? Theme.focus : Color.secondary)
+                ZoneGlyph(color: active ? Theme.focus : Theme.neutral)
                     .frame(width: 18, height: 18)
             }
             .frame(width: 34, height: 34)
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("In the zone")
+                Text(showsEnded ? "Run ended at" : "In the zone")
                     .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                Text("\(active ? currentMinutes : 0) min")
+                    .foregroundStyle(Theme.secondaryText)
+                Text("\(value) min")
                     .font(.system(size: 20, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(active ? Color.primary : Color.secondary)
+                    .foregroundStyle(Theme.primaryText)
             }
+            .fixedSize()
 
             Spacer(minLength: 0)
 
-            VStack(alignment: .trailing, spacing: 5) {
+            VStack(alignment: .trailing, spacing: 6) {
                 if drifting {
-                    if runs.lastEnded >= 60 {
-                        Text("Run ended at \(Int(runs.lastEnded / 60)) min")
-                            .font(.system(size: 11))
-                    }
-                    Text("Restarts when you're back")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    note("Restarts when\nyou're back")
+                } else if paused {
+                    note("Picks up from here\nwhen you resume")
                 } else if active, currentMinutes >= bestMinutes, currentMinutes >= 1 {
                     Text("New best today")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.focus)
+                        .foregroundStyle(Theme.link)
                 } else if bestMinutes > 0 {
                     Text("Best today \(bestMinutes) min")
                         .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.secondaryText)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule().fill(Theme.control)
@@ -468,8 +545,20 @@ struct ZoneModule: View {
             }
             .multilineTextAlignment(.trailing)
         }
-        .menuModule()
+        .menuModule(padding: EdgeInsets(top: 11, leading: 14, bottom: 11, trailing: 14))
         .accessibilityElement(children: .combine)
+    }
+
+    private var value: Int {
+        if showsEnded { return Int(runs.lastEnded / 60) }
+        return drifting ? 0 : currentMinutes
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .lineSpacing(1)
+            .foregroundStyle(Theme.secondaryText)
     }
 }
 
