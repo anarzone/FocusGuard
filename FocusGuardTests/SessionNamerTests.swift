@@ -55,6 +55,32 @@ final class SessionNamerTests: XCTestCase {
         XCTAssertEqual(pattern([seg(.focus, 0.5)]), .quiet)
     }
 
+    // MARK: - Judged on the focus rate
+
+    func testNeutralTimeIsLeftOut() {
+        // 15 focused, 3 drifted, 12 neutral: 83% focus rate, not 50% of tracked time.
+        let session = Array(repeating: [seg(.focus, 5), seg(.neutral, 4), seg(.distraction, 1)], count: 3).flatMap { $0 }
+        XCTAssertEqual(pattern(session), .steady)
+        // 27 focused, 3 drifted, 9 neutral: 90%.
+        let locked = Array(repeating: [seg(.focus, 9), seg(.neutral, 3), seg(.distraction, 1)], count: 3).flatMap { $0 }
+        XCTAssertEqual(pattern(locked), .lockedIn)
+    }
+
+    func testBandsFollowTheFocusRate() {
+        // Evening session from the menu canvas: 41 focused, 6 drifted, 3 other, 87%.
+        let evening = Array(repeating: [seg(.focus, 41 / 3), seg(.distraction, 2), seg(.neutral, 1)], count: 3).flatMap { $0 }
+        XCTAssertEqual(pattern(evening), .steady)
+        let bumpy = Array(repeating: [seg(.focus, 5), seg(.neutral, 2), seg(.distraction, 3)], count: 3).flatMap { $0 }
+        XCTAssertEqual(pattern(bumpy), .bumpy)      // 62%
+        let wandering = Array(repeating: [seg(.focus, 2), seg(.neutral, 5), seg(.distraction, 3)], count: 3).flatMap { $0 }
+        XCTAssertEqual(pattern(wandering), .wandering)   // 40%
+    }
+
+    func testOnlyNeutralTimeIsQuiet() {
+        XCTAssertEqual(pattern([seg(.neutral, 50)]), .quiet)
+        XCTAssertEqual(SessionNamer.name(segments: [seg(.neutral, 50)], runningSeconds: 50 * 60), "Quiet Deep Dive")
+    }
+
     func testNameCombinesPatternAndLength() {
         XCTAssertEqual(SessionNamer.name(segments: [seg(.focus, 50)], runningSeconds: 50 * 60), "Locked-in Deep Dive")
         XCTAssertEqual(SessionNamer.name(segments: [seg(.focus, 5), seg(.distraction, 8), seg(.focus, 17)],

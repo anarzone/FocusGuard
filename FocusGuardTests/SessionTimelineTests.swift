@@ -31,7 +31,7 @@ final class SessionTimelineTests: XCTestCase {
         XCTAssertEqual(grid.focusCells, 10)
         XCTAssertEqual(grid.driftCells, 2)
         XCTAssertEqual(grid.otherCells, 1)
-        XCTAssertEqual(grid.focusPercent, 77)
+        XCTAssertEqual(grid.focusPercent, 83)   // 10 / (10 + 2): other time left out
         XCTAssertFalse(grid.cells.contains(.future))
     }
 

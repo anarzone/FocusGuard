@@ -19,7 +19,7 @@ final class FocusSummaryBuilderTests: XCTestCase {
     func test_summary_includesAggregatedNumbersAndHosts() {
         let s = sampleSummary()
         XCTAssertTrue(s.contains("Today"))
-        XCTAssertTrue(s.contains("Focus: 95 min (37%)"))   // 95 / 255 ≈ 37%
+        XCTAssertTrue(s.contains("Focus: 95 min (44%)"))   // focus rate: 95 / (95 + 120) ≈ 44%
         XCTAssertTrue(s.contains("Distraction: 120 min"))
         XCTAssertTrue(s.contains("Current focus streak: 3 days"))
         XCTAssertTrue(s.contains("7-day average focus: 110 min/day"))
