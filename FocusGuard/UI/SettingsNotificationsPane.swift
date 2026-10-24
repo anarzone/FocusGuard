@@ -9,6 +9,7 @@ struct SettingsNotificationsPane: View {
     @AppStorage(SettingsKeys.showNotifications) private var allowed = true
     @AppStorage(SettingsKeys.Escalation.notificationsEnabled) private var nudges = true
     @AppStorage(HabitSettings.meetingAwareness) private var quietInCalls = true
+    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
     @AppStorage(HabitSettings.morningPlan) private var morningPlan = true
     @AppStorage(HabitSettings.eveningWrapUp) private var eveningWrapUp = true
 
@@ -22,17 +23,23 @@ struct SettingsNotificationsPane: View {
             SettingsSection("During a session") {
                 SettingsToggle(title: "Nudge when you drift", detail: nudgeDetail, isOn: $nudges)
                 SettingsDivider()
-                SettingsToggle(title: "Stay quiet during calls", detail: "Nudges wait until the call ends", isOn: $quietInCalls)
+                SettingsToggle(title: "Stay quiet during calls",
+                               detail: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls",
+                               isOn: $quietInCalls)
             }
             .disabled(!allowed)
             SettingsSection("Your day") {
                 SettingsToggle(title: "Morning plan",
-                               detail: "Once a day from \(String(format: "%02d:00", HabitSchedule.morningHours.lowerBound)) · your free time and a first session",
+                               detail: "A \(Self.hour(HabitSchedule.morningHours.lowerBound)) notification with free slots for today's sessions",
                                isOn: $morningPlan)
                 SettingsDivider()
                 SettingsToggle(title: "Evening wrap-up",
-                               detail: "After \(String(format: "%02d:00", HabitSchedule.wrapUpHour)), once you've stopped · how today went",
+                               detail: "After \(Self.hour(HabitSchedule.wrapUpHour)): focused time against your goal, and when to start tomorrow",
                                isOn: $eveningWrapUp)
+                SettingsDivider()
+                SettingsToggle(title: "Offer to start a session",
+                               detail: "After 5 focused minutes outside a session. It counts from when you began",
+                               isOn: $autoStartOffer)
             }
             .disabled(!allowed)
         } right: {
@@ -57,6 +64,9 @@ struct SettingsNotificationsPane: View {
             .padding(.leading, 4)
         }
     }
+
+    /// "09:00", in the 24-hour style the rest of the window uses.
+    static func hour(_ h: Int) -> String { String(format: "%02d:00", h) }
 
     private var defaultLength: Int {
         UserDefaults.standard.object(forKey: SessionDefaultsKey.durationMinutes) as? Int ?? 50

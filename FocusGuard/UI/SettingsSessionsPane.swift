@@ -35,10 +35,12 @@ struct SettingsSessionsPane: View {
             }
             SettingsSection("Starting and calls") {
                 SettingsToggle(title: "Offer a session when you're already focused",
-                               detail: "After 5 minutes in focus apps", isOn: $autoStartOffer)
+                               detail: "After 5 focused minutes outside a session. It counts from when you began",
+                               isOn: $autoStartOffer)
                 SettingsDivider()
                 SettingsToggle(title: "Calls never count as drift",
-                               detail: "Zoom, FaceTime and Meet stay neutral; nudges wait", isOn: $meetingAwareness)
+                               detail: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls",
+                               isOn: $meetingAwareness)
             }
         }
         .onAppear { namesOn = defaultLabel.isEmpty }
