@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSClassFromString("XCTestCase") != nil { return }
 
         appState = AppState()
+        AppAppearance.applyStored()
         // Starts the trial's reminder and end-of-trial timer.
         Entitlements.shared.refresh()
         menuBarController = MenuBarController(

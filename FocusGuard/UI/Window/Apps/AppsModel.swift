@@ -157,7 +157,13 @@ enum RuleItemBuilder {
 
     /// "Discord" from "com.hnc.Discord", for apps that aren't installed.
     static func fallbackName(_ bundleId: String) -> String {
-        bundleId.split(separator: ".").last.map(String.init) ?? bundleId
+        let parts = bundleId.split(separator: ".").map(String.init)
+        guard var name = parts.last else { return bundleId }
+        // "com.example.Thing.desktop" says less than the part before it.
+        if ["desktop", "app", "mac", "macos", "client", "electron"].contains(name.lowercased()), parts.count > 1 {
+            name = parts[parts.count - 2]
+        }
+        return name.prefix(1).uppercased() + name.dropFirst()
     }
 
     private static var names: [String: String?] = [:]

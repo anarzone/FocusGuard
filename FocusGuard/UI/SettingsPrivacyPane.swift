@@ -1,257 +1,367 @@
-import SwiftUI
-import SwiftData
 import AppKit
+import OSLog
+import SwiftData
+import SwiftUI
+import UniformTypeIdentifiers
 
+/// Privacy & data: what's kept, which apps' titles aren't, what goes
+/// online, how long history lasts, and taking it all back. "Send
+/// diagnostics" builds a local report the user reads before sending it.
 struct SettingsPrivacyPane: View {
     @Bindable var appState: AppState
+    var entitlements: Entitlements = .shared
 
     @State private var optOuts: [TitleOptOut] = []
-    @State private var newBundleId: String = ""
-    @State private var showingDeleteConfirm = false
-    @State private var stats: DBStats = .zero
-    @AppStorage("retentionDays") private var retentionDays: Int = 365
+    @State private var stats: StoreStats = .zero
+    @State private var confirmDeleteToday = false
+    @State private var confirmErase = false
+    @State private var report: DiagnosticsReport.Prepared?
+    @AppStorage(SettingsKeys.retentionDays) private var retentionDays = 365
+    @AppStorage(SettingsWindowKey.siteIcons) private var siteIcons = true
 
     private var context: ModelContext { appState.container.mainContext }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Privacy")
-                    .font(.system(size: 26, weight: .bold))
-                    .kerning(-0.5)
-                Text(PrivacyStatement.network)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-
-                sectionHeader("Title opt-out list", topPad: 24)
-                Text("Window titles are NOT recorded for these apps. Useful for Mail, Messages, password managers — anywhere the title can leak private content.")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
-
-                groupCard {
-                    if optOuts.isEmpty {
-                        Text("No apps opted out.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.tertiary)
-                            .padding(14)
-                    } else {
-                        ForEach(optOuts, id: \.bundleIdentifier) { entry in
-                            optOutRow(entry)
-                            if entry.bundleIdentifier != optOuts.last?.bundleIdentifier {
-                                Rectangle().fill(Theme.separator).frame(height: 0.5)
-                            }
-                        }
-                    }
+        SettingsColumns {
+            SettingsSection("Kept on this Mac") {
+                SettingsRow(title: stats.summary, detail: "In FocusGuard's folder in your Library") {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([StoreStats.storeURL]) }
+                        .buttonStyle(.capsule(.secondary, height: 26))
                 }
-
-                HStack(spacing: 8) {
-                    TextField("com.example.app", text: $newBundleId)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 12).monospacedDigit())
-                        .frame(maxWidth: 260)
-                    Button("Add") { addNew() }
-                        .disabled(newBundleId.trimmingCharacters(in: .whitespaces).isEmpty)
-                    Spacer()
+                SettingsDivider()
+                VStack(alignment: .leading, spacing: 7) {
+                    bullet("checkmark", "Which app or site is in front, once a second")
+                    bullet("checkmark", "Window titles, except in the apps below")
+                    bullet("checkmark", "Your sessions and how they went")
+                    bullet("xmark", "Never keystrokes, screen contents, page text or passwords")
                 }
-                .padding(.top, 8)
-
-                sectionHeader("Retention")
-                groupCard {
-                    row(
-                        title: "Keep history for",
-                        help: "Older sessions and activity events are pruned automatically each day."
-                    ) {
-                        Picker("", selection: $retentionDays) {
-                            ForEach(RetentionPolicy.choices, id: \.days) { choice in
-                                Text(choice.label).tag(choice.days)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                        .frame(width: 130)
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    row(
-                        title: "Prune now",
-                        help: "Apply the retention policy immediately."
-                    ) {
-                        Button("Prune") {
-                            let count = RetentionPolicy.prune(context: context)
-                            Persistence.logger.info("manual prune removed \(count) rows")
-                            reload()
-                        }
-                    }
-                }
-
-                sectionHeader("Your data")
-                groupCard {
-                    row(
-                        title: "Stored on this Mac",
-                        help: "\(counted(stats.sessionCount, "session")) · \(counted(stats.eventCount, "activity event")) · \(stats.fileSizeText)"
-                    ) {
-                        Button("Reveal in Finder") { revealInFinder() }
-                    }
-                    Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    row(
-                        title: "Delete all data",
-                        help: "Removes every session, activity event, and rule. Cannot be undone."
-                    ) {
-                        Button(role: .destructive) {
-                            showingDeleteConfirm = true
-                        } label: {
-                            Text("Delete…")
-                        }
-                        .tint(Theme.distraction)
-                    }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            titlesSection
+            SettingsSection("Something wrong?") {
+                SettingsRow(title: "Send diagnostics",
+                            detail: "App logs and settings only, never your activity, titles or sites. You see it all before it's sent.") {
+                    Button("Review and send…") { report = DiagnosticsReport.prepare(appState: appState) }
+                        .buttonStyle(.capsule(.secondary, height: 26))
                 }
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        } right: {
+            SettingsSection("What leaves this Mac") {
+                SettingsRow("Update checks", detail: "Once a day; sends the app version")
+                SettingsDivider()
+                SettingsToggle(title: "Site icons", detail: "Each icon comes straight from its own site", isOn: $siteIcons)
+                SettingsDivider()
+                SettingsRow("Licence check", detail: "Pro only, when you enter a key and when the app starts")
+                SettingsDivider()
+                SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
+            }
+            SettingsNote(systemImage: "lock",
+                         text: FeatureFlags.proAI
+                            ? "Smart categories, highlights and the work log are all worked out on this Mac."
+                            : "Highlights and session names are worked out on this Mac.")
+            SettingsSection("History") {
+                SettingsRow(title: "Keep history for",
+                            detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {
+                    Picker("Keep history for", selection: $retentionDays) {
+                        ForEach(RetentionPolicy.choices, id: \.days) { Text($0.label).tag($0.days) }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                    .onChange(of: retentionDays) { RetentionPolicy.prune(context: context); reload() }
+                }
+            }
+            SettingsSection("Your data") {
+                SettingsRow(title: "Export everything") {
+                    HStack(spacing: 6) {
+                        Button("JSON") { DataExporter.export(.json, container: appState.container) }
+                        Button("CSV") { DataExporter.export(.csv, container: appState.container) }
+                    }
+                    .buttonStyle(.capsule(.secondary, height: 26))
+                }
+                SettingsDivider()
+                SettingsRow(title: "Delete today's activity") {
+                    Button("Delete…") { confirmDeleteToday = true }
+                        .buttonStyle(.capsule(.secondary, height: 26))
+                }
+                SettingsDivider()
+                SettingsRow(title: "Erase all FocusGuard data", detail: "Activity, sessions, rules and settings") {
+                    Button("Erase…") { confirmErase = true }
+                        .buttonStyle(.capsule(.destructive, height: 26))
+                }
+            }
         }
         .task { reload() }
-        .task {
-            // Refresh DB stats every 5s while the pane is visible, so the
-            // counts stay current as the tracker accumulates events.
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                stats = DBStats.compute(context: context)
-            }
-        }
-        .alert("Delete all FocusGuard data?", isPresented: $showingDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) { deleteAllData() }
+        .confirmationDialog("Delete today's activity?", isPresented: $confirmDeleteToday) {
+            Button("Delete Today", role: .destructive) { DataEraser.deleteToday(appState: appState); reload() }
         } message: {
-            Text("Every session, activity event, and rule will be removed. This cannot be undone.")
+            Text("Today's activity and sessions are removed from this Mac. Earlier days stay.")
+        }
+        .confirmationDialog("Erase all FocusGuard data?", isPresented: $confirmErase) {
+            Button("Erase Everything", role: .destructive) { DataEraser.eraseAll(appState: appState); reload() }
+        } message: {
+            Text("Every session, activity, rule and setting is removed. This can't be undone.")
+        }
+        .sheet(item: $report) { prepared in
+            DiagnosticsSheet(prepared: prepared)
         }
     }
 
-    // MARK: - Sub-views
+    // MARK: - Titles
 
-    private func optOutRow(_ entry: TitleOptOut) -> some View {
-        HStack(spacing: 10) {
-            AppGlyph(kind: AppGlyph.kind(forBundleId: entry.bundleIdentifier), bundleId: entry.bundleIdentifier, size: 24)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.bundleIdentifier)
-                    .font(.system(size: 12).monospacedDigit())
-                if let reason = entry.reason {
-                    Text(reason)
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.tertiary)
+    private var titlesSection: some View {
+        SettingsSection("Don't record window titles in") {
+            VStack(alignment: .leading, spacing: 10) {
+                FlowLayout(spacing: 6) {
+                    ForEach(optOuts, id: \.bundleIdentifier) { entry in
+                        HStack(spacing: 4) {
+                            Text(Self.appName(entry.bundleIdentifier)).font(.system(size: 12)).foregroundStyle(Theme.primaryText)
+                            Button { remove(entry) } label: {
+                                Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(Theme.secondaryText)
+                                    .frame(width: 16, height: 16).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Remove \(Self.appName(entry.bundleIdentifier))")
+                        }
+                        .padding(.leading, 10).padding(.trailing, 4)
+                        .frame(height: 26)
+                        .background(Capsule().fill(Theme.chip))
+                    }
                 }
+                Button("Add app…", action: addApp).buttonStyle(.textLink)
             }
-            Spacer()
-            Button(role: .destructive) {
-                context.delete(entry)
-                Persistence.save(context)
-                appState.optOutCache.refresh()
-                reload()
-            } label: {
-                Text("Remove")
-                    .font(.system(size: 11.5))
-            }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .padding(14)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
     }
 
-    @ViewBuilder
-    private func sectionHeader(_ title: String, topPad: CGFloat = 24) -> some View {
-        Text(title.uppercased())
-            .font(.system(size: 11, weight: .semibold))
-            .tracking(0.4)
-            .foregroundStyle(.secondary)
-            .padding(.top, topPad)
-            .padding(.bottom, 8)
-    }
-
-    @ViewBuilder
-    private func groupCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
-            .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.separator, lineWidth: 0.5))
-    }
-
-    @ViewBuilder
-    private func row<Right: View>(
-        title: String,
-        help: String? = nil,
-        @ViewBuilder right: () -> Right
-    ) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13))
-                if let help {
-                    Text(help)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer()
-            right()
+    private func bullet(_ symbol: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: symbol).font(.system(size: 10, weight: .bold))
+                .foregroundStyle(symbol == "xmark" ? Theme.secondaryText : Theme.focus)
+            Text(text).font(.system(size: 12)).foregroundStyle(Theme.bodyText).fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
     }
 
-    // MARK: - Actions
+    static func appName(_ bundleId: String) -> String {
+        RuleItemBuilder.appName(bundleId) ?? RuleItemBuilder.fallbackName(bundleId)
+    }
 
-    private func addNew() {
-        let trimmed = newBundleId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        // Skip duplicates
-        if optOuts.contains(where: { $0.bundleIdentifier == trimmed }) { return }
-        context.insert(TitleOptOut(bundleIdentifier: trimmed))
+    private func addApp() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        guard panel.runModal() == .OK, let url = panel.url, let id = Bundle(url: url)?.bundleIdentifier,
+              !optOuts.contains(where: { $0.bundleIdentifier == id }) else { return }
+        context.insert(TitleOptOut(bundleIdentifier: id))
         Persistence.save(context)
         appState.optOutCache.refresh()
-        newBundleId = ""
         reload()
     }
 
-    private func revealInFinder() {
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Application Support/default.store")
-        NSWorkspace.shared.activateFileViewerSelecting([url])
-    }
-
-    private func deleteAllData() {
-        DataEraser.eraseAll(appState: appState)
+    private func remove(_ entry: TitleOptOut) {
+        context.delete(entry)
+        Persistence.save(context)
+        appState.optOutCache.refresh()
         reload()
     }
 
     private func reload() {
-        var descriptor = FetchDescriptor<TitleOptOut>()
-        descriptor.sortBy = [SortDescriptor(\.bundleIdentifier)]
-        optOuts = (try? context.fetch(descriptor)) ?? []
-        stats = DBStats.compute(context: context)
+        optOuts = Persistence.fetch(context, FetchDescriptor<TitleOptOut>(sortBy: [SortDescriptor(\.bundleIdentifier)]))
+        stats = StoreStats.compute(context: context)
     }
 }
 
-private struct DBStats {
-    let sessionCount: Int
-    let eventCount: Int
-    let fileSizeText: String
+/// "41 days · 212 sessions · 38 MB".
+struct StoreStats: Equatable {
+    let days: Int
+    let sessions: Int
+    let bytes: Int
 
-    static let zero = DBStats(sessionCount: 0, eventCount: 0, fileSizeText: "—")
+    static let zero = StoreStats(days: 0, sessions: 0, bytes: 0)
 
-    static func compute(context: ModelContext) -> DBStats {
-        let sessions = (try? context.fetchCount(FetchDescriptor<Session>())) ?? 0
-        let events   = (try? context.fetchCount(FetchDescriptor<ActivityEvent>())) ?? 0
+    static var storeURL: URL {
+        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support/default.store")
+    }
 
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Application Support/default.store")
-        let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB]
-        formatter.countStyle = .file
-        let sizeText = bytes == 0 ? "—" : formatter.string(fromByteCount: Int64(bytes))
+    var summary: String {
+        let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+        return "\(WindowFormat.count(days, "day")) · \(WindowFormat.count(sessions, "session")) · \(size)"
+    }
 
-        return DBStats(sessionCount: sessions, eventCount: events, fileSizeText: sizeText)
+    @MainActor
+    static func compute(context: ModelContext, now: Date = .now) -> StoreStats {
+        var first = FetchDescriptor<ActivityEvent>(sortBy: [SortDescriptor(\.startedAt)])
+        first.fetchLimit = 1
+        let start = Persistence.fetch(context, first).first?.startedAt
+        let days = start.map { max(1, (Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: $0), to: now).day ?? 0) + 1) } ?? 0
+        let sessions = Persistence.fetchCount(context, FetchDescriptor<Session>())
+        let files = ["", "-wal", "-shm"].map { storeURL.path + $0 }
+        let bytes = files.reduce(0) { $0 + ((try? FileManager.default.attributesOfItem(atPath: $1)[.size] as? Int) ?? 0) }
+        return StoreStats(days: days, sessions: sessions, bytes: bytes)
+    }
+}
+
+// MARK: - Diagnostics
+
+/// A plain-text report for support: the version, the Mac, the plan,
+/// permission states, settings that say how the app is set up, and this
+/// run's log lines with sites and paths taken out. No activity, no titles,
+/// no sites. Nothing is sent: the user reads it, then opens Mail or a
+/// GitHub issue themselves.
+enum DiagnosticsReport {
+    struct Prepared: Identifiable {
+        let id = UUID()
+        let text: String
+        let file: URL?
+    }
+
+    static let issuesURL = URL(string: "https://github.com/anarzone/FocusGuard/issues/new")!
+
+    @MainActor
+    static func prepare(appState: AppState, now: Date = .now) -> Prepared {
+        let text = build(sections: sections(appState: appState), logs: recentLogs(), now: now)
+        return Prepared(text: text, file: try? write(text, now: now))
+    }
+
+    @MainActor
+    static func sections(appState: AppState) -> [(String, [(String, String)])] {
+        let d = UserDefaults.standard
+        let engine = appState.escalationEngine
+        let permissions = appState.permissions
+        let plan: String
+        switch Entitlements.shared.plan {
+        case .free: plan = "Free"
+        case .pro: plan = "Pro"
+        case .trial: plan = "Trial, \(Entitlements.shared.plan.daysLeft(at: .now) ?? 0) days left"
+        }
+        let rules = Persistence.fetchCount(appState.container.mainContext, FetchDescriptor<AppRule>())
+        return [
+            ("App", [("Version", AppVersion.full),
+                     ("macOS", ProcessInfo.processInfo.operatingSystemVersionString),
+                     ("Plan", plan)]),
+            ("Permissions", [("All granted", permissions.allGranted ? "yes" : "no")]),
+            ("Settings", [("Drift preset", DriftResponse.current?.title ?? "tuned by hand"),
+                          ("Nudge after", "\(Int(engine.notifyThreshold)) s"),
+                          ("Pause screen after", "\(Int(engine.blockThreshold)) s"),
+                          ("Strict", engine.strictMode ? "on" : "off"),
+                          ("Daily goal", FocusGoal.format(minutes: FocusGoal.dailyMinutes)),
+                          ("Notifications", d.object(forKey: SettingsKeys.showNotifications) as? Bool ?? true ? "on" : "off"),
+                          ("Pause the tab", d.object(forKey: SettingsWindowKey.pauseTab) as? Bool ?? true ? "on" : "off"),
+                          ("Keep history", "\(RetentionPolicy.days) days"),
+                          ("Calendar starts", d.bool(forKey: SettingsKeys.Calendar.enabled) ? "on" : "off"),
+                          ("Rules", "\(rules)"),
+                          ("Daily limits", "\(appState.limits.statuses.count)")]),
+            ("Browser extension", [("Connected browsers", "\(appState.extensionBridge.connectedBrowsers.count)")]),
+        ]
+    }
+
+    static func build(sections: [(String, [(String, String)])], logs: [String], now: Date) -> String {
+        var lines = ["FocusGuard diagnostics, \(now.formatted(.iso8601))", ""]
+        for (title, rows) in sections {
+            lines.append("## \(title)")
+            lines += rows.map { "\($0.0): \($0.1)" }
+            lines.append("")
+        }
+        lines.append("## Log, this run")
+        lines += logs.isEmpty ? ["(nothing logged)"] : logs.map(scrub)
+        return lines.joined(separator: "\n")
+    }
+
+    /// Takes out anything that looks like a site or a path in the user's
+    /// home folder, so a log line can't say where someone was.
+    static func scrub(_ line: String) -> String {
+        var out = line.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        let patterns = [
+            #"https?://\S+"#,
+            #"\b(?:[a-z0-9-]+\.)+(?:com|org|net|io|app|dev|co|tv|gg|me|ai|edu|gov|uk|de|fr|ru|az)\b"#,
+        ]
+        for pattern in patterns {
+            out = out.replacingOccurrences(of: pattern, with: "<site>", options: [.regularExpression, .caseInsensitive])
+        }
+        return out
+    }
+
+    /// This run's log lines from FocusGuard itself, newest last.
+    static func recentLogs(limit: Int = 300) -> [String] {
+        guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else { return [] }
+        let since = store.position(timeIntervalSinceLatestBoot: max(0, ProcessInfo.processInfo.systemUptime - 6 * 3600))
+        guard let entries = try? store.getEntries(at: since) else { return [] }
+        var out: [String] = []
+        for case let entry as OSLogEntryLog in entries where entry.subsystem == "com.anar.focusguard" {
+            out.append("\(entry.date.formatted(.iso8601)) [\(entry.category)] \(entry.composedMessage)")
+        }
+        return Array(out.suffix(limit))
+    }
+
+    static func write(_ text: String, now: Date) throws -> URL {
+        let folder = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("FocusGuard Diagnostics", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let stamp = now.formatted(.iso8601).replacingOccurrences(of: ":", with: "-")
+        let url = folder.appendingPathComponent("FocusGuard diagnostics \(stamp).txt")
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+}
+
+/// The report, in full, before it goes anywhere.
+private struct DiagnosticsSheet: View {
+    let prepared: DiagnosticsReport.Prepared
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Send diagnostics").font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.primaryText)
+            Text("This is everything in the report. Nothing has been sent. Mail opens with it attached; for a GitHub issue it's copied so you can paste it in.")
+                .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                Text(prepared.text)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Theme.primaryText)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+            }
+            .frame(height: 300)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.windowCard))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.5))
+            HStack(spacing: 8) {
+                if let file = prepared.file {
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+                        .buttonStyle(.textLink)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.capsule(.secondary, height: 32))
+                    .keyboardShortcut(.cancelAction)
+                Button(copied ? "Copied" : "Open a GitHub issue") {
+                    copy()
+                    NSWorkspace.shared.open(DiagnosticsReport.issuesURL)
+                }
+                .buttonStyle(.capsule(.secondary, height: 32))
+                Button("Open in Mail") { mail() }
+                    .buttonStyle(.capsule(.primary, height: 32))
+            }
+        }
+        .padding(22)
+        .frame(width: 560)
+        .background(Theme.windowBackground)
+    }
+
+    private func copy() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(prepared.text, forType: .string)
+        copied = true
+    }
+
+    private func mail() {
+        let items: [Any] = prepared.file.map { [$0] } ?? [prepared.text]
+        guard let service = NSSharingService(named: .composeEmail) else { return }
+        service.subject = "FocusGuard diagnostics"
+        service.perform(withItems: items)
     }
 }
 

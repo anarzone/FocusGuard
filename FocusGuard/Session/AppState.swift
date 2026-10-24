@@ -215,6 +215,7 @@ final class AppState {
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
+        tabPause.isEnabled = defaults.object(forKey: SettingsWindowKey.pauseTab) as? Bool ?? true
         tracker.start()
         bridge.start(appState: self)
         setupAutoPauseObservers()

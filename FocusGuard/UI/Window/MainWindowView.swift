@@ -76,6 +76,7 @@ struct MainWindowView: View {
     @State private var tab: MainTab
     @State private var sheet: WindowSheet?
     @State private var appsMode: AppsMode = .used
+    @State private var settingsPane: SettingsPane = .general
 
     init(appState: AppState, initialTab: MainTab = .home) {
         self._appState = Bindable(wrappedValue: appState)
@@ -102,6 +103,10 @@ struct MainWindowView: View {
             if let requested = note.object as? MainTab { tab = requested }
         }
         .onChange(of: tab) { if tab != .apps && appsMode == .sort { appsMode = .used } }
+        .onReceive(NotificationCenter.default.publisher(for: .selectSettingsPane)) { note in
+            if let pane = note.object as? SettingsPane { settingsPane = pane }
+            tab = .settings
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openAppsSort)) { _ in
             appsMode = .sort
             tab = .apps
@@ -123,8 +128,7 @@ struct MainWindowView: View {
         case .apps:
             AppsSitesPage(appState: appState, mode: $appsMode)
         case .settings:
-            SettingsView(appState: appState)
-                .padding(.top, 28)
+            SettingsView(appState: appState, pane: $settingsPane)
         }
     }
 
