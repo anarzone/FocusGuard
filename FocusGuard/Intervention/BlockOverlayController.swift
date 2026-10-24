@@ -1,16 +1,17 @@
 import AppKit
 import SwiftUI
 
-/// Owns one borderless `NSWindow` per `NSScreen`. When `present(...)` is
+/// Owns one borderless window per `NSScreen`. When `present(...)` is
 /// called, all windows are brought up at `.screenSaver` level (above
 /// the normal app layer but below the Dock alert level), filling each
 /// screen edge-to-edge and joining all Spaces. Each window blurs what's
-/// behind it.
+/// behind it, in the system's light or dark appearance.
 ///
-/// A drift block has three ways out, each distinct: back to work (no pass),
+/// A drift block has these ways out, each distinct: back to work (no pass),
 /// "it's for work" (an exception for this site for the rest of the session),
-/// or — if the preset allows it, after its wait — a 2-minute pass
-/// (`onOverride`). A daily-limit block has back to work and, while the
+/// a 2-minute pass if the preset allows one (`onOverride`), and on Strict,
+/// ending the session early. Each waits as long as the preset says. A
+/// daily-limit block has back to work, starting a session, and while the
 /// preset allows it, a few more minutes (`onExtraTime`).
 
 /// Why the block screen is up, and what it offers.
@@ -97,6 +98,21 @@ class BlockOverlayController: BlockOverlayPresenting {
     /// The screen let the site through: a pass, "It's for work" or extra
     /// time; set by AppState (puts the paused tab back).
     var onLetThrough: (() -> Void)?
+    /// Whether the site's tab behind the screen is paused; set by AppState.
+    var tabPausedProvider: (() -> Bool)?
+    /// Whether "Start 50 minutes of focus" can start one now (no session
+    /// or break running); set by AppState.
+    var canStartSessionProvider: (() -> Bool)?
+    /// Today's numbers for a daily limit; set by AppState.
+    var limitStatusProvider: ((UUID) -> LimitStatus?)?
+    /// The usual session length, for "Start 50 minutes of focus"; set by AppState.
+    var sessionMinutesProvider: (() -> Int)?
+    /// "End the session early…", once confirmed (Strict); set by AppState.
+    var onEndSession: (() -> Void)?
+    /// "Start 50 minutes of focus" on a daily limit; set by AppState.
+    var onStartFocus: ((Int) -> Void)?
+    /// "Edit limit" / "Change for tomorrow"; set by AppState.
+    var onEditLimits: (() -> Void)?
 
     func present(_ request: BlockRequest) {
         guard !isPresenting else { return }
@@ -104,9 +120,17 @@ class BlockOverlayController: BlockOverlayPresenting {
 
         let message = OverlayMessage(
             request: request,
+            shownAt: .now,
             motivational: MotivationalMessages.random(),
             context: { [weak self] in self?.contextProvider?() },
             backToAppName: { [weak self] in self?.backToAppProvider?() },
+            isTabPaused: { [weak self] in self?.tabPausedProvider?() ?? false },
+            canStartSession: { [weak self] in self?.canStartSessionProvider?() ?? false },
+            limitStatus: { [weak self] in
+                guard case .dailyLimit(let limit) = request.reason else { return nil }
+                return self?.limitStatusProvider?(limit.limitID)
+            },
+            sessionMinutes: { [weak self] in self?.sessionMinutesProvider?() ?? 50 },
             onOverride: { [weak self] in
                 self?.dismiss()
                 self?.onOverride?()
@@ -126,14 +150,29 @@ class BlockOverlayController: BlockOverlayPresenting {
                 self?.dismiss()
                 self?.onExtraTime?(limit.limitID)
                 self?.onLetThrough?()
+            },
+            onEndSession: { [weak self] in
+                self?.dismiss()
+                self?.onEndSession?()
+            },
+            onStartFocus: { [weak self] minutes in
+                self?.dismiss()
+                self?.onStartFocus?(minutes)
+            },
+            onEditLimits: { [weak self] in
+                self?.dismiss()
+                self?.onEditLimits?()
             }
         )
 
         for screen in NSScreen.screens {
             let window = makeWindow(for: screen, content: message)
             windows.append(window)
-            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
         }
+        // The main screen's copy takes the keys, so esc and return work there.
+        let main = windows.first { $0.screen == NSScreen.main } ?? windows.first
+        main?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         onPresent?(request)
     }
@@ -157,7 +196,7 @@ class BlockOverlayController: BlockOverlayPresenting {
     // MARK: - Window factory
 
     private func makeWindow(for screen: NSScreen, content: OverlayMessage) -> NSWindow {
-        let window = NSWindow(
+        let window = MomentWindow(
             contentRect: screen.frame,
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
@@ -172,7 +211,6 @@ class BlockOverlayController: BlockOverlayPresenting {
         window.isMovable = false
         window.isReleasedWhenClosed = false
         window.acceptsMouseMovedEvents = false
-        window.appearance = NSAppearance(named: .darkAqua)
 
         // Blur whatever was on screen, then the SwiftUI content on top.
         let blur = NSVisualEffectView(frame: NSRect(origin: .zero, size: screen.frame.size))
@@ -181,7 +219,7 @@ class BlockOverlayController: BlockOverlayPresenting {
         blur.state = .active
         blur.autoresizingMask = [.width, .height]
 
-        let host = NSHostingView(rootView: BlockOverlayView(message: content))
+        let host = NSHostingView(rootView: BlockScreen(message: content))
         host.frame = blur.bounds
         host.autoresizingMask = [.width, .height]
         blur.addSubview(host)
@@ -192,17 +230,38 @@ class BlockOverlayController: BlockOverlayPresenting {
     }
 }
 
+/// The block screen for a drift, or the daily-limit screen.
+private struct BlockScreen: View {
+    let message: OverlayMessage
+
+    var body: some View {
+        switch message.request.reason {
+        case .drift(let policy):       BlockOverlayView(message: message, policy: policy)
+        case .dailyLimit(let limit):   LimitOverlayView(message: message, limit: limit)
+        }
+    }
+}
+
 // MARK: - Message payload
 
 struct OverlayMessage {
     let request: BlockRequest
+    /// When the screen came up; every button's wait counts from it.
+    let shownAt: Date
     let motivational: String
     let context: () -> BlockContext?
     let backToAppName: () -> String?
+    let isTabPaused: () -> Bool
+    let canStartSession: () -> Bool
+    let limitStatus: () -> LimitStatus?
+    let sessionMinutes: () -> Int
     let onOverride: () -> Void
     let onBackToWork: () -> Void
     let onAllowForSession: () -> Void
     let onExtraTime: () -> Void
+    let onEndSession: () -> Void
+    let onStartFocus: (Int) -> Void
+    let onEditLimits: () -> Void
 
     var appName: String { request.appName }
     var bundleId: String { request.bundleId }

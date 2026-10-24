@@ -24,14 +24,28 @@ final class SessionManager {
         nameEarlierSessions()
     }
 
-    func startSession(label: String? = nil, plannedDurationMinutes: Int? = nil) {
+    /// - Parameter startedAt: an earlier start (the auto-start offer counts
+    ///   from when the focused work began); what was tracked since then
+    ///   joins the session.
+    func startSession(label: String? = nil, plannedDurationMinutes: Int? = nil, startedAt: Date? = nil) {
         guard currentSession == nil else { return }
-        let session = Session(label: label, plannedDurationMinutes: plannedDurationMinutes)
+        let now = Date()
+        let session = Session(startedAt: min(startedAt ?? now, now), label: label,
+                              plannedDurationMinutes: plannedDurationMinutes)
         context.insert(session)
-        Persistence.save(context)
         currentSession = session
         tracker.currentSession = session
+        if startedAt != nil { claimEvents(since: session.startedAt, for: session) }
+        Persistence.save(context)
         onSessionStarted?()
+    }
+
+    /// Events from `start` on that belong to no session become this one's.
+    private func claimEvents(since start: Date, for session: Session) {
+        let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.startedAt >= start }
+        ))
+        for event in events where event.session == nil { event.session = session }
     }
 
     func stopSession(status: SessionStatus = .completed) {

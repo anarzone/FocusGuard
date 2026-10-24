@@ -16,297 +16,228 @@ struct BlockContext {
     let zoneBefore: TimeInterval
 }
 
-/// Full-screen pause when a drift outlasts the block threshold, or a daily
-/// limit runs out. A drift shows what you drifted to, the live session ring
-/// (with the drift in orange), and up to three ways out: back to work
-/// (default), "it's for work", or — if the preset allows it — a 2-minute
-/// pass. Each waits as long as the preset says (`OverridePolicy`).
+/// The block screen's words, from the preset and the session.
+struct BlockCopy: Equatable {
+    /// "x.com", or the app's name.
+    let place: String
+    let preset: DriftResponse
+    let sessionLabel: String
+    let endsAt: Date?
+    /// The site's tab behind the screen is paused.
+    let tabPaused: Bool
+
+    var headline: String { "Let's get back to \(sessionLabel)." }
+
+    var subtitle: String {
+        if preset.overridePolicy.allowsPass {
+            guard let endsAt else { return "\(place) will still be there when the session ends." }
+            return "\(place) will still be there when the session ends at \(MomentText.time(endsAt))."
+        }
+        let back = endsAt.map { "\(place) is back at \(MomentText.time($0))." } ?? "\(place) is back when it ends."
+        return "\(preset.title) is on, so there are no passes this session. \(back)"
+    }
+
+    var footer: String {
+        if preset.overridePolicy.locksDuringSession {
+            return "\(preset.title) · presets can change between sessions, not during one"
+        }
+        if tabPaused {
+            let until = endsAt.map { "until \(MomentText.time($0))" } ?? "until the session ends"
+            return "\(preset.title) · the \(place) tab stays paused \(until)"
+        }
+        let pass = MomentText.counted(Int((preset.overridePolicy.passSeconds / 60).rounded()), "minute")
+        return "\(preset.title) · a pass lasts \(pass) and counts as drift"
+    }
+
+    /// "Drifted 1:42", or "Drifted just now" for the first few seconds.
+    static func away(_ seconds: TimeInterval?) -> String {
+        guard let seconds, seconds >= 10 else { return "Drifted just now" }
+        let s = Int(seconds)
+        return "Drifted \(s / 60):\(String(format: "%02d", s % 60))"
+    }
+}
+
+/// Full-screen pause when a drift outlasts the preset's threshold. It shows
+/// what you drifted to, the live session ring (the drift in orange), and the
+/// ways out the preset allows (`OverridePolicy`):
+/// - Gentle: "Let me through" right away.
+/// - Standard: "Let me through" after a 5 s countdown on the button.
+/// - Strict: no pass; "It's for work" opens after 10 s, and the session can
+///   be ended early after an inline confirm.
+/// Every pass lasts 2 minutes and counts as drift. A footer names the preset.
 struct BlockOverlayView: View {
     let message: OverlayMessage
-    /// Whole seconds since the screen came up; every button's wait counts from it.
-    @State private var shownFor = 0
+    let policy: OverridePolicy
+    @State private var confirmingEnd = false
+    @ReduceMotion private var reduceMotion
 
-    private var policy: OverridePolicy? {
-        if case .drift(let policy) = message.request.reason { return policy }
-        return nil
-    }
-
-    private var limit: LimitBlock? {
-        if case .dailyLimit(let limit) = message.request.reason { return limit }
-        return nil
-    }
-
-    /// Seconds left before a button with this wait opens.
-    private func left(_ wait: Int) -> Int { max(0, wait - shownFor) }
-
-    private var longestWait: Int {
-        if let policy { return max(policy.passWaitSeconds, policy.forWorkWaitSeconds) }
-        return limit?.extraTime.waitSeconds ?? 0
-    }
+    private var preset: DriftResponse { MomentText.preset(for: policy) }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
-            if let limit {
-                limitContent(limit)
-            } else {
-                content(context: message.context(), now: timeline.date)
-            }
-        }
-        .preferredColorScheme(.dark)
-        .task {
-            while shownFor < longestWait, !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                shownFor += 1
-            }
+            content(context: message.context(), now: timeline.date)
         }
     }
 
     private func content(context: BlockContext?, now: Date) -> some View {
-        let label = context?.sessionLabel ?? "your session"
         let place = message.host ?? message.appName
-        let policy = policy ?? .standard
-        let passLeft = left(policy.passWaitSeconds)
+        let copy = BlockCopy(place: place, preset: preset, sessionLabel: context?.sessionLabel ?? "your session",
+                             endsAt: context?.endsAt, tabPaused: message.host != nil && message.isTabPaused())
+        let back = message.backToAppName().map { "Back to \($0)" } ?? "Back to work"
+        let passLeft = MomentText.secondsLeft(wait: policy.passWaitSeconds, shownAt: message.shownAt, now: now)
 
-        return VStack(spacing: 0) {
-            placePill(place) {
-                if let since = context?.awaySince {
-                    Text("· \(Self.clock(now.timeIntervalSince(since))) away from \(label)")
-                }
-            }
+        return ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                MomentPlacePill(request: message.request,
+                          status: BlockCopy.away(context?.awaySince.map { now.timeIntervalSince($0) }))
 
-            Text("Let's get back to \(label).")
-                .font(.system(size: 44, weight: .bold))
-                .kerning(-0.8)
-                .multilineTextAlignment(.center)
-                .padding(.top, 26)
+                Text(copy.headline)
+                    .font(.system(size: 44, weight: .bold))
+                    .kerning(-0.9)
+                    .foregroundStyle(Theme.primaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 24)
 
-            Text(subtitle(context: context, place: place))
-                .font(.system(size: 17))
-                .foregroundStyle(.white.opacity(0.72))
-                .multilineTextAlignment(.center)
-                .padding(.top, 10)
-                .padding(.horizontal, 40)
+                Text(context == nil ? message.motivational : copy.subtitle)
+                    .font(.system(size: 17))
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 10)
+                    .padding(.horizontal, 40)
 
-            if let context {
-                SessionRingView(timeline: context.timeline, progress: context.progress, size: 236, lineWidth: 15) {
-                    VStack(spacing: 2) {
-                        // Open-ended sessions have nothing to count down: show
-                        // how far in you are instead.
-                        Text(SessionClock.format(context.timeLeft ?? context.elapsed))
-                            .font(.system(size: 48, weight: .semibold).monospacedDigit())
-                            .contentTransition(.numericText(countsDown: context.timeLeft != nil))
-                        Text(context.timeLeft == nil ? "into this session" : "left in this session")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.7))
+                if let context {
+                    ring(context)
+                        .padding(.top, 30)
+                    let m = context.timeline.minutesPerCell
+                    MomentLegend(focused: context.timeline.focusCells * m,
+                               drifted: context.timeline.driftCells * m,
+                               other: context.timeline.otherCells * m)
+                        .padding(.top, 16)
+                    if context.zoneBefore >= 60 {
+                        Text("You were \(MomentText.counted(Int(context.zoneBefore / 60), "minute")) in the zone before this. Pick it back up.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.secondaryText)
+                            .padding(.top, 14)
                     }
                 }
-                .padding(.top, 34)
 
-                if context.zoneBefore >= 60 {
-                    Text("You were \(counted(Int(context.zoneBefore / 60), "minute")) in the zone before this. Pick it back up.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.62))
-                        .padding(.top, 18)
+                actions(back: back, inSession: context != nil, now: now)
+                    .padding(.top, 26)
+
+                if confirmingEnd, let context {
+                    endConfirm(context)
+                        .padding(.top, 16)
+                        .transition(Motion.transition(.opacity.combined(with: .move(edge: .top)), reduced: reduceMotion))
                 }
-            }
 
-            actions(policy: policy)
-                .padding(.top, 30)
-
-            HStack(spacing: 22) {
-                hint("esc", "back to work")
-                if policy.allowsPass {
-                    hint("return", passLeft == 0 ? "let me through, for \(Self.minutes(policy.passSeconds))" : "let me through, in \(passLeft) s")
+                HStack(spacing: 22) {
+                    MomentKeyHint(key: "esc", text: back.prefix(1).lowercased() + back.dropFirst())
+                    if policy.allowsPass {
+                        MomentKeyHint(key: "return", text: passLeft == 0 || policy.passWaitSeconds == 0
+                                ? "let me through, for \(passLength)"
+                                : "let me through, in \(passLeft) s")
+                    }
                 }
+                .padding(.top, 22)
             }
-            .padding(.top, 26)
+            .frame(maxWidth: 860)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 60)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            MomentFooter(systemImage: "shield", text: copy.footer)
+                .padding(.bottom, 26)
         }
-        .foregroundStyle(.white)
-        .frame(maxWidth: 820)
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Self.backdrop)
+        .background(MomentPalette.veil.ignoresSafeArea())
+        .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: confirmingEnd)
     }
 
-    /// A daily limit ran out: back to work, or a few more minutes while the preset allows it.
-    private func limitContent(_ limit: LimitBlock) -> some View {
+    private var passLength: String {
+        MomentText.counted(Int((policy.passSeconds / 60).rounded()), "minute")
+    }
+
+    private func ring(_ context: BlockContext) -> some View {
+        let m = context.timeline.minutesPerCell
+        let done = (context.timeline.focusCells + context.timeline.driftCells + context.timeline.otherCells) * m
+        let left = context.timeLeft
+        let label = [
+            "Session ring: \(done) minutes in.",
+            "\(context.timeline.focusCells * m) focused, \(context.timeline.driftCells * m) drifted, \(context.timeline.otherCells * m) other.",
+            left.map { "\(MomentText.clock($0)) left" + (context.endsAt.map { ", ends at \(MomentText.time($0))." } ?? ".") } ?? "",
+        ].joined(separator: " ")
+
+        return MomentRing(timeline: context.timeline, progress: context.progress) {
+            VStack(spacing: 2) {
+                // Open-ended sessions have nothing to count down: show how
+                // far in you are instead.
+                Text(MomentText.clock(left ?? context.elapsed))
+                    .font(.system(size: 48, weight: .semibold).monospacedDigit())
+                    .kerning(-0.9)
+                    .foregroundStyle(Theme.primaryText)
+                    .contentTransition(.numericText(countsDown: left != nil))
+                Text(left == nil ? "into this session" : context.endsAt.map { "left · ends \(MomentText.time($0))" } ?? "left")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.secondaryText)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+    }
+
+    private func actions(back: String, inSession: Bool, now: Date) -> some View {
+        let forWorkLeft = MomentText.secondsLeft(wait: policy.forWorkWaitSeconds, shownAt: message.shownAt, now: now)
+        let passLeft = MomentText.secondsLeft(wait: policy.passWaitSeconds, shownAt: message.shownAt, now: now)
         let place = message.host ?? message.appName
-        let extraLeft = left(limit.extraTime.waitSeconds)
-        let offersExtra = limit.extraLeft > 0
 
-        return VStack(spacing: 0) {
-            placePill(place) {
-                Text("· \(limit.minutesToday) of \(limit.minutesToday) min today")
-            }
-
-            Text("That's your \(limit.minutesToday) minutes on \(place) for today.")
-                .font(.system(size: 44, weight: .bold))
-                .kerning(-0.8)
-                .multilineTextAlignment(.center)
-                .padding(.top, 26)
-
-            Text(limit.extraTime.isOffered
-                 ? "It opens again at midnight."
-                 : "It opens again at midnight. You can change the limit for tomorrow.")
-                .font(.system(size: 17))
-                .foregroundStyle(.white.opacity(0.72))
-                .multilineTextAlignment(.center)
-                .padding(.top, 10)
-                .padding(.horizontal, 40)
-
-            HStack(spacing: 12) {
-                backButton
-                if offersExtra {
-                    waitingButton("\(limit.extraTime.minutes) more minutes", secondsLeft: extraLeft,
-                                  wait: limit.extraTime.waitSeconds, action: message.onExtraTime)
-                        .keyboardShortcut(.defaultAction)
-                        .accessibilityLabel(extraLeft == 0 ? "\(limit.extraTime.minutes) more minutes"
-                                            : "\(limit.extraTime.minutes) more minutes, available in \(counted(extraLeft, "second"))")
-                }
-            }
-            .padding(.top, 30)
-
-            HStack(spacing: 22) {
-                hint("esc", "back to work")
-                if offersExtra {
-                    hint("return", extraLeft == 0 ? "\(limit.extraTime.minutes) more minutes" : "\(limit.extraTime.minutes) more minutes, in \(extraLeft) s")
-                }
-            }
-            .padding(.top, 26)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: 820)
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Self.backdrop)
-    }
-
-    private static let backdrop = Color(red: 14/255, green: 14/255, blue: 22/255).opacity(0.55)
-
-    private func placePill<Detail: View>(_ place: String, @ViewBuilder detail: () -> Detail) -> some View {
-        HStack(spacing: 10) {
-            AppGlyph(kind: message.host == nil ? AppGlyph.kind(forBundleId: message.bundleId, name: message.appName) : .generic,
-                     bundleId: message.host == nil ? message.bundleId : nil, host: message.host, size: 26)
-            Text(place).font(.system(size: 14, weight: .semibold))
-            detail()
-                .font(.system(size: 14).monospacedDigit())
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .padding(.leading, 6)
-        .padding(.trailing, 14)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Theme.distraction.opacity(0.16)))
-        .overlay(Capsule().strokeBorder(Theme.distraction.opacity(0.5), lineWidth: 0.5))
-    }
-
-    private func subtitle(context: BlockContext?, place: String) -> String {
-        if let ends = context?.endsAt {
-            return "\(place) will still be there when your session ends at \(ends.formatted(date: .omitted, time: .shortened))."
-        }
-        return message.motivational
-    }
-
-    private var backButton: some View {
-        Button(action: message.onBackToWork) {
-            Text(message.backToAppName().map { "Back to \($0)" } ?? "Back to work")
-                .font(.system(size: 15, weight: .semibold))
-                .padding(.horizontal, 26)
-                .frame(height: 44)
-                .background(Capsule().fill(Theme.focusFill))
-                .shadow(color: Theme.focusFill.opacity(0.35), radius: 12, y: 6)
-        }
-        .buttonStyle(.plain)
-        .keyboardShortcut(.cancelAction)
-    }
-
-    private func actions(policy: OverridePolicy) -> some View {
-        let forWorkLeft = left(policy.forWorkWaitSeconds)
-        let passLeft = left(policy.passWaitSeconds)
         return HStack(spacing: 12) {
-            backButton
-
-            Button {
-                if forWorkLeft == 0 { message.onAllowForSession() }
-            } label: {
-                HStack(spacing: 8) {
-                    if forWorkLeft > 0 { CountdownRing(left: forWorkLeft, total: policy.forWorkWaitSeconds) }
-                    Text("It's for work")
-                }
-                .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(forWorkLeft == 0 ? 1 : 0.5))
-                .padding(.horizontal, 22)
-                .frame(height: 44)
-                .background(Capsule().fill(.white.opacity(0.12)))
-                .overlay(Capsule().strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
+            Button(action: message.onBackToWork) {
+                Label(back, systemImage: "arrow.uturn.backward")
             }
-            .buttonStyle(.plain)
-            .disabled(forWorkLeft > 0)
-            .help("Stop nudging about \(message.host ?? message.appName) until this session ends.")
-            .accessibilityLabel(forWorkLeft == 0 ? "It's for work" : "It's for work, available in \(counted(forWorkLeft, "second"))")
+            .buttonStyle(MomentButtonStyle(kind: .primary))
+            .keyboardShortcut(.cancelAction)
+
+            MomentWaitingButton(title: "It's for work", secondsLeft: forWorkLeft, wait: policy.forWorkWaitSeconds,
+                          waiting: .quiet, open: .quiet, action: message.onAllowForSession)
+                .help("Stop nudging about \(place) until this session ends.")
 
             if policy.allowsPass {
-                waitingButton("Let me through", secondsLeft: passLeft, wait: policy.passWaitSeconds, action: message.onOverride)
+                MomentWaitingButton(title: "Let me through", secondsLeft: passLeft, wait: policy.passWaitSeconds,
+                              action: message.onOverride)
                     .keyboardShortcut(.defaultAction)
-                    .accessibilityLabel(passLeft == 0 ? "Let me through for \(Self.minutes(policy.passSeconds))"
-                                        : "Let me through, available in \(counted(passLeft, "second"))")
+                    .help("Opens \(place) for \(passLength). The time counts as drift.")
+            } else if inSession {
+                Button("End the session early…") { confirmingEnd.toggle() }
+                    .buttonStyle(MomentButtonStyle(kind: .link))
+                    .accessibilityHint("Asks before ending the session")
             }
         }
     }
 
-    /// A quiet button that opens after `wait` seconds, with a ring counting down.
-    private func waitingButton(_ title: String, secondsLeft: Int, wait: Int, action: @escaping () -> Void) -> some View {
-        Button {
-            if secondsLeft == 0 { action() }
-        } label: {
+    /// "End Evening focus now?", in place under the buttons.
+    private func endConfirm(_ context: BlockContext) -> some View {
+        let minutes = MomentText.counted(max(1, Int(context.elapsed / 60)), "minute")
+        let forWork = policy.forWorkWaitSeconds > 0
+            ? " “It's for work” opens after \(policy.forWorkWaitSeconds) seconds, for sites that really are work." : ""
+        return VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("End \(context.sessionLabel) now?")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.primaryText)
+                Text("It's saved as \(minutes). \(preset.title) has no passes.\(forWork)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack(spacing: 8) {
-                if secondsLeft > 0 { CountdownRing(left: secondsLeft, total: wait) }
-                Text(title)
+                Button("End the session", action: message.onEndSession)
+                    .buttonStyle(MomentButtonStyle(kind: .destructive, height: 30))
+                Button("Keep going") { confirmingEnd = false }
+                    .buttonStyle(MomentButtonStyle(kind: .quiet, height: 30))
             }
-            .font(.system(size: 15))
-            .foregroundStyle(.white.opacity(secondsLeft == 0 ? 0.9 : 0.5))
-            .padding(.horizontal, 20)
-            .frame(height: 44)
         }
-        .buttonStyle(.plain)
-        .disabled(secondsLeft > 0)
-    }
-
-    private func hint(_ key: String, _ text: String) -> some View {
-        HStack(spacing: 6) {
-            Text(key)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(RoundedRectangle(cornerRadius: 5).fill(.white.opacity(0.1)))
-            Text(text)
-        }
-        .font(.system(size: 12))
-        .foregroundStyle(.white.opacity(0.45))
-    }
-
-    /// "2 minutes" for a pass length.
-    private static func minutes(_ seconds: TimeInterval) -> String {
-        counted(Int((seconds / 60).rounded()), "minute")
-    }
-
-    private static func clock(_ seconds: TimeInterval) -> String {
-        let s = Int(max(0, seconds))
-        return "\(s / 60):\(String(format: "%02d", s % 60))"
-    }
-}
-
-/// The small ring on a button that isn't open yet, with the seconds left.
-private struct CountdownRing: View {
-    let left: Int
-    let total: Int
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(.white.opacity(0.18), lineWidth: 2)
-            Circle().trim(from: 0, to: CGFloat(left) / CGFloat(max(1, total)))
-                .stroke(.white.opacity(0.6), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Text("\(left)").font(.system(size: 9, weight: .semibold).monospacedDigit())
-        }
-        .frame(width: 20, height: 20)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(width: 440, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(MomentPalette.quietFill))
     }
 }

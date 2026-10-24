@@ -68,6 +68,8 @@ enum DefaultRules {
         Seed(pattern: "ru.keepcoder.Telegram",     kind: .bundleId, classification: .distraction),
         Seed(pattern: "net.whatsapp.WhatsApp",     kind: .bundleId, classification: .distraction),
     ]
+        // ── Calls: neutral, neither focus nor drift (see MeetingApps) ──
+        + MeetingApps.seeds
 
     /// Insert seed rules. Skips any seed already present (matched by pattern+kind).
     @MainActor
