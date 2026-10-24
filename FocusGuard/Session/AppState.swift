@@ -21,6 +21,8 @@ final class AppState {
     let patternDetector: PatternDetector
     let breakManager: BreakManager
     let breakOverlay: BreakOverlayController
+    /// Morning plan, evening wrap-up, auto-start offers, calls.
+    let habits: HabitsCoordinator
     /// Free "Pause the tab": the site's tab shows a calm page while it's
     /// blocked, through the browser extension where it's connected and
     /// AppleScript elsewhere.
@@ -95,8 +97,11 @@ final class AppState {
         self.limits = limits
         self.calendarAutostart = CalendarAutostartCoordinator(sessionManager: manager)
         self.patternDetector = PatternDetector(presenter: presenter)
-        self.breakManager = BreakManager()
+        let breaks = BreakManager()
+        self.breakManager = breaks
         self.breakOverlay = BreakOverlayController()
+        self.habits = HabitsCoordinator(sessions: manager, breaks: breaks, tracker: tracker,
+                                        presenter: presenter, context: context)
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
         self.extensionBridge = bridge
@@ -148,7 +153,7 @@ final class AppState {
                     self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession)
                 }
             }
-            self?.maybeFireDailySummary()
+            self?.habits.tick()
             self?.maybeAutoPauseOrResume()
         }
 
@@ -168,15 +173,7 @@ final class AppState {
             guard let self else { return }
             self.music.sessionEnded()
             self.recap = SessionRecap(session: session, bestZoneToday: self.bestZoneToday(fresh: true))
-            let breakdown = ReportBuilder(context: context)
-                .breakdown(from: session.startedAt, to: session.endedAt ?? .now)
-            let focusMin = Int(breakdown.focus / 60)
-            let pct = Int((breakdown.focusPercent * 100).rounded())
-            self.notificationPresenter.presentSessionComplete(
-                label: session.displayName,
-                focusMinutes: focusMin,
-                focusPercent: pct
-            )
+            self.presentSessionComplete(for: session)
         }
 
         // Wire break overlay buttons → BreakManager actions.
@@ -205,6 +202,7 @@ final class AppState {
         blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
         blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }
         blockOverlay.onLetThrough = { [weak self] in self?.tabPause.letThrough() }
+        wireMoments(blockOverlay: blockOverlay)
 
         // Browser extension: its tab reports replace AppleScript while it's
         // connected; its block pages follow the preset, the daily limits and
@@ -215,6 +213,7 @@ final class AppState {
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
+        wireNotifications()
         tracker.start()
         bridge.start(appState: self)
         setupAutoPauseObservers()
@@ -236,6 +235,8 @@ final class AppState {
         // Shortcuts, Siri, Spotlight, the Focus filter, the widgets and the
         // Control Center control act on this state.
         SurfaceHost.attach(self)
+        // "Share week" posts .openShareComposer.
+        ShareComposerWindow.shared.observe(self)
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the
@@ -533,58 +534,5 @@ final class AppState {
         cachedStreak = value
         lastStreakAt = .now
         return value
-    }
-
-    // MARK: - Daily summary
-
-    /// Fired from the tracker tick. Posts a "day's wrap-up" notification once
-    /// per day after 9pm local time when the user has been inactive for at
-    /// least the configured grace period — implies the day is "done".
-    private var lastSummaryCheckAt: Date?
-    func maybeFireDailySummary() {
-        // Cheap rate-limit so we don't recompute on every 1Hz tick.
-        if let last = lastSummaryCheckAt, Date().timeIntervalSince(last) < 60 { return }
-        lastSummaryCheckAt = .now
-
-        let calendar = Calendar.current
-        let now = Date()
-        let hour = calendar.component(.hour, from: now)
-        guard hour >= GoalDefaults.summaryHourLocal else { return }
-
-        // Don't fire twice for the same day.
-        let todayKey = Self.dayKey(for: now, calendar: calendar)
-        if UserDefaults.standard.string(forKey: SettingsKeys.Goal.lastSummaryDayKey) == todayKey {
-            return
-        }
-
-        // Inactivity gate: most-recent event ended at least N minutes ago.
-        let descriptor = FetchDescriptor<ActivityEvent>(
-            sortBy: [SortDescriptor(\.endedAt, order: .reverse)]
-        )
-        var capped = descriptor
-        capped.fetchLimit = 1
-        let lastEvent = (try? container.mainContext.fetch(capped))?.first
-        let lastEnd = lastEvent?.endedAt ?? .distantPast
-        let idleSeconds = now.timeIntervalSince(lastEnd)
-        if idleSeconds < TimeInterval(GoalDefaults.summaryInactivityMinutes * 60) {
-            return
-        }
-
-        // Today's focus minutes.
-        let breakdown = todayBreakdown
-        let focusMin = Int(breakdown.focus / 60)
-        notificationPresenter.presentDailySummary(
-            focusMinutes: focusMin,
-            goalMinutes: FocusGoal.dailyMinutes
-        )
-        UserDefaults.standard.set(todayKey, forKey: SettingsKeys.Goal.lastSummaryDayKey)
-    }
-
-    private static func dayKey(for date: Date, calendar: Calendar) -> String {
-        let f = DateFormatter()
-        f.calendar = calendar
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
     }
 }

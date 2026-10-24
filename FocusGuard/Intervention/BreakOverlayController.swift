@@ -1,10 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// Surfaces the calm full-screen "Time to rest" overlay when a break starts.
-/// Unlike `BlockOverlayController` (the punitive distraction block), this
-/// window is freely dismissable — closing it just hides the overlay; the
-/// break timer keeps running and shows up in the menu bar.
+/// Surfaces the calm full-screen break screen when a break starts. Unlike
+/// `BlockOverlayController` (the distraction block), this window can be
+/// hidden: closing it just hides the screen; the break timer keeps running
+/// and shows in the menu bar, which stays visible above it.
 @MainActor
 final class BreakOverlayController {
     private var window: NSWindow?
@@ -16,6 +16,8 @@ final class BreakOverlayController {
     /// Called when the user closes the overlay (without skipping). The break
     /// timer keeps running.
     var onClose: (() -> Void)?
+    /// The session the break follows, if one just ended; set by AppState.
+    var finishedSessionProvider: (() -> FinishedSession?)?
 
     func present(breakManager: BreakManager) {
         guard !isPresenting else { return }
@@ -25,6 +27,7 @@ final class BreakOverlayController {
 
         let view = BreakOverlayView(
             breakManager: breakManager,
+            finished: finishedSessionProvider?(),
             onSkip: { [weak self] in
                 self?.onSkip?()
                 self?.dismiss()
@@ -38,9 +41,12 @@ final class BreakOverlayController {
             }
         )
 
+        // Everything but the menu bar, so the break's timer stays in sight.
+        let frame = NSRect(x: screen.frame.minX, y: screen.frame.minY,
+                           width: screen.frame.width, height: screen.visibleFrame.maxY - screen.frame.minY)
         let host = NSHostingController(rootView: view)
-        let window = NSWindow(
-            contentRect: screen.visibleFrame,
+        let window = MomentWindow(
+            contentRect: frame,
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -54,7 +60,7 @@ final class BreakOverlayController {
         // view) tears down the host controller that's still mid-action.
         window.isReleasedWhenClosed = false
         window.contentViewController = host
-        window.setFrame(screen.visibleFrame, display: true)
+        window.setFrame(frame, display: true)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 

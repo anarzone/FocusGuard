@@ -9,8 +9,10 @@ extension AppState {
         case .drift:                  reason = .session
         case .dailyLimit(let limit):  reason = .limit(minutes: limit.minutesToday)
         }
+        let context = blockContext()
         tabPause.blockShown(reason, snapshot: tracker.currentSnapshot,
-                            endsAt: blockContext()?.endsAt, backTo: backToAppName())
+                            endsAt: context?.endsAt, backTo: backToAppName(),
+                            sessionLabel: context?.sessionLabel, startedAt: sessionManager.currentSession?.startedAt)
     }
 
     /// A `focusguard://` link, from the paused-tab page.
