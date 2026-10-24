@@ -23,9 +23,13 @@ final class AppState {
     let breakOverlay: BreakOverlayController
     /// Morning plan, evening wrap-up, auto-start offers, calls.
     let habits: HabitsCoordinator
-    /// Free "Pause the tab": the site's tab shows a calm page while it's blocked.
-    let tabPause = TabPauseCoordinator(pauser: AppleScriptTabPauser())
+    /// Free "Pause the tab": the site's tab shows a calm page while it's
+    /// blocked, through the browser extension where it's connected and
+    /// AppleScript elsewhere.
+    let tabPause: TabPauseCoordinator
     let updater: UpdaterController
+    /// The browser extension's connection (see ExtensionBridge).
+    let extensionBridge: ExtensionBridge
     let insights = AIInsightsViewModel()
     let music = FocusMusic()
     /// Reads the store off the main thread for everything the menu shows.
@@ -81,6 +85,7 @@ final class AppState {
         let engine = EscalationEngine(presenter: presenter, overlay: blockOverlay)
         let limits = DailyLimitsEngine(context: context, notifier: presenter, overlay: blockOverlay,
                                        policy: { [weak engine] in engine?.policy ?? .standard })
+        let bridge = ExtensionBridge()
 
         self.permissions = PermissionsCoordinator()
         self.optOutCache = cache
@@ -99,6 +104,9 @@ final class AppState {
                                         presenter: presenter, context: context)
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
+        self.extensionBridge = bridge
+        self.tabPause = TabPauseCoordinator(pauser: PreferringTabPauser(
+            primary: ExtensionTabPauser(bridge: bridge), fallback: AppleScriptTabPauser()))
 
         // Hydrate engine config from persisted prefs.
         let defaults = UserDefaults.standard
@@ -195,8 +203,18 @@ final class AppState {
         blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }
         blockOverlay.onLetThrough = { [weak self] in self?.tabPause.letThrough() }
 
+        // Browser extension: its tab reports replace AppleScript while it's
+        // connected; its block pages follow the preset, the daily limits and
+        // the escalation engine's passes.
+        tracker.extensionTab = { [weak bridge] id in bridge?.tab(forBrowser: id) }
+        bridge.presetProvider = { [weak engine] in engine?.preset ?? .standard }
+        bridge.limitsProvider = { [weak limits] in limits?.statuses ?? [] }
+        bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
+        bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
+
         wireNotifications()
         tracker.start()
+        bridge.start(appState: self)
         setupAutoPauseObservers()
 
         // One-time cleanup of pre-fix idle events (loginwindow / screensaver)

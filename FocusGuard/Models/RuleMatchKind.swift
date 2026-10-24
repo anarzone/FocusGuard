@@ -8,12 +8,16 @@ enum RuleMatchKind: Int, Codable, CaseIterable {
     case host = 1
     /// Window title regex (case-insensitive). Last-resort, expensive.
     case titleRegex = 2
+    /// Part of a site: host plus path prefix, e.g. "youtube.com/shorts".
+    /// The host matches like `.host`; the path on whole segments.
+    case urlPrefix = 3
 
     var label: String {
         switch self {
         case .bundleId:   return "App"
         case .host:       return "Site"
         case .titleRegex: return "Title regex"
+        case .urlPrefix:  return "Part of a site"
         }
     }
 }

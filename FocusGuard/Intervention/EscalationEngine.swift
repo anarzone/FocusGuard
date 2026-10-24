@@ -26,11 +26,14 @@ final class EscalationEngine {
     /// silence → notify → block as configured.
     var strictMode: Bool = false
 
-    /// What the block screen lets you do, from the preset these settings match.
-    var policy: OverridePolicy {
+    /// The preset these settings match.
+    var preset: DriftResponse {
         DriftResponse.matching(silence: Int(silenceThreshold), notify: Int(notifyThreshold),
-                               block: Int(blockThreshold), strict: strictMode).overridePolicy
+                               block: Int(blockThreshold), strict: strictMode)
     }
+
+    /// What the block screen lets you do, from the preset these settings match.
+    var policy: OverridePolicy { preset.overridePolicy }
 
     /// A "Let me through" in progress: one site or app, for `policy.passSeconds`.
     /// The time still counts as drift; it only holds the block screen back.
@@ -139,6 +142,13 @@ final class EscalationEngine {
         blocked = nil
         currentStreakStartedAt = nil
         lastNotifiedAt = nil
+    }
+
+    /// A pass taken outside the block screen (the browser extension's block
+    /// page) for what `snapshot` shows: same rules, same length.
+    func takePass(for snapshot: ActivitySnapshot, now: Date = .now) {
+        blocked = snapshot
+        takePass(now: now)
     }
 
     /// "It's for work": stop escalating this site / app for the rest of the

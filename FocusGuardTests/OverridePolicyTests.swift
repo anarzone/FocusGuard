@@ -137,6 +137,22 @@ final class OverridePolicyTests: XCTestCase {
         XCTAssertEqual(overlay.current?.host, "reddit.com")
     }
 
+    func test_passFromTheBrowserHoldsTheBlockScreenBack() {
+        // Taken on the extension's block page: the block screen never came up.
+        engine.takePass(for: snap("https://x.com/", at: Date()))
+        XCTAssertEqual(engine.activePass?.name, "x.com")
+        let t0 = Date()
+        engine.observe(snapshot: snap("https://x.com/home", at: t0), isInSession: true)
+        engine.observe(snapshot: snap("https://x.com/home", at: t0.addingTimeInterval(engine.blockThreshold + 1)), isInSession: true)
+        XCTAssertFalse(overlay.presented)
+
+        use(.strict)
+        engine.resetForSessionEnd()
+        engine.takePass(for: snap("https://x.com/", at: Date()))
+        XCTAssertNil(engine.activePass, "Strict gives no pass from anywhere")
+        XCTAssertEqual(engine.preset, .strict)
+    }
+
     func test_gentle_alsoGivesTwoMinutes() {
         use(.gentle)
         blockOn("https://x.com/home", at: Date())

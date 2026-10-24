@@ -1,0 +1,215 @@
+/* Tokens and parts shared by the popup, block, options and welcome pages.
+   Colors follow the FocusGuard canvases: indigo for focus, orange for drift
+   (never under small text: a dot or fill plus a dark label), grey for off. */
+
+:root {
+  color-scheme: light dark;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --page: #F5F5F8;
+  --popup: #F4F4F8;
+  --card: #FFFFFF;
+  --card-edge: rgba(0, 0, 0, 0.06);
+  --ink: #1D1D1F;
+  --ink-body: #3A3A42;
+  --ink-2: #55555E;
+  --ink-3: #6E6E78;
+  --line: rgba(0, 0, 0, 0.1);
+  --fill-1: rgba(0, 0, 0, 0.05);
+  --fill-2: rgba(0, 0, 0, 0.07);
+  --fill-3: rgba(0, 0, 0, 0.1);
+  --track: rgba(0, 0, 0, 0.07);
+  --other: rgba(0, 0, 0, 0.22);
+  --indigo: #6155F5;
+  --indigo-fill: #6155F5;
+  --indigo-ink: #4B3FD9;
+  --indigo-soft: rgba(97, 85, 245, 0.12);
+  --indigo-hover: #5246E8;
+  --link: #4B3FD9;
+  --link-hover: #3A30B0;
+  --orange: #FF8D28;
+  --grey: #8E8E93;
+  --on-orange: #1D1D1F;
+  --pro-bg: rgba(97, 85, 245, 0.14);
+  --pro-ink: #4B3FD9;
+  --free-bg: rgba(0, 0, 0, 0.06);
+  --free-ink: #3A3A42;
+  --kbd: rgba(0, 0, 0, 0.06);
+  --shadow-menu: 0 0 0 0.5px rgba(0, 0, 0, 0.16), 0 12px 32px rgba(20, 30, 60, 0.22);
+  --primary-shadow: 0 6px 18px rgba(97, 85, 245, 0.28);
+  --focus-ring: 0 0 0 3px rgba(97, 85, 245, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #1C1C21;
+    --popup: #1C1C21;
+    --card: #26262C;
+    --card-edge: rgba(255, 255, 255, 0.08);
+    --ink: #F5F5F7;
+    --ink-body: #C7C7CF;
+    --ink-2: #A1A1AA;
+    --ink-3: #8E8E96;
+    --line: rgba(255, 255, 255, 0.12);
+    --fill-1: rgba(255, 255, 255, 0.06);
+    --fill-2: rgba(255, 255, 255, 0.1);
+    --fill-3: rgba(255, 255, 255, 0.14);
+    --track: rgba(255, 255, 255, 0.1);
+    --other: rgba(255, 255, 255, 0.28);
+    --indigo: #5E5CE6;
+    --indigo-fill: #6D7CFF;
+    --indigo-ink: #B9C0FF;
+    --indigo-soft: rgba(109, 124, 255, 0.24);
+    --indigo-hover: #6E6CF0;
+    --link: #9AA3FF;
+    --link-hover: #C9CEFF;
+    --orange: #DC7620;
+    --grey: #98989D;
+    --pro-bg: rgba(109, 124, 255, 0.24);
+    --pro-ink: #B9C0FF;
+    --free-bg: rgba(255, 255, 255, 0.1);
+    --free-ink: #C7C7CF;
+    --kbd: rgba(255, 255, 255, 0.1);
+    --shadow-menu: 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 12px 32px rgba(0, 0, 0, 0.5);
+    --primary-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.3), 0 8px 22px rgba(94, 92, 230, 0.35);
+    --focus-ring: 0 0 0 3px rgba(154, 163, 255, 0.45);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--link); text-decoration: none; cursor: pointer; }
+a:hover { color: var(--link-hover); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+.faint { color: var(--ink-3); }
+.hidden { display: none !important; }
+
+/* Cards */
+.card {
+  border-radius: 13px;
+  background: var(--card);
+  box-shadow: 0 0 0 0.5px var(--card-edge);
+}
+
+/* Buttons */
+button { font-family: inherit; color: inherit; }
+.btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 18px;
+  border: none;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:disabled { cursor: default; }
+.btn-primary { background: var(--indigo); color: #FFFFFF; font-weight: 600; }
+.btn-primary:hover:not(:disabled) { background: var(--indigo-hover); }
+.btn-quiet { background: var(--fill-2); color: var(--ink); }
+.btn-quiet:hover:not(:disabled) { background: var(--fill-3); }
+.btn-quiet:disabled { background: var(--fill-1); color: var(--ink-3); }
+.btn-plain { background: transparent; color: var(--ink); }
+.btn-plain:disabled { color: var(--ink-3); }
+.btn-wide { width: 100%; }
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--fill-2); }
+
+/* Badges */
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.badge-pro { background: var(--pro-bg); color: var(--pro-ink); }
+.badge-free { background: var(--free-bg); color: var(--free-ink); }
+
+/* Category chips: indigo for focus, grey for neutral, an orange fill with a
+   dark label for distracting. */
+.chip-focus { background: var(--indigo-soft); color: var(--indigo-ink); }
+.chip-neutral { background: var(--fill-3); color: var(--ink); }
+.chip-distracting { background: var(--orange); color: var(--on-orange); }
+
+.swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; display: inline-block; }
+.swatch-f { background: var(--indigo-fill); }
+.swatch-d { background: var(--orange); }
+.swatch-o { background: var(--other); }
+
+/* Site tile: the first letter on a dark square. No icons are fetched. */
+.tile {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+/* Switch */
+.switch {
+  width: 38px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  padding: 2px;
+  background: var(--fill-3);
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  transition: background 0.15s;
+}
+.switch span {
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+.switch[aria-checked="true"] { background: var(--indigo); }
+.switch[aria-checked="true"] span { transform: translateX(16px); }
+.switch:disabled { opacity: 0.5; cursor: default; }
+
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--kbd);
+  color: var(--ink-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
