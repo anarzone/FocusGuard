@@ -53,8 +53,10 @@ struct FocusActions {
     /// - Parameters:
     ///   - minutes: planned length; nil means the usual one.
     ///   - openEnded: run until ended (the Focus filter's "While Work is on").
+    ///   - startedAt: an earlier start, for the auto-start offer.
     @discardableResult
-    func start(minutes: Int? = nil, openEnded: Bool = false, label: String? = nil, now: Date = .now) -> StartResult {
+    func start(minutes: Int? = nil, openEnded: Bool = false, label: String? = nil, startedAt: Date? = nil,
+               now: Date = .now) -> StartResult {
         if let session = sessions.currentSession { return .alreadyRunning(name: session.displayName) }
         if let state = breaks.current {
             guard breaks.canEndEarly else { return .onStrictBreak(until: state.startedAt.addingTimeInterval(state.plannedDuration)) }
@@ -64,9 +66,10 @@ struct FocusActions {
         let name = label?.trimmingCharacters(in: .whitespacesAndNewlines)
         let defaultLabel = defaults.string(forKey: SessionDefaultsKey.label) ?? ""
         let chosen = (name?.isEmpty == false ? name : nil) ?? (defaultLabel.isEmpty ? nil : defaultLabel)
-        sessions.startSession(label: chosen, plannedDurationMinutes: planned)
+        sessions.startSession(label: chosen, plannedDurationMinutes: planned, startedAt: startedAt)
+        let start = startedAt.map { min($0, now) } ?? now
         return .started(name: sessions.currentSession?.displayName ?? "", minutes: planned,
-                        endsAt: planned.map { now.addingTimeInterval(TimeInterval($0 * 60)) })
+                        endsAt: planned.map { start.addingTimeInterval(TimeInterval($0 * 60)) })
     }
 
     enum EndResult: Equatable {
