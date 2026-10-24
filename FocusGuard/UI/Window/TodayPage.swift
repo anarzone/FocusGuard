@@ -808,7 +808,7 @@ private struct SetupCard: View {
                         .foregroundStyle(Theme.primaryText)
                         .padding(.bottom, 6)
                     ForEach(steps, id: \.title) { step in
-                        SetupStepRow(step: step)
+                        TodaySetupStepRow(step: step)
                     }
                 }
             }
@@ -816,20 +816,20 @@ private struct SetupCard: View {
         }
     }
 
-    private var steps: [SetupStep] {
+    private var steps: [TodaySetupStep] {
         [
-            SetupStep(title: "Allow Screen Recording and notifications",
+            TodaySetupStep(title: "Allow Screen Recording and notifications",
                       detail: "So FocusGuard can see what's in front.",
                       done: appState.permissions.allGranted,
                       action: ("Set up", { NotificationCenter.default.post(name: .showOnboarding, object: nil) })),
-            SetupStep(title: "Pick a daily goal: \(Self.goalWords(FocusGoal.dailyMinutes))",
+            TodaySetupStep(title: "Pick a daily goal: \(Self.goalWords(FocusGoal.dailyMinutes))",
                       detail: "Change it any time in Settings.",
                       done: true, action: nil),
-            SetupStep(title: "Sort your apps",
+            TodaySetupStep(title: "Sort your apps",
                       detail: "Check FocusGuard's guesses in about 2 minutes.",
                       done: appsSorted,
                       action: ("Sort now", { onNavigate(.apps) })),
-            SetupStep(title: "Start your first session",
+            TodaySetupStep(title: "Start your first session",
                       detail: "It gets a name from how it goes, like Steady Deep Dive.",
                       done: false, action: nil),
         ]
@@ -847,15 +847,15 @@ extension SetupCard {
     }
 }
 
-private struct SetupStep {
+private struct TodaySetupStep {
     let title: String
     let detail: String
     let done: Bool
     let action: (title: String, run: () -> Void)?
 }
 
-private struct SetupStepRow: View {
-    let step: SetupStep
+private struct TodaySetupStepRow: View {
+    let step: TodaySetupStep
 
     var body: some View {
         HStack(spacing: 10) {
