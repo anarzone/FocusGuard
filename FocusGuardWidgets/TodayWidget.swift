@@ -147,7 +147,7 @@ struct TodayWidgetView: View {
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Today").font(.system(size: 11)).foregroundStyle(.secondary)
-                Text("\(Int((s.today.focusRate * 100).rounded()))% focus rate").font(.system(size: 14, weight: .semibold))
+                Text("\(FocusRate.percent(focused: s.today.focused, drifted: s.today.drifted))% focus rate").font(.system(size: 14, weight: .semibold))
                 Text(s.today.sessions == 1 ? "1 session" : "\(s.today.sessions) sessions")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
@@ -173,7 +173,7 @@ struct TodayWidgetView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.name).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                 Text(session.focused + session.drifted >= 60
-                     ? "\(Int((session.focusRate * 100).rounded()))% focused so far"
+                     ? "\(FocusRate.percent(focused: session.focused, drifted: session.drifted))% focused so far"
                      : (s.phase == .paused ? "Paused" : "Just started"))
                     .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
             }
@@ -224,7 +224,7 @@ struct TodayWidgetView: View {
                             BreakButtons(canEnd: s.onBreak?.canEndEarly ?? true, palette: palette)
                         } else {
                             if let session = s.session, session.focused + session.drifted >= 60 {
-                                Text("\(Int((session.focusRate * 100).rounded()))% focused so far")
+                                Text("\(FocusRate.percent(focused: session.focused, drifted: session.drifted))% focused so far")
                                     .font(.system(size: 12)).foregroundStyle(.secondary)
                             }
                             SessionButtons(paused: s.phase == .paused, palette: palette)
@@ -253,7 +253,7 @@ struct TodayWidgetView: View {
                 Text("of \(SurfaceWords.duration(s.today.goalSeconds))\(s.phase == .ready ? "" : " goal")")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            Text("\(Int((s.today.focusRate * 100).rounded()))% focus rate · \(s.today.sessions == 1 ? "1 session" : "\(s.today.sessions) sessions")")
+            Text("\(FocusRate.percent(focused: s.today.focused, drifted: s.today.drifted))% focus rate · \(s.today.sessions == 1 ? "1 session" : "\(s.today.sessions) sessions")")
                 .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
         }
     }

@@ -69,7 +69,7 @@ actor SurfaceStats {
         let split = SurfaceSnapshotBuilder.split(SessionTimeline.segments(from: session.events))
         let running = max(0, endedAt.timeIntervalSince(session.startedAt) - session.pausedSeconds)
         return SurfaceSnapshot.Last(name: session.displayName, endedAt: endedAt, minutes: Int(running / 60),
-                                    focusRate: SurfaceSnapshot.rate(focused: split.focused, drifted: split.drifted))
+                                    focusRate: FocusRate.of(focused: split.focused, drifted: split.drifted))
     }
 }
 

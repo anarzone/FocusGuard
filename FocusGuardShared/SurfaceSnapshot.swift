@@ -38,7 +38,7 @@ struct SurfaceSnapshot: Codable, Equatable {
         /// f focused, d drifted, o other, n the cell in progress, . to come.
         var ring: String
 
-        var focusRate: Double { SurfaceSnapshot.rate(focused: focused, drifted: drifted) }
+        var focusRate: Double { FocusRate.of(focused: focused, drifted: drifted) }
     }
 
     struct Break: Codable, Equatable {
@@ -59,7 +59,7 @@ struct SurfaceSnapshot: Codable, Equatable {
         /// Days in a row the goal was met, up to yesterday.
         var streak: Int
 
-        var focusRate: Double { SurfaceSnapshot.rate(focused: focused, drifted: drifted) }
+        var focusRate: Double { FocusRate.of(focused: focused, drifted: drifted) }
         var goalProgress: Double { goalSeconds > 0 ? min(1, focused / goalSeconds) : 0 }
     }
 
@@ -75,12 +75,6 @@ struct SurfaceSnapshot: Codable, Equatable {
         var endedAt: Date
         var minutes: Int
         var focusRate: Double
-    }
-
-    /// Focused ÷ (focused + drifted), the rate shown everywhere.
-    static func rate(focused: TimeInterval, drifted: TimeInterval) -> Double {
-        let counted = max(0, focused) + max(0, drifted)
-        return counted > 0 ? max(0, focused) / counted : 0
     }
 
     // MARK: - Time
