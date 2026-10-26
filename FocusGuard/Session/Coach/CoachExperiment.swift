@@ -202,7 +202,7 @@ enum CoachPlanner {
     /// none has one, the strongest finding alone.
     static func plan(_ findings: [CoachFinding], settings: CoachSettings) -> (CoachFinding, CoachExperiment?)? {
         for finding in findings {
-            if let experiment = experiment(for: finding, settings: settings) { return (finding, experiment) }
+            if let experiment = Self.experiment(for: finding, settings: settings) { return (finding, experiment) }
         }
         return findings.first.map { ($0, nil) }
     }

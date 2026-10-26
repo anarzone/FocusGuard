@@ -23,14 +23,14 @@ struct CoachDraft: Equatable, Sendable {
 
     static func make(_ finding: CoachFinding?, experiment: CoachExperiment?,
                      locale: Locale = .current, calendar: Calendar = .current) -> CoachDraft {
-        let points = finding.map { points(for: $0, locale: locale, calendar: calendar) } ?? []
-        let why = experiment.map { why(for: $0, finding: finding, locale: locale, calendar: calendar) }
+        let points = finding.map { Self.points(for: $0, locale: locale, calendar: calendar) } ?? []
+        let why = experiment.map { Self.why(for: $0, finding: finding, locale: locale, calendar: calendar) }
         var facts = points.map(\.sentence)
         if let experiment {
             facts.append("Suggested experiment: \(experiment.title(locale: locale, calendar: calendar)). "
                          + experiment.effect(locale: locale, calendar: calendar))
         }
-        return CoachDraft(headline: finding.map { headline(for: $0, locale: locale, calendar: calendar) }
+        return CoachDraft(headline: finding.map { Self.headline(for: $0, locale: locale, calendar: calendar) }
                               ?? "A steady week, with nothing that stood out.",
                           points: points, why: why, facts: facts)
     }
