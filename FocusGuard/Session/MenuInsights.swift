@@ -340,7 +340,8 @@ enum MenuInsightsBuilder {
         usageRows(ReportBuilder.topApps(events, from: from, to: to, limit: 40), limit: limit)
     }
 
-    private static func usageRows(_ apps: [AppUsageEntry], limit: Int) -> [UsageRow] {
+    /// Rows from ranked apps, browsers split into their sites.
+    static func usageRows(_ apps: [AppUsageEntry], limit: Int) -> [UsageRow] {
         var rows: [UsageRow] = []
         for app in apps {
             if app.tabs.isEmpty {

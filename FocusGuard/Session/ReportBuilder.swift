@@ -154,20 +154,35 @@ struct ReportBuilder {
 
     /// Top apps in `[from, to)` from events already read; a wider read works too.
     static func topApps(_ events: [ActivityEvent], from: Date, to: Date, limit: Int = 10) -> [AppUsageEntry] {
-        struct Group {
-            var kind: AppGlyphKind
-            var name: String
-            var bundleId: String
-            var seconds: TimeInterval
-            var tally: ClassificationTally
-            var events: Int
-            // Per-host breakdown — only populated for browser bundles. Maps
-            // host (e.g. "github.com") → time per classification.
-            var hosts: [String: ClassificationTally]
-        }
-        var groups: [String: Group] = [:]
         var hosts = HostCache()
+        return topApps(appGroups(events, from: from, to: to, hosts: &hosts), limit: limit)
+    }
 
+    /// One app's time before ranking: what `topApps` ranks, and what a day's
+    /// summary keeps so days can be added up.
+    struct AppGroup {
+        var kind: AppGlyphKind
+        var name: String
+        var bundleId: String
+        var seconds: TimeInterval
+        var tally: ClassificationTally
+        var events: Int
+        // Per-host breakdown — only populated for browser bundles. Maps
+        // host (e.g. "github.com") → time per classification.
+        var hosts: [String: ClassificationTally]
+
+        mutating func add(_ other: AppGroup) {
+            seconds += other.seconds
+            events += other.events
+            tally.add(other.tally)
+            for (host, time) in other.hosts { hosts[host, default: ClassificationTally()].add(time) }
+        }
+    }
+
+    /// Time per app in `[from, to)`, keyed by bundle id.
+    static func appGroups(_ events: [ActivityEvent], from: Date, to: Date,
+                          hosts: inout HostCache) -> [String: AppGroup] {
+        var groups: [String: AppGroup] = [:]
         for e in events {
             let key = e.bundleIdentifier
             let dur = max(0, min(e.endedAt, to).timeIntervalSince(max(e.startedAt, from)))
@@ -177,7 +192,7 @@ struct ReportBuilder {
             let host = isBrowser ? e.url.flatMap { hosts.host(of: $0) } : nil
 
             let classification = e.classification ?? .neutral
-            var group = groups[key] ?? Group(
+            var group = groups[key] ?? AppGroup(
                 kind: AppGlyph.kind(forBundleId: e.bundleIdentifier, name: e.appName),
                 name: e.appName,
                 bundleId: e.bundleIdentifier,
@@ -194,8 +209,11 @@ struct ReportBuilder {
             }
             groups[key] = group
         }
+        return groups
+    }
 
-        return groups.values
+    static func topApps(_ groups: [String: AppGroup], limit: Int) -> [AppUsageEntry] {
+        groups.values
             .sorted { $0.seconds > $1.seconds }
             .prefix(limit)
             .map { g in
@@ -227,21 +245,27 @@ struct ReportBuilder {
     /// Top distractions in `[from, to)` from events already read, of any
     /// kind; a wider read works too.
     static func topDistractions(_ all: [ActivityEvent], from: Date, to: Date, limit: Int = 5) -> [DistractionEntry] {
+        var hosts = HostCache()
+        return topDistractions(distractionGroups(all, from: from, to: to, hosts: &hosts), limit: limit)
+    }
+
+    /// One distracting site or app's time before ranking.
+    struct DistractionGroup {
+        var kind: AppGlyphKind
+        var name: String
+        var subtitle: String
+        var seconds: TimeInterval
+        var host: String?
+        var bundleId: String
+    }
+
+    /// Distracting time in `[from, to)`, keyed by host for browser
+    /// distractions or bundle id otherwise.
+    static func distractionGroups(_ all: [ActivityEvent], from: Date, to: Date,
+                                  hosts: inout HostCache) -> [String: DistractionGroup] {
         let dRaw = Classification.distraction.rawValue
         let events = all.filter { $0.endedAt >= from && $0.startedAt < to && $0.classificationRaw == dRaw }
-
-        // Group by host (for browser distractions) or bundle id otherwise.
-        struct Group {
-            var kind: AppGlyphKind
-            var name: String
-            var subtitle: String
-            var seconds: TimeInterval
-            var host: String?
-            var bundleId: String
-        }
-        var groups: [String: Group] = [:]
-        var hosts = HostCache()
-
+        var groups: [String: DistractionGroup] = [:]
         for e in events {
             let host = e.url.flatMap { hosts.host(of: $0) }
             let key = host ?? e.bundleIdentifier
@@ -252,7 +276,7 @@ struct ReportBuilder {
                 groups[key] = existing
             } else {
                 let kind = AppGlyph.kind(forBundleId: e.bundleIdentifier, name: host ?? e.appName)
-                groups[key] = Group(
+                groups[key] = DistractionGroup(
                     kind: kind,
                     name: host ?? e.appName,
                     subtitle: host ?? e.bundleIdentifier,
@@ -262,7 +286,10 @@ struct ReportBuilder {
                 )
             }
         }
+        return groups
+    }
 
+    static func topDistractions(_ groups: [String: DistractionGroup], limit: Int) -> [DistractionEntry] {
         let totalDistr = groups.values.reduce(0) { $0 + $1.seconds }
         return groups.values
             .sorted { $0.seconds > $1.seconds }
@@ -346,6 +373,12 @@ struct ClassificationTally: Equatable {
         case .neutral:     neutral += seconds
         case .distraction: distraction += seconds
         }
+    }
+
+    mutating func add(_ other: ClassificationTally) {
+        focus += other.focus
+        neutral += other.neutral
+        distraction += other.distraction
     }
 
     /// Ties go to distraction, then focus, so a drift never hides.

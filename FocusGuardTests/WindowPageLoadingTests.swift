@@ -2,9 +2,9 @@ import XCTest
 import SwiftData
 @testable import FocusGuard
 
-/// The window's pages load on `StatsStore` through quicker paths (one read
-/// per report, finished days from kept totals, cached hours and hosts).
-/// They must give the same numbers as the plain builders.
+/// The window's pages load on `StatsStore` through quicker paths (finished
+/// days added up from kept summaries, one read per report, cached hours and
+/// hosts). They must give the same numbers as the plain builders.
 @MainActor
 final class WindowPageLoadingTests: XCTestCase {
     private var container: ModelContainer!
@@ -33,6 +33,14 @@ final class WindowPageLoadingTests: XCTestCase {
         ]
         for back in 0..<70 {
             guard let date = calendar.date(byAdding: .day, value: -back, to: today) else { continue }
+            // The morning's focus is a session, for the longest run in the zone.
+            var session: Session?
+            if let morning = calendar.date(byAdding: .hour, value: 9, to: date), morning.addingTimeInterval(3600) <= now {
+                let s = Session(startedAt: morning)
+                s.endedAt = morning.addingTimeInterval(3600)
+                context.insert(s)
+                session = s
+            }
             for (hour, minutes, kind, url) in day {
                 guard let start = calendar.date(byAdding: .hour, value: hour, to: date) else { continue }
                 let end = start.addingTimeInterval(minutes * 60)
@@ -42,6 +50,7 @@ final class WindowPageLoadingTests: XCTestCase {
                                           appName: url == nil ? "Xcode" : "Google Chrome")
                 event.url = url
                 event.classification = kind
+                if hour == 9 { event.session = session }
                 context.insert(event)
             }
         }
@@ -71,8 +80,38 @@ final class WindowPageLoadingTests: XCTestCase {
             for (a, b) in zip(fast.heat.joined(), direct.heat.joined()) { XCTAssertEqual(a, b, accuracy: 0.01, label) }
             XCTAssertEqual(fast.data.heatHours, direct.data.heatHours, label)
             XCTAssertEqual(fast.data.apps.map(\.id), direct.data.apps.map(\.id), label)
+            for (a, b) in zip(fast.data.apps, direct.data.apps) { XCTAssertEqual(a.seconds, b.seconds, accuracy: 0.01, label) }
             XCTAssertEqual(fast.data.distractions.map(\.name), direct.data.distractions.map(\.name), label)
-            XCTAssertEqual(fast.data.buckets.map(\.focus), direct.data.buckets.map(\.focus), label)
+            for (a, b) in zip(fast.data.distractions, direct.data.distractions) {
+                XCTAssertEqual(a.seconds, b.seconds, accuracy: 0.01, label)
+            }
+            XCTAssertEqual(fast.data.buckets.count, direct.data.buckets.count, label)
+            for (a, b) in zip(fast.data.buckets, direct.data.buckets) {
+                XCTAssertEqual(a.focus, b.focus, accuracy: 0.01, label)
+                XCTAssertEqual(a.drift, b.drift, accuracy: 0.01, label)
+                XCTAssertEqual(a.other, b.other, accuracy: 0.01, label)
+                XCTAssertEqual(a.isLocked, b.isLocked, label)
+            }
+            XCTAssertEqual(fast.data.longestZone, direct.data.longestZone, accuracy: 0.01, label)
+            XCTAssertEqual(fast.data.sessionCount, direct.data.sessionCount, label)
+            XCTAssertEqual(fast.longestZoneDay, direct.longestZoneDay, label)
+            XCTAssertEqual(fast.distractions.map(\.before), direct.distractions.map(\.before), label)
+        }
+    }
+
+    func testAppsFromTheStatsStoreMatchReadingTheEvents() async throws {
+        let now = Date.now
+        try seed(now: now)
+        let store = StatsStore(container: container)
+        for range in [AppsRange.today, .week, .month] {
+            let from = range.start(now: now)
+            let fast = await store.usageRows(from: from, to: now, limit: 300)
+            let direct = MenuInsightsBuilder.usageRows(context: ModelContext(container), from: from, to: now, limit: 300)
+            XCTAssertEqual(fast.map(\.id), direct.map(\.id), range.rawValue)
+            for (a, b) in zip(fast, direct) {
+                XCTAssertEqual(a.seconds, b.seconds, accuracy: 0.01, range.rawValue)
+                XCTAssertEqual(a.classification, b.classification, range.rawValue)
+            }
         }
     }
 

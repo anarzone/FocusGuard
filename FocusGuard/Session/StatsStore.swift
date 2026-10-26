@@ -11,10 +11,13 @@ import SwiftData
 /// what the main context has saved; the tracker saves every few seconds.
 actor StatsStore {
     private let container: ModelContainer
-    /// Totals of finished days, which don't change unless events are
-    /// reclassified or erased (`.activityTotalsChanged` clears them). Saves
-    /// re-reading a week of events (~200 ms) every few seconds.
-    private var pastDays: [Date: DailyBreakdown] = [:]
+    /// Summaries of finished days, which don't change unless events are
+    /// reclassified or erased (`.activityTotalsChanged` clears them). The
+    /// menu's streak fills the last 60 at launch; Reports and Apps & Sites
+    /// then add these up instead of reading every event again.
+    private var pastDays: [Date: DaySummary] = [:]
+    /// Days kept at most, oldest dropped first (a few KB each).
+    private let keptDays = 400
 
     init(container: ModelContainer) {
         self.container = container
@@ -24,28 +27,34 @@ actor StatsStore {
         pastDays = [:]
     }
 
-    /// Breakdowns of finished days in `[from, before)`, computing only the
-    /// ones not kept yet.
-    private func pastBreakdowns(_ context: ModelContext, from: Date, before: Date,
-                                calendar: Calendar = .current) -> [DailyBreakdown] {
-        var days: [Date] = []
-        var cursor = calendar.startOfDay(for: from)
-        let end = calendar.startOfDay(for: before)
-        while cursor < end {
-            days.append(cursor)
-            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor.addingTimeInterval(86_400)
-        }
+    /// Summaries of finished `days`, making only the ones not kept yet, from
+    /// one read of their events.
+    private func pastSummaries(_ context: ModelContext, days: [Date], calendar: Calendar = .current) -> [DaySummary] {
         let missing = days.filter { pastDays[$0] == nil }
-        if let first = missing.first, let last = missing.last {
-            let through = calendar.date(byAdding: .day, value: 1, to: last) ?? last.addingTimeInterval(86_400)
-            for day in ReportBuilder(context: context).dailyBreakdowns(from: first, to: through, calendar: calendar) {
-                pastDays[day.date] = day
+        if !missing.isEmpty {
+            for summary in DaySummary.make(days: missing, context: context, calendar: calendar) {
+                pastDays[summary.day] = summary
             }
-            // Keep a couple of months; older days aren't asked for.
-            let horizon = calendar.date(byAdding: .day, value: -70, to: end) ?? end
-            pastDays = pastDays.filter { $0.key >= horizon }
+            if pastDays.count > keptDays {
+                for day in pastDays.keys.sorted().prefix(pastDays.count - keptDays) where !days.contains(day) {
+                    pastDays[day] = nil
+                }
+            }
         }
         return days.compactMap { pastDays[$0] }
+    }
+
+    /// Breakdowns of finished days in `[from, before)`.
+    private func pastBreakdowns(_ context: ModelContext, from: Date, before: Date,
+                                calendar: Calendar = .current) -> [DailyBreakdown] {
+        let days = days(context, now: before, calendar: calendar).days(from: from, to: calendar.startOfDay(for: before))
+        return pastSummaries(context, days: days, calendar: calendar).map(\.dailyBreakdown)
+    }
+
+    /// Whole days for a report to add up: kept summaries for finished days,
+    /// today's read fresh.
+    private func days(_ context: ModelContext, now: Date, calendar: Calendar = .current) -> DaySummaries {
+        DaySummaries(context: context, now: now, calendar: calendar) { self.pastSummaries(context, days: $0, calendar: calendar) }
     }
 
     private func streak(_ context: ModelContext, now: Date) -> Int {
@@ -106,8 +115,23 @@ actor StatsStore {
         read { MenuInsightsBuilder.week(context: $0, streak: streak, containing: date, now: now) }
     }
 
+    /// Apps and sites by time. Whole days up to now add up their summaries.
     func usageRows(from: Date, to: Date, limit: Int) -> [UsageRow] {
-        read { MenuInsightsBuilder.usageRows(context: $0, from: from, to: to, limit: limit) }
+        read { context in
+            // Today's summary runs to the latest event, so only a range up
+            // to now can use it.
+            guard abs(to.timeIntervalSinceNow) < 300,
+                  let summaries = days(context, now: to).summaries(from: from, to: to) else {
+                return MenuInsightsBuilder.usageRows(context: context, from: from, to: to, limit: limit)
+            }
+            var apps: [String: ReportBuilder.AppGroup] = [:]
+            for day in summaries {
+                for (key, group) in day.apps {
+                    if apps[key] == nil { apps[key] = group } else { apps[key]?.add(group) }
+                }
+            }
+            return MenuInsightsBuilder.usageRows(ReportBuilder.topApps(apps, limit: 40), limit: limit)
+        }
     }
 
     /// Apps and sites with the time inside sessions split out.
@@ -125,39 +149,15 @@ actor StatsStore {
         }
     }
 
-    /// A week or month report: reads of up to two months of events, the
-    /// heaviest thing the window shows. The period before and the 8-week
-    /// trend read finished days from `pastDays`.
+    /// A week or month report, added up from day summaries: finished days
+    /// kept here, today's read fresh.
     func reports(period: ReportPeriod, offset: Int, now: Date, historyStart: Date?,
                  weekendsCount: Bool) -> ReportsModel {
         read { context in
             ReportsModelBuilder.build(period: period, offset: offset, context: context, now: now,
                                       historyStart: historyStart, weekendsCount: weekendsCount,
-                                      breakdown: { self.breakdown(context, from: $0, to: $1, now: now) })
+                                      summaries: days(context, now: now))
         }
-    }
-
-    /// Totals of `[from, to)`: whole finished days from `pastDays`, the rest
-    /// read from the store.
-    private func breakdown(_ context: ModelContext, from: Date, to: Date, now: Date,
-                           calendar: Calendar = .current) -> BreakdownSnapshot {
-        let reports = ReportBuilder(context: context)
-        let days = min(calendar.startOfDay(for: to), calendar.startOfDay(for: now))
-        // Only whole days can come from the kept totals.
-        guard calendar.startOfDay(for: from) == from, days > from else { return reports.breakdown(from: from, to: to) }
-        var focus: TimeInterval = 0, neutral: TimeInterval = 0, distraction: TimeInterval = 0
-        for day in pastBreakdowns(context, from: from, before: days, calendar: calendar) {
-            focus += day.focus
-            neutral += day.neutral
-            distraction += day.distraction
-        }
-        if to > days {
-            let rest = reports.breakdown(from: days, to: to)
-            focus += rest.focus
-            neutral += rest.neutral
-            distraction += rest.distraction
-        }
-        return BreakdownSnapshot(focus: focus, neutral: neutral, distraction: distraction)
     }
 }
 

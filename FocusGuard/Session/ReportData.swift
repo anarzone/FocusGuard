@@ -192,6 +192,90 @@ enum ReportDataBuilder {
         )
     }
 
+    /// The same report added up from day summaries instead of read event by
+    /// event: a few dozen sums rather than thousands of events. Nil where it
+    /// can't be (not a week or a month, or not starting on a whole day);
+    /// `build(period:offset:context:…)` reads the events then.
+    /// `sessionEvents`, when the caller has them, covers every event inside
+    /// a session in the period.
+    static func build(period: ReportPeriod, offset: Int, days: DaySummaries, notBefore: Date? = nil,
+                      sessionEvents known: [ActivityEvent]? = nil) -> ReportData? {
+        guard period == .week || period == .month else { return nil }
+        let context = days.context, now = days.now, calendar = days.calendar
+        let interval = period.interval(offset: offset, now: now, calendar: calendar)
+        let until = min(interval.end, now)
+        let previousInterval = period.interval(offset: offset + 1, now: now, calendar: calendar)
+        let floor = notBefore ?? .distantPast
+        let start = min(max(interval.start, floor), interval.end)
+        let previousStart = previousInterval.start.addingTimeInterval(start.timeIntervalSince(interval.start))
+        let previousUntil = min(previousInterval.start.addingTimeInterval(until.timeIntervalSince(interval.start)),
+                                previousInterval.end)
+        guard let summaries = days.summaries(from: start, to: until) else { return nil }
+
+        let previous = previousStart >= floor
+            ? days.breakdown(from: previousStart, to: previousUntil)
+            : BreakdownSnapshot(focus: 0, neutral: 0, distraction: 0)
+
+        var buckets = bucketIntervals(period: period, interval: interval, events: [], now: now, calendar: calendar)
+        for index in buckets.indices where buckets[index].interval.end <= start {
+            buckets[index].isLocked = true
+        }
+        let byDay = Dictionary(summaries.map { ($0.day, $0) }, uniquingKeysWith: { first, _ in first })
+        for index in buckets.indices {
+            guard let day = byDay[buckets[index].interval.start] else { continue }
+            buckets[index].focus = day.bar.focus
+            buckets[index].drift = day.bar.distraction
+            buckets[index].other = day.bar.neutral
+        }
+
+        var total = ClassificationTally()
+        var heat = Array(repeating: Array(repeating: TimeInterval(0), count: 24), count: 7)
+        var firstHour = 7, lastHour = 19
+        var apps: [String: ReportBuilder.AppGroup] = [:]
+        var distractions: [String: ReportBuilder.DistractionGroup] = [:]
+        for day in summaries {
+            total.add(day.breakdown)
+            let row = (calendar.component(.weekday, from: day.day) - calendar.firstWeekday + 7) % 7
+            for hour in 0..<24 { heat[row][hour] += day.focusByHour[hour] }
+            if let hours = day.hours {
+                firstHour = min(firstHour, hours.lowerBound)
+                lastHour = max(lastHour, hours.upperBound)
+            }
+            for (key, group) in day.apps {
+                if apps[key] == nil { apps[key] = group } else { apps[key]?.add(group) }
+            }
+            for (key, group) in day.distractions {
+                if distractions[key] == nil { distractions[key] = group } else { distractions[key]?.seconds += group.seconds }
+            }
+        }
+
+        // The longest run needs the events themselves, but only the few
+        // inside sessions.
+        let end = interval.end
+        let sessionEvents = known?.filter { $0.endedAt >= start && $0.startedAt < end }
+            ?? Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+                predicate: #Predicate { $0.endedAt >= start && $0.startedAt < end && $0.session != nil },
+                sortBy: [SortDescriptor(\.startedAt)]
+            ))
+        let sessionCount = Persistence.fetchCount(context, FetchDescriptor<Session>(
+            predicate: #Predicate { $0.startedAt >= start && $0.startedAt < end }
+        ))
+
+        return ReportData(
+            interval: interval,
+            breakdown: BreakdownSnapshot(focus: total.focus, neutral: total.neutral, distraction: total.distraction),
+            previous: previous,
+            longestZone: FocusRuns.compute(FocusRuns.spans(from: sessionEvents), now: now).longest,
+            sessionCount: sessionCount,
+            buckets: buckets,
+            goalPerBucket: FocusGoal.dailySeconds,
+            heat: heat,
+            heatHours: firstHour...lastHour,
+            apps: MenuInsightsBuilder.usageRows(ReportBuilder.topApps(apps, limit: 40), limit: 8),
+            distractions: ReportBuilder.topDistractions(distractions, limit: 5)
+        )
+    }
+
     /// Hours for a day (trimmed to when there was activity, at least 7–19),
     /// days for a week or month, months for a year.
     static func bucketIntervals(period: ReportPeriod, interval: DateInterval, events: [ActivityEvent],
