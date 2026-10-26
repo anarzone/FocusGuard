@@ -44,6 +44,7 @@ enum DataEraser {
 
         DefaultRules.seedIfNeeded(in: context)
         appState.classifier.invalidate()
+        appState.smartCategories.erase()
         appState.recap = nil
     }
 }

@@ -198,6 +198,7 @@ final class AppState {
         blockOverlay.contextProvider = { [weak self] in self?.blockContext() }
         blockOverlay.backToAppProvider = { [weak self] in self?.backToAppName() }
         classifier.isBlockListLocked = { [weak self] in self?.isStrictLocked ?? false }
+        smartCategories.attach(tracker: tracker)
         blockOverlay.onBackToWork = { [weak self] in self?.backToWork() }
         blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
         blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }

@@ -22,6 +22,10 @@ final class Classifier {
     /// nothing blocked can be unblocked then. Set by AppState.
     @ObservationIgnored var isBlockListLocked: () -> Bool = { false }
 
+    /// Pro "YouTube video by video": a page's own verdict, which wins over
+    /// the site's rules. Set by SmartCategories; nil means the rules decide.
+    @ObservationIgnored var pageVerdict: (_ url: String) -> Classification? = { _ in nil }
+
     init(context: ModelContext) {
         self.context = context
         refresh()
@@ -99,9 +103,10 @@ final class Classifier {
             )
             let events = (try? context.fetch(urlDescriptor)) ?? []
             for e in events {
-                if let host = e.url.flatMap({ URL(string: $0)?.host?.lowercased() }),
+                if let url = e.url, let host = URL(string: url)?.host?.lowercased(),
                    Self.host(host, matches: pattern) {
-                    e.classificationRaw = raw
+                    // A video judged on its own keeps its verdict.
+                    e.classificationRaw = pageVerdict(url)?.rawValue ?? raw
                 }
             }
         case .urlPrefix:
@@ -132,7 +137,8 @@ final class Classifier {
     }
 
     func classify(bundleId: String, windowTitle: String?, url: String?) -> Classification {
-        matchingRule(bundleId: bundleId, windowTitle: windowTitle, url: url)?.classification ?? .neutral
+        if let url, let verdict = pageVerdict(url) { return verdict }
+        return matchingRule(bundleId: bundleId, windowTitle: windowTitle, url: url)?.classification ?? .neutral
     }
 
     /// The rule that decides this activity, highest priority first; nil
