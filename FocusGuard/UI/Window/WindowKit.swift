@@ -160,23 +160,8 @@ struct PageHeader<Controls: View>: View {
             }
             Spacer(minLength: 12)
             controls()
-                .background(WindowNoDragArea())
         }
         .frame(height: 60)
-    }
-}
-
-/// Keeps the area behind it out of the window's drag region. The header
-/// sits under the window's tall title bar, where macOS moves the window on
-/// a mouse-down anywhere the content allows it, before the app sees the
-/// click; SwiftUI content allows it, so buttons there never got clicked.
-/// Put this behind anything clickable in the top 66 points of the window.
-struct WindowNoDragArea: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { NoDragView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    private final class NoDragView: NSView {
-        override var mouseDownCanMoveWindow: Bool { false }
     }
 }
 
@@ -630,32 +615,31 @@ struct WindowSplitRow: Layout {
 /// A page that scrolls under its header: the title and its controls stay
 /// put, so scrolling never slides them under the window's top edge. Both
 /// get the page's margins here.
+///
+/// The scroll view must start below the window's 66-point toolbar strip.
+/// One that starts inside it is stretched up under the toolbar (macOS 26's
+/// scroll edge effect), over the header, and takes the header's clicks; so
+/// the gap between them is outside the scroll view, as in Settings.
 struct WindowScroll<Header: View, Content: View>: View {
     @ViewBuilder var header: () -> Header
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             header()
                 .padding(.leading, 16)
                 .padding(.trailing, 24)
             GeometryReader { geo in
                 ScrollView(.vertical) {
                     content()
-                        .padding(.top, 12)
                         .padding(.leading, 16)
                         .padding(.trailing, 24)
                         .padding(.bottom, 20)
                         .frame(minHeight: geo.size.height, alignment: .top)
                 }
                 .scrollIndicators(.automatic)
-                // Cards fade out where they pass under the header.
-                .mask {
-                    VStack(spacing: 0) {
-                        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 12)
-                        Color.black
-                    }
-                }
+                // A page that fits doesn't scroll or bounce.
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
     }
