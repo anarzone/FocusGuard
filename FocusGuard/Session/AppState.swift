@@ -43,6 +43,8 @@ final class AppState {
     var lastTodayInsights: TodayInsights?
     var lastWeekInsights: WeekInsights?
     var lastUsageRows: [UsageRow]?
+    /// The window's pages as last loaded; read once when a page opens.
+    @ObservationIgnored let windowPages = WindowPageCache()
     @ObservationIgnored private var menuStatsAt: Date = .distantPast
     @ObservationIgnored private var streakAt: Date = .distantPast
     @ObservationIgnored private var refreshingMenuStats = false

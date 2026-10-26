@@ -69,9 +69,16 @@ struct TodayModel {
     }
 }
 
-/// Builds the Today page's model from the store. Cheap enough to run every
-/// few seconds while the page is open.
-@MainActor
+/// The Today page as loaded: the day, whether any session exists yet (none
+/// means the first-day page) and the streak.
+struct TodayPageData {
+    var model: TodayModel
+    var hasSessions: Bool
+    var streak: Int
+}
+
+/// Builds the Today page's model from the store. Runs on `StatsStore`, off
+/// the main thread, every few seconds while the page is open.
 enum TodayModelBuilder {
     static func build(day date: Date, context: ModelContext, now: Date = .now,
                       calendar: Calendar = .current) -> TodayModel {

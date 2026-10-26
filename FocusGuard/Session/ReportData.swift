@@ -90,12 +90,15 @@ struct ReportData {
     )
 }
 
-@MainActor
 enum ReportDataBuilder {
     /// - Parameter notBefore: the first moment the plan's history reaches
     ///   (`Entitlements.historyStart`); nothing earlier is read or compared.
+    /// `breakdown` gives the totals between two times, for the period
+    /// before; `StatsStore` passes one that reads finished days from its
+    /// kept totals.
     static func build(period: ReportPeriod, offset: Int, context: ModelContext,
-                      now: Date = .now, calendar: Calendar = .current, notBefore: Date? = nil) -> ReportData {
+                      now: Date = .now, calendar: Calendar = .current, notBefore: Date? = nil,
+                      breakdown totals: ((Date, Date) -> BreakdownSnapshot)? = nil) -> ReportData {
         let interval = period.interval(offset: offset, now: now, calendar: calendar)
         let until = min(interval.end, now)
         let previousInterval = period.interval(offset: offset + 1, now: now, calendar: calendar)
@@ -107,24 +110,30 @@ enum ReportDataBuilder {
                                 previousInterval.end)
 
         let reports = ReportBuilder(context: context)
-        let breakdown = reports.breakdown(from: start, to: until)
         let previous = previousStart >= floor
-            ? reports.breakdown(from: previousStart, to: previousUntil)
+            ? (totals ?? reports.breakdown)(previousStart, previousUntil)
             : BreakdownSnapshot(focus: 0, neutral: 0, distraction: 0)
 
+        // One read of the period's events; the totals, apps and
+        // distractions below all come from it.
         let end = interval.end
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= start && $0.startedAt < end },
             sortBy: [SortDescriptor(\.startedAt)]
         )
         let events = Persistence.fetch(context, descriptor)
+        let breakdown = ReportBuilder.breakdown(events, from: start, to: until)
 
         var buckets = bucketIntervals(period: period, interval: interval, events: events, now: now, calendar: calendar)
         for index in buckets.indices where buckets[index].interval.end <= start {
             buckets[index].isLocked = true
         }
         var heat = Array(repeating: Array(repeating: TimeInterval(0), count: 24), count: 7)
-        var activeHours: [Int] = []
+        var firstHour = 7, lastHour = 19
+        var hours = HourCursor(calendar: calendar)
+        // Events come in start order, so the first bucket an event can touch
+        // only moves forward.
+        var firstBucket = 0
 
         for event in events {
             let kind = SessionTimeline.Kind(event.classification ?? .neutral)
@@ -132,9 +141,10 @@ enum ReportDataBuilder {
             let e = min(event.endedAt.addingTimeInterval(1), end)
             guard e > s else { continue }
 
-            for index in buckets.indices {
+            while firstBucket < buckets.count, buckets[firstBucket].interval.end <= s { firstBucket += 1 }
+            for index in buckets.indices.dropFirst(firstBucket) {
                 let b = buckets[index].interval
-                guard b.end > s, b.start < e else { continue }
+                guard b.start < e else { break }
                 let seconds = min(b.end, e).timeIntervalSince(max(b.start, s))
                 switch kind {
                 case .focus: buckets[index].focus += seconds
@@ -146,22 +156,17 @@ enum ReportDataBuilder {
             // Heatmap: walk the event hour by hour.
             var cursor = s
             while cursor < e {
-                let hourStart = calendar.dateInterval(of: .hour, for: cursor)?.start ?? cursor
-                let hourEnd = hourStart.addingTimeInterval(3600)
-                let slice = min(hourEnd, e).timeIntervalSince(cursor)
-                let hour = calendar.component(.hour, from: cursor)
-                activeHours.append(hour)
-                if kind == .focus {
-                    let weekday = calendar.component(.weekday, from: cursor)
-                    let row = (weekday - calendar.firstWeekday + 7) % 7
-                    heat[row][hour] += slice
-                }
-                cursor = hourEnd
+                let slot = hours.slot(at: cursor)
+                let slice = min(slot.end, e).timeIntervalSince(cursor)
+                firstHour = min(firstHour, slot.hour)
+                lastHour = max(lastHour, slot.hour)
+                if kind == .focus { heat[slot.row][slot.hour] += slice }
+                cursor = slot.end
             }
         }
 
-        let lo = min(7, activeHours.min() ?? 7)
-        let hi = max(19, activeHours.max() ?? 19)
+        let lo = firstHour
+        let hi = lastHour
 
         let sessionEvents = events.filter { $0.session != nil }
         let longest = FocusRuns.compute(FocusRuns.spans(from: sessionEvents), now: now).longest
@@ -182,8 +187,8 @@ enum ReportDataBuilder {
             goalPerBucket: goal,
             heat: heat,
             heatHours: lo...hi,
-            apps: MenuInsightsBuilder.usageRows(context: context, from: start, to: until, limit: 8),
-            distractions: reports.topDistractions(from: start, to: until, limit: 5)
+            apps: MenuInsightsBuilder.usageRows(events: events, from: start, to: until, limit: 8),
+            distractions: ReportBuilder.topDistractions(events, from: start, to: until, limit: 5)
         )
     }
 
@@ -224,5 +229,37 @@ enum ReportDataBuilder {
             cursor = next
         }
         return out
+    }
+}
+
+/// The calendar hour a moment falls in, with its heatmap row and column.
+/// Remembers the last hour: events come in order and most fall in the same
+/// hour as the one before, so the calendar maths runs once per hour rather
+/// than once per event.
+struct HourCursor {
+    struct Slot {
+        let start: Date
+        let end: Date
+        /// 0–23.
+        let hour: Int
+        /// Weekday, 0 = the calendar's first weekday.
+        let row: Int
+    }
+
+    let calendar: Calendar
+    private var last: Slot?
+
+    init(calendar: Calendar) {
+        self.calendar = calendar
+    }
+
+    mutating func slot(at date: Date) -> Slot {
+        if let last, date >= last.start, date < last.end { return last }
+        let start = calendar.dateInterval(of: .hour, for: date)?.start ?? date
+        let slot = Slot(start: start, end: start.addingTimeInterval(3600),
+                        hour: calendar.component(.hour, from: date),
+                        row: (calendar.component(.weekday, from: date) - calendar.firstWeekday + 7) % 7)
+        last = slot
+        return slot
     }
 }
