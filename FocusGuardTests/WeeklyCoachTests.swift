@@ -9,10 +9,11 @@ import SwiftData
 final class WeeklyCoachTests: XCTestCase {
     typealias F = CoachFixture
 
-    struct FakeModel: CoachLanguageModel {
+    /// Rewords only the headline, as JSON.
+    struct FakeModel: OnDeviceModel {
         let headline: String
-        func respond(to prompt: String, instructions: String) async -> String? {
-            instructions == CoachWriter.headlineInstructions ? headline : nil
+        func respond(instructions: String, prompt: String, shape: AnswerShape) async throws -> String {
+            String(decoding: try JSONEncoder().encode(["headline": headline]), as: UTF8.self)
         }
     }
 
@@ -64,6 +65,7 @@ final class WeeklyCoachTests: XCTestCase {
         coach.now = { [unowned self] in self.clock }
         coach.locale = F.locale
         coach.goalSeconds = { 3 * 3600 }
+        coach.model = { nil }
         return coach
     }
 
@@ -114,7 +116,7 @@ final class WeeklyCoachTests: XCTestCase {
 
     func test_usesTheModelsWords_whenTheyStickToTheFacts() async throws {
         fixture = F.xAfterSessions()
-        coach.model = FakeModel(headline: "x.com follows 4 of 5 of your sessions")
+        coach.model = { FakeModel(headline: "x.com follows 4 of 5 of your sessions") }
         await coach.refresh()
         let note = try XCTUnwrap(coach.note)
         XCTAssertEqual(note.headline, "x.com follows 4 of 5 of your sessions.")

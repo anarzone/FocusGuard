@@ -1,12 +1,5 @@
 import Foundation
 
-/// A language model the coach can ask to reword its note. The facts are
-/// worked out before it's asked; it only phrases them.
-protocol CoachLanguageModel: Sendable {
-    /// The model's reply, or nil when there's no model on this Mac or it failed.
-    func respond(to prompt: String, instructions: String) async -> String?
-}
-
 /// One line of the note: a bold lead and the rest, after a coloured dot.
 struct CoachPoint: Codable, Hashable, Sendable {
     enum Tone: String, Codable, Sendable { case focus, drift, other }
@@ -156,42 +149,43 @@ struct CoachWording: Equatable, Sendable {
     let onDevice: Bool
 }
 
-/// Asks the model to reword the draft's headline and "why", and keeps its
-/// words only when they say nothing the facts don't. Without a model, or
-/// when it strays, the template words stay.
+/// Asks the on-device model to reword the draft's headline and "why", and
+/// keeps its words only when they say nothing the facts don't. Without a
+/// model, or when it strays or fails, the template words stay.
 struct CoachWriter {
-    let model: CoachLanguageModel?
+    let model: (any OnDeviceModel)?
 
-    static let headlineInstructions = """
-        You write the headline of a weekly focus note for one person. Use only the facts you are given. \
-        Never add numbers, sites, apps, days or times that are not in the facts. One sentence, at most \
-        14 words, plain and kind, speaking to the person as "you". No emoji, no quotation marks, no \
-        exclamation marks.
+    static let instructions = """
+        You reword a weekly focus note for one person. Use only the facts you are given. Never add \
+        numbers, sites, apps, days or times that are not in the facts. Speak to the person as "you", \
+        plain and kind. No emoji, no quotation marks, no exclamation marks.
         """
 
-    static let whyInstructions = """
-        You explain in one sentence why a small experiment might help, for a weekly focus note. Use only \
-        the facts you are given. Never add numbers, sites, apps, days or times that are not in the facts. \
-        At most 24 words, plain and kind, speaking to the person as "you". No emoji, no quotation marks.
-        """
+    private struct Answer: Decodable {
+        let headline: String
+        let why: String?
+    }
+
+    static func shape(withWhy: Bool) -> AnswerShape {
+        var fields = [AnswerShape.Field("headline", "The note's headline: one sentence, at most 14 words", .text)]
+        if withWhy {
+            fields.append(.init("why", "One sentence, at most 24 words, on why the experiment might help", .text))
+        }
+        return .object(fields)
+    }
 
     func write(_ draft: CoachDraft) async -> CoachWording {
-        guard let model else { return CoachWording(headline: draft.headline, why: draft.why, onDevice: false) }
-        let facts = draft.facts.map { "- \($0)" }.joined(separator: "\n")
+        let plain = CoachWording(headline: draft.headline, why: draft.why, onDevice: false)
+        guard let model else { return plain }
+        var prompt = "Facts:\n" + draft.facts.map { "- \($0)" }.joined(separator: "\n")
+            + "\nPlain headline: \(draft.headline)"
+        if let why = draft.why { prompt += "\nPlain reason for the experiment: \(why)" }
+        guard let answer = try? await model.respond(Answer.self, instructions: Self.instructions, prompt: prompt,
+                                                    shape: Self.shape(withWhy: draft.why != nil)) else { return plain }
+
         let allowed = draft.facts + [draft.headline, draft.why ?? ""]
-
-        let headline = await model.respond(
-            to: "Facts:\n\(facts)\nA plain version: \(draft.headline)\nWrite the headline.",
-            instructions: Self.headlineInstructions
-        ).flatMap { Self.accept($0, allowed: allowed, maxLength: 110) }
-
-        var why: String?
-        if let plain = draft.why {
-            why = await model.respond(
-                to: "Facts:\n\(facts)\nA plain version: \(plain)\nWrite the sentence.",
-                instructions: Self.whyInstructions
-            ).flatMap { Self.accept($0, allowed: allowed, maxLength: 170) }
-        }
+        let headline = Self.accept(answer.headline, allowed: allowed, maxLength: 110)
+        let why = draft.why == nil ? nil : answer.why.flatMap { Self.accept($0, allowed: allowed, maxLength: 170) }
         return CoachWording(headline: headline ?? draft.headline, why: why ?? draft.why,
                             onDevice: headline != nil || why != nil)
     }

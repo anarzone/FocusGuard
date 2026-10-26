@@ -306,10 +306,13 @@ final class CoachPatternTests: XCTestCase {
 
 /// The model only rewords; anything it adds is thrown away.
 final class CoachWriterTests: XCTestCase {
-    struct FakeModel: CoachLanguageModel {
-        let replies: [String: String]
-        func respond(to prompt: String, instructions: String) async -> String? {
-            instructions == CoachWriter.headlineInstructions ? replies["headline"] : replies["why"]
+    /// Answers with these fields as JSON, the way guided generation does;
+    /// with none, it fails like a model hitting its guardrails.
+    struct FakeModel: OnDeviceModel {
+        let replies: [String: String]?
+        func respond(instructions: String, prompt: String, shape: AnswerShape) async throws -> String {
+            guard let replies else { throw OnDeviceAIError.unreadableAnswer }
+            return String(decoding: try JSONEncoder().encode(replies), as: UTF8.self)
         }
     }
 
@@ -343,6 +346,18 @@ final class CoachWriterTests: XCTestCase {
         XCTAssertEqual(wording.headline, draft.headline)
         XCTAssertEqual(wording.why, draft.why)
         XCTAssertFalse(wording.onDevice)
+    }
+
+    func test_aFailingModel_leavesTheTemplate() async {
+        let wording = await CoachWriter(model: FakeModel(replies: nil)).write(draft)
+        XCTAssertEqual(wording, CoachWording(headline: draft.headline, why: draft.why, onDevice: false))
+    }
+
+    func test_asksForTheWhyOnlyWhenThereIsOne() {
+        guard case .object(let fields) = CoachWriter.shape(withWhy: false) else { return XCTFail("expected an object") }
+        XCTAssertEqual(fields.map(\.name), ["headline"])
+        guard case .object(let both) = CoachWriter.shape(withWhy: true) else { return XCTFail("expected an object") }
+        XCTAssertEqual(both.map(\.name), ["headline", "why"])
     }
 
     func test_dropsWordsNamingASiteThatIsntInTheFacts() {

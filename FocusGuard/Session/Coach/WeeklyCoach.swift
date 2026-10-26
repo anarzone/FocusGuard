@@ -112,7 +112,9 @@ final class WeeklyCoach {
 
     @ObservationIgnored var reader: (DateInterval) async -> CoachData = { CoachData.empty($0) }
     @ObservationIgnored var applier: CoachApplying?
-    @ObservationIgnored var model: CoachLanguageModel?
+    /// Apple's on-device model, or nil without Apple Intelligence (the note
+    /// keeps its template words then).
+    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.model
     @ObservationIgnored var isUnlocked: () -> Bool = { Entitlements.shared.isUnlocked(.coach) }
     /// A free user's first use: starts the 14-day trial.
     @ObservationIgnored var startTrial: () -> Void = { Entitlements.shared.startTrialIfNeeded(for: .coach) }
@@ -145,7 +147,6 @@ final class WeeklyCoach {
         applier = LiveCoachApplier(limits: appState.limits, preset: { [weak engine] in engine?.preset ?? .standard },
                                    defaults: defaults)
         engine.presetOverride = { [defaults] now in CoachRules.preset(at: now, defaults) }
-        model = CoachModels.onDevice
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.refresh() }
         }
@@ -235,7 +236,7 @@ final class WeeklyCoach {
         let plan = CoachPlanner.plan(findings, settings: settings)
         let experiment = plan?.1
         let draft = CoachDraft.make(plan?.0, experiment: experiment, locale: locale, calendar: calendar)
-        let wording = await CoachWriter(model: model).write(draft)
+        let wording = await CoachWriter(model: model()).write(draft)
 
         var baseline = experiment.flatMap { $0.metric.measure(last, calendar: calendar) }
         if case .timeOfDay(let f)? = plan?.0, case .sessionRate(let hours)? = experiment?.metric, hours == f.weak {
