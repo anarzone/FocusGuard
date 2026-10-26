@@ -164,8 +164,9 @@ enum CoachPatternFinder {
             part.minutes += session.minutes
             parts[hours] = part
         }
-        let rated = CoachHours.parts.compactMap { hours in
-            parts[hours].flatMap { $0.sessions >= 2 && $0.focus + $0.drift >= 20 * 60 ? (hours, $0) : nil }
+        let rated: [(CoachHours, Part)] = CoachHours.parts.compactMap { hours in
+            guard let part = parts[hours], part.sessions >= 2, part.focus + part.drift >= 20 * 60 else { return nil }
+            return (hours, part)
         }
         guard rated.count >= 2,
               let weak = rated.min(by: { $0.1.rate < $1.1.rate }),
