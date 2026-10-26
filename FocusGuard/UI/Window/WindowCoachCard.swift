@@ -19,109 +19,75 @@ struct WindowCoachCard: View {
         .task { await coach.refresh() }
     }
 
+    /// One line, so Reports fits the window: last week's main pattern and
+    /// this week's experiment. The menu's Weekly coach pane has the rest
+    /// (the other points, why, last week's experiment).
     private var card: some View {
-        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-        return HStack(alignment: .top, spacing: 18) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.focus)
-                        .accessibilityHidden(true)
-                    Text("Weekly coach")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Theme.primaryText)
-                        .accessibilityAddTraits(.isHeader)
-                    ProBadge()
-                }
-                Text(coach.note.map { "Last week · \(CoachWords.range($0.about))" } ?? "A note each week")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Worked out on this Mac")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.tertiaryText)
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.focus)
+                    .accessibilityHidden(true)
+                Text("Weekly coach")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.primaryText)
+                    .accessibilityAddTraits(.isHeader)
+                ProBadge()
             }
-            .frame(width: 168, alignment: .leading)
-
-            if let note = coach.note {
-                WindowSplitRow(weights: [1, 1, 1], spacing: 16) {
-                    column(1, "Last week") {
-                        Text(note.headline)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.primaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let point = note.points.first { line(point.sentence) }
-                    }
-                    column(2, "Try this week") {
-                        if note.experiment != nil {
-                            CoachTryCard(coach: coach, note: note, compact: true)
-                        } else {
-                            line("Nothing to try this week: no change FocusGuard can make stood out.")
-                        }
-                    }
-                    if let trial = coach.lastResult {
-                        column(3, "Last week's experiment") {
-                            let result = CoachWords.result(trial, underHeading: true)
-                            Text(result.lead)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Theme.primaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                            line(result.rest.trimmingCharacters(in: .whitespaces))
-                            if coach.canKeepLastResult {
-                                Button("Keep it on") { coach.keepLastResult() }.buttonStyle(.textLink)
-                            }
-                        }
-                    } else {
-                        column(3, "Also last week") {
-                            if note.points.count > 1 {
-                                line(note.points[1].sentence)
-                            } else {
-                                line("Focused \(WindowFormat.hm(note.stats.focused)) at a \(Int((note.stats.rate * 100).rounded()))% focus rate.")
-                            }
-                        }
-                    }
-                }
-            } else {
-                Text(coach.isMakingNote ? "Looking at last week…" : CoachWords.waiting)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.bodyText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize()
+            summary
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(details)
+            Spacer(minLength: 8)
+            if let note = coach.note, let experiment = note.experiment {
+                choice(experiment, week: note.week).fixedSize()
             }
         }
-        .padding(EdgeInsets(top: 12, leading: 18, bottom: 12, trailing: 18))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .frame(height: 44)
         .background(shape.fill(Theme.windowCard))
         .overlay(shape.strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
     }
 
-    private func column<Content: View>(_ number: Int, _ title: String,
-                                       @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text("\(number)")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Theme.proBadgeText)
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(Theme.proBadge))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.secondaryText)
-                content()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    /// "Sunday drifted most. Try this week: a 50-minute daily limit on youtube.com."
+    private var summary: Text {
+        guard let note = coach.note else {
+            return Text(coach.isMakingNote ? "Looking at last week…" : CoachWords.waiting).foregroundColor(Theme.bodyText)
         }
-        .accessibilityElement(children: .contain)
+        let lead = Text(note.headline).fontWeight(.semibold).foregroundColor(Theme.primaryText)
+        guard let experiment = note.experiment else { return lead }
+        return lead + Text(" Try this week: \(experiment.title()).").foregroundColor(Theme.bodyText)
     }
 
-    private func line(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 12))
-            .foregroundStyle(Theme.bodyText)
-            .lineSpacing(2)
-            .fixedSize(horizontal: false, vertical: true)
+    /// The whole note, on hover.
+    private var details: String {
+        guard let note = coach.note else { return "" }
+        return ([note.headline] + note.points.map(\.sentence) + [note.why].compactMap { $0 }).joined(separator: "\n")
+    }
+
+    @ViewBuilder private func choice(_ experiment: CoachExperiment, week: DateInterval) -> some View {
+        switch coach.state.choice {
+        case .open:
+            HStack(spacing: 6) {
+                Button("Try it this week") { coach.tryIt() }.buttonStyle(.capsule(.primary, height: 26))
+                Button("Not now") { coach.notNow() }.buttonStyle(.capsule(.secondary, height: 26))
+            }
+        case .trying:
+            HStack(spacing: 8) {
+                Text(CoachWords.until(week)).font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                    .help(experiment.effect())
+                Button("Undo") { coach.reconsider() }.buttonStyle(.textLink)
+            }
+        case .dismissed:
+            HStack(spacing: 8) {
+                Text("Skipped for this week.").font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                Button("Undo") { coach.reconsider() }.buttonStyle(.textLink)
+            }
+        }
     }
 
     private var locked: some View {

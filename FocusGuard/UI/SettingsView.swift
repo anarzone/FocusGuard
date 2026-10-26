@@ -126,7 +126,6 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(WindowNoDragArea())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

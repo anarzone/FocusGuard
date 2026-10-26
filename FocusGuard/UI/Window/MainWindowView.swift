@@ -198,7 +198,6 @@ private struct WindowSidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(WindowNoDragArea())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
