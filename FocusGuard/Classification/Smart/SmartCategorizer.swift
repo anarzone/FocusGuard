@@ -64,17 +64,17 @@ enum SmartCategorizer {
         calls, and music playing in the background.
         distracting: pulls attention away from work, like social media, video, news feeds, \
         games and shopping.
-        Judge from the evidence: when and how long it's used, what it's used next to, \
-        and its window titles.
-        For each one, write a reason of at most ten plain words that points to the evidence, \
-        like "Open next to Xcode while you code". Don't repeat the category in the reason.
+        Judge from what the app or site is, and from the evidence: when and how long it's used, \
+        what it's used next to, and its window titles.
+        Say what each one is in two or three plain words, like "design tool", "issue tracker", \
+        "music player", "chat app" or "news site", without the words focus, neutral or distracting.
         Say how sure you are from 0 to 100. Below 70 means a person should decide.
         """
 
     private struct Answer: Decodable {
         struct Item: Decodable {
             let id: String
-            let reason: String
+            let what: String
             let category: String
             let sure: Int
         }
@@ -85,7 +85,7 @@ enum SmartCategorizer {
         .object([
             .init("items", "One entry for each app or site, in the order given", .list(of: .object([
                 .init("id", "The id given for it", .choice(ids)),
-                .init("reason", "Why, in at most ten words, from the evidence", .text),
+                .init("what", "What it is, in two or three words, like \"design tool\" or \"chat app\"", .text),
                 .init("category", "Which it is", .choice(["focus", "neutral", "distracting"])),
                 .init("sure", "How sure you are, 0 to 100", .number(0...100)),
             ]), count: ids.count...ids.count)),
@@ -102,7 +102,7 @@ enum SmartCategorizer {
                   let classification = category(item.category) else { return nil }
             let evidence = batch[index]
             return Verdict(key: evidence.key, classification: classification,
-                           sure: min(100, max(0, item.sure)), reason: tidyReason(item.reason, evidence: evidence))
+                           sure: min(100, max(0, item.sure)), reason: reason(what: item.what, evidence: evidence))
         }
     }
 
@@ -143,14 +143,30 @@ enum SmartCategorizer {
         }
     }
 
-    /// One short line, starting with a capital, no full stop; the evidence
-    /// stands in when the model gave nothing usable.
-    static func tidyReason(_ reason: String, evidence: SmartEvidence) -> String {
-        var text = reason.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'."))
-        if text.count > 80 { text = String(text.prefix(79)) + "…" }
-        guard text.count >= 3 else { return fallbackReason(evidence) }
-        return text.prefix(1).uppercased() + text.dropFirst()
+    /// The line under its name: what it is (the model's words) and how
+    /// it's used (the evidence's). "Design tool you open next to Linear",
+    /// "Chat app, mostly 21:00 to 23:00".
+    static func reason(what: String, evidence: SmartEvidence) -> String {
+        var kind = what.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        kind = kind.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'.,"))
+        for article in ["a ", "an ", "the "] where kind.lowercased().hasPrefix(article) {
+            kind = String(kind.dropFirst(article.count))
+        }
+        // Too long to be a kind, its own name back, or the category again.
+        let lower = kind.lowercased()
+        guard (2...32).contains(kind.count), lower != evidence.name.lowercased(),
+              !["focus", "neutral", "distract"].contains(where: lower.contains) else {
+            return fallbackReason(evidence)
+        }
+        kind = kind.prefix(1).uppercased() + kind.dropFirst()
+        if let next = evidence.alongside.first?.name, evidence.sessionShare >= 0.5 {
+            return "\(kind) you open next to \(next)"
+        }
+        if evidence.sessionShare >= 0.6 { return "\(kind), mostly during sessions" }
+        if let hours = evidence.hours { return "\(kind), \(hours)" }
+        if evidence.sessionShare <= 0.2 { return "\(kind), mostly outside sessions" }
+        if let next = evidence.alongside.first?.name { return "\(kind) you use next to \(next)" }
+        return kind
     }
 
     static func fallbackReason(_ evidence: SmartEvidence) -> String {

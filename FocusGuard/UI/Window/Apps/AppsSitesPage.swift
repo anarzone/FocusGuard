@@ -48,8 +48,7 @@ struct AppsSitesPage: View {
     private func reload() {
         let now = Date.now
         items = AppsModelBuilder.items(context: context, classifier: appState.classifier,
-                                       from: range.start(now: now), to: now,
-                                       smart: FeatureFlags.smartCategories ? appState.smartCategories : nil)
+                                       from: range.start(now: now), to: now, smart: smart)
         let descriptor = FetchDescriptor<AppRule>(sortBy: [SortDescriptor(\.priority, order: .reverse)])
         rules = Persistence.fetch(context, descriptor)
         if selection == nil || !items.contains(where: { $0.id == selection }) {

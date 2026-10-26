@@ -32,6 +32,18 @@ enum YouTubeVideos {
     /// Videos per question.
     static let batchSize = 5
 
+    /// The model's "coding tutorial", or a plain stand-in when it just gave
+    /// the title back or nothing usable.
+    static func kind(_ text: String, title: String, classification: Classification) -> String {
+        let kind = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'.")).lowercased()
+        let words = kind.split(separator: " ").count
+        guard (1...5).contains(words), kind.count <= 32, !title.lowercased().contains(kind) else {
+            return classification == .focus ? "talk or tutorial" : "not about work"
+        }
+        return kind
+    }
+
     struct Pending: Equatable {
         let videoId: String
         let title: String
@@ -42,7 +54,8 @@ enum YouTubeVideos {
         focus: talks, lectures, courses, tutorials, conference sessions and how-tos, \
         especially ones about what they're working on.
         distracting: everything else, like entertainment, sport, gaming, vlogs, news and music videos.
-        Describe each video in two to five plain words, like "coding tutorial" or "race highlights".
+        Say what kind of video each one is in two to four plain words, not its title: \
+        like "coding tutorial", "conference talk", "race highlights", "music mix" or "vlog".
         """
 
     private struct Answer: Decodable {
@@ -58,7 +71,7 @@ enum YouTubeVideos {
         .object([
             .init("videos", "One entry for each video, in the order given", .list(of: .object([
                 .init("id", "The id given for it", .choice(ids)),
-                .init("kind", "What the video is, in two to five words", .text),
+                .init("kind", "What kind of video it is, in two to four words, not its title", .text),
                 .init("category", "Which it is", .choice(["focus", "distracting"])),
             ]), count: ids.count...ids.count)),
         ])
@@ -94,11 +107,8 @@ enum YouTubeVideos {
                 for item in answer.videos {
                     guard let index = ids.firstIndex(of: item.id), seen.insert(item.id).inserted else { continue }
                     let classification: Classification = item.category.lowercased() == "focus" ? .focus : .distraction
-                    var kind = item.kind.trimmingCharacters(in: .whitespacesAndNewlines)
-                        .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'."))
-                    if kind.count > 40 { kind = String(kind.prefix(39)) + "…" }
                     out.append(VideoVerdict(videoId: batch[index].videoId, title: batch[index].title,
-                                            kind: kind.isEmpty ? (classification == .focus ? "talk or tutorial" : "not about work") : kind.lowercased(),
+                                            kind: kind(item.kind, title: batch[index].title, classification: classification),
                                             classification: classification, byUser: false, at: now))
                 }
             } catch {

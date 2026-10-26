@@ -13,7 +13,7 @@ import SwiftData
 @Observable
 final class SmartCategories {
     /// Smart rules sit above built-in ones (100) and below the person's (200+).
-    static let rulePriority = 150
+    nonisolated static let rulePriority = 150
 
     static let enabledKey = "smartCategories.enabled"
     static let perVideoKey = "smartCategories.youtubePerVideo"
@@ -103,6 +103,13 @@ final class SmartCategories {
 
     /// Apple Intelligence is there to ask.
     var isModelAvailable: Bool { modelProvider() != nil }
+
+    /// Why it can't ask, for the note shown instead.
+    var availability: OnDeviceAI.Availability {
+        if isModelAvailable { return .available }
+        let system = OnDeviceAI.availability
+        return system == .available ? .unsupported : system
+    }
 
     /// "Sorted 19 of 21 new apps and sites · 2 need you", or nil.
     var banner: SmartBanner? {
@@ -341,7 +348,8 @@ final class SmartCategories {
         guard !verdicts.isEmpty else { return [] }
         for verdict in verdicts where store.videos[verdict.videoId] == nil { store.remember(verdict) }
         store.save(to: defaults)
-        reclassifyVideos(ids: Set(verdicts.map(\.videoId)))
+        // Just watched: only the last couple of days can hold them.
+        reclassifyVideos(ids: Set(verdicts.map(\.videoId)), since: now().addingTimeInterval(-2 * 86_400))
         return verdicts
     }
 
@@ -406,9 +414,10 @@ final class SmartCategories {
     }
 
     /// youtube.com videos follow their verdicts (or the site's category
-    /// when video by video is off). Nil means every video.
-    private func reclassifyVideos(ids: Set<String>?) {
-        let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(predicate: #Predicate { $0.url != nil }))
+    /// when video by video is off). Nil ids means every video.
+    private func reclassifyVideos(ids: Set<String>?, since: Date = .distantPast) {
+        let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.url != nil && $0.endedAt >= since }))
         var changed = false
         for event in events {
             guard let url = event.url, let id = YouTubeVideos.videoId(in: url), ids?.contains(id) ?? true else { continue }

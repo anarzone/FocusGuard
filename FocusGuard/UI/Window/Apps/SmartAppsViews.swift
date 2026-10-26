@@ -117,6 +117,7 @@ struct YouTubePerVideoSection: View {
                                                                   set: { smart.setPerVideo($0); onChange() }))
                         .labelsHidden()
                         .toggleStyle(.switch)
+                        .tint(Theme.focusFill)
                         .controlSize(.small)
                         .disabled(!smart.isModelAvailable && !smart.perVideo)
                 }

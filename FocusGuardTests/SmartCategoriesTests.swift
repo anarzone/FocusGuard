@@ -19,7 +19,7 @@ final class SmartCategoriesTests: XCTestCase {
     /// 26 Oct 2026, 16:00 UTC.
     private let now = Date(timeIntervalSince1970: 1_793_030_400)
 
-    /// What the fake model says, by name: category, how sure, reason.
+    /// What the fake model says, by name: category, how sure, what it is.
     private var answers: [String: (String, Int, String)] = [:]
     private var model: FakeOnDeviceModel!
     private var modelAvailable = true
@@ -40,8 +40,8 @@ final class SmartCategoriesTests: XCTestCase {
         modelAvailable = true
         model = FakeOnDeviceModel { [unowned self] request in
             let items = FakeOnDeviceModel.items(in: request.prompt).map { item -> [String: Any] in
-                let (category, sure, reason) = self.answers[item.name] ?? ("neutral", 50, "No idea")
-                return ["id": item.id, "reason": reason, "category": category, "sure": sure]
+                let (category, sure, what) = self.answers[item.name] ?? ("neutral", 50, "utility")
+                return ["id": item.id, "what": what, "category": category, "sure": sure]
             }
             return FakeOnDeviceModel.json(["items": items])
         }
@@ -155,6 +155,37 @@ final class SmartCategoriesTests: XCTestCase {
         hours[20] = 600
         XCTAssertEqual(SmartEvidenceBuilder.busyHours(hours), "mostly 10:00 to 12:00")
         XCTAssertNil(SmartEvidenceBuilder.busyHours([TimeInterval](repeating: 100, count: 24)))
+        var late = [TimeInterval](repeating: 0, count: 24)
+        late[22] = 1800
+        late[23] = 1800
+        XCTAssertEqual(SmartEvidenceBuilder.busyHours(late), "mostly 22:00 to 00:00")
+    }
+
+    func test_reason_saysWhatItIsAndHowItsUsed() {
+        func evidence(share: Double, hours: String? = nil, next: String? = nil) -> SmartEvidence {
+            SmartEvidence(key: "x", name: "Figma", bundleId: "x", host: nil, seconds: 3600, inSession: 3600 * share,
+                          hours: hours, alongside: next.map { [(name: $0, classification: .focus)] } ?? [], titles: [])
+        }
+        XCTAssertEqual(SmartCategorizer.reason(what: "a design tool", evidence: evidence(share: 0.85, next: "Linear")),
+                       "Design tool you open next to Linear")
+        XCTAssertEqual(SmartCategorizer.reason(what: "music player", evidence: evidence(share: 0.7)),
+                       "Music player, mostly during sessions")
+        XCTAssertEqual(SmartCategorizer.reason(what: "chat app.", evidence: evidence(share: 0.1, hours: "mostly 21:00 to 23:00")),
+                       "Chat app, mostly 21:00 to 23:00")
+        XCTAssertEqual(SmartCategorizer.reason(what: "News site", evidence: evidence(share: 0.1)),
+                       "News site, mostly outside sessions")
+        // Its own name back, or a sentence, isn't a kind: the evidence speaks instead.
+        XCTAssertEqual(SmartCategorizer.reason(what: "Figma", evidence: evidence(share: 0.7)), "1h 00m this week, mostly in sessions")
+        XCTAssertEqual(SmartCategorizer.reason(what: "focus tool", evidence: evidence(share: 0.7)), "1h 00m this week, mostly in sessions")
+        XCTAssertEqual(SmartCategorizer.reason(what: String(repeating: "word ", count: 12), evidence: evidence(share: 0.1)),
+                       "1h 00m this week, mostly outside sessions")
+    }
+
+    func test_videoKind_isNeverJustTheTitle() {
+        XCTAssertEqual(YouTubeVideos.kind("Coding talk.", title: "Swift concurrency in depth", classification: .focus), "coding talk")
+        XCTAssertEqual(YouTubeVideos.kind("swift concurrency in depth", title: "Swift concurrency in depth", classification: .focus),
+                       "talk or tutorial")
+        XCTAssertEqual(YouTubeVideos.kind("", title: "Best F1 overtakes", classification: .distraction), "not about work")
     }
 
     func test_cleanTitle_dropsUnreadCount_andShortensLongOnes() {
@@ -167,8 +198,8 @@ final class SmartCategoriesTests: XCTestCase {
     func test_run_appliesSureOnes_andLeavesUnsureOnesForThePerson() async {
         use("com.figma.Desktop", name: "Figma", minutes: 40)
         use("com.example.Mystery", name: "Mystery", minutes: 20)
-        answers = ["Figma": ("focus", 92, "Design tool you open next to Linear"),
-                   "Mystery": ("distracting", 60, "Mostly late at night")]
+        answers = ["Figma": ("focus", 92, "design tool"),
+                   "Mystery": ("distracting", 60, "game")]
         let engine = makeEngine()
 
         let made = await engine.run()
@@ -180,7 +211,7 @@ final class SmartCategoriesTests: XCTestCase {
         XCTAssertEqual(engine.sortedForYou.map(\.key), ["com.figma.Desktop"])
         XCTAssertEqual(engine.needsYou.map(\.key), ["com.example.Mystery"])
         XCTAssertEqual(engine.needsYou.first?.suggested, .distraction)
-        XCTAssertEqual(engine.suggestion(for: "com.figma.Desktop")?.reason, "Design tool you open next to Linear")
+        XCTAssertEqual(engine.suggestion(for: "com.figma.Desktop")?.reason.hasPrefix("Design tool"), true)
         XCTAssertEqual(engine.banner?.text, "Sorted 1 of 2 new apps and sites · 1 needs you")
 
         let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>())
@@ -398,7 +429,7 @@ final class SmartCategoriesTests: XCTestCase {
         await makeEngine().run()
 
         let again = makeEngine()
-        XCTAssertEqual(again.store.records["com.figma.Desktop"]?.reason, "Design tool")
+        XCTAssertEqual(again.store.records["com.figma.Desktop"]?.suggested, .focus)
 
         again.erase()
         XCTAssertTrue(makeEngine().store.records.isEmpty)
@@ -414,9 +445,9 @@ final class SmartCategoriesTests: XCTestCase {
         use("com.figma.Desktop", name: "Figma", minutes: 40)
         use("com.example.Mystery", name: "Mystery", minutes: 20)
         use("com.example.Fresh", name: "Fresh", minutes: 10)
-        answers = ["Figma": ("focus", 92, "Design tool you open next to Linear"),
-                   "Mystery": ("distracting", 60, "Mostly late at night"),
-                   "Fresh": ("neutral", 40, "Hard to say")]
+        answers = ["Figma": ("focus", 92, "design tool"),
+                   "Mystery": ("distracting", 60, "game"),
+                   "Fresh": ("neutral", 40, "utility")]
         let engine = makeEngine()
         await engine.run()
         engine.dismiss(engine.needsYou.first { $0.key == "com.example.Fresh" }!)
@@ -425,9 +456,10 @@ final class SmartCategoriesTests: XCTestCase {
                                            from: now.addingTimeInterval(-86_400), to: now, smart: engine)
         let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
         XCTAssertEqual(byName["Figma"]?.source, .smart)
-        XCTAssertEqual(byName["Figma"]?.why, "Design tool you open next to Linear")
+        XCTAssertEqual(byName["Figma"]?.why, engine.suggestion(for: "com.figma.Desktop")?.reason)
         XCTAssertEqual(byName["Figma"]?.isSmart, true)
-        XCTAssertEqual(byName["Mystery"]?.why, "Looks like distracting · Mostly late at night")
+        let mystery = engine.suggestion(for: "com.example.Mystery")?.reason ?? "?"
+        XCTAssertEqual(byName["Mystery"]?.why, "Looks like distracting · \(mystery)")
         XCTAssertEqual(byName["Fresh"]?.why, "App · no rule yet", "a dismissed guess isn't shown")
         XCTAssertEqual(byName["github.com"]?.isSmart, false)
         XCTAssertEqual(AppsModelBuilder.toSort(items).map(\.name), ["Mystery", "Fresh", "Figma", "github.com"])

@@ -467,7 +467,7 @@ struct MenuSmartView: View {
                              detail: "New apps and sites sorted on this Mac from how you use them, each with a reason. You can undo any of it.",
                              systemImage: "sparkles", onTrialStarted: { smart.turnOn() }, onUpgrade: openUpgrade)
             } else if !smart.isModelAvailable {
-                SmartUnavailableCard(sortByHand: sortByHand)
+                SmartUnavailableCard(availability: smart.availability, sortByHand: sortByHand)
             } else if !smart.isEnabled {
                 offCard
             } else {
@@ -517,6 +517,7 @@ struct MenuSmartView: View {
                     Spacer()
                     Toggle("Sort on its own", isOn: $smart.isEnabled)
                         .toggleStyle(.switch)
+                        .tint(Theme.focusFill)
                         .controlSize(.mini)
                 }
                 .font(.system(size: 11))
@@ -594,26 +595,28 @@ struct MenuSmartView: View {
     }
 
     private func sortedRow(_ record: SmartRecord) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            AppGlyph(kind: record.isSite ? .generic : AppGlyph.kind(forBundleId: record.bundleId, name: record.name),
-                     bundleId: record.isSite ? nil : record.bundleId, host: record.host, size: 20)
-            VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                AppGlyph(kind: record.isSite ? .generic : AppGlyph.kind(forBundleId: record.bundleId, name: record.name),
+                         bundleId: record.isSite ? nil : record.bundleId, host: record.host, size: 20)
                 Text(record.name)
                     .font(.system(size: 12, weight: .semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(record.reason)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                CategoryChip(classification: record.suggested)
+                Button("Undo") {
+                    refused = smart.undo(record) ? nil : "Strict keeps \(record.name) blocked until the session ends."
+                    changed()
+                }
+                .buttonStyle(.textLink)
+                .accessibilityLabel("Undo \(record.name)")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            CategoryChip(classification: record.suggested)
-            Button("Undo") {
-                refused = smart.undo(record) ? nil : "Strict keeps \(record.name) blocked until the session ends."
-                changed()
-            }
-            .buttonStyle(.textLink)
-            .accessibilityLabel("Undo \(record.name)")
+            Text(record.reason)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 28)
         }
         .padding(.horizontal, 2)
         .padding(.vertical, 5)
@@ -672,6 +675,7 @@ struct MenuSmartView: View {
                 Toggle("YouTube video by video", isOn: Binding(get: { smart.perVideo }, set: { smart.setPerVideo($0); changed() }))
                     .labelsHidden()
                     .toggleStyle(.switch)
+                    .tint(Theme.focusFill)
                     .controlSize(.mini)
                     .disabled(!smart.isModelAvailable && !smart.perVideo)
             }
@@ -699,6 +703,7 @@ struct MenuSmartView: View {
 /// "Needs Apple Intelligence (macOS 26)": what to do about it, and back to
 /// sorting by hand.
 struct SmartUnavailableCard: View {
+    let availability: OnDeviceAI.Availability
     let sortByHand: () -> Void
 
     var body: some View {
@@ -709,7 +714,7 @@ struct SmartUnavailableCard: View {
                     .accessibilityHidden(true)
                 Text(OnDeviceAI.unavailableNote).font(.system(size: 13, weight: .semibold))
             }
-            Text(OnDeviceAI.availability.sortingNote)
+            Text(availability.sortingNote)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)

@@ -138,7 +138,7 @@ enum SmartEvidenceBuilder {
             bestSeconds = byHour[hour] + byHour[hour + 1]
         }
         guard bestSeconds / total >= 0.5 else { return nil }
-        return String(format: "mostly %02d:00 to %02d:00", best, best + 2)
+        return String(format: "mostly %02d:00 to %02d:00", best, (best + 2) % 24)
     }
 
     /// Short and tidy: no "(3)" unread count, no line breaks.
