@@ -20,6 +20,18 @@ final class Session {
     var pausedAt: Date?
     /// Total accumulated paused time, in seconds. Updated on resume.
     var pausedSeconds: TimeInterval = 0
+    /// What the session was for, typed before it started (Pro). Nil
+    /// without one.
+    var goal: String?
+    /// Whether the goal was reached (`GoalVerdict`): the debrief's verdict,
+    /// or the user's correction of it. Nil until there's a debrief.
+    var goalVerdictRaw: String?
+    /// The project the session counted toward in the work log, worked out
+    /// from its goal and apps.
+    var project: String?
+    /// The written debrief (`StoredDebrief`, JSON), made on this Mac when
+    /// the session ended. Nil without Apple Intelligence.
+    var debriefData: Data?
 
     @Relationship(deleteRule: .cascade, inverse: \ActivityEvent.session)
     var events: [ActivityEvent] = []

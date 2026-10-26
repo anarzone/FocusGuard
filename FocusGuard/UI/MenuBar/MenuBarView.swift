@@ -31,7 +31,10 @@ struct MenuBarView: View {
     /// The picker opens on the last length the user started with.
     @AppStorage("menu.lastSessionMinutes") private var lastSessionMinutes = 0
     /// What the next session is for (Pro AI, behind `FeatureFlags.debrief`).
+    /// It moves onto the session when one starts (`DebriefCoordinator`).
     @AppStorage(SessionGoal.key) private var sessionGoal = ""
+    /// Goals offered under the empty field.
+    @State private var goalSuggestions: [GoalSuggestion] = []
     var entitlements: Entitlements = .shared
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -85,8 +88,12 @@ struct MenuBarView: View {
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
         .onAppear { appState.refreshMenuStats(force: true) }
+        .onAppear { goalSuggestions = appState.debriefs.goalSuggestions() }
         .onChange(of: appState.habits.autoStartOffer) { pickingLength = false }
-        .onChange(of: appState.sessionManager.currentSession?.id) { pickingLength = false }
+        .onChange(of: appState.sessionManager.currentSession?.id) {
+            pickingLength = false
+            goalSuggestions = appState.debriefs.goalSuggestions()
+        }
         .onReceive(ticker) { tick in
             now = tick
             // Never waits: the numbers come back from StatsStore.
@@ -222,11 +229,12 @@ struct MenuBarView: View {
             } else {
                 if FeatureFlags.debrief {
                     if entitlements.isUnlocked(.debrief) {
-                        SessionGoalField(goal: $sessionGoal)
+                        SessionGoalField(goal: $sessionGoal, suggestions: goalSuggestions, onSubmit: start)
                     } else {
                         LockedProRow(feature: .debrief, title: "Add a goal for this session",
                                      detail: "Say what the session is for. When it ends, the debrief checks whether you got there.",
-                                     systemImage: "scope")
+                                     systemImage: "scope",
+                                     onTrialStarted: { goalSuggestions = appState.debriefs.goalSuggestions() })
                     }
                 }
 
@@ -316,8 +324,8 @@ struct MenuBarView: View {
             }
 
             VStack(spacing: 12) {
-                if FeatureFlags.debrief, entitlements.isUnlocked(.debrief), !sessionGoal.isEmpty {
-                    GoalLine(goal: sessionGoal)
+                if FeatureFlags.debrief, entitlements.isUnlocked(.debrief), let goal = session.goal {
+                    GoalLine(goal: goal)
                 }
                 SessionRingView(
                     timeline: timeline,
@@ -460,11 +468,17 @@ struct MenuBarView: View {
 
             if FeatureFlags.debrief {
                 if entitlements.isUnlocked(.debrief) {
-                    ProRow(title: "Debrief is ready", detail: "What you did, where you drifted, a tip") { openPane = .debrief }
+                    DebriefRow(session: recap.session, status: appState.debriefs.status(for: recap.session)) {
+                        openPane = openPane == .debrief ? nil : .debrief
+                    }
                 } else {
                     LockedProRow(feature: .debrief, title: "Debrief this session",
                                  detail: "What you did, where you drifted, and one thing to try next time.",
-                                 systemImage: "sparkles")
+                                 systemImage: "sparkles",
+                                 onTrialStarted: {
+                                     appState.debriefs.write(for: recap.session)
+                                     openPane = .debrief
+                                 })
                 }
             }
 
