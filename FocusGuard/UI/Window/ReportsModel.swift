@@ -85,34 +85,44 @@ enum ReportsModelBuilder {
     /// Hours the hour charts cover.
     static let hours = 8...19
 
-    /// `breakdown` gives the totals between two times, for the period before
-    /// and the trend; `StatsStore` passes one that reads finished days from
-    /// its kept totals.
+    /// `summaries` adds whole days up from their summaries instead of
+    /// reading their events; `StatsStore` passes one backed by the summaries
+    /// it keeps for finished days.
     static func build(period: ReportPeriod, offset: Int, context: ModelContext, now: Date = .now,
                       calendar: Calendar = .current, historyStart: Date? = nil,
                       weekendsCount: Bool = false, goal: TimeInterval = FocusGoal.dailySeconds,
-                      breakdown: ((Date, Date) -> BreakdownSnapshot)? = nil) -> ReportsModel {
-        let data = ReportDataBuilder.build(period: period, offset: offset, context: context, now: now,
-                                           calendar: calendar, notBefore: historyStart, breakdown: breakdown)
-        let interval = data.interval
+                      summaries: DaySummaries? = nil) -> ReportsModel {
+        let interval = period.interval(offset: offset, now: now, calendar: calendar)
         let start = max(interval.start, historyStart ?? .distantPast)
         let until = min(interval.end, now)
         let reports = ReportBuilder(context: context)
 
-        // Sessions in the period: the longest run's day, and how they went.
+        // Sessions in the period, and the events inside sessions around it
+        // in one read: one read per session took ~10 ms each.
         let sessionDescriptor = FetchDescriptor<Session>(
             predicate: #Predicate { $0.startedAt >= start && $0.startedAt < until },
             sortBy: [SortDescriptor(\.startedAt)]
         )
         let sessions = Persistence.fetch(context, sessionDescriptor).filter { $0.endedAt != nil }
+        let sessionEvents = sessionEvents(around: sessions, from: start, to: interval.end, context: context)
+
+        let data = summaries.flatMap {
+            ReportDataBuilder.build(period: period, offset: offset, days: $0, notBefore: historyStart, sessionEvents: sessionEvents)
+        } ?? ReportDataBuilder.build(period: period, offset: offset, context: context, now: now, calendar: calendar,
+                                     notBefore: historyStart,
+                                     breakdown: summaries.map { days in { days.breakdown(from: $0, to: $1) } })
+
+        // The longest run's day, and how the sessions went.
+        let eventsBySession = Dictionary(grouping: sessionEvents.filter { $0.session != nil }) { $0.session!.persistentModelID }
         var longestDay: Date?
         var longest: TimeInterval = 0
         var tally: [SessionNamer.Pattern: Int] = [:]
         var fadingStarts: [Date] = []
         for session in sessions {
-            let run = FocusRuns.compute(FocusRuns.spans(from: session.events), now: now).longest
+            let events = eventsBySession[session.persistentModelID] ?? []
+            let run = FocusRuns.compute(FocusRuns.spans(from: events), now: now).longest
             if run > longest { longest = run; longestDay = session.startedAt }
-            let pattern = pattern(of: session)
+            let pattern = pattern(of: session, events: events)
             tally[pattern, default: 0] += 1
             if pattern == .fading { fadingStarts.append(session.startedAt) }
         }
@@ -126,7 +136,8 @@ enum ReportsModelBuilder {
         let previousUntil = min(previous.end, previous.start.addingTimeInterval(until.timeIntervalSince(interval.start)))
         let canCompare = previousStart >= (historyStart ?? .distantPast)
         let before: [String: TimeInterval] = canCompare
-            ? Dictionary(reports.topDistractions(from: previousStart, to: previousUntil, limit: 60)
+            ? Dictionary((summaries?.distractions(from: previousStart, to: previousUntil, limit: 60)
+                          ?? reports.topDistractions(from: previousStart, to: previousUntil, limit: 60))
                 .map { ($0.host ?? $0.bundleId, $0.seconds) }, uniquingKeysWith: +)
             : [:]
         let distractions = data.distractions.map { entry in
@@ -150,10 +161,11 @@ enum ReportsModelBuilder {
             let heatStart = max(calendar.date(byAdding: .day, value: -21, to: interval.start) ?? interval.start,
                                 historyStart ?? .distantPast)
             // The week itself is already in `data.heat`; read only the three before it.
-            let earlier = focusHeat(context: context, from: heatStart, to: max(heatStart, start), calendar: calendar)
+            let earlier = summaries.flatMap { focusHeat(days: $0, from: heatStart, to: start) }
+                ?? focusHeat(context: context, from: heatStart, to: max(heatStart, start), calendar: calendar)
             heat = zip(earlier, data.heat).map { zip($0, $1).map(+) }
             heatWeeks = max(1, Int((until.timeIntervalSince(heatStart) / (7 * 86_400)).rounded(.up)))
-            let totals = breakdown ?? reports.breakdown
+            let totals = summaries.map { days in { days.breakdown(from: $0, to: $1) } } ?? reports.breakdown
             trend = weekTrend(focus: { totals($0, $1).focus },
                               endingWith: interval, weeks: 8, now: now,
                               calendar: calendar, historyStart: historyStart)
@@ -191,12 +203,40 @@ enum ReportsModelBuilder {
     }
 
     /// The session's pattern: from the name it earned, else worked out again.
-    static func pattern(of session: Session) -> SessionNamer.Pattern {
+    static func pattern(of session: Session, events: [ActivityEvent]? = nil) -> SessionNamer.Pattern {
         if let name = session.autoName,
            let match = SessionNamer.Pattern.allCases.first(where: { name.hasPrefix($0.rawValue + " ") }) {
             return match
         }
-        return SessionNamer.pattern(of: SessionTimeline.segments(from: session.events))
+        return SessionNamer.pattern(of: SessionTimeline.segments(from: events ?? session.events))
+    }
+
+    /// Events inside any session, from `[from, to)` and over the whole of
+    /// each of `sessions`, in start order: all of those sessions' events,
+    /// and every session event in the period.
+    static func sessionEvents(around sessions: [Session], from: Date, to: Date,
+                              context: ModelContext) -> [ActivityEvent] {
+        // A session's events lie within it; the margin covers the last
+        // event running a little past the end.
+        let first = min(from, sessions.map(\.startedAt).min() ?? from)
+        let last = max(to, sessions.compactMap(\.endedAt).max() ?? to).addingTimeInterval(3600)
+        return Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
+            predicate: #Predicate { $0.endedAt >= first && $0.startedAt < last && $0.session != nil },
+            sortBy: [SortDescriptor(\.startedAt)]
+        ))
+    }
+
+    /// The same from day summaries; nil when `[from, to)` isn't whole days.
+    static func focusHeat(days: DaySummaries, from: Date, to: Date) -> [[TimeInterval]]? {
+        var heat = Array(repeating: Array(repeating: TimeInterval(0), count: 24), count: 7)
+        guard to > from else { return heat }
+        guard let summaries = days.summaries(from: from, to: to) else { return nil }
+        let calendar = days.calendar
+        for day in summaries {
+            let row = (calendar.component(.weekday, from: day.day) - calendar.firstWeekday + 7) % 7
+            for hour in 0..<24 { heat[row][hour] += day.focusByHour[hour] }
+        }
+        return heat
     }
 
     /// Focus by weekday (row 0 = the calendar's first weekday) and hour.
