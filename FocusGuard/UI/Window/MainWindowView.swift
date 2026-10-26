@@ -258,7 +258,8 @@ private struct SidebarSessionCard: View {
                     }
                 }
             } else {
-                let minutes: Int? = lengthChoice < 0 ? nil : (lengthChoice > 0 ? lengthChoice : defaultMinutes)
+                let minutes: Int? = lengthChoice < 0 ? nil
+                    : (lengthChoice > 0 ? lengthChoice : CoachRules.sessionMinutes() ?? defaultMinutes)
                 Button {
                     appState.sessionManager.startSession(label: defaultLabel.isEmpty ? nil : defaultLabel,
                                                          plannedDurationMinutes: minutes)

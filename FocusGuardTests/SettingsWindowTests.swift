@@ -53,8 +53,11 @@ final class SettingsWindowTests: XCTestCase {
     }
 
     func testProTableHidesAIUntilItShips() {
-        XCTAssertFalse(FeatureFlags.proAI)
-        XCTAssertFalse(PlanComparison.rows.contains { $0.ai })
+        // Each AI row follows its own feature's flag.
+        XCTAssertTrue(PlanComparison.rows.filter(\.ai).allSatisfy(\.shipped))
+        XCTAssertEqual(PlanComparison.rows.filter(\.ai).count, PlanComparison.all.filter { $0.ai && $0.shipped }.count)
+        XCTAssertEqual(PlanComparison.rows.contains { $0.name == "Weekly coach" }, FeatureFlags.coach)
+        XCTAssertEqual(PlanComparison.rows.contains { $0.name.hasPrefix("Smart categories") }, FeatureFlags.smartCategories)
         XCTAssertEqual(PlanComparison.rows.first { $0.name == "Daily site limits" }?.free, .text("1"))
         XCTAssertEqual(PlanComparison.rows.first { $0.name == "Reports and highlights" }?.free, .text("30 days"))
     }

@@ -208,6 +208,8 @@ struct UpgradeFeature {
     let symbol: String
     var comingLater = false
     var ai = false
+    /// An AI feature's own flag: it's listed once that ships.
+    var shipped = true
 
     static let all: [UpgradeFeature] = [
         UpgradeFeature(title: "Block in the browser", body: "Pages never load. Block parts of sites, like Shorts.",
@@ -215,18 +217,18 @@ struct UpgradeFeature {
         UpgradeFeature(title: "Block on the whole Mac", body: "Every browser and app, private windows too.",
                        symbol: "shield", comingLater: true),
         UpgradeFeature(title: "Smart categories", body: "Sorted on this Mac, YouTube one video at a time.",
-                       symbol: "sparkle", ai: true),
+                       symbol: "sparkle", ai: true, shipped: FeatureFlags.smartCategories),
         UpgradeFeature(title: "Goals and debriefs", body: "A goal when you start, one click when you finish.",
-                       symbol: "scope", ai: true),
+                       symbol: "scope", ai: true, shipped: FeatureFlags.debrief),
         UpgradeFeature(title: "Work log", body: "A standup draft and a timesheet, ready to paste.",
-                       symbol: "doc.text", ai: true),
-        UpgradeFeature(title: "Weekly coach", body: "Three things to try, every Monday.",
-                       symbol: "chart.bar", ai: true),
+                       symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
+        UpgradeFeature(title: "Weekly coach", body: "One pattern from your week and one thing to try, every week.",
+                       symbol: "chart.bar", ai: true, shipped: FeatureFlags.coach),
         UpgradeFeature(title: "Daily limits for any site", body: "Free keeps one.", symbol: "hourglass"),
         UpgradeFeature(title: "All your history", body: "Reports for every week you have tracked.",
                        symbol: "clock.arrow.circlepath"),
     ]
 
     /// AI features only once they ship.
-    static var shown: [UpgradeFeature] { all.filter { FeatureFlags.proAI || !$0.ai } }
+    static var shown: [UpgradeFeature] { all.filter { !$0.ai || $0.shipped } }
 }

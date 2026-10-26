@@ -94,7 +94,7 @@ struct MenuPaneView: View {
                 // Filled in by Pro AI later; only reachable with FeatureFlags.debrief on.
                 DebriefPane(debrief: nil, close: close)
             case .coach:
-                CoachPane(note: nil, close: close, seeWeek: { open(.insights) })
+                CoachPane(close: close, seeWeek: { open(.insights) })
             }
         }
         .padding(.horizontal, 14)

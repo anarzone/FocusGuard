@@ -32,8 +32,18 @@ final class EscalationEngine {
                                block: Int(blockThreshold), strict: strictMode)
     }
 
-    /// What the block screen lets you do, from the preset these settings match.
-    var policy: OverridePolicy { preset.overridePolicy }
+    /// A preset for a stretch of the day, such as the weekly coach's
+    /// "Strict after 17:00". Used only while it's stricter than `preset`.
+    @ObservationIgnored var presetOverride: (Date) -> DriftResponse? = { _ in nil }
+
+    /// The preset in force at `now`: the one in Settings, or a stricter override.
+    func presetInForce(at now: Date = .now) -> DriftResponse {
+        guard let override = presetOverride(now), override.strictness > preset.strictness else { return preset }
+        return override
+    }
+
+    /// What the block screen lets you do, from the preset in force.
+    var policy: OverridePolicy { presetInForce().overridePolicy }
 
     /// A "Let me through" in progress: one site or app, for `policy.passSeconds`.
     /// The time still counts as drift; it only holds the block screen back.
@@ -105,16 +115,22 @@ final class EscalationEngine {
 
         guard let start = currentStreakStartedAt else { return }
         let elapsed = now.timeIntervalSince(start)
+        // A stricter override brings its own timings while it lasts.
+        let inForce = presetInForce(at: now)
+        let overridden = inForce != preset
+        let strict = overridden ? inForce.values.strict : strictMode
+        let block = overridden ? TimeInterval(inForce.values.block) : blockThreshold
+        let notify = overridden ? TimeInterval(inForce.values.notify) : notifyThreshold
 
         // Block stage takes precedence — once the overlay is up, no more
         // notifications. Strict skips the silence/notify ladder, and a pass
         // that just ran out brings the block screen straight back.
-        if strictMode || elapsed >= blockThreshold || reblockKey == key {
+        if strict || elapsed >= block || reblockKey == key {
             if !overlay.isPresenting { presentBlock(for: snapshot) }
             return
         }
 
-        if elapsed >= notifyThreshold {
+        if elapsed >= notify {
             if let last = lastNotifiedAt, now.timeIntervalSince(last) < notifyCooldown {
                 return  // throttled
             }

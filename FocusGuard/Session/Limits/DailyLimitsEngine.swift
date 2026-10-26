@@ -221,11 +221,12 @@ final class DailyLimitsEngine {
         return .now
     }
 
-    /// Removes a limit: now, or from tomorrow on Strict.
+    /// Removes a limit: now, or from tomorrow on Strict. `evenOnStrict`
+    /// removes it now on any preset (the weekly coach's limit, once its week is over).
     @discardableResult
-    func removeLimit(_ id: UUID) -> LimitChange? {
+    func removeLimit(_ id: UUID, evenOnStrict: Bool = false) -> LimitChange? {
         guard let limit = limits.first(where: { $0.id == id }) else { return nil }
-        if policy().limitChangesWaitForTomorrow {
+        if policy().limitChangesWaitForTomorrow && !evenOnStrict {
             limit.pendingMinutes = 0
             limit.pendingFrom = tomorrow
             Persistence.save(context)

@@ -36,14 +36,6 @@ struct SessionDebrief: Equatable {
     let standup: String?
 }
 
-/// The weekly coach's note on the week before.
-struct WeeklyCoachNote: Equatable {
-    let weekLabel: String
-    let headline: String
-    let points: [String]
-    let tryThis: String?
-}
-
 /// A category the smart suggestions would give an app or site.
 struct SmartSuggestion: Equatable, Identifiable {
     var id: String { host ?? bundleId }
@@ -260,48 +252,6 @@ struct DebriefPane: View {
             }
         }
         .paneCard()
-    }
-}
-
-// MARK: - Weekly coach
-
-struct CoachPane: View {
-    let note: WeeklyCoachNote?
-    let close: () -> Void
-    var seeWeek: () -> Void = {}
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PaneTitle(title: "Weekly coach", close: close) { ProBadge() }
-            if let note {
-                Text(note.weekLabel).font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
-                Takeaway(text: note.headline)
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(note.points, id: \.self) { point in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Circle().fill(Theme.focus).frame(width: 6, height: 6)
-                            Text(point).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-                .paneCard()
-                if let tryThis = note.tryThis {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Try this week").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
-                        Text(tryThis).font(.system(size: 13, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
-                    }
-                    .paneCard()
-                }
-            } else {
-                emptyState("No note yet", "After your first full week, the coach sums up what worked and suggests one thing to try.")
-            }
-            Spacer(minLength: 0)
-            HStack {
-                Text("Worked out on this Mac").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
-                Spacer()
-                Button("See the week ›", action: seeWeek).buttonStyle(.textLink)
-            }
-        }
     }
 }
 

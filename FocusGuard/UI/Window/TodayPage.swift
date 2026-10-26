@@ -120,7 +120,7 @@ struct TodayPage: View {
             sessionLeft: left,
             inSession: isToday && session != nil,
             onBreak: isToday && appState.breakManager.current != nil,
-            nextLength: lengthChoice > 0 ? lengthChoice : defaultMinutes,
+            nextLength: lengthChoice > 0 ? lengthChoice : CoachRules.sessionMinutes() ?? defaultMinutes,
             hasActivity: model.focused + model.drifted > 0 || !model.activity.isEmpty
         ))
     }
@@ -240,7 +240,7 @@ struct TodayPage: View {
             return left > 0 ? DateInterval(start: now, duration: left) : nil
         }
         guard appState.breakManager.current == nil, lengthChoice >= 0 else { return nil }
-        let minutes = lengthChoice > 0 ? lengthChoice : defaultMinutes
+        let minutes = lengthChoice > 0 ? lengthChoice : CoachRules.sessionMinutes() ?? defaultMinutes
         return DateInterval(start: now, duration: TimeInterval(minutes * 60))
     }
 
@@ -674,7 +674,7 @@ private struct ReadyNow: View {
     /// Minutes, or nil for open-ended.
     private var chosen: Int? {
         if lengthChoice < 0 { return nil }
-        return lengthChoice > 0 ? lengthChoice : defaultMinutes
+        return lengthChoice > 0 ? lengthChoice : CoachRules.sessionMinutes() ?? defaultMinutes
     }
 
     var body: some View {

@@ -27,6 +27,8 @@ struct FocusActions {
     var usualMinutes: Int { Self.usualMinutes(defaults) }
 
     static func usualMinutes(_ defaults: UserDefaults = .standard) -> Int {
+        // A weekly coach experiment ("25-minute sessions after 17:00") comes first.
+        if let coach = CoachRules.sessionMinutes(at: .now, defaults) { return clamp(coach) }
         let last = defaults.integer(forKey: SurfaceKeys.lastSessionMinutes)
         let fallback = defaults.object(forKey: SessionDefaultsKey.durationMinutes) as? Int ?? 50
         return clamp(last > 0 ? last : fallback)

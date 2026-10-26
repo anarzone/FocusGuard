@@ -57,9 +57,7 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
             }
             SettingsNote(systemImage: "lock",
-                         text: FeatureFlags.proAI
-                            ? "Smart categories, highlights and the work log are all worked out on this Mac."
-                            : "Highlights and session names are worked out on this Mac.")
+                         text: Self.onDeviceNote)
             SettingsSection("History") {
                 SettingsRow(title: "Keep history for",
                             detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {
@@ -383,5 +381,16 @@ enum PrivacyStatement {
     static var short: String {
         let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify if you use it."
         return AISettings.isAvailable ? base + " AI tips, if you turn them on, send a short summary." : base
+    }
+}
+
+extension SettingsPrivacyPane {
+    /// What's worked out on this Mac, naming only the Pro AI that has shipped.
+    static var onDeviceNote: String {
+        var parts = ["Highlights", "session names"]
+        if FeatureFlags.smartCategories { parts.append("smart categories") }
+        if FeatureFlags.debrief { parts.append("debriefs and the work log") }
+        if FeatureFlags.coach { parts.append("the weekly coach") }
+        return "\(HabitFormat.list(parts)) are worked out on this Mac."
     }
 }
