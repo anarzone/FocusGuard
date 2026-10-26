@@ -45,6 +45,7 @@ enum DataEraser {
         DefaultRules.seedIfNeeded(in: context)
         appState.classifier.invalidate()
         appState.recap = nil
+        WeeklyCoach.shared.erase()
     }
 }
 

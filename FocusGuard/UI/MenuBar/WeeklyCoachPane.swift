@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The weekly coach beside the menu: last week's one pattern, one
 /// experiment to try this week, how last week's went, and the tiles.
-struct CoachPane: View {
+/// (`CoachPane` in ProPanes.swift is the old placeholder, no longer shown.)
+struct WeeklyCoachPane: View {
     var coach: WeeklyCoach = .shared
     var entitlements: Entitlements = .shared
     let close: () -> Void

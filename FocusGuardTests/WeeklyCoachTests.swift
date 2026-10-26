@@ -279,6 +279,36 @@ final class WeeklyCoachTests: XCTestCase {
         XCTAssertFalse(HabitSettings.isOn(HabitSettings.morningPlan, defaults))
     }
 
+    // MARK: - Erase all data
+
+    func test_eraseForgetsTheNote_andUndoesThisWeeksExperiment() async throws {
+        fixture = F.lateEveningDrift()
+        await coach.refresh()
+        coach.tryIt()
+        XCTAssertEqual(CoachRules.all(defaults).count, 1)
+
+        coach.erase()
+        XCTAssertNil(coach.note)
+        XCTAssertNil(coach.state.running)
+        XCTAssertTrue(CoachRules.all(defaults).isEmpty)
+        XCTAssertNil(makeCoach().state.week, "a relaunch starts over too")
+    }
+
+    func test_eraseKeepsKeptChanges_withoutTheirNumbers() async throws {
+        fixture = F.xAfterSessions()
+        await coach.refresh()
+        coach.tryIt()
+        coach.keepRunning()
+
+        coach.erase()
+        XCTAssertEqual(siteLimits, ["x.com"])
+        let kept = try XCTUnwrap(coach.state.kept.first)
+        XCTAssertNil(kept.before)
+        XCTAssertNil(kept.after)
+        coach.stop(kept)
+        XCTAssertEqual(siteLimits, [])
+    }
+
     // MARK: - Plans
 
     func test_aFinishedTrialEndsTheExperiment_evenOnFree() async throws {

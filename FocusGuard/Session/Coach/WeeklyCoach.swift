@@ -52,7 +52,7 @@ struct CoachTrial: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     let experiment: CoachExperiment
     /// Its measure on the week it came from, and on the week it ran.
-    let before: Double?
+    var before: Double?
     var after: Double?
     /// The week it ran in; it ends with it unless kept.
     let week: DateInterval
@@ -315,6 +315,24 @@ final class WeeklyCoach {
         applier?.undo(trial.undo, weekOver: false)
         state.kept.removeAll { $0.id == trial.id }
         if state.finished?.id == trial.id { state.finished?.kept = false }
+        save()
+    }
+
+    /// "Erase all data": forgets the notes and results worked out from the
+    /// erased activity. This week's experiment is undone unless it was kept;
+    /// kept changes stay on, and can still be stopped.
+    func erase() {
+        if let trial = state.running {
+            if trial.kept { state.kept.append(trial) } else { applier?.undo(trial.undo, weekOver: true) }
+        }
+        let kept = state.kept.map { trial -> CoachTrial in
+            var trial = trial
+            trial.before = nil
+            trial.after = nil
+            return trial
+        }
+        state = CoachState(kept: kept)
+        problem = nil
         save()
     }
 
