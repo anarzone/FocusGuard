@@ -160,8 +160,23 @@ struct PageHeader<Controls: View>: View {
             }
             Spacer(minLength: 12)
             controls()
+                .background(WindowNoDragArea())
         }
         .frame(height: 60)
+    }
+}
+
+/// Keeps the area behind it out of the window's drag region. The header
+/// sits under the window's tall title bar, where macOS moves the window on
+/// a mouse-down anywhere the content allows it, before the app sees the
+/// click; SwiftUI content allows it, so buttons there never got clicked.
+/// Put this behind anything clickable in the top 66 points of the window.
+struct WindowNoDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { NoDragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class NoDragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { false }
     }
 }
 
