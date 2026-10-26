@@ -240,10 +240,11 @@ final class WindowModelTests: XCTestCase {
     }
 
     func testUpgradeSheetHidesAIUntilItShips() {
-        // Each AI feature follows its own flag.
-        XCTAssertTrue(UpgradeFeature.shown.filter(\.ai).allSatisfy(\.shipped))
-        XCTAssertEqual(UpgradeFeature.shown.contains { $0.title == "Weekly coach" }, FeatureFlags.coach)
-        XCTAssertEqual(UpgradeFeature.shown.contains { $0.title == "Work log" }, FeatureFlags.debrief)
+        let shown = Set(UpgradeFeature.shown.map(\.title))
+        XCTAssertEqual(shown.contains("Smart categories"), FeatureFlags.smartCategories)
+        XCTAssertEqual(shown.contains("Goals and debriefs"), FeatureFlags.debrief)
+        XCTAssertEqual(shown.contains("Work log"), FeatureFlags.debrief)
+        XCTAssertEqual(shown.contains("Weekly coach"), FeatureFlags.coach)
         XCTAssertTrue(UpgradeFeature.shown.contains { $0.title == "Block on the whole Mac" && $0.comingLater })
     }
 }

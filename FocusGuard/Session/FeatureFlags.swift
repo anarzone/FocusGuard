@@ -14,6 +14,6 @@ enum FeatureFlags {
     static let coach = true
 
     /// Any Pro AI feature has shipped: drives general copy about AI (the
-    /// upgrade sheet's header). Lists of features check each flag on its own.
+    /// upgrade sheet, the Pro pane, the privacy note).
     static var proAI: Bool { smartCategories || debrief || coach }
 }

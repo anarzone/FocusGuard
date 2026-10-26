@@ -205,7 +205,7 @@ enum PlanComparison {
         let free: Cell
         let pro: Cell
         var ai = false
-        /// An AI row's own feature flag: it joins the table once that ships.
+        /// Its own `FeatureFlags` switch, for AI features that ship one by one.
         var shipped = true
     }
 
@@ -222,5 +222,5 @@ enum PlanComparison {
         Row(name: "Daily site limits", free: .text("\(Plan.freeDailyLimits)"), pro: .text("Any")),
     ]
 
-    static var rows: [Row] { all.filter { !$0.ai || $0.shipped } }
+    static var rows: [Row] { all.filter(\.shipped) }
 }

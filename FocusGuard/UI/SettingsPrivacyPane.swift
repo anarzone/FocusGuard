@@ -57,7 +57,7 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
             }
             SettingsNote(systemImage: "lock",
-                         text: Self.onDeviceNote)
+                         text: PrivacyNote.onThisMac)
             SettingsSection("History") {
                 SettingsRow(title: "Keep history for",
                             detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {
@@ -384,13 +384,19 @@ enum PrivacyStatement {
     }
 }
 
-extension SettingsPrivacyPane {
-    /// What's worked out on this Mac, naming only the Pro AI that has shipped.
-    static var onDeviceNote: String {
-        var parts = ["Highlights", "session names"]
-        if FeatureFlags.smartCategories { parts.append("smart categories") }
-        if FeatureFlags.debrief { parts.append("debriefs and the work log") }
-        if FeatureFlags.coach { parts.append("the weekly coach") }
-        return "\(HabitFormat.list(parts)) are worked out on this Mac."
+/// What's worked out on this Mac, naming only the Pro AI that has shipped.
+enum PrivacyNote {
+    static var onThisMac: String {
+        make(smartCategories: FeatureFlags.smartCategories, debrief: FeatureFlags.debrief, coach: FeatureFlags.coach)
+    }
+
+    static func make(smartCategories: Bool, debrief: Bool, coach: Bool) -> String {
+        var parts: [String] = []
+        if smartCategories { parts.append("smart categories") }
+        parts += ["highlights", "session names"]
+        if debrief { parts += ["debriefs", "the work log"] }
+        if coach { parts.append("the weekly coach") }
+        let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + " and " + (parts.last ?? "") : parts.joined()
+        return list.prefix(1).uppercased() + list.dropFirst() + " are worked out on this Mac."
     }
 }

@@ -55,7 +55,7 @@ struct UpgradeSheet: View {
                     Text("FocusGuard").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.secondaryText)
                     ProBadge()
                 }
-                Text(FeatureFlags.proAI
+                Text(FeatureFlags.debrief || FeatureFlags.coach
                      ? "Block for real, and let FocusGuard write up your week."
                      : "Block for real, keep every week, and set as many limits as you like.")
                     .font(.system(size: 22, weight: .bold))
@@ -208,7 +208,7 @@ struct UpgradeFeature {
     let symbol: String
     var comingLater = false
     var ai = false
-    /// An AI feature's own flag: it's listed once that ships.
+    /// Its own `FeatureFlags` switch, for AI features that ship one by one.
     var shipped = true
 
     static let all: [UpgradeFeature] = [
@@ -222,7 +222,7 @@ struct UpgradeFeature {
                        symbol: "scope", ai: true, shipped: FeatureFlags.debrief),
         UpgradeFeature(title: "Work log", body: "A standup draft and a timesheet, ready to paste.",
                        symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
-        UpgradeFeature(title: "Weekly coach", body: "One pattern from your week and one thing to try, every week.",
+        UpgradeFeature(title: "Weekly coach", body: "Three things to try, every Monday.",
                        symbol: "chart.bar", ai: true, shipped: FeatureFlags.coach),
         UpgradeFeature(title: "Daily limits for any site", body: "Free keeps one.", symbol: "hourglass"),
         UpgradeFeature(title: "All your history", body: "Reports for every week you have tracked.",
@@ -230,5 +230,5 @@ struct UpgradeFeature {
     ]
 
     /// AI features only once they ship.
-    static var shown: [UpgradeFeature] { all.filter { !$0.ai || $0.shipped } }
+    static var shown: [UpgradeFeature] { all.filter(\.shipped) }
 }
