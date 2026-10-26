@@ -214,7 +214,7 @@ final class AppState {
         // connected; its block pages follow the preset, the daily limits and
         // the escalation engine's passes.
         tracker.extensionTab = { [weak bridge] id in bridge?.tab(forBrowser: id) }
-        bridge.presetProvider = { [weak engine] in engine?.preset ?? .standard }
+        bridge.presetProvider = { [weak engine] in engine?.presetInForce() ?? .standard }
         bridge.limitsProvider = { [weak limits] in limits?.statuses ?? [] }
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
@@ -244,6 +244,8 @@ final class AppState {
         SurfaceHost.attach(self)
         // "Share week" posts .openShareComposer.
         ShareComposerWindow.shared.observe(self)
+        // The weekly coach's experiments act through the limits and settings.
+        WeeklyCoach.shared.attach(self)
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the

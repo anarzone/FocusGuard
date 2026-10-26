@@ -11,7 +11,7 @@ enum FeatureFlags {
     /// The session goal, the debrief after a session and the work log.
     static let debrief = true
     /// The weekly coach note and its experiment.
-    static let coach = false
+    static let coach = true
 
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).

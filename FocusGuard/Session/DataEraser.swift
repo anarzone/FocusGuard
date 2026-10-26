@@ -46,6 +46,7 @@ enum DataEraser {
         appState.classifier.invalidate()
         appState.smartCategories.erase()
         appState.recap = nil
+        WeeklyCoach.shared.erase()
     }
 }
 

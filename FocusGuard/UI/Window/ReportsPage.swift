@@ -125,6 +125,8 @@ struct ReportsPage: View {
 
     private var week: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // This week's note from the weekly coach (Pro), about last week.
+            if FeatureFlags.coach && offset == 0 { WindowCoachCard(entitlements: entitlements) }
             kpis(sessionsSlot: false)
             WindowSplitRow(weights: [1.55, 1]) {
                 WindowCard(padding: EdgeInsets(top: 14, leading: 20, bottom: 10, trailing: 20)) {

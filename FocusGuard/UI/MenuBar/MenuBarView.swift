@@ -289,7 +289,7 @@ struct MenuBarView: View {
     }
 
     private func restoreLength() {
-        let saved = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
+        let saved = CoachRules.sessionMinutes() ?? (lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes)
         minutes = min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, saved))
     }
 
@@ -544,7 +544,7 @@ struct MenuBarView: View {
         let remaining = state.remaining(now: now)
         let fraction = state.plannedDuration > 0 ? remaining / state.plannedDuration : 0
         let backAt = now.addingTimeInterval(remaining)
-        let next = lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes
+        let next = CoachRules.sessionMinutes() ?? (lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes)
 
         return VStack(alignment: .leading, spacing: 6) {
             VStack(spacing: 14) {

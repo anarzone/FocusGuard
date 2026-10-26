@@ -11,6 +11,9 @@ enum HabitSettings {
     static let autoStartOffer = "habits.autoStartOffer.enabled"
     /// Calls count as neutral, and nudges wait until the call ends.
     static let meetingAwareness = "habits.meetingAwareness.enabled"
+    /// The hour the morning plan starts going out; missing means 09:00.
+    /// The weekly coach moves it for an experiment.
+    static let morningPlanHour = "habits.morningPlan.hour"
 
     static func isOn(_ key: String, _ defaults: UserDefaults = .standard) -> Bool {
         defaults.object(forKey: key) as? Bool ?? true
@@ -19,8 +22,13 @@ enum HabitSettings {
 
 /// When the habits speak up, in local hours.
 enum HabitSchedule {
-    /// The morning plan goes out from 09:00 until noon, once a day.
-    static let morningHours = 9..<12
+    /// The morning plan goes out from 09:00 (or the hour in
+    /// `HabitSettings.morningPlanHour`) until noon, once a day.
+    static var morningHours: Range<Int> { morningStartHour()..<12 }
+
+    static func morningStartHour(_ defaults: UserDefaults = .standard) -> Int {
+        min(11, max(5, defaults.object(forKey: HabitSettings.morningPlanHour) as? Int ?? 9))
+    }
     /// Free slots are looked for until this hour.
     static let dayEndHour = 19
     /// At most this many sessions are suggested.

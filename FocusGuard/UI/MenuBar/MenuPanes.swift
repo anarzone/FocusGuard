@@ -94,7 +94,7 @@ struct MenuPaneView: View {
                 // Only reachable with FeatureFlags.debrief on.
                 DebriefPaneHost(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close)
             case .coach:
-                CoachPane(note: nil, close: close, seeWeek: { open(.insights) })
+                WeeklyCoachPane(close: close, seeWeek: { open(.insights) })
             }
         }
         .padding(.horizontal, 14)

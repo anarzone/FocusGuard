@@ -10,6 +10,7 @@ struct InsightsPane: View {
     /// Opens another pane next to the menu (the weekly coach).
     var openPane: (MenuPane) -> Void = { _ in }
     var entitlements: Entitlements = .shared
+    var coach: WeeklyCoach = .shared
 
     enum Range: String, CaseIterable, Identifiable {
         case today = "Today", week = "Week"
@@ -115,13 +116,13 @@ struct InsightsPane: View {
 
             if FeatureFlags.coach, weekOffset >= -1 {
                 if entitlements.isUnlocked(.coach) {
-                    ProRow(title: "Weekly coach", detail: "What worked, and one thing to try", systemImage: "sparkles") {
+                    ProRow(title: "Weekly coach", detail: CoachWords.rowDetail(coach), systemImage: "sparkles") {
                         openPane(.coach)
                     }
+                    .task { await coach.refresh() }
                 } else if appState.sessionManager.currentSession == nil {
-                    LockedProRow(feature: .coach, title: "Weekly coach",
-                                 detail: "A short note each week on what worked, and one thing to try.",
-                                 systemImage: "sparkles")
+                    LockedProRow(feature: .coach, title: "Weekly coach", detail: CoachWords.pitch,
+                                 systemImage: "sparkles", onTrialStarted: { openPane(.coach) })
                 }
             }
         }
