@@ -91,8 +91,8 @@ struct MenuPaneView: View {
             case .settings:
                 QuickSettingsPane(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close)
             case .debrief:
-                // Filled in by Pro AI later; only reachable with FeatureFlags.debrief on.
-                DebriefPane(debrief: nil, close: close)
+                // Only reachable with FeatureFlags.debrief on.
+                DebriefPaneHost(appState: appState, onOpenMain: onOpenMain, dismiss: dismiss, close: close)
             case .coach:
                 CoachPane(note: nil, close: close, seeWeek: { open(.insights) })
             }

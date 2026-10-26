@@ -205,6 +205,8 @@ enum PlanComparison {
         let free: Cell
         let pro: Cell
         var ai = false
+        /// Its own `FeatureFlags` switch, for AI features that ship one by one.
+        var shipped = true
     }
 
     static let all: [Row] = [
@@ -213,12 +215,12 @@ enum PlanComparison {
         Row(name: "Pause the tab", free: .yes, pro: .yes),
         Row(name: "Block in the browser, parts of sites too", free: .no, pro: .yes),
         Row(name: "Block on the whole Mac", free: .no, pro: .text("Later")),
-        Row(name: "Smart categories, YouTube per video", free: .no, pro: .yes, ai: true),
-        Row(name: "Session goals, debriefs and work log", free: .no, pro: .yes, ai: true),
-        Row(name: "Standup draft and timesheet", free: .no, pro: .yes, ai: true),
-        Row(name: "Weekly coach", free: .no, pro: .yes, ai: true),
+        Row(name: "Smart categories, YouTube per video", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.smartCategories),
+        Row(name: "Session goals, debriefs and work log", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
+        Row(name: "Standup draft and timesheet", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
+        Row(name: "Weekly coach", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.coach),
         Row(name: "Daily site limits", free: .text("\(Plan.freeDailyLimits)"), pro: .text("Any")),
     ]
 
-    static var rows: [Row] { all.filter { FeatureFlags.proAI || !$0.ai } }
+    static var rows: [Row] { all.filter(\.shipped) }
 }
