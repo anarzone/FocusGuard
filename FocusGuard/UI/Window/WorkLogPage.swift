@@ -30,12 +30,14 @@ enum WorkLogAccess {
 /// Loads the week from the store and keeps it fresh.
 private struct WorkLogView: View {
     @Bindable var appState: AppState
+    /// The week, its days and the timesheet's columns all come from this.
+    var calendar: Calendar = .current
 
     @State private var offset = 0
     @State private var model = WorkLogModel.empty(ReportPeriod.week.interval(offset: 0))
 
     var body: some View {
-        WorkLogContent(model: model, offset: $offset, canWrite: appState.debriefs.canWrite) { entry, verdict in
+        WorkLogContent(model: model, offset: $offset, canWrite: appState.debriefs.canWrite, calendar: calendar) { entry, verdict in
             guard let session = appState.debriefs.session(id: entry.id) else { return }
             appState.debriefs.correct(session, to: verdict)
             reload()
@@ -51,9 +53,9 @@ private struct WorkLogView: View {
     }
 
     private func reload() {
-        model = WorkLogBuilder.load(interval: ReportPeriod.week.interval(offset: offset),
+        model = WorkLogBuilder.load(interval: ReportPeriod.week.interval(offset: offset, calendar: calendar),
                                     context: appState.container.mainContext,
-                                    isOptedOut: appState.optOutCache.isOptedOut)
+                                    isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
     }
 }
 
@@ -64,6 +66,8 @@ struct WorkLogContent: View {
     @Binding var offset: Int
     /// Apple Intelligence is there to write debriefs.
     let canWrite: Bool
+    /// The one the model was built with, for the CSV's dates.
+    var calendar: Calendar = .current
     /// The user's own call on a goal, from the row's menu.
     var onCorrect: (WorkLogEntry, GoalVerdict) -> Void = { _, _ in }
 
@@ -475,7 +479,7 @@ struct WorkLogContent: View {
     }
 
     private func exportTimesheet() {
-        let csv = model.timesheet.csv()
+        let csv = model.timesheet.csv(calendar: calendar)
         let panel = NSSavePanel()
         panel.title = "Export timesheet"
         panel.nameFieldStringValue = "focusguard-timesheet-\(model.interval.start.formatted(.iso8601.year().month().day())).csv"

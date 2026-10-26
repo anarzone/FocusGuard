@@ -446,6 +446,49 @@ final class WorkLogTests: XCTestCase {
         XCTAssertEqual(sheet.days.count, 6)
     }
 
+    /// The runner's own zone isn't the calendar's: CSV dates follow the calendar.
+    func testCSVDatesFollowTheCalendarsTimeZone() {
+        var far = Calendar(identifier: .gregorian)
+        far.timeZone = TimeZone(identifier: "Pacific/Kiritimati")!   // UTC+14, never the runner's
+        far.firstWeekday = 2
+        let monday = far.date(from: DateComponents(year: 2026, month: 10, day: 19))!
+        let sheet = Timesheet(days: (0..<5).map { far.date(byAdding: .day, value: $0, to: monday)! },
+                              rows: [.init(project: "X", seconds: [3600, 0, 0, 0, 0])])
+        XCTAssertEqual(sheet.csv(calendar: far).split(separator: "\n").first,
+                       "Project,2026-10-19,2026-10-20,2026-10-21,2026-10-22,2026-10-23,Total")
+    }
+
+    /// A US week runs Sunday to Saturday; the timesheet still lists Monday to
+    /// Friday, plus a weekend day only when it has time on it.
+    func testASundayFirstWeekStillListsMondayToFriday() {
+        var us = Calendar(identifier: .gregorian)
+        us.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        us.firstWeekday = 1
+        let wednesday = us.date(from: DateComponents(year: 2026, month: 10, day: 21, hour: 12))!
+        let week = ReportPeriod.week.interval(offset: 0, now: wednesday, calendar: us)
+        XCTAssertEqual(us.component(.weekday, from: week.start), 1)   // starts on Sunday the 18th
+
+        func session(day: Int, project: String) -> WorkLogBuilder.Input {
+            let start = us.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 10))!
+            let end = start.addingTimeInterval(3600)
+            let facts = DebriefFacts.make(goal: "Work", start: start, end: end, events: [
+                DebriefFacts.Event(start: start, end: end.addingTimeInterval(-1), bundleId: "x", appName: "Xcode",
+                                   title: nil, url: nil, classification: .focus),
+            ], isOptedOut: { _ in false })
+            return .init(id: UUID(), start: start, end: end, name: "S", goal: "Work", verdict: .done,
+                         project: project, stored: nil, facts: facts)
+        }
+        let weekdays = WorkLogBuilder.build((19...23).map { session(day: $0, project: "X") }, interval: week, calendar: us)
+        XCTAssertEqual(weekdays.timesheet.days.map { us.component(.weekday, from: $0) }, [2, 3, 4, 5, 6])
+        XCTAssertEqual(weekdays.timesheet.rows.first?.seconds, [3600, 3600, 3600, 3600, 3600])
+        XCTAssertEqual(weekdays.timesheet.csv(calendar: us).split(separator: "\n").first,
+                       "Project,2026-10-19,2026-10-20,2026-10-21,2026-10-22,2026-10-23,Total")
+
+        let withSunday = WorkLogBuilder.build([session(day: 18, project: "X"), session(day: 23, project: "X")],
+                                              interval: week, calendar: us)
+        XCTAssertEqual(withSunday.timesheet.days.map { us.component(.weekday, from: $0) }, [1, 2, 3, 4, 5, 6])
+    }
+
     func testTheStandupIsForTheNextWorkingDay() {
         let standup = model().standup
         XCTAssertEqual(standup.map { calendar.component(.weekday, from: $0.day) }, 2)   // Friday's is for Monday

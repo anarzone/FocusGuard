@@ -59,7 +59,8 @@ struct Timesheet: Equatable {
         var title: String { project ?? "No project" }
     }
 
-    /// Monday to Friday, plus a weekend day that has time on it.
+    /// Monday to Friday, plus a weekend day that has time on it, in order,
+    /// whichever day the calendar's week starts on.
     let days: [Date]
     let rows: [Row]
 
@@ -74,9 +75,12 @@ struct Timesheet: Equatable {
     }
 
     /// Hours as CSV: a header of dates, a row per project, then the totals.
+    /// Dates are written in the calendar's own time zone, the one `days`
+    /// were cut in.
     func csv(calendar: Calendar = .current) -> String {
         let format = DateFormatter()
         format.calendar = calendar
+        format.timeZone = calendar.timeZone
         format.locale = Locale(identifier: "en_US_POSIX")
         format.dateFormat = "yyyy-MM-dd"
         func number(_ seconds: TimeInterval) -> String { String(format: "%.2f", seconds / 3600) }
