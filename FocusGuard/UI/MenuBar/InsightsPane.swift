@@ -113,7 +113,7 @@ struct InsightsPane: View {
         VStack(alignment: .leading, spacing: 12) {
             InsightsWeekView(week: week, weekOffset: $weekOffset, canGoBack: canGoBack, now: now)
 
-            if FeatureFlags.proAI, weekOffset >= -1 {
+            if FeatureFlags.coach, weekOffset >= -1 {
                 if entitlements.isUnlocked(.coach) {
                     ProRow(title: "Weekly coach", detail: "What worked, and one thing to try", systemImage: "sparkles") {
                         openPane(.coach)
