@@ -33,8 +33,9 @@ struct ReportsPage: View {
 
     var body: some View {
         WindowScroll {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 12) {
-                header
                 // The same line under the header for a week and a month, so
                 // switching between them doesn't move the page.
                 let words = ReportWords.goalHeadline(model.goal, period: model.period, weekendsCount: weekendsCount,
@@ -48,9 +49,6 @@ struct ReportsPage: View {
                 default: week
                 }
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 24)
-            .padding(.bottom, 20)
         }
         .task(id: reloadKey) {
             await reload()

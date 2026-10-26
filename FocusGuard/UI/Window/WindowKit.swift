@@ -612,16 +612,36 @@ struct WindowSplitRow: Layout {
 
 /// A page that fills the window when there's room and scrolls when there
 /// isn't: flexible rows stretch to the bottom edge, down to their minimum.
-struct WindowScroll<Content: View>: View {
+/// A page that scrolls under its header: the title and its controls stay
+/// put, so scrolling never slides them under the window's top edge. Both
+/// get the page's margins here.
+struct WindowScroll<Header: View, Content: View>: View {
+    @ViewBuilder var header: () -> Header
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        GeometryReader { geo in
-            ScrollView(.vertical) {
-                content()
-                    .frame(minHeight: geo.size.height, alignment: .top)
+        VStack(spacing: 0) {
+            header()
+                .padding(.leading, 16)
+                .padding(.trailing, 24)
+            GeometryReader { geo in
+                ScrollView(.vertical) {
+                    content()
+                        .padding(.top, 12)
+                        .padding(.leading, 16)
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 20)
+                        .frame(minHeight: geo.size.height, alignment: .top)
+                }
+                .scrollIndicators(.automatic)
+                // Cards fade out where they pass under the header.
+                .mask {
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 12)
+                        Color.black
+                    }
+                }
             }
-            .scrollIndicators(.automatic)
         }
     }
 }
