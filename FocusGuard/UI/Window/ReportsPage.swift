@@ -15,6 +15,10 @@ struct ReportsPage: View {
     init(appState: AppState, period: ReportPeriod = .week) {
         self._appState = Bindable(wrappedValue: appState)
         self._period = State(initialValue: period)
+        // Open on the report as last loaded; the fresh copy follows.
+        if let cached = appState.windowPages.reports[WindowPageCache.reportsKey(period, 0)] {
+            self._model = State(initialValue: cached)
+        }
     }
 
     private var reloadKey: String { "\(period.rawValue)-\(offset)-\(entitlements.plan.unlocksPro(at: .now))" }
@@ -42,16 +46,28 @@ struct ReportsPage: View {
             .padding(.bottom, 20)
         }
         .task(id: reloadKey) {
-            while !Task.isCancelled {
-                reload()
+            await reload()
+            // Only the current week or month still changes.
+            while offset == 0, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
+                if !Task.isCancelled { await reload() }
             }
         }
     }
 
-    private func reload() {
-        model = ReportsModelBuilder.build(period: period, offset: offset, context: appState.container.mainContext,
-                                          historyStart: entitlements.historyStart(), weekendsCount: weekendsCount)
+    /// Builds the report off the main thread (a month takes about half a
+    /// second); a period stepped to shows its last copy, if any, until then.
+    private func reload() async {
+        let key = WindowPageCache.reportsKey(period, offset)
+        if let cached = appState.windowPages.reports[key], cached.data.interval != model.data.interval {
+            model = cached
+        }
+        let fresh = await appState.stats.reports(period: period, offset: offset, now: .now,
+                                                 historyStart: entitlements.historyStart(),
+                                                 weekendsCount: weekendsCount)
+        guard !Task.isCancelled, key == WindowPageCache.reportsKey(period, offset) else { return }
+        model = fresh
+        appState.windowPages.reports[key] = fresh
     }
 
     // MARK: - Header

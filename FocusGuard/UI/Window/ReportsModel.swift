@@ -81,16 +81,19 @@ struct GoalDays: Equatable {
     let misses: [Date]
 }
 
-@MainActor
 enum ReportsModelBuilder {
     /// Hours the hour charts cover.
     static let hours = 8...19
 
+    /// `breakdown` gives the totals between two times, for the period before
+    /// and the trend; `StatsStore` passes one that reads finished days from
+    /// its kept totals.
     static func build(period: ReportPeriod, offset: Int, context: ModelContext, now: Date = .now,
                       calendar: Calendar = .current, historyStart: Date? = nil,
-                      weekendsCount: Bool = false, goal: TimeInterval = FocusGoal.dailySeconds) -> ReportsModel {
+                      weekendsCount: Bool = false, goal: TimeInterval = FocusGoal.dailySeconds,
+                      breakdown: ((Date, Date) -> BreakdownSnapshot)? = nil) -> ReportsModel {
         let data = ReportDataBuilder.build(period: period, offset: offset, context: context, now: now,
-                                           calendar: calendar, notBefore: historyStart)
+                                           calendar: calendar, notBefore: historyStart, breakdown: breakdown)
         let interval = data.interval
         let start = max(interval.start, historyStart ?? .distantPast)
         let until = min(interval.end, now)
@@ -146,9 +149,13 @@ enum ReportsModelBuilder {
         case .week:
             let heatStart = max(calendar.date(byAdding: .day, value: -21, to: interval.start) ?? interval.start,
                                 historyStart ?? .distantPast)
-            heat = focusHeat(context: context, from: heatStart, to: until, calendar: calendar)
+            // The week itself is already in `data.heat`; read only the three before it.
+            let earlier = focusHeat(context: context, from: heatStart, to: max(heatStart, start), calendar: calendar)
+            heat = zip(earlier, data.heat).map { zip($0, $1).map(+) }
             heatWeeks = max(1, Int((until.timeIntervalSince(heatStart) / (7 * 86_400)).rounded(.up)))
-            trend = weekTrend(reports: reports, endingWith: interval, weeks: 8, now: now,
+            let totals = breakdown ?? reports.breakdown
+            trend = weekTrend(focus: { totals($0, $1).focus },
+                              endingWith: interval, weeks: 8, now: now,
                               calendar: calendar, historyStart: historyStart)
             bestNote = bestWeekNote(trend)
         case .month:
@@ -198,17 +205,17 @@ enum ReportsModelBuilder {
         guard to > from else { return heat }
         let focusRaw = Classification.focus.rawValue
         let descriptor = FetchDescriptor<ActivityEvent>(
-            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to && $0.classificationRaw == focusRaw }
+            predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to && $0.classificationRaw == focusRaw },
+            sortBy: [SortDescriptor(\.startedAt)]
         )
+        var hours = HourCursor(calendar: calendar)
         for event in Persistence.fetch(context, descriptor) {
             var cursor = max(event.startedAt, from)
             let end = min(event.endedAt.addingTimeInterval(1), to)
             while cursor < end {
-                let hourStart = calendar.dateInterval(of: .hour, for: cursor)?.start ?? cursor
-                let slice = min(hourStart.addingTimeInterval(3600), end).timeIntervalSince(cursor)
-                let row = (calendar.component(.weekday, from: cursor) - calendar.firstWeekday + 7) % 7
-                heat[row][calendar.component(.hour, from: cursor)] += slice
-                cursor = hourStart.addingTimeInterval(3600)
+                let slot = hours.slot(at: cursor)
+                heat[slot.row][slot.hour] += min(slot.end, end).timeIntervalSince(cursor)
+                cursor = slot.end
             }
         }
         return heat
@@ -216,14 +223,14 @@ enum ReportsModelBuilder {
 
     /// Focus per week for `weeks` weeks ending with `interval`. Weeks the
     /// plan's history doesn't reach are left out.
-    static func weekTrend(reports: ReportBuilder, endingWith interval: DateInterval, weeks: Int, now: Date,
-                          calendar: Calendar, historyStart: Date?) -> [WeekTotal] {
+    static func weekTrend(focus: (Date, Date) -> TimeInterval, endingWith interval: DateInterval, weeks: Int,
+                          now: Date, calendar: Calendar, historyStart: Date?) -> [WeekTotal] {
         (0..<weeks).reversed().compactMap { back -> WeekTotal? in
             guard let start = calendar.date(byAdding: .weekOfYear, value: -back, to: interval.start),
                   let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start) else { return nil }
             if let historyStart, end <= historyStart { return nil }
             let from = max(start, historyStart ?? .distantPast)
-            return WeekTotal(start: start, focus: reports.breakdown(from: from, to: min(end, now)).focus, isCurrent: back == 0)
+            return WeekTotal(start: start, focus: focus(from, min(end, now)), isCurrent: back == 0)
         }
     }
 

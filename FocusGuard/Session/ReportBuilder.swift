@@ -20,7 +20,12 @@ struct ReportBuilder {
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
         )
-        let events = (try? context.fetch(descriptor)) ?? []
+        return Self.breakdown((try? context.fetch(descriptor)) ?? [], from: from, to: to)
+    }
+
+    /// Totals of `[from, to)` from events already read; time outside it is
+    /// left out, so a wider read works too.
+    static func breakdown(_ events: [ActivityEvent], from: Date, to: Date) -> BreakdownSnapshot {
         var f: TimeInterval = 0, n: TimeInterval = 0, d: TimeInterval = 0
         for e in events {
             let start = max(e.startedAt, from)
@@ -144,8 +149,11 @@ struct ReportBuilder {
         let descriptor = FetchDescriptor<ActivityEvent>(
             predicate: #Predicate { $0.endedAt >= from && $0.startedAt < to }
         )
-        let events = (try? context.fetch(descriptor)) ?? []
+        return Self.topApps((try? context.fetch(descriptor)) ?? [], from: from, to: to, limit: limit)
+    }
 
+    /// Top apps in `[from, to)` from events already read; a wider read works too.
+    static func topApps(_ events: [ActivityEvent], from: Date, to: Date, limit: Int = 10) -> [AppUsageEntry] {
         struct Group {
             var kind: AppGlyphKind
             var name: String
@@ -158,6 +166,7 @@ struct ReportBuilder {
             var hosts: [String: ClassificationTally]
         }
         var groups: [String: Group] = [:]
+        var hosts = HostCache()
 
         for e in events {
             let key = e.bundleIdentifier
@@ -165,9 +174,7 @@ struct ReportBuilder {
             if dur <= 0 { continue }
 
             let isBrowser = BrowserTabReader.isBrowser(bundleIdentifier: e.bundleIdentifier)
-            let host = isBrowser
-                ? e.url.flatMap { URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") }
-                : nil
+            let host = isBrowser ? e.url.flatMap { hosts.host(of: $0) } : nil
 
             let classification = e.classification ?? .neutral
             var group = groups[key] ?? Group(
@@ -214,7 +221,14 @@ struct ReportBuilder {
                 $0.endedAt >= from && $0.startedAt < to && $0.classificationRaw == dRaw
             }
         )
-        let events = (try? context.fetch(descriptor)) ?? []
+        return Self.topDistractions((try? context.fetch(descriptor)) ?? [], from: from, to: to, limit: limit)
+    }
+
+    /// Top distractions in `[from, to)` from events already read, of any
+    /// kind; a wider read works too.
+    static func topDistractions(_ all: [ActivityEvent], from: Date, to: Date, limit: Int = 5) -> [DistractionEntry] {
+        let dRaw = Classification.distraction.rawValue
+        let events = all.filter { $0.endedAt >= from && $0.startedAt < to && $0.classificationRaw == dRaw }
 
         // Group by host (for browser distractions) or bundle id otherwise.
         struct Group {
@@ -226,9 +240,10 @@ struct ReportBuilder {
             var bundleId: String
         }
         var groups: [String: Group] = [:]
+        var hosts = HostCache()
 
         for e in events {
-            let host = e.url.flatMap { URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") }
+            let host = e.url.flatMap { hosts.host(of: $0) }
             let key = host ?? e.bundleIdentifier
             let dur = max(0, min(e.endedAt, to).timeIntervalSince(max(e.startedAt, from)))
 
@@ -263,6 +278,20 @@ struct ReportBuilder {
                     bundleId: g.bundleId
                 )
             }
+    }
+}
+
+/// A URL's host without "www.", parsed once per distinct URL: a week has
+/// thousands of browser events but far fewer pages, and parsing is the
+/// slow part of grouping them.
+struct HostCache {
+    private var hosts: [String: String?] = [:]
+
+    mutating func host(of url: String) -> String? {
+        if let known = hosts[url] { return known }
+        let host = URL(string: url)?.host?.replacingOccurrences(of: "www.", with: "")
+        hosts[url] = host
+        return host
     }
 }
 

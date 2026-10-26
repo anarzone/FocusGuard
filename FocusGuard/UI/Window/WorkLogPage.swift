@@ -34,7 +34,15 @@ private struct WorkLogView: View {
     var calendar: Calendar = .current
 
     @State private var offset = 0
-    @State private var model = WorkLogModel.empty(ReportPeriod.week.interval(offset: 0))
+    @State private var model: WorkLogModel
+
+    init(appState: AppState, calendar: Calendar = .current) {
+        self._appState = Bindable(wrappedValue: appState)
+        self.calendar = calendar
+        // Open on the week as last loaded; the fresh copy follows.
+        let interval = ReportPeriod.week.interval(offset: 0, calendar: calendar)
+        self._model = State(initialValue: appState.windowPages.workLog[interval.start] ?? .empty(interval))
+    }
 
     var body: some View {
         WorkLogContent(model: model, offset: $offset, canWrite: appState.debriefs.canWrite, calendar: calendar) { entry, verdict in
@@ -53,9 +61,10 @@ private struct WorkLogView: View {
     }
 
     private func reload() {
-        model = WorkLogBuilder.load(interval: ReportPeriod.week.interval(offset: offset, calendar: calendar),
-                                    context: appState.container.mainContext,
+        let interval = ReportPeriod.week.interval(offset: offset, calendar: calendar)
+        model = WorkLogBuilder.load(interval: interval, context: appState.container.mainContext,
                                     isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
+        appState.windowPages.workLog[interval.start] = model
     }
 }
 

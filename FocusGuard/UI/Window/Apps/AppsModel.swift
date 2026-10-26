@@ -108,7 +108,17 @@ enum AppsModelBuilder {
     /// `smart` adds smart categories' reasons and guesses.
     static func items(context: ModelContext, classifier: Classifier, from start: Date, to end: Date,
                       smart: SmartCategories? = nil) -> [AppsItem] {
-        MenuInsightsBuilder.usageRows(context: context, from: start, to: end, limit: 300).map { row in
+        items(rows: MenuInsightsBuilder.usageRows(context: context, from: start, to: end, limit: usageLimit),
+              classifier: classifier, smart: smart)
+    }
+
+    /// How many apps and sites the page lists.
+    static let usageLimit = 300
+
+    /// The rows read from the store (`StatsStore.usageRows`, off the main
+    /// thread), each with the rule behind its category.
+    static func items(rows: [UsageRow], classifier: Classifier, smart: SmartCategories? = nil) -> [AppsItem] {
+        rows.map { row in
             let rule = classifier.matchingRule(bundleId: row.host == nil ? row.bundleId : "",
                                                windowTitle: nil,
                                                url: row.host.map { "https://\($0)" })

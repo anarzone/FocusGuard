@@ -77,6 +77,7 @@ struct MainWindowView: View {
     @State private var sheet: WindowSheet?
     @State private var appsMode: AppsMode = .used
     @State private var settingsPane: SettingsPane = .general
+    @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
 
     init(appState: AppState, initialTab: MainTab = .home) {
         self._appState = Bindable(wrappedValue: appState)
@@ -102,6 +103,7 @@ struct MainWindowView: View {
         .onReceive(NotificationCenter.default.publisher(for: .selectMainTab)) { note in
             if let requested = note.object as? MainTab { tab = requested }
         }
+        .task { await appState.windowPages.warm(appState, weekendsCount: weekendsCount) }
         .onChange(of: tab) { if tab != .apps && appsMode == .sort { appsMode = .used } }
         .onReceive(NotificationCenter.default.publisher(for: .selectSettingsPane)) { note in
             if let pane = note.object as? SettingsPane { settingsPane = pane }

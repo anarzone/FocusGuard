@@ -114,7 +114,53 @@ actor StatsStore {
     func appUsage(from: Date, to: Date, limit: Int) -> [UsageRow] {
         read { MenuInsightsBuilder.appUsage(context: $0, from: from, to: to, limit: limit) }
     }
+
+    // MARK: - Window pages
+
+    func todayPage(day: Date, now: Date) -> TodayPageData {
+        read { context in
+            TodayPageData(model: TodayModelBuilder.build(day: day, context: context, now: now),
+                          hasSessions: Persistence.fetchCount(context, FetchDescriptor<Session>()) > 0,
+                          streak: streak(context, now: now))
+        }
+    }
+
+    /// A week or month report: reads of up to two months of events, the
+    /// heaviest thing the window shows. The period before and the 8-week
+    /// trend read finished days from `pastDays`.
+    func reports(period: ReportPeriod, offset: Int, now: Date, historyStart: Date?,
+                 weekendsCount: Bool) -> ReportsModel {
+        read { context in
+            ReportsModelBuilder.build(period: period, offset: offset, context: context, now: now,
+                                      historyStart: historyStart, weekendsCount: weekendsCount,
+                                      breakdown: { self.breakdown(context, from: $0, to: $1, now: now) })
+        }
+    }
+
+    /// Totals of `[from, to)`: whole finished days from `pastDays`, the rest
+    /// read from the store.
+    private func breakdown(_ context: ModelContext, from: Date, to: Date, now: Date,
+                           calendar: Calendar = .current) -> BreakdownSnapshot {
+        let reports = ReportBuilder(context: context)
+        let days = min(calendar.startOfDay(for: to), calendar.startOfDay(for: now))
+        // Only whole days can come from the kept totals.
+        guard calendar.startOfDay(for: from) == from, days > from else { return reports.breakdown(from: from, to: to) }
+        var focus: TimeInterval = 0, neutral: TimeInterval = 0, distraction: TimeInterval = 0
+        for day in pastBreakdowns(context, from: from, before: days, calendar: calendar) {
+            focus += day.focus
+            neutral += day.neutral
+            distraction += day.distraction
+        }
+        if to > days {
+            let rest = reports.breakdown(from: days, to: to)
+            focus += rest.focus
+            neutral += rest.neutral
+            distraction += rest.distraction
+        }
+        return BreakdownSnapshot(focus: focus, neutral: neutral, distraction: distraction)
+    }
 }
+
 
 /// What the menu shows from the store, kept on `AppState` and refreshed in
 /// the background, so the menu only ever reads it.

@@ -332,8 +332,17 @@ enum MenuInsightsBuilder {
     /// Apps and browser sites by time. Browsers are split into their sites so
     /// "Chrome" doesn't hide youtube.com.
     static func usageRows(context: ModelContext, from: Date, to: Date, limit: Int) -> [UsageRow] {
+        usageRows(ReportBuilder(context: context).topApps(from: from, to: to, limit: 40), limit: limit)
+    }
+
+    /// The same from events already read; a wider read works too.
+    static func usageRows(events: [ActivityEvent], from: Date, to: Date, limit: Int) -> [UsageRow] {
+        usageRows(ReportBuilder.topApps(events, from: from, to: to, limit: 40), limit: limit)
+    }
+
+    private static func usageRows(_ apps: [AppUsageEntry], limit: Int) -> [UsageRow] {
         var rows: [UsageRow] = []
-        for app in ReportBuilder(context: context).topApps(from: from, to: to, limit: 40) {
+        for app in apps {
             if app.tabs.isEmpty {
                 rows.append(UsageRow(id: app.bundleId, name: app.name, bundleId: app.bundleId, host: nil,
                                      seconds: app.seconds, classification: app.classification))

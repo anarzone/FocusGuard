@@ -19,6 +19,17 @@ struct TodayPage: View {
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
 
+    init(appState: AppState, onNavigate: @escaping (MainTab) -> Void) {
+        self._appState = Bindable(wrappedValue: appState)
+        self.onNavigate = onNavigate
+        // Open on the day as last loaded; the fresh copy follows.
+        if let cached = appState.windowPages.today[Calendar.current.startOfDay(for: .now)] {
+            self._model = State(initialValue: cached.model)
+            self._isFirstDay = State(initialValue: !cached.hasSessions)
+            self._streak = State(initialValue: cached.streak)
+        }
+    }
+
     private var isToday: Bool { dayOffset == 0 }
     private var showFirstDay: Bool { isToday && isFirstDay && appState.sessionManager.currentSession == nil }
 
@@ -67,7 +78,7 @@ struct TodayPage: View {
         }
         .task(id: dayOffset) {
             while !Task.isCancelled {
-                reload()
+                await reload()
                 try? await Task.sleep(for: .seconds(10))
             }
         }
@@ -78,15 +89,27 @@ struct TodayPage: View {
                 now = date
             }
         }
-        .onChange(of: appState.sessionManager.currentSession?.id) { reload() }
+        .onChange(of: appState.sessionManager.currentSession?.id) { Task { await reload() } }
     }
 
-    private func reload() {
-        now = .now
-        let context = appState.container.mainContext
-        model = TodayModelBuilder.build(day: day, context: context, now: now)
-        isFirstDay = Persistence.fetchCount(context, FetchDescriptor<Session>()) == 0
-        streak = appState.currentStreak
+    /// Builds the day off the main thread; a day stepped to shows its last
+    /// copy, if any, until then.
+    private func reload() async {
+        let now = Date.now
+        let day = Calendar.current.date(byAdding: .day, value: -dayOffset, to: now) ?? now
+        let key = Calendar.current.startOfDay(for: day)
+        if model.day != key, let cached = appState.windowPages.today[key] { show(cached) }
+        let fresh = await appState.stats.todayPage(day: day, now: now)
+        guard !Task.isCancelled, key == Calendar.current.startOfDay(for: self.day) else { return }
+        self.now = now
+        show(fresh)
+        appState.windowPages.today[key] = fresh
+    }
+
+    private func show(_ data: TodayPageData) {
+        model = data.model
+        isFirstDay = !data.hasSessions
+        streak = data.streak
     }
 
     // MARK: - Header
@@ -247,7 +270,7 @@ struct TodayPage: View {
     // MARK: - Sessions
 
     private var sessionsCard: some View {
-        SessionsCard(appState: appState, sessions: model.sessions, isToday: isToday, onChange: reload)
+        SessionsCard(appState: appState, sessions: model.sessions, isToday: isToday) { Task { await reload() } }
     }
 
     // MARK: - Apps
@@ -269,7 +292,7 @@ struct TodayPage: View {
                             ForEach(model.topApps) { row in
                                 TopAppRow(row: row, maxSeconds: maxSeconds) { c in
                                     appState.setCategory(c, for: row)
-                                    reload()
+                                    Task { await reload() }
                                 }
                             }
                         }

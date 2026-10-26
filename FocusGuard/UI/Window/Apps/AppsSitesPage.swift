@@ -15,11 +15,23 @@ struct AppsSitesPage: View {
     @State private var selection: String?
     @State private var newRule: NewRuleDraft?
 
+    init(appState: AppState, mode: Binding<AppsMode>) {
+        self._appState = Bindable(wrappedValue: appState)
+        self._mode = mode
+        // Open on the apps as last loaded; the fresh copy follows.
+        if let cached = appState.windowPages.apps[.week] {
+            self._items = State(initialValue: cached)
+            self._selection = State(initialValue: cached.first?.id)
+        }
+    }
+
     private var context: ModelContext { appState.container.mainContext }
     private var entitlements: Entitlements { .shared }
     /// Smart categories, while they're built and unlocked.
-    private var smart: SmartCategories? {
-        FeatureFlags.smartCategories && entitlements.isUnlocked(.smartCategories) ? appState.smartCategories : nil
+    private var smart: SmartCategories? { Self.smart(appState) }
+
+    static func smart(_ appState: AppState) -> SmartCategories? {
+        FeatureFlags.smartCategories && Entitlements.shared.isUnlocked(.smartCategories) ? appState.smartCategories : nil
     }
 
     var body: some View {
@@ -38,7 +50,7 @@ struct AppsSitesPage: View {
                 .padding(.bottom, 20)
             }
         }
-        .task(id: range) { reload() }
+        .task(id: range) { await load() }
         .onReceive(NotificationCenter.default.publisher(for: .activityTotalsChanged)) { _ in reload() }
         .sheet(item: $newRule) { draft in
             NewRuleSheet(appState: appState, draft: draft) { reload() }
@@ -46,9 +58,25 @@ struct AppsSitesPage: View {
     }
 
     private func reload() {
+        Task { await load() }
+    }
+
+    /// Reads usage off the main thread (a month of it takes a few hundred
+    /// milliseconds); a range switched to shows its last copy, if any, until then.
+    private func load() async {
+        let range = range
+        if let cached = appState.windowPages.apps[range] { show(cached) }
         let now = Date.now
-        items = AppsModelBuilder.items(context: context, classifier: appState.classifier,
-                                       from: range.start(now: now), to: now, smart: smart)
+        let rows = await appState.stats.usageRows(from: range.start(now: now), to: now,
+                                                  limit: AppsModelBuilder.usageLimit)
+        guard !Task.isCancelled, range == self.range else { return }
+        let fresh = AppsModelBuilder.items(rows: rows, classifier: appState.classifier, smart: smart)
+        appState.windowPages.apps[range] = fresh
+        show(fresh)
+    }
+
+    private func show(_ items: [AppsItem]) {
+        self.items = items
         let descriptor = FetchDescriptor<AppRule>(sortBy: [SortDescriptor(\.priority, order: .reverse)])
         rules = Persistence.fetch(context, descriptor)
         if selection == nil || !items.contains(where: { $0.id == selection }) {
