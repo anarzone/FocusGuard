@@ -28,7 +28,7 @@ struct MenuAppsPane: View {
         VStack(alignment: .leading, spacing: 12) {
             PaneTitle(title: "Apps & sites", close: close) { EmptyView() }
 
-            if FeatureFlags.proAI {
+            if FeatureFlags.smartCategories {
                 modeTabs
             }
 

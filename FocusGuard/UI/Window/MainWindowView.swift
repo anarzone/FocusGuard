@@ -185,7 +185,7 @@ private struct WindowSidebar: View {
                     .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if item == .workLog && !(FeatureFlags.proAI && entitlements.isUnlocked(.workLog)) {
+                if item == .workLog && !(FeatureFlags.debrief && entitlements.isUnlocked(.workLog)) {
                     ProBadge()
                 }
             }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Work log, a Pro feature built on session goals and debriefs. Until
-/// those ship (`FeatureFlags.proAI`), everyone sees what it will be: a
+/// those ship (`FeatureFlags.debrief`), everyone sees what it will be: a
 /// faded preview with a card about it.
 struct WorkLogPage: View {
     @Bindable var appState: AppState
@@ -35,7 +35,7 @@ struct WorkLogPage: View {
                     .frame(width: 40, height: 40)
                     .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.focusTint))
                 ProBadge()
-                if !FeatureFlags.proAI { ComingLaterBadge() }
+                if !FeatureFlags.debrief { ComingLaterBadge() }
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text("Your week, written up for you")
@@ -55,7 +55,7 @@ struct WorkLogPage: View {
                 point("Timesheet", "Focused hours per project and day, exported as CSV.")
             }
             VStack(spacing: 8) {
-                if FeatureFlags.proAI && entitlements.canStartTrial {
+                if FeatureFlags.debrief && entitlements.canStartTrial {
                     Button("Try Pro free for \(Plan.trialDays) days") {
                         entitlements.startTrialIfNeeded(for: .workLog)
                     }
