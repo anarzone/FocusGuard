@@ -208,7 +208,7 @@ struct UpgradeFeature {
     let symbol: String
     var comingLater = false
     var ai = false
-    /// An AI feature shows once its switch is on.
+    /// Its own `FeatureFlags` switch, for AI features that ship one by one.
     var shipped = true
 
     static let all: [UpgradeFeature] = [

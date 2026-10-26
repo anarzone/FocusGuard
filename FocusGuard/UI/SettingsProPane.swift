@@ -205,7 +205,7 @@ enum PlanComparison {
         let free: Cell
         let pro: Cell
         var ai = false
-        /// An AI row shows once its feature's switch is on.
+        /// Its own `FeatureFlags` switch, for AI features that ship one by one.
         var shipped = true
     }
 

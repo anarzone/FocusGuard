@@ -239,7 +239,7 @@ final class WindowModelTests: XCTestCase {
                        "1h 05m less than September")
     }
 
-    func testUpgradeSheetShowsEachAIFeatureOnceItShips() {
+    func testUpgradeSheetHidesAIUntilItShips() {
         let shown = Set(UpgradeFeature.shown.map(\.title))
         XCTAssertEqual(shown.contains("Smart categories"), FeatureFlags.smartCategories)
         XCTAssertEqual(shown.contains("Goals and debriefs"), FeatureFlags.debrief)

@@ -57,11 +57,7 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
             }
             SettingsNote(systemImage: "lock",
-                         text: FeatureFlags.debrief
-                            ? "Smart categories, highlights and the work log are all worked out on this Mac."
-                            : FeatureFlags.smartCategories
-                                ? "Smart categories, highlights and session names are all worked out on this Mac."
-                                : "Highlights and session names are worked out on this Mac.")
+                         text: PrivacyNote.onThisMac)
             SettingsSection("History") {
                 SettingsRow(title: "Keep history for",
                             detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {
@@ -385,5 +381,22 @@ enum PrivacyStatement {
     static var short: String {
         let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify if you use it."
         return AISettings.isAvailable ? base + " AI tips, if you turn them on, send a short summary." : base
+    }
+}
+
+/// What's worked out on this Mac, naming only the Pro AI that has shipped.
+enum PrivacyNote {
+    static var onThisMac: String {
+        make(smartCategories: FeatureFlags.smartCategories, debrief: FeatureFlags.debrief, coach: FeatureFlags.coach)
+    }
+
+    static func make(smartCategories: Bool, debrief: Bool, coach: Bool) -> String {
+        var parts: [String] = []
+        if smartCategories { parts.append("smart categories") }
+        parts += ["highlights", "session names"]
+        if debrief { parts += ["debriefs", "the work log"] }
+        if coach { parts.append("the weekly coach") }
+        let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + " and " + (parts.last ?? "") : parts.joined()
+        return list.prefix(1).uppercased() + list.dropFirst() + " are worked out on this Mac."
     }
 }

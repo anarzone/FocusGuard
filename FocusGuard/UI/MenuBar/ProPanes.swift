@@ -1,9 +1,9 @@
 import SwiftUI
 
-// Pro AI in the menu: the session goal, the debrief after a session and the
-// weekly coach. Everything here shows only while `FeatureFlags.proAI` is on,
-// and nothing fills the data yet, so the views fall back to an empty state
-// until the AI behind them exists. Smart categories live in AppsSortPane.
+// Pro AI in the menu: the session goal, the debrief after a session, the
+// weekly coach and smart category suggestions. Everything here shows only
+// while `FeatureFlags.proAI` is on, and nothing fills the data yet, so the
+// views fall back to an empty state until the AI behind them exists.
 
 // MARK: - Data
 
@@ -42,6 +42,17 @@ struct WeeklyCoachNote: Equatable {
     let headline: String
     let points: [String]
     let tryThis: String?
+}
+
+/// A category the smart suggestions would give an app or site.
+struct SmartSuggestion: Equatable, Identifiable {
+    var id: String { host ?? bundleId }
+    let name: String
+    let bundleId: String
+    let host: String?
+    let suggested: Classification
+    /// Why, in a line: "Open in 9 of your sessions, next to Xcode."
+    let reason: String
 }
 
 /// The goal typed in before a session, for the debrief to check.
@@ -289,6 +300,47 @@ struct CoachPane: View {
                 Text("Worked out on this Mac").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                 Spacer()
                 Button("See the week ›", action: seeWeek).buttonStyle(.textLink)
+            }
+        }
+    }
+}
+
+// MARK: - Smart suggestions
+
+/// The Apps & sites pane's second tab: categories worked out from how each
+/// app is used. Nothing changes until it's accepted.
+struct SmartSuggestionsView: View {
+    var suggestions: [SmartSuggestion] = []
+    var entitlements: Entitlements = .shared
+    var onAccept: (SmartSuggestion) -> Void = { _ in }
+
+    var body: some View {
+        if !entitlements.isUnlocked(.smartCategories) {
+            LockedProRow(feature: .smartCategories, title: "Smart suggestions",
+                         detail: "Categories worked out on this Mac from how you use each app. Nothing changes until you accept.",
+                         systemImage: "sparkles")
+        } else if suggestions.isEmpty {
+            emptyState("No suggestions yet", "New suggestions arrive after each week of use.")
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Worked out on this Mac from how you use each one. Nothing changes until you accept.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.secondaryText)
+                ForEach(suggestions) { suggestion in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            AppGlyph(kind: suggestion.host == nil ? AppGlyph.kind(forBundleId: suggestion.bundleId, name: suggestion.name) : .generic,
+                                     bundleId: suggestion.host == nil ? suggestion.bundleId : nil, host: suggestion.host, size: 22)
+                            Text(suggestion.name).font(.system(size: 13, weight: .semibold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            CategoryChip(classification: suggestion.suggested)
+                        }
+                        Text(suggestion.reason).font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                        Button("Make it \(categoryName(suggestion.suggested))") { onAccept(suggestion) }
+                            .buttonStyle(.capsule(.secondary, height: 24))
+                    }
+                    .paneCard()
+                }
             }
         }
     }
