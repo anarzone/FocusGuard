@@ -9,7 +9,7 @@ enum FeatureFlags {
     /// Smart category suggestions, with a reason for each.
     static let smartCategories = false
     /// The session goal, the debrief after a session and the work log.
-    static let debrief = false
+    static let debrief = true
     /// The weekly coach note and its experiment.
     static let coach = false
 

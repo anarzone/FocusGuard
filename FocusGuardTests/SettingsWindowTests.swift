@@ -53,8 +53,15 @@ final class SettingsWindowTests: XCTestCase {
     }
 
     func testProTableHidesAIUntilItShips() {
-        XCTAssertFalse(FeatureFlags.proAI)
-        XCTAssertFalse(PlanComparison.rows.contains { $0.ai })
+        let names = Set(PlanComparison.rows.map(\.name))
+        XCTAssertEqual(names.contains("Smart categories, YouTube per video"), FeatureFlags.smartCategories)
+        XCTAssertEqual(names.contains("Session goals, debriefs and work log"), FeatureFlags.debrief)
+        XCTAssertEqual(names.contains("Standup draft and timesheet"), FeatureFlags.debrief)
+        XCTAssertEqual(names.contains("Weekly coach"), FeatureFlags.coach)
+        XCTAssertEqual(PrivacyNote.make(smartCategories: false, debrief: false, coach: false),
+                       "Highlights and session names are worked out on this Mac.")
+        XCTAssertEqual(PrivacyNote.make(smartCategories: true, debrief: true, coach: false),
+                       "Smart categories, highlights, session names, debriefs and the work log are worked out on this Mac.")
         XCTAssertEqual(PlanComparison.rows.first { $0.name == "Daily site limits" }?.free, .text("1"))
         XCTAssertEqual(PlanComparison.rows.first { $0.name == "Reports and highlights" }?.free, .text("30 days"))
     }
