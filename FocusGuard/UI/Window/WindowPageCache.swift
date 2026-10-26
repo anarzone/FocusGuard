@@ -16,20 +16,30 @@ final class WindowPageCache {
     static func reportsKey(_ period: ReportPeriod, _ offset: Int) -> String { "\(period.rawValue)-\(offset)" }
 
     /// Loads the slow pages, Reports and Apps & Sites, in the background
-    /// when the window opens: even the first switch to them then shows them
-    /// at once. The others load in a few milliseconds when opened.
+    /// when the window opens, what each opens on first: even the first
+    /// switch to them, or to Month, then shows at once. The others load in
+    /// a few milliseconds when opened.
     func warm(_ appState: AppState, weekendsCount: Bool) async {
-        let stats = appState.stats, now = Date.now
-        if reports[Self.reportsKey(.week, 0)] == nil {
-            reports[Self.reportsKey(.week, 0)] = await stats.reports(
-                period: .week, offset: 0, now: now, historyStart: Entitlements.shared.historyStart(),
-                weekendsCount: weekendsCount)
-        }
-        if apps[.week] == nil {
-            let rows = await stats.usageRows(from: AppsRange.week.start(now: now), to: now,
-                                             limit: AppsModelBuilder.usageLimit)
-            apps[.week] = AppsModelBuilder.items(rows: rows, classifier: appState.classifier,
-                                                 smart: AppsSitesPage.smart(appState))
-        }
+        // What each page opens on first, then the other choices.
+        await warmReport(.week, appState, weekendsCount: weekendsCount)
+        await warmApps(.week, appState)
+        await warmReport(.month, appState, weekendsCount: weekendsCount)
+        await warmApps(.today, appState)
+        await warmApps(.month, appState)
+    }
+
+    private func warmReport(_ period: ReportPeriod, _ appState: AppState, weekendsCount: Bool) async {
+        let key = Self.reportsKey(period, 0)
+        guard reports[key] == nil else { return }
+        reports[key] = await appState.stats.reports(period: period, offset: 0, now: .now,
+                                                    historyStart: Entitlements.shared.historyStart(),
+                                                    weekendsCount: weekendsCount)
+    }
+
+    private func warmApps(_ range: AppsRange, _ appState: AppState) async {
+        guard apps[range] == nil else { return }
+        let now = Date.now
+        let rows = await appState.stats.usageRows(from: range.start(now: now), to: now, limit: AppsModelBuilder.usageLimit)
+        apps[range] = AppsModelBuilder.items(rows: rows, classifier: appState.classifier, smart: AppsSitesPage.smart(appState))
     }
 }
