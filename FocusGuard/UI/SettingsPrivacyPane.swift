@@ -57,9 +57,11 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
             }
             SettingsNote(systemImage: "lock",
-                         text: FeatureFlags.proAI
+                         text: FeatureFlags.debrief
                             ? "Smart categories, highlights and the work log are all worked out on this Mac."
-                            : "Highlights and session names are worked out on this Mac.")
+                            : FeatureFlags.smartCategories
+                                ? "Smart categories, highlights and session names are all worked out on this Mac."
+                                : "Highlights and session names are worked out on this Mac.")
             SettingsSection("History") {
                 SettingsRow(title: "Keep history for",
                             detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {

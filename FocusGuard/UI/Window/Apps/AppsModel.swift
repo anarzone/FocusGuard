@@ -40,12 +40,27 @@ enum RuleSource: Equatable {
     case none
     /// One of FocusGuard's own rules.
     case builtIn
+    /// Smart categories (Pro) sorted it on their own.
+    case smart
     /// One the user made, here or by changing a category.
     case user
 
     init(_ rule: AppRule?) {
         guard let rule else { self = .none; return }
-        self = rule.priority >= 200 ? .user : .builtIn
+        if rule.priority >= 200 {
+            self = .user
+        } else {
+            self = rule.priority == SmartCategories.rulePriority ? .smart : .builtIn
+        }
+    }
+
+    /// "Made by" in the rules list.
+    var maker: String {
+        switch self {
+        case .none, .builtIn: return "Built-in"
+        case .smart:          return "Smart"
+        case .user:           return "You"
+        }
     }
 }
 
@@ -55,6 +70,11 @@ struct AppsItem: Identifiable, Equatable {
     let source: RuleSource
     /// The rule that decides it, if any, by kind; for the why line.
     let ruleKind: RuleMatchKind?
+    /// What smart categories said: sorted on their own, or a guess that
+    /// waits for the user.
+    var suggestion: SmartRecord?
+    /// youtube.com while each video is judged on its own.
+    var perVideo = false
 
     var id: String { row.id }
     var name: String { row.name }
@@ -62,27 +82,39 @@ struct AppsItem: Identifiable, Equatable {
     /// What a daily limit or rule targets: the host, or the bundle id.
     var target: String { row.host ?? row.bundleId }
 
-    /// "Site · built-in rule", "App · you sorted it".
+    /// "Site · built-in rule", "App · you sorted it", or smart categories'
+    /// reason.
     var why: String {
         let kind = isSite ? "Site" : "App"
+        if perVideo { return "\(kind) · smart categories decide each video" }
         switch source {
-        case .none:    return "\(kind) · no rule yet"
+        case .none:
+            if let suggestion { return "Looks like \(categoryName(suggestion.suggested).lowercased()) · \(suggestion.reason)" }
+            return "\(kind) · no rule yet"
         case .builtIn: return "\(kind) · built-in rule"
+        case .smart:   return suggestion?.reason ?? "\(kind) · sorted by smart categories"
         case .user:    return ruleKind == .titleRegex ? "\(kind) · your window-title rule" : "\(kind) · you sorted it"
         }
     }
+
+    /// The why line comes from smart categories (it gets a sparkle).
+    var isSmart: Bool { perVideo || source == .smart || (source == .none && suggestion != nil) }
 }
 
 @MainActor
 enum AppsModelBuilder {
     /// Apps and sites used since `start`, most time first, with where each
     /// one's category comes from.
-    static func items(context: ModelContext, classifier: Classifier, from start: Date, to end: Date) -> [AppsItem] {
+    /// `smart` adds smart categories' reasons and guesses.
+    static func items(context: ModelContext, classifier: Classifier, from start: Date, to end: Date,
+                      smart: SmartCategories? = nil) -> [AppsItem] {
         MenuInsightsBuilder.usageRows(context: context, from: start, to: end, limit: 300).map { row in
             let rule = classifier.matchingRule(bundleId: row.host == nil ? row.bundleId : "",
                                                windowTitle: nil,
                                                url: row.host.map { "https://\($0)" })
-            return AppsItem(row: row, source: RuleSource(rule), ruleKind: rule?.matchKind)
+            return AppsItem(row: row, source: RuleSource(rule), ruleKind: rule?.matchKind,
+                            suggestion: smart?.suggestion(for: row.id),
+                            perVideo: smart?.isPerVideoOn == true && row.host.map { Classifier.host($0, matches: YouTubeVideos.host) } == true)
         }
     }
 
@@ -92,9 +124,9 @@ enum AppsModelBuilder {
     }
 
     /// Items left to sort: the ones nobody has decided on yet, most used
-    /// first, then the built-in guesses.
+    /// first, then what smart categories sorted, then the built-in guesses.
     static func toSort(_ items: [AppsItem]) -> [AppsItem] {
-        items.filter { $0.source == .none } + items.filter { $0.source == .builtIn }
+        items.filter { $0.source == .none } + items.filter { $0.source == .smart } + items.filter { $0.source == .builtIn }
     }
 }
 

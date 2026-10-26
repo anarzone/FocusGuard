@@ -7,7 +7,7 @@ enum FeatureFlags {
     // isn't there.
 
     /// Smart category suggestions, with a reason for each.
-    static let smartCategories = false
+    static let smartCategories = true
     /// The session goal, the debrief after a session and the work log.
     static let debrief = false
     /// The weekly coach note and its experiment.

@@ -404,6 +404,37 @@ final class SmartCategoriesTests: XCTestCase {
         XCTAssertTrue(makeEngine().store.records.isEmpty)
     }
 
+    // MARK: - Apps & Sites
+
+    func test_appsAndSitesShowsReasons_andSortsSmartPicksBeforeBuiltInOnes() async {
+        context.insert(AppRule(pattern: "github.com", matchKind: .host, classification: .focus, priority: 100))
+        Persistence.save(context)
+        classifier.invalidate()
+        use("com.google.Chrome", name: "Chrome", minutes: 5, url: "https://github.com/a")
+        use("com.figma.Desktop", name: "Figma", minutes: 40)
+        use("com.example.Mystery", name: "Mystery", minutes: 20)
+        use("com.example.Fresh", name: "Fresh", minutes: 10)
+        answers = ["Figma": ("focus", 92, "Design tool you open next to Linear"),
+                   "Mystery": ("distracting", 60, "Mostly late at night"),
+                   "Fresh": ("neutral", 40, "Hard to say")]
+        let engine = makeEngine()
+        await engine.run()
+        engine.dismiss(engine.needsYou.first { $0.key == "com.example.Fresh" }!)
+
+        let items = AppsModelBuilder.items(context: context, classifier: classifier,
+                                           from: now.addingTimeInterval(-86_400), to: now, smart: engine)
+        let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
+        XCTAssertEqual(byName["Figma"]?.source, .smart)
+        XCTAssertEqual(byName["Figma"]?.why, "Design tool you open next to Linear")
+        XCTAssertEqual(byName["Figma"]?.isSmart, true)
+        XCTAssertEqual(byName["Mystery"]?.why, "Looks like distracting · Mostly late at night")
+        XCTAssertEqual(byName["Fresh"]?.why, "App · no rule yet", "a dismissed guess isn't shown")
+        XCTAssertEqual(byName["github.com"]?.isSmart, false)
+        XCTAssertEqual(AppsModelBuilder.toSort(items).map(\.name), ["Mystery", "Fresh", "Figma", "github.com"])
+        XCTAssertEqual(RuleSource(AppRule(pattern: "x", matchKind: .bundleId, classification: .focus,
+                                          priority: SmartCategories.rulePriority)).maker, "Smart")
+    }
+
     // MARK: - YouTube video by video
 
     func test_videoIdAndTitle() {

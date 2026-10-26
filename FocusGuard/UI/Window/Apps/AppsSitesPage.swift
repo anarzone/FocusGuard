@@ -16,6 +16,11 @@ struct AppsSitesPage: View {
     @State private var newRule: NewRuleDraft?
 
     private var context: ModelContext { appState.container.mainContext }
+    private var entitlements: Entitlements { .shared }
+    /// Smart categories, while they're built and unlocked.
+    private var smart: SmartCategories? {
+        FeatureFlags.smartCategories && entitlements.isUnlocked(.smartCategories) ? appState.smartCategories : nil
+    }
 
     var body: some View {
         Group {
@@ -43,7 +48,8 @@ struct AppsSitesPage: View {
     private func reload() {
         let now = Date.now
         items = AppsModelBuilder.items(context: context, classifier: appState.classifier,
-                                       from: range.start(now: now), to: now)
+                                       from: range.start(now: now), to: now,
+                                       smart: FeatureFlags.smartCategories ? appState.smartCategories : nil)
         let descriptor = FetchDescriptor<AppRule>(sortBy: [SortDescriptor(\.priority, order: .reverse)])
         rules = Persistence.fetch(context, descriptor)
         if selection == nil || !items.contains(where: { $0.id == selection }) {
@@ -82,6 +88,9 @@ struct AppsSitesPage: View {
 
     private var used: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let smart, smart.isOn, let banner = smart.banner {
+                SmartBannerBar(banner: banner, onReview: { mode = .sort }, onClose: smart.closeBanner)
+            }
             filterBar
             WindowSplitRow(weights: [1.72, 1]) {
                 table
@@ -252,12 +261,12 @@ struct AppsSitesPage: View {
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(rule.limitMinutes == nil ? Theme.tertiaryText : Theme.primaryText)
                 .frame(width: 90, alignment: .leading)
-            Text(rule.source == .user ? "You" : "Built-in")
+            Text(rule.source.maker)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.bodyText)
                 .frame(width: 96, alignment: .leading)
             Group {
-                if rule.source == .user {
+                if rule.source == .user || rule.source == .smart {
                     Button {
                         if let model = rules.first(where: { $0.id == rule.id }) {
                             appState.deleteRule(model)
@@ -307,7 +316,14 @@ private struct AppsTableRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.primaryText)
                         .lineLimit(1).truncationMode(.middle)
-                    Text(item.why).font(.system(size: 11)).foregroundStyle(Theme.secondaryText).lineLimit(1)
+                    HStack(spacing: 4) {
+                        if item.isSmart {
+                            Image(systemName: "sparkle").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.focus)
+                                .accessibilityLabel("Smart categories:")
+                        }
+                        Text(item.why).font(.system(size: 11)).foregroundStyle(Theme.secondaryText).lineLimit(1)
+                    }
+                    .help(item.why)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -316,10 +332,16 @@ private struct AppsTableRow: View {
                 WindowBar(fraction: item.row.seconds / peak, color: CategoryChip.dot(item.row.classification), height: 3)
             }
             .frame(width: 80, alignment: .leading)
-            CategoryControl(name: item.name, current: item.row.classification,
-                            lockedToDistracting: appState.isStrictLocked && item.row.classification == .distraction) { c in
-                appState.setCategory(c, for: item.row)
-                onChange()
+            Group {
+                if item.perVideo {
+                    PerVideoPill()
+                } else {
+                    CategoryControl(name: item.name, current: item.row.classification,
+                                    lockedToDistracting: appState.isStrictLocked && item.row.classification == .distraction) { c in
+                        appState.setCategory(c, for: item.row)
+                        onChange()
+                    }
+                }
             }
             .frame(width: 204)
             Text(limit.map { "\($0.minutes) min" } ?? "—")
@@ -405,6 +427,8 @@ private struct AppsInspector: View {
     let onChange: () -> Void
     let onPartOfSite: () -> Void
 
+    @State private var undoRefused = false
+
     var body: some View {
         WindowCard(padding: EdgeInsets(top: 16, leading: 18, bottom: 16, trailing: 18)) {
             VStack(alignment: .leading, spacing: 14) {
@@ -419,17 +443,27 @@ private struct AppsInspector: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Counts as").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.primaryText)
-                    CategoryControl(name: item.name, current: item.row.classification,
-                                    lockedToDistracting: appState.isStrictLocked && item.row.classification == .distraction,
-                                    height: 30) { c in
-                        appState.setCategory(c, for: item.row)
-                        onChange()
+                    HStack(spacing: 6) {
+                        Text("Counts as").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.primaryText)
+                        if item.perVideo { ProBadge() }
                     }
-                    Text(sourceLine)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if item.perVideo {
+                        PerVideoPill(height: 30)
+                    } else {
+                        CategoryControl(name: item.name, current: item.row.classification,
+                                        lockedToDistracting: appState.isStrictLocked && item.row.classification == .distraction,
+                                        height: 30) { c in
+                            appState.setCategory(c, for: item.row)
+                            onChange()
+                        }
+                    }
+                    if !item.perVideo {
+                        smartNote
+                    }
+                }
+
+                if isYouTube {
+                    YouTubePerVideoSection(appState: appState, item: item, onChange: onChange)
                 }
 
                 Rectangle().fill(Theme.hairline).frame(height: 0.5)
@@ -452,10 +486,48 @@ private struct AppsInspector: View {
         }
     }
 
+    private var isYouTube: Bool {
+        FeatureFlags.smartCategories && item.row.host.map { Classifier.host($0, matches: YouTubeVideos.host) } == true
+    }
+
+    /// Where the category comes from; for smart categories, their reason
+    /// with Undo, or their guess to take.
+    @ViewBuilder private var smartNote: some View {
+        if let suggestion = item.suggestion, item.source == .smart {
+            VStack(alignment: .leading, spacing: 6) {
+                SmartReasonLine(lead: "Sorted for you.", reason: suggestion.reason)
+                Button("Undo") {
+                    undoRefused = !appState.smartCategories.undo(suggestion)
+                    onChange()
+                }
+                .buttonStyle(.textLink)
+                if undoRefused {
+                    Text("Strict keeps it blocked until the session ends.")
+                        .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                }
+            }
+        } else if let suggestion = item.suggestion, item.source == .none {
+            VStack(alignment: .leading, spacing: 6) {
+                SmartReasonLine(lead: "Looks like \(categoryName(suggestion.suggested).lowercased()).", reason: suggestion.reason)
+                Button("Make it \(categoryName(suggestion.suggested))") {
+                    appState.smartCategories.accept(suggestion, as: suggestion.suggested)
+                    onChange()
+                }
+                .buttonStyle(.capsule(.secondary, height: 26))
+            }
+        } else {
+            Text(sourceLine)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var sourceLine: String {
         switch item.source {
         case .none:    return "No rule yet, so it counts as neutral: neither for nor against you."
         case .builtIn: return "Sorted by a built-in rule. Pick another to override it; your choice also updates past reports."
+        case .smart:   return "Sorted by smart categories. Pick another to make it yours."
         case .user:    return "You sorted it. Your choice also updated past reports."
         }
     }
