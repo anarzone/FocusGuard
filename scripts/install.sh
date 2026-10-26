@@ -58,9 +58,22 @@ echo "Installing to $DEST…"
 rm -rf "$DEST"
 cp -R "$APP" "$DEST"
 
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister
+
+# Every build registers its copy of the app with LaunchServices (Xcode's
+# DerivedData, build/, test runs), and LaunchServices may then open one of
+# those instead of this one from Spotlight, a focusguard:// link or a
+# widget: an old build, or one that can't open the current store. Forget
+# every copy but this one.
+"$LSREGISTER" -dump 2>/dev/null \
+    | sed -n 's|^path: *\(.*/FocusGuard\.app\) (0x[0-9a-f]*)$|\1|p' \
+    | sort -u \
+    | while IFS= read -r copy; do
+        [ "$copy" = "$DEST" ] || "$LSREGISTER" -u "$copy" 2>/dev/null || true
+    done
+
 # Re-register so Finder/Spotlight pick up the new icon.
-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister \
-    -f -r -trusted "$DEST" 2>/dev/null || true
+"$LSREGISTER" -f -r -trusted "$DEST" 2>/dev/null || true
 
 echo "Launching…"
 open "$DEST"
