@@ -40,7 +40,8 @@ final class DebriefCoordinator {
     @ObservationIgnored private let entitlements: Entitlements
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let calendarSource = CalendarGoalSource()
-    @ObservationIgnored var model: DebriefModel
+    /// The on-device model, nil while it isn't available. Tests pass a fake.
+    @ObservationIgnored private let model: () -> (any OnDeviceModel)?
     /// Whether the switch is on; tests turn it on before it ships.
     @ObservationIgnored var isShipped: Bool = FeatureFlags.debrief
 
@@ -50,10 +51,11 @@ final class DebriefCoordinator {
     static let minimumTracked: TimeInterval = 2 * 60
 
     init(context: ModelContext, isOptedOut: @escaping (String) -> Bool,
-         model: DebriefModel? = nil, entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
+         model: @escaping () -> (any OnDeviceModel)? = OnDeviceAI.model,
+         entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
         self.context = context
         self.isOptedOut = isOptedOut
-        self.model = model ?? DebriefModels.live()
+        self.model = model
         self.entitlements = entitlements ?? .shared
         self.defaults = defaults
     }
@@ -62,7 +64,7 @@ final class DebriefCoordinator {
     var isEnabled: Bool { isShipped && entitlements.isUnlocked(.debrief) }
 
     /// Whether this Mac can write debriefs (Apple Intelligence on macOS 26).
-    var canWrite: Bool { model.isAvailable }
+    var canWrite: Bool { model() != nil }
 
     // MARK: - Goal
 
@@ -109,7 +111,7 @@ final class DebriefCoordinator {
             session.project = ProjectGuess.guess(goal: facts.goal, titles: facts.titles, apps: facts.apps, known: known)
             Persistence.save(context)
         }
-        guard model.isAvailable, facts.tracked >= Self.minimumTracked else { return }
+        guard let model = model(), facts.tracked >= Self.minimumTracked else { return }
 
         let id = session.id
         writing.insert(id)
@@ -117,7 +119,7 @@ final class DebriefCoordinator {
         Task {
             defer { writing.remove(id) }
             do {
-                let draft = DebriefCleanup.tidy(try await model.write(DebriefPrompt(facts: facts)),
+                let draft = DebriefCleanup.tidy(try await DebriefWriter.write(DebriefPrompt(facts: facts), with: model),
                                                 hasGoal: facts.goal != nil)
                 guard !session.isDeleted, session.modelContext != nil else { return }
                 session.storedDebrief = draft
@@ -138,7 +140,7 @@ final class DebriefCoordinator {
         if session.debriefData != nil { return .written }
         if writing.contains(session.id) { return .writing }
         if failed.contains(session.id) { return .plain(.failed) }
-        if !model.isAvailable { return .plain(.needsAppleIntelligence) }
+        if !canWrite { return .plain(.needsAppleIntelligence) }
         return .plain(.tooShort)
     }
 

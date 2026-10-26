@@ -160,24 +160,25 @@ final class DebriefTests: XCTestCase {
 
 // MARK: - The on-device adapter
 
-/// Answers every question with one JSON reply, and keeps what was asked.
+/// Stands in for the on-device model: answers every question with one JSON
+/// reply (or an error), and keeps what was asked.
 @MainActor
 private final class ScriptedOnDeviceModel: OnDeviceModel {
-    let reply: String
+    var reply: String
+    var fails = false
     private(set) var prompts: [String] = []
-    private(set) var shapes: [AnswerShape] = []
 
     init(reply: String) { self.reply = reply }
 
     func respond(instructions: String, prompt: String, shape: AnswerShape) async throws -> String {
         prompts.append(prompt)
-        shapes.append(shape)
+        if fails { throw OnDeviceAIError.unreadableAnswer }
         return reply
     }
 }
 
 @MainActor
-final class OnDeviceDebriefModelTests: XCTestCase {
+final class DebriefWriterTests: XCTestCase {
     func testTheAnswerIsReadIntoAStoredDebrief() async throws {
         let fake = ScriptedOnDeviceModel(reply: """
         {"verdict":"partly","evidence":"Tests pass, PR still open.","evidenceShort":"PR open",
@@ -185,13 +186,11 @@ final class OnDeviceDebriefModelTests: XCTestCase {
          "tip":"Close x.com before a build","tipReason":"Both drifts began in a build.",
          "project":"FocusGuard","standup":"Wrote the namer tests."}
         """)
-        let model = OnDeviceDebriefModel(model: fake)
-        XCTAssertTrue(model.isAvailable)
         let facts = DebriefFacts.make(goal: "Ship it", start: .now, end: .now.addingTimeInterval(600), events: [
             DebriefFacts.Event(start: .now, end: .now.addingTimeInterval(599), bundleId: "x", appName: "Xcode",
                                title: "FocusGuard — Namer.swift", url: nil, classification: .focus),
         ], isOptedOut: { _ in false })
-        let stored = try await model.write(DebriefPrompt(facts: facts))
+        let stored = try await DebriefWriter.write(DebriefPrompt(facts: facts), with: fake)
         XCTAssertEqual(stored.verdict, .partly)
         XCTAssertEqual(stored.workedOn, [.init(app: "Xcode", what: "SessionNamer tests")])
         XCTAssertEqual(stored.tipDetail, "Both drifts began in a build.")
@@ -199,7 +198,7 @@ final class OnDeviceDebriefModelTests: XCTestCase {
     }
 
     func testWorkedOnCanOnlyNameTheSessionsApps() {
-        guard case .object(let fields) = OnDeviceDebriefModel.shape(apps: ["Xcode", "github.com"]),
+        guard case .object(let fields) = DebriefWriter.shape(apps: ["Xcode", "github.com"]),
               let workedOn = fields.first(where: { $0.name == "workedOn" }),
               case .list(let item, let count) = workedOn.shape,
               case .object(let itemFields) = item,
@@ -212,30 +211,15 @@ final class OnDeviceDebriefModelTests: XCTestCase {
 
 // MARK: - Coordinator
 
-/// A stand-in for the on-device model.
-@MainActor
-private final class FakeDebriefModel: DebriefModel {
-    var isAvailable = true
-    var reply = StoredDebrief(verdict: .done, evidence: "PR #49 was merged at 19:41.", evidenceShort: "PR #49 merged",
-                              workedOn: [.init(app: "Xcode", what: "SessionNamer.swift")], tip: "Keep the build log in view",
-                              project: "FocusGuard", standup: "Shipped session names.")
-    var fails = false
-    private(set) var prompts: [DebriefPrompt] = []
-
-    func write(_ prompt: DebriefPrompt) async throws -> StoredDebrief {
-        prompts.append(prompt)
-        if fails { throw OnDeviceDebriefModel.Failure.unavailable }
-        return reply
-    }
-}
-
 @MainActor
 final class DebriefCoordinatorTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
     private var container: ModelContainer!
     private var context: ModelContext!
-    private var model: FakeDebriefModel!
+    private var model: ScriptedOnDeviceModel!
+    /// Whether the fake stands for a Mac with Apple Intelligence.
+    private var available = true
 
     override func setUp() async throws {
         try await super.setUp()
@@ -244,7 +228,12 @@ final class DebriefCoordinatorTests: XCTestCase {
         let schema = Schema([Session.self, ActivityEvent.self, TitleOptOut.self, AppRule.self, DailyLimit.self])
         container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
         context = ModelContext(container)
-        model = FakeDebriefModel()
+        available = true
+        model = ScriptedOnDeviceModel(reply: """
+        {"verdict":"done","evidence":"PR #49 was merged at 19:41.","evidenceShort":"PR #49 merged",
+         "workedOn":[{"app":"Xcode","what":"SessionNamer.swift"}],"driftNote":"","tip":"Keep the build log in view",
+         "tipReason":"The drift began in a build.","project":"FocusGuard","standup":"Shipped session names."}
+        """)
     }
 
     override func tearDown() async throws {
@@ -259,8 +248,10 @@ final class DebriefCoordinatorTests: XCTestCase {
     private func make(pro: Bool = true, optedOut: Set<String> = []) -> DebriefCoordinator {
         let entitlements = Entitlements(defaults: defaults)
         if pro { entitlements.startTrialIfNeeded(for: .debrief) }
+        let fake = model!
         let coordinator = DebriefCoordinator(context: context, isOptedOut: { optedOut.contains($0) },
-                                             model: model, entitlements: entitlements, defaults: defaults)
+                                             model: { [unowned self] in self.available ? fake : nil },
+                                             entitlements: entitlements, defaults: defaults)
         coordinator.isShipped = true
         return coordinator
     }
@@ -332,7 +323,7 @@ final class DebriefCoordinatorTests: XCTestCase {
         XCTAssertEqual(session.storedDebrief?.evidence, "PR #49 was merged at 19:41.")
         XCTAssertEqual(session.goalVerdict, .done)
         XCTAssertEqual(session.project, "FocusGuard")
-        XCTAssertFalse(model.prompts.first?.text.contains("Chat with Sam") ?? true)
+        XCTAssertFalse(model.prompts.first?.contains("Chat with Sam") ?? true)
 
         let debrief = coordinator.debrief(for: session)
         XCTAssertEqual(debrief.workedOn.first?.app, "Xcode")
@@ -347,7 +338,7 @@ final class DebriefCoordinatorTests: XCTestCase {
     }
 
     func testWithoutAppleIntelligenceTheGoalStaysAndTheSummaryIsPlain() throws {
-        model.isAvailable = false
+        available = false
         let coordinator = make()
         let session = try finishedSession(goal: "Ship it")
         coordinator.sessionEnded(session)

@@ -1,20 +1,5 @@
 import Foundation
 
-/// Writes a debrief from a session's facts. The live one asks Apple's
-/// on-device model through `OnDeviceAI`; tests pass a fake. Nothing here
-/// leaves the Mac.
-@MainActor
-protocol DebriefModel: AnyObject {
-    /// Whether the model can run on this Mac right now.
-    var isAvailable: Bool { get }
-    func write(_ prompt: DebriefPrompt) async throws -> StoredDebrief
-}
-
-enum DebriefModels {
-    /// The model the app uses.
-    @MainActor static func live() -> DebriefModel { OnDeviceDebriefModel() }
-}
-
 /// What the model is told: the instructions and the session, as text.
 /// Window titles reach it only from apps that aren't opted out (see
 /// `DebriefFacts`).
@@ -116,27 +101,14 @@ enum DebriefCleanup {
     }
 }
 
-/// The debrief as Apple's on-device model writes it (macOS 26 with Apple
-/// Intelligence on), through the shared `OnDeviceAI` helper. The answer is
-/// filled into a fixed shape, so it always parses; "what you worked on"
+/// Writes a debrief with the on-device model (`OnDeviceAI`: Apple's, on
+/// macOS 26 with Apple Intelligence on). Nothing leaves the Mac. The answer
+/// is filled into a fixed shape, so it always parses; "what you worked on"
 /// can only name the session's own apps and sites.
-@MainActor
-final class OnDeviceDebriefModel: DebriefModel {
-    enum Failure: Error { case unavailable }
-
-    /// The model to ask instead of Apple's; tests pass a fake.
-    private let model: (any OnDeviceModel)?
-
-    init(model: (any OnDeviceModel)? = nil) {
-        self.model = model
-    }
-
-    var isAvailable: Bool { model != nil || OnDeviceAI.isAvailable }
-
-    func write(_ prompt: DebriefPrompt) async throws -> StoredDebrief {
-        guard let model = model ?? OnDeviceAI.model() else { throw Failure.unavailable }
+enum DebriefWriter {
+    static func write(_ prompt: DebriefPrompt, with model: any OnDeviceModel) async throws -> StoredDebrief {
         let answer = try await model.respond(Answer.self, instructions: prompt.instructions, prompt: prompt.ask,
-                                             shape: Self.shape(apps: prompt.appNames))
+                                             shape: shape(apps: prompt.appNames))
         return answer.stored
     }
 
