@@ -182,6 +182,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.title = "FocusGuard"
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
+            // An empty unified toolbar makes the title bar taller, so the
+            // traffic lights sit inside the inset sidebar panel with room
+            // around them instead of against its top edge. It has no items,
+            // so clicks still reach the page header beside it.
+            window.toolbar = NSToolbar(identifier: "MainWindowToolbar")
+            window.toolbarStyle = .unified
+            window.titlebarSeparatorStyle = .none
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 980, height: 640)
