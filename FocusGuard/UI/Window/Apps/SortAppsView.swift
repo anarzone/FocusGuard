@@ -2,7 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// "Sort your apps": one app or site at a time, most used first. 1, 2 and
-/// 3 pick Focus, Neutral and Distracting; space skips.
+/// 3 pick Focus, Neutral and Distracting; space skips. Smart categories'
+/// guess (Pro) shows on the card with its reason.
 struct SortAppsView: View {
     @Bindable var appState: AppState
     /// Waiting to be sorted, most used first.
@@ -149,7 +150,7 @@ struct SortAppsView: View {
                 finished
             }
             Spacer(minLength: 0)
-            Text("Unsure? Leave it neutral. Neutral time is not counted for or against you.")
+            Text(footnote)
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.tertiaryText)
         }
@@ -172,11 +173,24 @@ struct SortAppsView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .accessibilityAddTraits(.isHeader)
-                Text("\(item.isSite ? "Site" : "App") · \(WindowFormat.hm(item.row.seconds)) \(range.phrase)")
+                Text(([item.isSite ? "Site" : "App", "\(WindowFormat.hm(item.row.seconds)) \(range.phrase)"]
+                      + [item.suggestion?.hours].compactMap { $0 }).joined(separator: " · "))
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.secondaryText)
             }
-            if item.source == .builtIn {
+            if let suggestion = item.suggestion {
+                HStack(spacing: 8) {
+                    SmartReasonLine(lead: item.source == .smart
+                                        ? "Sorted as \(categoryName(suggestion.suggested).lowercased()) for you."
+                                        : "Looks like \(categoryName(suggestion.suggested).lowercased()).",
+                                    reason: suggestion.reason)
+                    ProBadge()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: 460)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.focus.opacity(0.08)))
+            } else if item.source == .builtIn {
                 HStack(spacing: 8) {
                     Image(systemName: "lightbulb").foregroundStyle(Theme.focus)
                     (Text("FocusGuard guessed \(categoryName(item.row.classification).lowercased()).").fontWeight(.semibold)
@@ -212,7 +226,8 @@ struct SortAppsView: View {
     }
 
     private func choice(_ c: Classification, key: String, item: AppsItem) -> some View {
-        let guessed = item.source == .builtIn && item.row.classification == c
+        let guessed = item.suggestion.map { $0.suggested == c }
+            ?? (item.source == .builtIn && item.row.classification == c)
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return Button { pick(c) } label: {
             VStack(spacing: 6) {
@@ -257,6 +272,14 @@ struct SortAppsView: View {
         }
     }
 
+    private var footnote: String {
+        if FeatureFlags.smartCategories, Entitlements.shared.isUnlocked(.smartCategories),
+           !appState.smartCategories.isModelAvailable {
+            return "Smart suggestions: \(OnDeviceAI.unavailableNote). Unsure? Leave it neutral."
+        }
+        return "Unsure? Leave it neutral. Neutral time is not counted for or against you."
+    }
+
     private var timeLeft: String {
         guard !queue.isEmpty else { return "" }
         let minutes = Int((Double(queue.count) * 4 / 60).rounded(.up))
@@ -267,7 +290,9 @@ struct SortAppsView: View {
 
     private func pick(_ c: Classification) {
         guard let item = current else { return }
-        if c != item.row.classification || item.source != .user {
+        if let guess = item.suggestion, item.source == .none {
+            appState.smartCategories.accept(guess, as: c)
+        } else if c != item.row.classification || item.source != .user {
             appState.setCategory(c, for: item.row)
         }
         done.append((item, c))
@@ -291,6 +316,10 @@ struct SortAppsView: View {
         appState.setCategory(item.row.classification, for: item.row)
         if item.source != .user, let rule = userRule(for: item) {
             appState.deleteRule(rule)
+        }
+        // Sorted by smart categories before: their rule comes back.
+        if item.source == .smart, let suggestion = item.suggestion {
+            appState.smartCategories.restore(suggestion)
         }
         queue.insert(item, at: 0)
     }

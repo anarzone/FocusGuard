@@ -68,6 +68,10 @@ final class ActivityTracker {
     /// present: no Automation prompt, and titles without Screen Recording.
     var extensionTab: ((_ bundleId: String) -> ExtensionTab?)?
 
+    /// Called when a new event starts (another app, page or title). Smart
+    /// categories watch it for things not sorted yet.
+    var onNewEvent: ((ActivityEvent) -> Void)?
+
     private let context: ModelContext
     private let inspector: WindowInspector
     private let browserReader: BrowserTabReader
@@ -237,6 +241,7 @@ final class ActivityTracker {
             new.classification = classification
             context.insert(new)
             currentEvent = new
+            onNewEvent?(new)
         }
 
         // Coalesced save: hold pending mutations in the context for up to
