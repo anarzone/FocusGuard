@@ -86,11 +86,12 @@ struct WorkLogContent: View {
 
     var body: some View {
         WindowScroll {
+            PageHeader(title: "Work log", subtitle: subtitle) {
+                PeriodStepper(offset: $offset, unit: "week")
+                exportMenu
+            }
+        } content: {
             VStack(alignment: .leading, spacing: 12) {
-                PageHeader(title: "Work log", subtitle: subtitle) {
-                    PeriodStepper(offset: $offset, unit: "week")
-                    exportMenu
-                }
                 let headline = model.headline(offset: offset)
                 WindowHeadline(lead: headline.lead, rest: headline.rest)
                 if !canWrite { appleIntelligenceNote }
@@ -103,9 +104,6 @@ struct WorkLogContent: View {
                     }
                 }
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 24)
-            .padding(.bottom, 20)
         }
         .onAppear { standupText = model.standup?.text ?? "" }
         .onChange(of: model.standup) {

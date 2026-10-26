@@ -45,8 +45,9 @@ struct TodayPage: View {
 
     var body: some View {
         WindowScroll {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 12) {
-                header
                 if !appState.permissions.allGranted && !showFirstDay { permissionBanner }
                 WindowHeadline(lead: headline.lead, rest: headline.rest)
 
@@ -72,9 +73,6 @@ struct TodayPage: View {
                 }
                 .frame(minHeight: 210, maxHeight: .infinity)
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 24)
-            .padding(.bottom, 20)
         }
         .task(id: dayOffset) {
             while !Task.isCancelled {

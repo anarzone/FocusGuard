@@ -362,10 +362,10 @@ extension ReportsModel {
 
 enum ReportWords {
     /// "Goal met on 13 of 16 weekdays so far." and what the misses share.
-    static func monthHeadline(_ goal: GoalDays, weekendsCount: Bool, isCurrent: Bool,
-                              calendar: Calendar = .current) -> (lead: String, rest: String) {
+    static func goalHeadline(_ goal: GoalDays, period: ReportPeriod, weekendsCount: Bool, isCurrent: Bool,
+                             calendar: Calendar = .current) -> (lead: String, rest: String) {
         let noun = weekendsCount ? "days" : "weekdays"
-        guard goal.counted > 0 else { return ("No goal days yet this month.", "") }
+        guard goal.counted > 0 else { return ("No goal days yet this \(period.rawValue.lowercased()).", "") }
         let lead = "Goal met on \(goal.met) of \(goal.counted) \(noun)\(isCurrent ? " so far" : "")."
         guard !goal.misses.isEmpty else { return (lead, goal.met > 0 ? "Not one missed." : "") }
         let weekdays = goal.misses.map { calendar.component(.weekday, from: $0) }

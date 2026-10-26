@@ -33,17 +33,22 @@ struct ReportsPage: View {
 
     var body: some View {
         WindowScroll {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 12) {
-                header
+                // The same line under the header for a week and a month, so
+                // switching between them doesn't move the page.
+                let words = ReportWords.goalHeadline(model.goal, period: model.period, weekendsCount: weekendsCount,
+                                                     isCurrent: offset == 0)
+                WindowHeadline(lead: words.lead, rest: words.rest)
                 if let clipped = model.clippedAt { historyNote(clipped) }
-                switch period {
+                // Laid out for the report on screen: until a newly picked
+                // period has loaded, the last one stays whole.
+                switch model.period {
                 case .month: month
                 default: week
                 }
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 24)
-            .padding(.bottom, 20)
         }
         .task(id: reloadKey) {
             await reload()
@@ -73,16 +78,15 @@ struct ReportsPage: View {
     // MARK: - Header
 
     private var subtitle: String {
-        let title = period.title(for: model.data.interval)
-        if period == .week, let note = model.bestWeekNote { return "\(title) · \(note)" }
+        let title = model.period.title(for: model.data.interval)
+        if model.period == .week, let note = model.bestWeekNote { return "\(title) · \(note)" }
         return title
     }
 
     private var header: some View {
         PageHeader(title: "Reports", subtitle: subtitle) {
-            WindowSwitch(options: [(ReportPeriod.week, "Week"), (.month, "Month")], selection: $period, label: "Period")
-                .onChange(of: period) { offset = 0 }
-            PeriodStepper(offset: $offset, unit: period.rawValue.lowercased(), maxOffset: maxOffset)
+            // Share week comes and goes with the period, so it sits first:
+            // the switch, the stepper and Export stay put under the pointer.
             if period == .week {
                 Button {
                     NotificationCenter.default.post(name: .openShareComposer, object: model.data.interval.start)
@@ -92,6 +96,9 @@ struct ReportsPage: View {
                 .buttonStyle(.header)
                 .help("Make a picture of this week to share")
             }
+            WindowSwitch(options: [(ReportPeriod.week, "Week"), (.month, "Month")], selection: $period, label: "Period")
+                .onChange(of: period) { offset = 0 }
+            PeriodStepper(offset: $offset, unit: period.rawValue.lowercased(), maxOffset: maxOffset)
             Menu {
                 Button("Export as CSV…") { export(.csv) }
                 Button("Export as JSON…") { export(.json) }
@@ -189,8 +196,6 @@ struct ReportsPage: View {
 
     private var month: some View {
         VStack(alignment: .leading, spacing: 12) {
-            let words = ReportWords.monthHeadline(model.goal, weekendsCount: weekendsCount, isCurrent: offset == 0)
-            WindowHeadline(lead: words.lead, rest: words.rest)
             kpis(sessionsSlot: true)
             WindowSplitRow(weights: [1, 1.42]) {
                 WindowCard(padding: EdgeInsets(top: 12, leading: 18, bottom: 10, trailing: 18)) {
@@ -253,9 +258,9 @@ struct ReportsPage: View {
 
     private func kpis(sessionsSlot: Bool) -> some View {
         let data = model.data
-        let against = period == .week ? "last week" : previousMonthName
+        let against = model.period == .week ? "last week" : previousMonthName
         let focusedChange = WindowFormat.percentChange(data.breakdown.focus, data.previous.focus)
-            .map { period == .week ? "\($0) vs last week" : "\($0) vs the same days in \(previousMonthName)" }
+            .map { model.period == .week ? "\($0) vs last week" : "\($0) vs the same days in \(previousMonthName)" }
             ?? "nothing to compare yet"
         let prevRateCounts = data.previous.focus + data.previous.distraction >= 60
         let rateDetail = prevRateCounts
@@ -301,7 +306,7 @@ struct ReportsPage: View {
                 WindowCardTitle("Top distractions", note: (model.distractions.first?.comparable ?? true) ? against : "")
                     .padding(.bottom, 6)
                 if model.distractions.isEmpty {
-                    empty("Nothing distracting in this \(period == .week ? "week" : "month"). Nice.")
+                    empty("Nothing distracting in this \(model.period == .week ? "week" : "month"). Nice.")
                 } else {
                     let peak = max(1, model.distractions.map(\.seconds).max() ?? 1)
                     ForEach(model.distractions) { item in

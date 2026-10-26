@@ -168,16 +168,19 @@ final class WindowModelTests: XCTestCase {
         XCTAssertTrue(goal.misses.isEmpty)
     }
 
-    func testMonthHeadlineNamesWhatTheMissesShare() {
+    func testGoalHeadlineNamesWhatTheMissesShare() {
         let fridays = [date(2026, 10, 2), date(2026, 10, 9), date(2026, 10, 16)]
-        let words = ReportWords.monthHeadline(GoalDays(met: 13, counted: 16, misses: fridays),
-                                              weekendsCount: false, isCurrent: true, calendar: calendar)
+        let words = ReportWords.goalHeadline(GoalDays(met: 13, counted: 16, misses: fridays), period: .month,
+                                             weekendsCount: false, isCurrent: true, calendar: calendar)
         XCTAssertEqual(words.lead, "Goal met on 13 of 16 weekdays so far.")
         XCTAssertEqual(words.rest, "All three misses were Fridays.")
-        let one = ReportWords.monthHeadline(GoalDays(met: 3, counted: 4, misses: [fridays[0]]),
-                                            weekendsCount: true, isCurrent: false, calendar: calendar)
+        let one = ReportWords.goalHeadline(GoalDays(met: 3, counted: 4, misses: [fridays[0]]), period: .week,
+                                           weekendsCount: true, isCurrent: false, calendar: calendar)
         XCTAssertEqual(one.lead, "Goal met on 3 of 4 days.")
         XCTAssertEqual(one.rest, "The one miss was a Friday.")
+        let none = ReportWords.goalHeadline(GoalDays(met: 0, counted: 0, misses: []), period: .week,
+                                            weekendsCount: false, isCurrent: true, calendar: calendar)
+        XCTAssertEqual(none.lead, "No goal days yet this week.")
     }
 
     func testMonthGridStartsOnTheRightWeekday() {
