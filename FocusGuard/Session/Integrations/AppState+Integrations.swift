@@ -22,6 +22,7 @@ extension AppState {
                 return Persistence.fetch(context, descriptor).first
             }
         }
+        wireStatusSync()
     }
 
     /// After the goal moved onto the session: a picked reminder goes with

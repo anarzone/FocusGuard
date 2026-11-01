@@ -13,6 +13,9 @@ enum FocusGuardURL: Equatable {
     case keepPaused(pauseID: String)
     /// Start a break of this many minutes.
     case startBreak(minutes: Int)
+    /// Slack's sign-in coming back (`SlackAccount`): a code, or an error
+    /// such as "access_denied", with the state FocusGuard sent.
+    case slackAuth(code: String?, state: String, error: String?)
 
     static let scheme = "focusguard"
     static let breakMinutes = 1...60
@@ -40,6 +43,9 @@ enum FocusGuardURL: Equatable {
         case "break":
             let minutes = value("minutes").flatMap(Int.init) ?? 10
             self = .startBreak(minutes: min(max(minutes, Self.breakMinutes.lowerBound), Self.breakMinutes.upperBound))
+        case "slack-auth":
+            guard let state = value("state") else { return nil }
+            self = .slackAuth(code: value("code"), state: state, error: value("error"))
         default:
             return nil
         }
@@ -62,6 +68,10 @@ enum FocusGuardURL: Equatable {
         case .startBreak(let minutes):
             components.host = "break"
             components.queryItems = [URLQueryItem(name: "minutes", value: String(minutes))]
+        case .slackAuth(let code, let state, let error):
+            components.host = "slack-auth"
+            components.queryItems = [URLQueryItem(name: "code", value: code), URLQueryItem(name: "state", value: state),
+                                     URLQueryItem(name: "error", value: error)].filter { $0.value != nil }
         }
         return components.url ?? URL(string: "\(Self.scheme)://back")!
     }

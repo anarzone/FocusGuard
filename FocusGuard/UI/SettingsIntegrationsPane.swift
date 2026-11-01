@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Integrations: the calendar, tasks as session goals, code, macOS and
-/// the browser. Nothing here signs in anywhere; Calendar and Reminders ask
-/// macOS once.
+/// Integrations: the calendar, tasks as session goals, code, status in
+/// Slack and Discord, macOS and the browser. Only Slack signs in; Calendar
+/// and Reminders ask macOS once.
 struct SettingsIntegrationsPane: View {
     @Bindable var appState: AppState
     var entitlements: Entitlements = .shared
@@ -38,6 +38,7 @@ struct SettingsIntegrationsPane: View {
             tasksSection
             codeSection
         } right: {
+            SettingsStatusSection()
             macSection
             SettingsSection("Browser and music") {
                 browserRow

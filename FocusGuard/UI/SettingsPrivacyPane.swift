@@ -365,14 +365,18 @@ private struct DiagnosticsSheet: View {
 
 /// What leaves this Mac, said the same way everywhere. Keep it in step with
 /// the code: update checks (Sparkle), site icons (`FaviconLoader`, from the
-/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`) and, while
-/// the app offers them, AI tips.
+/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Slack once
+/// it's built in (`SlackAccount`) and, while the app offers them, AI tips.
 enum PrivacyStatement {
     /// For the Privacy and About panes.
-    static var network: String {
+    static var network: String { networkStatement(slack: StatusSync.slackAvailable) }
+
+    /// - Parameter slack: Slack is built in, for the status while you focus.
+    static func networkStatement(slack: Bool) -> String {
+        let services = slack ? "Spotify and Slack when you use them" : "Spotify when you use it"
         let rest = AISettings.isAvailable
-            ? "for Spotify when you use it, and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
-            : "and for Spotify when you use it"
+            ? "for \(services), and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
+            : "and for \(services)"
         return "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, "
             + "to fetch site icons from the sites themselves, \(rest)."
     }

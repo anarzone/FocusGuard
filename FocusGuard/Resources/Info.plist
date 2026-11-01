@@ -35,6 +35,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FGDiscordApplicationID</key>
+	<string>$(DISCORD_APPLICATION_ID)</string>
+	<key>FGSlackClientID</key>
+	<string>$(SLACK_CLIENT_ID)</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>

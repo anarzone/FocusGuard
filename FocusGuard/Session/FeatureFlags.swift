@@ -22,6 +22,11 @@ enum FeatureFlags {
     /// The month in review, in Reports › Month.
     static let monthlyReview = true
 
+    /// Slack status and Discord activity while a session runs (Settings ›
+    /// Integrations › Status in Slack and Discord). Each app's row also
+    /// waits for its ID in the build (`SLACK_CLIENT_ID`, `DISCORD_APPLICATION_ID`).
+    static let statusSync = true
+
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
     static var proAI: Bool { smartCategories || debrief || coach || ask || monthlyReview }
