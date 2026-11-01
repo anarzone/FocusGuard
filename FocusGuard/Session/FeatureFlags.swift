@@ -15,6 +15,10 @@ enum FeatureFlags {
     /// Ask: questions about your own focus, answered on this Mac.
     static let ask = true
 
+    /// Open reminders as session goals, ticked off when the session's done
+    /// (Settings › Integrations › Tasks as session goals).
+    static let taskGoals = true
+
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
     static var proAI: Bool { smartCategories || debrief || coach || ask }

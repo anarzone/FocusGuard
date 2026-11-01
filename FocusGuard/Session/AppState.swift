@@ -25,6 +25,9 @@ final class AppState {
     let habits: HabitsCoordinator
     /// The session goal and the debrief after each session (Pro).
     let debriefs: DebriefCoordinator
+    /// Sessions on the calendar, the next meeting, reminders and the Git
+    /// branch as goals.
+    let integrations: IntegrationsCoordinator
     /// Free "Pause the tab": the site's tab shows a calm page while it's
     /// blocked, through the browser extension where it's connected and
     /// AppleScript elsewhere.
@@ -107,6 +110,7 @@ final class AppState {
         self.habits = HabitsCoordinator(sessions: manager, breaks: breaks, tracker: tracker,
                                         presenter: presenter, context: context)
         self.debriefs = DebriefCoordinator(context: context, isOptedOut: { [weak cache] in cache?.isOptedOut($0) ?? true })
+        self.integrations = IntegrationsCoordinator()
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
         self.extensionBridge = bridge
@@ -159,6 +163,7 @@ final class AppState {
                 }
             }
             self?.habits.tick()
+            self?.integrations.tick()
             self?.maybeAutoPauseOrResume()
         }
 
@@ -166,6 +171,7 @@ final class AppState {
         manager.onSessionStarted = { [weak self, weak manager] in
             self?.recap = nil
             self?.debriefs.sessionStarted(manager?.currentSession)
+            self?.integrationsSessionStarted(manager?.currentSession)
             SystemFocusBridge.onSessionStarted()
             self?.music.sessionStarted()
         }
@@ -180,6 +186,7 @@ final class AppState {
             self.music.sessionEnded()
             self.recap = SessionRecap(session: session, bestZoneToday: self.bestZoneToday(fresh: true))
             self.debriefs.sessionEnded(session)
+            Task { await self.integrations.sessionEnded(session) }
             self.presentSessionComplete(for: session)
         }
 
@@ -222,6 +229,7 @@ final class AppState {
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
         wireNotifications()
+        wireIntegrations()
         tabPause.isEnabled = defaults.object(forKey: SettingsWindowKey.pauseTab) as? Bool ?? true
         tracker.start()
         bridge.start(appState: self)
