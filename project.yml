@@ -67,7 +67,7 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: com.anar.focusguard
             CFBundleURLSchemes: [focusguard]
-        NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify or Apple Music."
+        NSAppleEventsUsageDescription: "FocusGuard reads the active browser tab to detect distraction sites during focus sessions, plays your focus music in Spotify or Apple Music, and offers your Things to-dos for today as session goals, ticking one off when you finish it."
         NSCalendarsFullAccessUsageDescription: "FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events."
         NSCalendarsUsageDescription: "FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events."
         NSRemindersFullAccessUsageDescription: "FocusGuard offers your open reminders as session goals, and ticks one off when you finish it in a session."

@@ -55,6 +55,8 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Licence check", detail: "Pro only, when you enter a key and when the app starts")
                 SettingsDivider()
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
+                SettingsDivider()
+                SettingsRow("Todoist and Linear", detail: "Only if you connect them: reads your tasks, and ticks off the one you finish")
             }
             SettingsNote(systemImage: "lock",
                          text: PrivacyNote.onThisMac)
@@ -365,21 +367,22 @@ private struct DiagnosticsSheet: View {
 
 /// What leaves this Mac, said the same way everywhere. Keep it in step with
 /// the code: update checks (Sparkle), site icons (`FaviconLoader`, from the
-/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`) and, while
-/// the app offers them, AI tips.
+/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Todoist and
+/// Linear (`TodoistTasks`, `LinearTasks`) and, while the app offers them,
+/// AI tips.
 enum PrivacyStatement {
     /// For the Privacy and About panes.
     static var network: String {
         let rest = AISettings.isAvailable
-            ? "for Spotify when you use it, and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
-            : "and for Spotify when you use it"
+            ? "for Spotify, Todoist and Linear when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
+            : "and for Spotify, Todoist and Linear when you use them"
         return "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, "
             + "to fetch site icons from the sites themselves, \(rest)."
     }
 
     /// For onboarding's welcome step.
     static var short: String {
-        let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify if you use it."
+        let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them."
         return AISettings.isAvailable ? base + " AI tips, if you turn them on, send a short summary." : base
     }
 }

@@ -1,31 +1,39 @@
 import AppKit
 import Foundation
 
-/// The integrations that sign in to nothing (Settings › Integrations):
-/// sessions on the calendar, the next meeting in the menu, open reminders
-/// as goals and ticking them off (Pro), and the Git branch as a goal.
+/// The integrations (Settings › Integrations): sessions on the calendar,
+/// the next meeting in the menu, open tasks from Reminders, Things, Todoist
+/// and Linear as goals and ticking them off (Pro), and the Git branch as a
+/// goal.
 ///
-/// EventKit is read and written off the main thread (`EventKitBridge`);
-/// what the menu shows is kept here.
+/// EventKit is read and written off the main thread (`EventKitBridge`),
+/// and so are the task sources (`TaskStore`); what the menu shows is kept
+/// here.
 @MainActor
 @Observable
 final class IntegrationsCoordinator {
     /// The next timed event in the chosen calendars; nil with the switch
     /// off or without access. The menu shows it from 30 minutes before.
     private(set) var nextMeeting: NextMeeting?
-    /// Open reminders to offer as goals, best first. Empty unless Pro and
-    /// switched on.
-    private(set) var reminderGoals: [ReminderItem] = []
+    /// Open tasks to offer as goals, from every source switched on, best
+    /// first. Empty unless Pro.
+    private(set) var taskGoals: [TaskItem] = []
+    /// Sources that couldn't be read for a reason the user can fix: a token
+    /// turned down, or Things not allowed.
+    private(set) var taskProblems: [TaskSource: TaskSourceProblem] = [:]
     /// The branch being worked on, with the switch on.
     private(set) var gitGoal: GitGoal?
-    /// Sessions whose goal came from a reminder, by session.
+    /// Sessions whose goal came from a task, by session.
     private(set) var taskLinks: [UUID: TaskLink] = [:]
-    /// What's next on the list after a session's reminder was ticked off.
-    private(set) var nextTasks: [UUID: ReminderItem] = [:]
+    /// What's next on the list after a session's task was ticked off.
+    private(set) var nextTasks: [UUID: TaskItem] = [:]
 
     @ObservationIgnored let calendarWriter: SessionCalendarWriter
     @ObservationIgnored private let calendar: CalendarStore
     @ObservationIgnored private let reminders: ReminderStore
+    @ObservationIgnored private let taskStores: [TaskSource: TaskStore]
+    /// What each source gave last; one that can't be reached keeps its own.
+    @ObservationIgnored private var tasksBySource: [TaskSource: [TaskItem]] = [:]
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let entitlements: Entitlements
     /// The app in front and its window title, for the Git branch. AppState
@@ -39,7 +47,7 @@ final class IntegrationsCoordinator {
 
     private enum Key {
         static let links = "integrations.reminders.sessionLinks"
-        /// The reminder picked under the goal field, until a session starts.
+        /// The task picked under the goal field, until a session starts.
         static let picked = "integrations.reminders.picked"
     }
     /// Links kept, newest last.
@@ -47,10 +55,14 @@ final class IntegrationsCoordinator {
     /// The next meeting is looked up this often.
     static let meetingInterval: TimeInterval = 60
 
-    init(calendar: CalendarStore, reminders: ReminderStore, entitlements: Entitlements? = nil,
-         defaults: UserDefaults = .standard) {
+    /// - Parameter tasks: where tasks come from; Reminders (from
+    ///   `reminders`), Things, Todoist and Linear when nil.
+    init(calendar: CalendarStore, reminders: ReminderStore, tasks: [TaskStore]? = nil,
+         entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
         self.calendar = calendar
         self.reminders = reminders
+        let stores = tasks ?? [ReminderTasks(store: reminders, defaults: defaults), ThingsTasks(), TodoistTasks(), LinearTasks()]
+        self.taskStores = Dictionary(stores.map { ($0.source, $0) }, uniquingKeysWith: { first, _ in first })
         self.defaults = defaults
         self.entitlements = entitlements ?? .shared
         self.calendarWriter = SessionCalendarWriter(store: calendar, defaults: defaults)
@@ -65,14 +77,14 @@ final class IntegrationsCoordinator {
         self.init(calendar: bridge, reminders: bridge)
     }
 
-    /// Reminders as goals and ticking them off: Pro, and switched on.
-    var remindersOn: Bool {
-        isShipped && entitlements.isUnlocked(.taskGoals) && IntegrationSettings.isOn(IntegrationSettings.reminders, defaults)
+    /// A source's tasks as goals and ticking them off: Pro, and switched on.
+    func isOn(_ source: TaskSource) -> Bool {
+        isShipped && entitlements.isUnlocked(.taskGoals) && IntegrationSettings.isOn(source.settingKey, defaults)
     }
 
     // MARK: - Refreshing
 
-    /// When the menu opens: the next meeting, the reminders and the branch.
+    /// When the menu opens: the next meeting, the tasks and the branch.
     func refreshForMenu(now: Date = .now) async {
         async let meeting: Void = refreshNextMeeting(now: now)
         async let goals: Void = refreshGoalSources(now: now)
@@ -92,16 +104,14 @@ final class IntegrationsCoordinator {
         if next != nextMeeting { nextMeeting = next }
     }
 
-    /// Reminders (Pro) and the Git branch, for the goal field.
+    /// Tasks (Pro) and the Git branch, for the goal field.
     func refreshGoalSources(now: Date = .now) async {
-        if remindersOn {
-            let items = await reminders.incomplete(listIDs: IntegrationSettings.ids(IntegrationSettings.reminderLists, defaults)) ?? []
-            let ordered = ReminderGoals.ordered(items, now: now)
-            if ordered != reminderGoals { reminderGoals = ordered }
-        } else if !reminderGoals.isEmpty {
-            reminderGoals = []
-        }
+        async let tasks: Void = refreshTasks(now: now)
+        await refreshGitGoal()
+        _ = await tasks
+    }
 
+    private func refreshGitGoal() async {
         guard IntegrationSettings.isOn(IntegrationSettings.gitBranch, defaults) else {
             if gitGoal != nil { gitGoal = nil }
             return
@@ -133,7 +143,7 @@ final class IntegrationsCoordinator {
     /// - Parameter startedByEvent: the user's own calendar event started it,
     ///   so it's on the calendar already.
     func sessionStarted(_ session: Session, startedByEvent: Bool, now: Date = .now) async {
-        linkPickedReminder(to: session)
+        linkPickedTask(to: session)
         guard !startedByEvent else { return }
         await calendarWriter.sessionStarted(id: session.id, name: Self.name(of: session), start: session.startedAt,
                                             plannedMinutes: session.plannedDurationMinutes,
@@ -174,13 +184,61 @@ final class IntegrationsCoordinator {
         await calendarWriter.skipPlanned(slot)
     }
 
-    // MARK: - Reminders as goals
+    // MARK: - Tasks as goals
 
-    /// A suggestion was picked under the goal field: a reminder is kept
-    /// until the session starts, to tick it off after.
+    /// Reads every source switched on, all at once. A source that can't be
+    /// reached keeps what it gave last; one switched off gives nothing.
+    func refreshTasks(now: Date = .now) async {
+        let stores = TaskSource.allCases.filter { isOn($0) }.compactMap { taskStores[$0] }
+        for source in TaskSource.allCases where !isOn(source) {
+            tasksBySource[source] = nil
+            setProblem(nil, for: source)
+        }
+        let results = await withTaskGroup(of: (TaskSource, Result<[TaskItem], TaskSourceProblem>).self) { group in
+            for store in stores {
+                group.addTask { await Self.read(store) }
+            }
+            var all: [(TaskSource, Result<[TaskItem], TaskSourceProblem>)] = []
+            for await result in group { all.append(result) }
+            return all
+        }
+        for (source, result) in results {
+            switch result {
+            case .success(let items):
+                tasksBySource[source] = items
+                setProblem(nil, for: source)
+            case .failure(.unreachable):
+                break
+            case .failure(let problem):
+                tasksBySource[source] = nil
+                setProblem(problem, for: source)
+            }
+        }
+        publishTasks(now: now)
+    }
+
+    nonisolated private static func read(_ store: TaskStore) async -> (TaskSource, Result<[TaskItem], TaskSourceProblem>) {
+        do {
+            return (store.source, .success(try await store.openTasks()))
+        } catch {
+            return (store.source, .failure(error as? TaskSourceProblem ?? .unreachable))
+        }
+    }
+
+    private func publishTasks(now: Date) {
+        let ordered = TaskGoals.ordered(tasksBySource.values.flatMap { $0 }, now: now)
+        if ordered != taskGoals { taskGoals = ordered }
+    }
+
+    private func setProblem(_ problem: TaskSourceProblem?, for source: TaskSource) {
+        if taskProblems[source] != problem { taskProblems[source] = problem }
+    }
+
+    /// A suggestion was picked under the goal field: a task is kept until
+    /// the session starts, to tick it off after.
     func goalPicked(_ suggestion: GoalSuggestion) {
-        guard case .reminder(let id, _) = suggestion.source,
-              let item = reminderGoals.first(where: { $0.id == id }),
+        guard case .task(let source, let id, _) = suggestion.source,
+              let item = taskGoals.first(where: { $0.source == source && $0.id == id }),
               let data = try? JSONEncoder().encode(item) else {
             defaults.removeObject(forKey: Key.picked)
             return
@@ -188,32 +246,32 @@ final class IntegrationsCoordinator {
         defaults.set(data, forKey: Key.picked)
     }
 
-    /// The reminder picked for the next session, if any.
-    var pickedReminder: ReminderItem? {
-        defaults.data(forKey: Key.picked).flatMap { try? JSONDecoder().decode(ReminderItem.self, from: $0) }
+    /// The task picked for the next session, if any.
+    var pickedTask: TaskItem? {
+        defaults.data(forKey: Key.picked).flatMap { try? JSONDecoder().decode(TaskItem.self, from: $0) }
     }
 
-    /// "Start 25 min" on the next reminder: it's picked for the session
-    /// about to start.
-    func pick(_ item: ReminderItem) {
+    /// "Start 25 min" on the next task: it's picked for the session about
+    /// to start.
+    func pick(_ item: TaskItem) {
         if let data = try? JSONEncoder().encode(item) { defaults.set(data, forKey: Key.picked) }
     }
 
-    /// The picked reminder goes with the session, while the goal is still
-    /// its title (an edited goal is the user's own).
-    private func linkPickedReminder(to session: Session) {
-        guard let item = pickedReminder else { return }
+    /// The picked task goes with the session, while the goal is still its
+    /// title (an edited goal is the user's own).
+    private func linkPickedTask(to session: Session) {
+        guard let item = pickedTask else { return }
         defaults.removeObject(forKey: Key.picked)
-        guard remindersOn, let goal = session.goal,
+        guard isOn(item.source), let goal = session.goal,
               goal.caseInsensitiveCompare(String(item.title.prefix(SessionGoal.maxLength))) == .orderedSame else { return }
-        taskLinks[session.id] = TaskLink(reminder: item, linkedAt: session.startedAt)
+        taskLinks[session.id] = TaskLink(task: item, linkedAt: session.startedAt)
         saveLinks()
     }
 
     // MARK: - Ticking off
 
     /// The goal's verdict changed, from the debrief or the user: Done ticks
-    /// the reminder off, anything else takes back a tick FocusGuard made.
+    /// the task off, anything else takes back a tick FocusGuard made.
     func verdictChanged(_ session: Session, byUser: Bool, now: Date = .now) async {
         guard let link = taskLinks[session.id], entitlements.isUnlocked(.taskGoals) else { return }
         switch link.change(for: session.goalVerdict, byUser: byUser) {
@@ -223,7 +281,7 @@ final class IntegrationsCoordinator {
         }
     }
 
-    /// "Undo": the reminder is open again, and the debrief won't tick it.
+    /// "Undo": the task is open again, and the debrief won't tick it.
     func undoTick(session id: UUID) async {
         guard taskLinks[id]?.ticked == true else { return }
         await setTicked(false, session: id)
@@ -236,19 +294,19 @@ final class IntegrationsCoordinator {
         await setTicked(true, session: id)
     }
 
+    /// Ticks the session's task off in its own app, or opens it again; the
+    /// goals offered follow, and after a tick so does what's next.
     private func setTicked(_ ticked: Bool, session id: UUID, now: Date = .now) async {
-        guard let link = taskLinks[id], link.ticked != ticked,
-              await reminders.setCompleted(link.reminder.id, ticked) else { return }
+        guard let link = taskLinks[id], link.ticked != ticked, let store = taskStores[link.task.source],
+              await store.setCompleted(link.task, ticked) else { return }
         taskLinks[id]?.ticked = ticked
         if ticked { taskLinks[id]?.undone = false }
         saveLinks()
-        if ticked {
-            reminderGoals.removeAll { $0.id == link.reminder.id }
-            let open = await reminders.incomplete(listIDs: IntegrationSettings.ids(IntegrationSettings.reminderLists, defaults)) ?? []
-            nextTasks[id] = ReminderGoals.next(after: link.reminder.id, in: open, now: now)
-        } else {
-            nextTasks[id] = nil
-        }
+        let source = link.task.source
+        if ticked { tasksBySource[source]?.removeAll { $0.isSame(as: link.task) } }
+        if isOn(source), let open = try? await store.openTasks() { tasksBySource[source] = open }
+        publishTasks(now: now)
+        nextTasks[id] = ticked ? TaskGoals.next(after: link.task, in: taskGoals, now: now) : nil
     }
 
     private func saveLinks() {
@@ -270,5 +328,37 @@ final class IntegrationsCoordinator {
     func requestRemindersAccess() async -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         return await reminders.requestAccess()
+    }
+
+    /// Reads Things now, in front, so macOS asks once whether FocusGuard
+    /// may control it.
+    func requestThingsAccess() async {
+        NSApp.activate(ignoringOtherApps: true)
+        await refreshTasks()
+    }
+
+    /// Whether Todoist or Linear has its token saved.
+    func isConnected(_ source: TaskSource) -> Bool {
+        (taskStores[source] as? TokenTaskStore)?.hasToken ?? false
+    }
+
+    /// Checks a pasted token with the service and keeps it if it's taken;
+    /// its tasks are read straight after.
+    func connect(_ source: TaskSource, token: String) async -> TokenCheck {
+        guard let store = taskStores[source] as? TokenTaskStore else { return .rejected }
+        let check = await store.connect(token: token)
+        if check == .accepted {
+            setProblem(nil, for: source)
+            await refreshTasks()
+        }
+        return check
+    }
+
+    /// Forgets the token; the source's tasks go too.
+    func disconnect(_ source: TaskSource) {
+        (taskStores[source] as? TokenTaskStore)?.disconnect()
+        tasksBySource[source] = nil
+        setProblem(nil, for: source)
+        publishTasks(now: .now)
     }
 }
