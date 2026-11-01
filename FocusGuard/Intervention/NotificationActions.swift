@@ -15,7 +15,7 @@ enum NotificationCommand: Equatable {
     case startFromOffer(since: Date, minutes: Int?)
     /// The auto-start offer's "Not now".
     case snoozeAutoStart
-    /// The morning plan's "Plan them".
+    /// The morning plan's "Plan them", the evening tip's "Plan it".
     case planSessions([Date])
     /// "Skip this one" on a planned session: its slot comes off the calendar.
     case skipPlannedSession(at: Date)
@@ -63,7 +63,7 @@ enum NotificationCommand: Equatable {
             self = .startFromOffer(since: Date(timeIntervalSinceReferenceDate: since), minutes: minutes)
         case (.autoStart, .notNow?):
             self = .snoozeAutoStart
-        case (.morningPlan, .planThem?):
+        case (.morningPlan, .planThem?), (.wrapUp, .planThem?):
             let slots = (info[NotificationInfo.slots] as? [Double]) ?? []
             self = .planSessions(slots.map(Date.init(timeIntervalSinceReferenceDate:)))
         case (.plannedSession, .skip?):

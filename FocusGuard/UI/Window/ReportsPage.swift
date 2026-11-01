@@ -196,11 +196,18 @@ struct ReportsPage: View {
 
     private var month: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // The month in review (Pro): the month that ended last, or the
+            // finished month on screen.
+            if FeatureFlags.monthlyReview {
+                let latest = ReportPeriod.month.interval(offset: 1)
+                let reviewed = offset == 0 ? latest : ReportPeriod.month.interval(offset: offset)
+                WindowMonthReviewStrip(month: reviewed, isLatest: reviewed.start == latest.start, entitlements: entitlements)
+            }
             kpis(sessionsSlot: true)
             WindowSplitRow(weights: [1, 1.42]) {
                 WindowCard(padding: EdgeInsets(top: 12, leading: 18, bottom: 10, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        WindowCardTitle("Daily goal", note: "a full ring is \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))")
+                        WindowCardTitle("Daily goal", note: ringNote)
                         MonthCalendarGrid(weeks: model.calendar, goal: FocusGoal.dailySeconds)
                         Spacer(minLength: 0)
                     }
@@ -247,6 +254,12 @@ struct ReportsPage: View {
             }
             .frame(minHeight: 200, maxHeight: .infinity)
         }
+    }
+
+    /// "a full ring is 4h", and any weekday's own goal: ", 2h on Fridays".
+    private var ringNote: String {
+        let own = FocusGoal.weekdayGoals().map { ", \(FocusGoal.format(minutes: $0.minutes)) on \(FocusGoal.pluralWeekday($0.weekday))" }
+        return "a full ring is \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))" + own.joined()
     }
 
     private var previousMonthName: String {

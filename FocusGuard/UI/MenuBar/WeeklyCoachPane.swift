@@ -218,16 +218,18 @@ private struct TryCardBackground: ViewModifier {
 /// A dot and a line with a bold lead.
 struct CoachPointRow: View {
     let point: CoachPoint
+    /// The month review's sheet sets its lines a size up.
+    var size: CGFloat = 12
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 9) {
             Circle()
                 .fill(color)
-                .frame(width: 7, height: 7)
+                .frame(width: size - 5, height: size - 5)
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1 }
                 .accessibilityHidden(true)
             (Text(point.lead).fontWeight(.semibold) + Text(point.rest))
-                .font(.system(size: 12))
+                .font(.system(size: size))
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
         }

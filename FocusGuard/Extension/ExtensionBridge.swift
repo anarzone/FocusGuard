@@ -457,7 +457,7 @@ final class ExtensionBridge {
             plan: plan,
             preset: preset.rawValue,
             policy: preset.overridePolicy,
-            today: .init(focusSeconds: Int(appState.menuStats.today.focus), goalMinutes: FocusGoal.dailyMinutes),
+            today: .init(focusSeconds: Int(appState.menuStats.today.focus), goalMinutes: FocusGoal.todayMinutes),
             phase: .ready,
             blocking: .init(pauseTab: appState.tabPause.isEnabled, sites: [], parts: [], limits: limits(now: now),
                             passes: passes.filter { $0.value > now }

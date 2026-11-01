@@ -685,6 +685,11 @@ struct AskFactsBuilder {
                            tone: .drift, summary: "Minutes a day before \(Int(before.rounded())), during it \(Int(after.rounded())).")
         case .firstSession:
             visual = nil
+        case .callDayFocus, .weekdayFocus:
+            let widest = max(1, before, after)
+            visual = .rows([AskRow(name: "Before", value: before / widest, text: metricText(metric, before)),
+                            AskRow(name: "During it", value: after / widest, text: metricText(metric, after))],
+                           tone: .focus, summary: "Focused \(WindowFormat.hm(before)) a day before, \(WindowFormat.hm(after)) during it.")
         }
         return AskFacts(lead: lead, detail: detail, facts: facts + [basis], visual: visual, basis: basis)
     }
@@ -694,6 +699,7 @@ struct AskFactsBuilder {
         case .sessionRate:  return percent(value)
         case .siteMinutes:  return "\(Int(value.rounded())) min a day"
         case .firstSession: return clock(minutes: Int(value.rounded()))
+        case .callDayFocus, .weekdayFocus: return "\(WindowFormat.hm(value)) focused a day"
         }
     }
 

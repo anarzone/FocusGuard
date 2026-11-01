@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// Computes the user's current "goal streak" — number of consecutive days
-/// hitting `FocusGoal.dailyMinutes`, walking back from yesterday.
+/// hitting the day's goal (`FocusGoal.minutes(on:)`), walking back from yesterday.
 ///
 /// Why yesterday and not today? Today isn't done yet — counting it would make
 /// the streak flicker (3 → 4 → 4 → 3 if user falls behind by evening). We
@@ -33,7 +33,6 @@ struct StreakCalculator {
     /// yesterday (StatsStore passes the days it already has).
     static func streak(focusByDay byDay: [Date: TimeInterval], now: Date = .now, calendar: Calendar = .current) -> Int {
         let weekendsCount = UserDefaults.standard.bool(forKey: SettingsKeys.Goal.weekendsCount)
-        let goalSeconds = FocusGoal.dailySeconds
         let lookbackStart = calendar.date(byAdding: .day, value: -lookbackDays, to: calendar.startOfDay(for: now)) ?? now
 
         var streak = 0
@@ -48,7 +47,7 @@ struct StreakCalculator {
                 continue
             }
             let secs = byDay[cursor] ?? 0
-            if secs >= goalSeconds {
+            if secs >= FocusGoal.seconds(on: cursor, calendar: calendar) {
                 streak += 1
                 cursor = calendar.date(byAdding: .day, value: -1, to: cursor) ?? cursor
             } else {

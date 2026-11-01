@@ -51,6 +51,45 @@ final class HabitCopyTests: XCTestCase {
                                       busy: nil, calendar: calendar))
     }
 
+    // MARK: - A session before the first call (a weekly coach experiment)
+
+    func testMorningPlanPutsASessionRightBeforeTheFirstCall() throws {
+        let busy = [DateInterval(start: at(10, 30), end: at(11, 30)), DateInterval(start: at(15), end: at(16))]
+        let plan = try XCTUnwrap(MorningPlan.make(now: at(9), focusedMinutes: 0, goalMinutes: 240, sessionMinutes: 50,
+                                                  busy: busy, warmUpMinutes: 25, calendar: calendar))
+        XCTAssertEqual(plan.warmUp, MorningPlan.WarmUp(start: at(10, 5), minutes: 25, call: at(10, 30)))
+        XCTAssertEqual(plan.slots.first, at(10, 5))
+        XCTAssertEqual(plan.slots.count, 3)
+        XCTAssertTrue(plan.body(locale: locale, calendar: calendar)
+            .hasPrefix("A 25-minute session at 10:05, before your 10:30 call. Then free slots at "))
+    }
+
+    func testNoSessionBeforeACallThatsTooSoon() throws {
+        let busy = [DateInterval(start: at(9, 20), end: at(10))]
+        let plan = try XCTUnwrap(MorningPlan.make(now: at(9), focusedMinutes: 0, goalMinutes: 240, sessionMinutes: 50,
+                                                  busy: busy, warmUpMinutes: 25, calendar: calendar))
+        XCTAssertNil(plan.warmUp)
+        XCTAssertEqual(plan, MorningPlan.make(now: at(9), focusedMinutes: 0, goalMinutes: 240, sessionMinutes: 50,
+                                              busy: busy, calendar: calendar))
+    }
+
+    func testWithoutACallTheMorningPlanIsAsBefore() throws {
+        let plan = try XCTUnwrap(MorningPlan.make(now: at(9), focusedMinutes: 0, goalMinutes: 240, sessionMinutes: 50,
+                                                  busy: [], warmUpMinutes: 25, calendar: calendar))
+        XCTAssertNil(plan.warmUp)
+        XCTAssertEqual(plan.slots, MorningPlan.make(now: at(9), focusedMinutes: 0, goalMinutes: 240, sessionMinutes: 50,
+                                                    busy: [], calendar: calendar)?.slots)
+    }
+
+    func testJustTheSessionBeforeTheCall_whenItCoversTheGoal() throws {
+        let busy = [DateInterval(start: at(10, 30), end: at(18))]
+        let plan = try XCTUnwrap(MorningPlan.make(now: at(9), focusedMinutes: 220, goalMinutes: 240, sessionMinutes: 50,
+                                                  busy: busy, warmUpMinutes: 25, calendar: calendar))
+        XCTAssertEqual(plan.slots, [at(10, 5)])
+        XCTAssertEqual(plan.title, "A session before your first call?")
+        XCTAssertEqual(plan.body(locale: locale, calendar: calendar), "A 25-minute session at 10:05, before your 10:30 call.")
+    }
+
     // MARK: - Evening wrap-up
 
     func testWrapUpShortOfTheGoal() {

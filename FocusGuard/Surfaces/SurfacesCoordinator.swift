@@ -130,7 +130,7 @@ final class SurfacesCoordinator {
         writing = true
         let now = Date()
         lastWrite = now
-        let goal = FocusGoal.dailySeconds
+        let goal = FocusGoal.todaySeconds
         Task {
             let numbers = await stats.read(now: now, goal: goal)
             lastNumbers = numbers
@@ -178,7 +178,7 @@ final class SurfacesCoordinator {
         let now = Date()
         // The widget waits on this: write the new state right away with the
         // numbers already known, then refresh them.
-        if let lastNumbers { write(appState, numbers: lastNumbers, goal: FocusGoal.dailySeconds, now: now) }
+        if let lastNumbers { write(appState, numbers: lastNumbers, goal: FocusGoal.todaySeconds, now: now) }
         lastState = stateKey(now: now)
         lastMinute = shownMinute(now: now)
         refresh(widgets: true, controls: true)

@@ -17,6 +17,12 @@ struct CoachEvent: Equatable, Sendable {
     let session: UUID?
 
     var duration: TimeInterval { max(0, end.timeIntervalSince(start)) }
+
+    /// Time in a call app or on a call site (Zoom, Meet, Teams…).
+    var isCall: Bool {
+        isSite ? MeetingApps.hosts.contains { Classifier.host(target, matches: $0) }
+            : MeetingApps.bundleIds.contains(target)
+    }
 }
 
 /// A finished session.
@@ -35,6 +41,8 @@ struct CoachData: Sendable {
     let interval: DateInterval
     let events: [CoachEvent]
     let sessions: [CoachSession]
+    /// The calendar's busy times in it, when FocusGuard may read the calendar.
+    var busy: [DateInterval] = []
 
     static func empty(_ interval: DateInterval) -> CoachData {
         CoachData(interval: interval, events: [], sessions: [])
@@ -50,8 +58,57 @@ struct CoachData: Sendable {
                 return CoachEvent(start: start, end: end, kind: event.kind, target: event.target,
                                   name: event.name, isSite: event.isSite, session: event.session)
             },
-            sessions: sessions.filter { interval.start <= $0.start && $0.start < interval.end }
+            sessions: sessions.filter { interval.start <= $0.start && $0.start < interval.end },
+            busy: busy.compactMap { span in
+                let start = max(span.start, interval.start), end = min(span.end, interval.end)
+                return end > start ? DateInterval(start: start, end: end) : nil
+            }
         )
+    }
+
+    /// Time in calls each day, by the day's start: call apps and sites, and
+    /// the calendar's busy times, counted once where they overlap.
+    func callSecondsByDay(calendar: Calendar) -> [Date: TimeInterval] {
+        let spans = events.filter(\.isCall).map { DateInterval(start: $0.start, end: $0.end) } + busy
+        var byDay: [Date: [DateInterval]] = [:]
+        for span in spans {
+            var cursor = span.start
+            while cursor < span.end {
+                let day = calendar.startOfDay(for: cursor)
+                let next = calendar.date(byAdding: .day, value: 1, to: day) ?? span.end
+                let end = min(span.end, next)
+                byDay[day, default: []].append(DateInterval(start: cursor, end: end))
+                cursor = end
+            }
+        }
+        return byDay.mapValues(Self.covered)
+    }
+
+    /// How much time `spans` cover together.
+    static func covered(_ spans: [DateInterval]) -> TimeInterval {
+        var total: TimeInterval = 0
+        var open: DateInterval?
+        for span in spans.sorted(by: { $0.start < $1.start }) {
+            if let current = open, span.start <= current.end {
+                open = DateInterval(start: current.start, end: max(current.end, span.end))
+            } else {
+                total += open?.duration ?? 0
+                open = span
+            }
+        }
+        return total + (open?.duration ?? 0)
+    }
+
+    /// Focused seconds each day, by the day's start.
+    func focusByDay(calendar: Calendar) -> [Date: TimeInterval] {
+        Dictionary(grouping: events.filter { $0.kind == .focus }) { calendar.startOfDay(for: $0.start) }
+            .mapValues { $0.reduce(0) { $0 + $1.duration } }
+    }
+
+    /// Tracked seconds each day, by the day's start.
+    func trackedByDay(calendar: Calendar) -> [Date: TimeInterval] {
+        Dictionary(grouping: events) { calendar.startOfDay(for: $0.start) }
+            .mapValues { $0.reduce(0) { $0 + $1.duration } }
     }
 
     /// The events tracked in a session, by session.

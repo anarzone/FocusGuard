@@ -63,7 +63,7 @@ struct TodayModel {
     var inSessionProgress: Double { goal > 0 ? min(goalProgress, focusedInSessions / goal) : 0 }
 
     static func empty(day: Date = .now) -> TodayModel {
-        TodayModel(day: day, focused: 0, focusedInSessions: 0, drifted: 0, goal: FocusGoal.dailySeconds,
+        TodayModel(day: day, focused: 0, focusedInSessions: 0, drifted: 0, goal: FocusGoal.seconds(on: day),
                    bestZone: 0, bestZoneSession: nil, sessions: [], activity: [],
                    window: DateInterval(start: day, duration: 3600), topApps: [], trackingStarted: nil)
     }
@@ -125,7 +125,7 @@ enum TodayModelBuilder {
             focused: focused,
             focusedInSessions: inSessions,
             drifted: drifted,
-            goal: FocusGoal.dailySeconds,
+            goal: FocusGoal.seconds(on: dayStart, calendar: calendar),
             bestZone: best?.bestRun ?? 0,
             bestZoneSession: (best?.bestRun ?? 0) >= 60 ? best?.name : nil,
             sessions: sessions,

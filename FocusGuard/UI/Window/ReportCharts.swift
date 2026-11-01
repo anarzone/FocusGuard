@@ -395,7 +395,7 @@ struct MonthCalendarGrid: View {
                 ZStack {
                     Circle().inset(by: 1.25).stroke(Theme.track, lineWidth: 2.5)
                     if cell.focus > 0 && !cell.isLocked {
-                        WindowArc(start: 0, end: min(0.9999, cell.focus / max(1, goal)))
+                        WindowArc(start: 0, end: min(0.9999, cell.focus / max(1, goal(of: cell))))
                             .inset(1.25)
                             .stroke(Theme.focus, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                     }
@@ -415,8 +415,13 @@ struct MonthCalendarGrid: View {
 
     private var summary: String {
         let days = weeks.flatMap { $0 }.filter { $0.day != nil && !$0.isFuture && !$0.isLocked }
-        let met = days.filter { $0.focus >= goal }.count
+        let met = days.filter { $0.focus >= goal(of: $0) }.count
         return "Calendar: goal met on \(met) of \(days.count) days so far."
+    }
+
+    /// The day's own goal (a weekday can have one), else the daily goal.
+    private func goal(of cell: CalendarDay) -> TimeInterval {
+        cell.goal > 0 ? cell.goal : goal
     }
 }
 

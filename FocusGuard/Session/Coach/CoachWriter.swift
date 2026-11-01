@@ -45,6 +45,17 @@ struct CoachDraft: Equatable, Sendable {
             return "\(weekday(f.day, locale: locale, calendar: calendar)) drifted most."
         case .lateStarts:
             return "Days that started early focused more."
+        case .switching(let f):
+            return "\(weekday(f.day, locale: locale, calendar: calendar))'s sessions switched apps \(every(f.minutesPerSwitch))."
+        case .sessionLength(let f):
+            return "Your \(f.minutes)-minute sessions went best: \(percent(f.rate)), against \(percent(f.longerRate)) for longer ones."
+        case .meetingDays(let f):
+            return "Days with \(f.callHours) hours of calls kept \(percent(f.heavyFocus / max(1, f.otherFocus))) of your usual focus."
+        case .appChain(let f):
+            return "\(f.sourceName) led straight to \(f.name) \(counted(f.count, "time"))."
+        case .weeklyRhythm(let f):
+            let days = CoachExperiment.weekdays(f.weekday, locale: locale, calendar: calendar)
+            return "\(days) have been your weakest day \(spelled(f.weeks)) weeks running."
         }
     }
 
@@ -83,6 +94,43 @@ struct CoachDraft: Equatable, Sendable {
                 CoachPoint(lead: "From \(cutoff) or later: \(duration(f.lateFocus))",
                            rest: " a day, over \(counted(f.lateDays, "day")).", tone: .drift),
             ]
+        case .switching(let f):
+            return [
+                CoachPoint(lead: "\(weekday(f.day, locale: locale, calendar: calendar)): a new app \(every(f.minutesPerSwitch))",
+                           rest: " in sessions, \(counted(f.switches, "change")) in all.", tone: .drift),
+                CoachPoint(lead: "Other days:", rest: " \(every(f.usualMinutesPerSwitch)).", tone: .focus),
+                CoachPoint(lead: "Most of those sessions", rest: " ran \(f.hours.phrase(locale: locale, calendar: calendar)).",
+                           tone: .other),
+            ]
+        case .sessionLength(let f):
+            return [
+                CoachPoint(lead: "\(f.minutes)-minute sessions: \(percent(f.rate))",
+                           rest: " focus rate across \(counted(f.sessions, "session")).", tone: .focus),
+                CoachPoint(lead: "Longer ones: \(percent(f.longerRate))",
+                           rest: " across \(counted(f.longerSessions, "session")).", tone: .drift),
+                CoachPoint(lead: "Over \(counted(f.weeks, "week")),", rest: " not just last week.", tone: .other),
+            ]
+        case .meetingDays(let f):
+            return [
+                CoachPoint(lead: "\(counted(f.heavyDays, "day")) with \(f.callHours) hours of calls or more: \(duration(f.heavyFocus))",
+                           rest: " focused a day.", tone: .drift),
+                CoachPoint(lead: "The other \(counted(f.otherDays, "day")): \(duration(f.otherFocus))",
+                           rest: " a day.", tone: .focus),
+            ]
+        case .appChain(let f):
+            return [
+                CoachPoint(lead: "From \(f.sourceName) to \(f.name)",
+                           rest: " within seconds, \(counted(f.count, "time")) last week.", tone: .drift),
+                CoachPoint(lead: "About \(minutes(f.dailySeconds)) a day",
+                           rest: " on \(f.name) last week.", tone: .other),
+            ]
+        case .weeklyRhythm(let f):
+            let days = CoachExperiment.weekdays(f.weekday, locale: locale, calendar: calendar)
+            return [
+                CoachPoint(lead: "\(days): \(duration(f.focus)) focused",
+                           rest: " on average, the lowest of each of the last \(f.weeks) weeks.", tone: .drift),
+                CoachPoint(lead: "Your other days: \(duration(f.othersFocus))", rest: " on average.", tone: .focus),
+            ]
         }
     }
 
@@ -104,6 +152,13 @@ struct CoachDraft: Equatable, Sendable {
             }
         case let .earlierMorningPlan(hour):
             return "The morning plan suggests today's sessions; from \(CoachExperiment.clock(hour, locale: locale, calendar: calendar)) it comes before the day fills up."
+        case let .sessionLength(minutes):
+            return "Your \(minutes)-minute sessions held their focus best, so every session starts at that length."
+        case let .sessionBeforeFirstCall(minutes):
+            return "A \(minutes)-minute session before the first call gets some focus in before the calls break up the day."
+        case let .weekdayGoal(weekday, _):
+            let days = CoachExperiment.weekdays(weekday, locale: locale, calendar: calendar)
+            return "A goal you can meet on \(days) keeps the streak going, and every other day keeps your usual goal."
         }
     }
 
@@ -121,6 +176,17 @@ struct CoachDraft: Equatable, Sendable {
 
     static func counted(_ count: Int, _ noun: String) -> String {
         "\(count) \(count == 1 ? noun : noun + "s")"
+    }
+
+    /// "every minute", "every 2 minutes".
+    static func every(_ minutes: Double) -> String {
+        minutes < 1.5 ? "every minute" : "every \(Int(minutes.rounded())) minutes"
+    }
+
+    /// "three", for small counts in a sentence.
+    static func spelled(_ n: Int) -> String {
+        let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+        return words.indices.contains(n) ? words[n] : "\(n)"
     }
 
     static func weekday(_ day: Date, locale: Locale, calendar: Calendar) -> String {
@@ -154,11 +220,20 @@ struct CoachWording: Equatable, Sendable {
 /// model, or when it strays or fails, the template words stay.
 struct CoachWriter {
     let model: (any OnDeviceModel)?
+    /// What the model is told: `instructions`, or `monthInstructions` for
+    /// the month review.
+    var brief: String = CoachWriter.instructions
 
     static let instructions = """
         You reword a weekly focus note for one person. Use only the facts you are given. Never add \
         numbers, sites, apps, days or times that are not in the facts. Speak to the person as "you", \
         plain and kind. No emoji, no quotation marks, no exclamation marks.
+        """
+
+    static let monthInstructions = """
+        You reword the headline of a monthly focus review for one person. Use only the facts you are \
+        given. Never add numbers, sites, apps, days, months or times that are not in the facts. Speak \
+        to the person as "you", plain and kind. No emoji, no quotation marks, no exclamation marks.
         """
 
     private struct Answer: Decodable {
@@ -180,7 +255,7 @@ struct CoachWriter {
         var prompt = "Facts:\n" + draft.facts.map { "- \($0)" }.joined(separator: "\n")
             + "\nPlain headline: \(draft.headline)"
         if let why = draft.why { prompt += "\nPlain reason for the experiment: \(why)" }
-        guard let answer = try? await model.respond(Answer.self, instructions: Self.instructions, prompt: prompt,
+        guard let answer = try? await model.respond(Answer.self, instructions: brief, prompt: prompt,
                                                     shape: Self.shape(withWhy: draft.why != nil)) else { return plain }
 
         let allowed = draft.facts + [draft.headline, draft.why ?? ""]
