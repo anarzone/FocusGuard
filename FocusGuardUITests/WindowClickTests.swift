@@ -124,7 +124,11 @@ final class WindowClickTests: XCTestCase {
     func testPagesThatFitDontScroll() throws {
         try XCTSkipIf(window.frame.height < 700, "The screen is too small for the usual window size")
         open("Today")
-        assertStays(window.staticTexts["Your day"], "Today")
+        // Without the app's permissions (as in CI) Today adds a banner
+        // asking for them: more to see, so it may scroll then.
+        if !text(containing: "FocusGuard needs").waitForExistence(timeout: 2) {
+            assertStays(window.staticTexts["Your day"], "Today")
+        }
         open("Reports")
         assertStays(window.staticTexts["Focus and drift per day"], "Reports › Week")
         click(window.buttons["Month"])
