@@ -176,10 +176,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            hosting.preferredContentSize = NSSize(width: 1200, height: 720)
+            // The usual 1200 × 720, or what fits a smaller screen (a 1024 × 768
+            // display, the CI runners) rather than hanging off its edge.
+            let visible = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1200, height: 720)
+            let size = NSSize(width: min(1200, max(980, visible.width)), height: min(720, max(640, visible.height)))
+            hosting.preferredContentSize = size
 
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
+                contentRect: NSRect(origin: .zero, size: size),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -198,12 +202,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 980, height: 640)
-            // On a screen smaller than the usual 1200 × 720 (a 1024 × 768
-            // display, the CI runners), start at what fits, not half off it.
-            if let visible = NSScreen.main?.visibleFrame {
-                window.setContentSize(NSSize(width: min(1200, max(980, visible.width)),
-                                             height: min(720, max(640, visible.height))))
-            }
             window.center()
 
             // When the user clicks the red traffic light, drop the Dock icon
