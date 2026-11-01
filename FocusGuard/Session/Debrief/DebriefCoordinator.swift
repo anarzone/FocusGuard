@@ -82,10 +82,10 @@ final class DebriefCoordinator {
         Persistence.save(context)
     }
 
-    /// Goals to offer under the empty field: open reminders and the Git
-    /// branch (from `IntegrationsCoordinator`), the calendar event on now,
-    /// and the last goal if it wasn't done.
-    func goalSuggestions(now: Date = .now, reminders: [ReminderItem] = [], git: GitGoal? = nil) -> [GoalSuggestion] {
+    /// Goals to offer under the empty field: open tasks and the Git branch
+    /// (from `IntegrationsCoordinator`), the calendar event on now, and the
+    /// last goal if it wasn't done.
+    func goalSuggestions(now: Date = .now, tasks: [TaskItem] = [], git: GitGoal? = nil) -> [GoalSuggestion] {
         guard isEnabled else { return [] }
         var descriptor = FetchDescriptor<Session>(
             predicate: #Predicate { $0.goal != nil && $0.endedAt != nil },
@@ -96,7 +96,7 @@ final class DebriefCoordinator {
         let event = calendarSource.current(now: now)
         return GoalSuggestion.make(lastGoal: last?.goal, lastVerdict: last?.goalVerdict,
                                    calendarTitle: event?.title, calendarStart: event?.start,
-                                   reminders: reminders, git: git, now: now)
+                                   tasks: tasks, git: git, now: now)
     }
 
     // MARK: - Debrief

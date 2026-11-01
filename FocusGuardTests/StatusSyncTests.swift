@@ -543,7 +543,7 @@ final class StatusSyncTests: XCTestCase {
     }
 
     func testPrivacyStatementNamesSlackOnceItsBuiltIn() {
-        XCTAssertTrue(PrivacyStatement.networkStatement(slack: true).contains("Spotify and Slack"))
+        XCTAssertTrue(PrivacyStatement.networkStatement(slack: true).contains("Linear and Slack"))
         XCTAssertFalse(PrivacyStatement.networkStatement(slack: false).contains("Slack"))
     }
 }

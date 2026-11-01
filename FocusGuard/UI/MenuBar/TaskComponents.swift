@@ -1,7 +1,7 @@
 import SwiftUI
 
 // The integrations in the menu: the next meeting on the ready screen, and
-// ticking off a reminder when the session's done (Pro). The data is in
+// ticking off a task when the session's done (Pro). The data is in
 // Session/Integrations.
 
 // MARK: - Next meeting
@@ -39,8 +39,8 @@ struct NextMeetingRow: View {
 
 // MARK: - Tick it off
 
-/// The Complete screen's goal when it came from a reminder: how it went,
-/// and the reminder ticked off on Done, with Undo.
+/// The Complete screen's goal when it came from a task: how it went, and
+/// the task ticked off in its app on Done, with Undo.
 struct TaskGoalCard: View {
     let goal: String
     let verdict: GoalVerdict?
@@ -67,24 +67,25 @@ struct TaskGoalCard: View {
     }
 
     @ViewBuilder private var status: some View {
+        let app = link.task.source.name
         HStack(spacing: 8) {
             if link.ticked {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Theme.focus)
                     .accessibilityHidden(true)
-                Text("Ticked off in Reminders").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Ticked off in \(app)").frame(maxWidth: .infinity, alignment: .leading)
                 Button("Undo", action: onUndo).buttonStyle(.textLink)
             } else if verdict == .done {
                 Image(systemName: "circle")
                     .foregroundStyle(Theme.secondaryText)
                     .accessibilityHidden(true)
-                Text("Still open in Reminders").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Still open in \(app)").frame(maxWidth: .infinity, alignment: .leading)
                 Button("Tick off", action: onTick).buttonStyle(.textLink)
             } else {
                 Image(systemName: "checklist")
                     .foregroundStyle(Theme.secondaryText)
                     .accessibilityHidden(true)
-                Text(link.reminder.list.isEmpty ? "From Reminders" : "From Reminders · \(link.reminder.list)")
+                Text(link.task.list.isEmpty ? "From \(app)" : "From \(app) · \(link.task.list)")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -123,9 +124,9 @@ private struct VerdictPicker: View {
     }
 }
 
-/// After a tick: the next open reminder, ready to start on.
+/// After a tick: the next open task, ready to start on.
 struct NextTaskRow: View {
-    let item: ReminderItem
+    let item: TaskItem
     let minutes: Int
     let onStart: () -> Void
 

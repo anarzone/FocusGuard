@@ -55,6 +55,8 @@ struct SettingsPrivacyPane: View {
                 SettingsRow("Licence check", detail: "Pro only, when you enter a key and when the app starts")
                 SettingsDivider()
                 SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
+                SettingsDivider()
+                SettingsRow("Todoist and Linear", detail: "Only if you connect them: reads your tasks, and ticks off the one you finish")
             }
             SettingsNote(systemImage: "lock",
                          text: PrivacyNote.onThisMac)
@@ -365,15 +367,16 @@ private struct DiagnosticsSheet: View {
 
 /// What leaves this Mac, said the same way everywhere. Keep it in step with
 /// the code: update checks (Sparkle), site icons (`FaviconLoader`, from the
-/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Slack once
-/// it's built in (`SlackAccount`) and, while the app offers them, AI tips.
+/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Todoist and
+/// Linear (`TodoistTasks`, `LinearTasks`), Slack once it's built in
+/// (`SlackAccount`) and, while the app offers them, AI tips.
 enum PrivacyStatement {
     /// For the Privacy and About panes.
     static var network: String { networkStatement(slack: StatusSync.slackAvailable) }
 
     /// - Parameter slack: Slack is built in, for the status while you focus.
     static func networkStatement(slack: Bool) -> String {
-        let services = slack ? "Spotify and Slack when you use them" : "Spotify when you use it"
+        let services = slack ? "Spotify, Todoist, Linear and Slack when you use them" : "Spotify, Todoist and Linear when you use them"
         let rest = AISettings.isAvailable
             ? "for \(services), and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
             : "and for \(services)"
@@ -383,7 +386,7 @@ enum PrivacyStatement {
 
     /// For onboarding's welcome step.
     static var short: String {
-        let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify if you use it."
+        let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them."
         return AISettings.isAvailable ? base + " AI tips, if you turn them on, send a short summary." : base
     }
 }

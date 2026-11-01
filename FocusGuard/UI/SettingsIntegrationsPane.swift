@@ -2,8 +2,9 @@ import AppKit
 import SwiftUI
 
 /// Integrations: the calendar, tasks as session goals, code, status in
-/// Slack and Discord, macOS and the browser. Only Slack signs in; Calendar
-/// and Reminders ask macOS once.
+/// Slack and Discord, macOS and the browser. Calendar, Reminders and Things
+/// ask macOS once; Todoist and Linear take a personal token
+/// (`TaskSourceRows`); only Slack signs in.
 struct SettingsIntegrationsPane: View {
     @Bindable var appState: AppState
     var entitlements: Entitlements = .shared
@@ -224,7 +225,7 @@ struct SettingsIntegrationsPane: View {
 
     private var tasksSection: some View {
         SettingsSection(title: "Tasks as session goals", trailing: { ProBadge() }) {
-            SettingsRow(title: "Reminders", detail: remindersDetail) {
+            TaskSourceRow(source: .reminders, detail: remindersDetail) {
                 if tasksUnlocked || entitlements.canStartTrial {
                     Toggle("Reminders", isOn: Binding(get: { remindersOn && tasksUnlocked }, set: setReminders))
                         .toggleStyle(.switch)
@@ -253,6 +254,7 @@ struct SettingsIntegrationsPane: View {
                     }
                 }
             }
+            TaskSourceRows(integrations: appState.integrations, entitlements: entitlements)
         }
     }
 

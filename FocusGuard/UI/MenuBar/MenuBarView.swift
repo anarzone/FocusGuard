@@ -280,7 +280,7 @@ struct MenuBarView: View {
     }
 
     private func refreshGoalSuggestions() {
-        goalSuggestions = appState.debriefs.goalSuggestions(reminders: appState.integrations.reminderGoals,
+        goalSuggestions = appState.debriefs.goalSuggestions(tasks: appState.integrations.taskGoals,
                                                             git: appState.integrations.gitGoal)
     }
 
@@ -565,8 +565,8 @@ struct MenuBarView: View {
         }
     }
 
-    /// "Start 25 min" on the next reminder: it's the new session's goal.
-    private func start(task item: ReminderItem) {
+    /// "Start 25 min" on the next task: it's the new session's goal.
+    private func start(task item: TaskItem) {
         sessionGoal = String(item.title.prefix(SessionGoal.maxLength))
         appState.integrations.pick(item)
         lastSessionMinutes = minutes

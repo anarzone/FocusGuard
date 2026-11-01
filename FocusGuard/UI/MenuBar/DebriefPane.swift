@@ -7,13 +7,13 @@ import SwiftUI
 // MARK: - Goal
 
 /// "What's this session for?" on the ready screen: the goal the debrief
-/// checks. Empty, it offers open reminders (Pro), the calendar event on
-/// now, the Git branch and the last unfinished goal, each under a heading
-/// for where it came from. Return starts the session.
+/// checks. Empty, it offers open tasks (Pro), the calendar event on now,
+/// the Git branch and the last unfinished goal, each under a heading for
+/// where it came from. Return starts the session.
 struct SessionGoalField: View {
     @Binding var goal: String
     var suggestions: [GoalSuggestion] = []
-    /// A suggestion was picked; a reminder is kept to tick off after.
+    /// A suggestion was picked; a task is kept to tick off after.
     var onPick: (GoalSuggestion) -> Void = { _ in }
     var onSubmit: () -> Void = {}
 
@@ -113,7 +113,7 @@ private struct GoalSuggestionRow: View {
 
     private var icon: String {
         switch suggestion.source {
-        case .reminder: return "circle"
+        case .task:     return "circle"
         case .calendar: return "calendar"
         case .git:      return "arrow.triangle.branch"
         case .lastGoal: return "arrow.uturn.backward"
@@ -122,10 +122,10 @@ private struct GoalSuggestionRow: View {
 
     private var help: String {
         switch suggestion.source {
-        case .reminder: return "From Reminders, ticked off when you get it done"
-        case .calendar: return "From your calendar"
-        case .git:      return "The branch you're on"
-        case .lastGoal: return "Your last goal, not done yet"
+        case .task(let from, _, _): return "From \(from.name), ticked off when you get it done"
+        case .calendar:             return "From your calendar"
+        case .git:                  return "The branch you're on"
+        case .lastGoal:             return "Your last goal, not done yet"
         }
     }
 }

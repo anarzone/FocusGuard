@@ -15,8 +15,9 @@ struct GoalSuggestion: Equatable, Identifiable {
         case lastGoal
         /// The calendar event on now (or starting soon).
         case calendar
-        /// An open reminder (Pro), and its list's name.
-        case reminder(id: String, list: String)
+        /// An open task (Pro): a reminder, a Things to-do, a Todoist task
+        /// or a Linear issue, and where it's filed.
+        case task(TaskSource, id: String, list: String)
         /// The branch checked out in a repo.
         case git(repo: String)
     }
@@ -28,11 +29,11 @@ struct GoalSuggestion: Equatable, Identifiable {
 
     var id: String { "\(source)-\(text)" }
 
-    /// In the field's order: up to two reminders, the calendar event, the
-    /// Git branch, then the unfinished last goal. A text already offered
-    /// isn't offered again.
+    /// In the field's order: up to two tasks (best first, from any
+    /// source), the calendar event, the Git branch, then the unfinished
+    /// last goal. A text already offered isn't offered again.
     static func make(lastGoal: String?, lastVerdict: GoalVerdict?, calendarTitle: String?, calendarStart: Date? = nil,
-                     reminders: [ReminderItem] = [], git: GitGoal? = nil,
+                     tasks: [TaskItem] = [], git: GitGoal? = nil,
                      now: Date = .now, calendar: Calendar = .current) -> [GoalSuggestion] {
         var out: [GoalSuggestion] = []
         func add(_ text: String?, _ source: Source, _ detail: String? = nil) {
@@ -40,8 +41,8 @@ struct GoalSuggestion: Equatable, Identifiable {
                   !out.contains(where: { $0.text.caseInsensitiveCompare(text) == .orderedSame }) else { return }
             out.append(GoalSuggestion(text: text, source: source, detail: detail))
         }
-        for item in reminders.prefix(ReminderGoals.offered) {
-            add(item.title, .reminder(id: item.id, list: item.list), ReminderGoals.dueNote(item, now: now, calendar: calendar))
+        for item in tasks.prefix(TaskGoals.offered) {
+            add(item.title, .task(item.source, id: item.id, list: item.list), TaskGoals.dueNote(item, now: now, calendar: calendar))
         }
         add(calendarTitle, .calendar, calendarStart.flatMap { $0 > now ? HabitFormat.time($0, calendar: calendar) : nil })
         if let git { add(git.branch, .git(repo: git.repo)) }
@@ -52,13 +53,13 @@ struct GoalSuggestion: Equatable, Identifiable {
     }
 
     /// The heading over a run of suggestions from one place: "Reminders ·
-    /// Work", "Calendar", "Git · focusguard", "Last time".
+    /// Work", "Todoist · Inbox", "Calendar", "Git · focusguard", "Last time".
     var group: String {
         switch source {
-        case .reminder(_, let list): return list.isEmpty ? "Reminders" : "Reminders · \(list)"
-        case .calendar:              return "Calendar"
-        case .git(let repo):         return "Git · \(repo)"
-        case .lastGoal:              return "Last time"
+        case .task(let from, _, let list): return list.isEmpty ? from.name : "\(from.name) · \(list)"
+        case .calendar:                    return "Calendar"
+        case .git(let repo):               return "Git · \(repo)"
+        case .lastGoal:                    return "Last time"
         }
     }
 
