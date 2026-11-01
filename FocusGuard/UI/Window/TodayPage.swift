@@ -10,7 +10,10 @@ struct TodayPage: View {
 
     @State private var dayOffset = 0
     @State private var model: TodayModel = .empty()
-    @State private var now = Date.now
+    /// The clock: every second in a session or break, else at each reload.
+    @State private var tickedAt = Date.now
+    /// Never older than the window's showing, so it shows fresh numbers.
+    private var now: Date { max(tickedAt, OnScreen.shared.windowShownAt) }
     /// No session ever: the first-day page.
     @State private var isFirstDay = false
     @State private var streak = 0
@@ -18,6 +21,7 @@ struct TodayPage: View {
     @AppStorage(WindowDefaultsKey.sessionLength) private var lengthChoice = 0
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
+    @Environment(\.isOnScreen) private var isOnScreen
 
     init(appState: AppState, onNavigate: @escaping (MainTab) -> Void) {
         self._appState = Bindable(wrappedValue: appState)
@@ -74,19 +78,14 @@ struct TodayPage: View {
                 .frame(minHeight: 210, maxHeight: .infinity)
             }
         }
-        .task(id: dayOffset) {
-            while !Task.isCancelled {
-                await reload()
-                try? await Task.sleep(for: .seconds(10))
-            }
-        }
+        // While the window can be seen: the session card's clock ticks every
+        // second in a session or break, and the rest reloads every 10 s.
+        .repeating(every: .seconds(10), while: isOnScreen, id: dayOffset) { await reload() }
         .task { await appState.permissions.refresh() }
-        // The session card's clock ticks every second; the rest reloads every 10 s.
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
-            if isToday && (appState.sessionManager.currentSession != nil || appState.breakManager.current != nil) {
-                now = date
-            }
-        }
+        .repeating(every: .seconds(1),
+                   while: isOnScreen && isToday
+                       && (appState.sessionManager.currentSession != nil || appState.breakManager.current != nil),
+                   id: 0) { tickedAt = .now }
         .onChange(of: appState.sessionManager.currentSession?.id) { Task { await reload() } }
     }
 
@@ -99,7 +98,7 @@ struct TodayPage: View {
         if model.day != key, let cached = appState.windowPages.today[key] { show(cached) }
         let fresh = await appState.stats.todayPage(day: day, now: now)
         guard !Task.isCancelled, key == Calendar.current.startOfDay(for: self.day) else { return }
-        self.now = now
+        tickedAt = now
         show(fresh)
         appState.windowPages.today[key] = fresh
     }

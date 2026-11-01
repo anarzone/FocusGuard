@@ -11,6 +11,7 @@ struct ReportsPage: View {
     @State private var model: ReportsModel = .empty
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
     @Environment(\.openWindowSheet) private var openSheet
+    @Environment(\.isOnScreen) private var isOnScreen
 
     init(appState: AppState, period: ReportPeriod = .week) {
         self._appState = Bindable(wrappedValue: appState)
@@ -50,14 +51,9 @@ struct ReportsPage: View {
                 }
             }
         }
-        .task(id: reloadKey) {
-            await reload()
-            // Only the current week or month still changes.
-            while offset == 0, !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                if !Task.isCancelled { await reload() }
-            }
-        }
+        // Only the current week or month still changes, and only while the
+        // window can be seen is it worth reloading.
+        .repeating(every: offset == 0 ? .seconds(60) : nil, while: isOnScreen, id: reloadKey) { await reload() }
     }
 
     /// Builds the report off the main thread (a month takes about half a

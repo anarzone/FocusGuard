@@ -59,12 +59,14 @@ final class ExtensionBridge {
     /// through" does, for what the snapshot shows, so a pass taken in the
     /// browser isn't followed by the block screen.
     @ObservationIgnored var grantEnginePass: (ActivitySnapshot) -> Void = { _ in }
+    /// A browser reported another tab, or the grace after switching to one
+    /// ran out: the tracker looks again now instead of at its next tick.
+    @ObservationIgnored var onTabChange: (() -> Void)?
 
     // MARK: State
 
     private let server: BrowserSocketServer
     @ObservationIgnored private weak var appState: AppState?
-    @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var activationObserver: NSObjectProtocol?
     @ObservationIgnored private var rulesObserver: NSObjectProtocol?
     @ObservationIgnored private var lastSent: ExtensionState?
@@ -100,9 +102,9 @@ final class ExtensionBridge {
         } catch {
             Persistence.logger.error("browser extension socket didn't start: \(String(describing: error), privacy: .public)")
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
-        }
+        // No timer of its own: `tick` runs on the tracker's, every second in
+        // a session or on a break and less often otherwise, and every
+        // message from a browser pushes straight away (`handle`).
         // Switching to a browser: ask its extension where it is, in case a
         // focus change got lost on the way.
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -121,8 +123,6 @@ final class ExtensionBridge {
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
         server.stop()
         clients = [:]
     }
@@ -193,6 +193,7 @@ final class ExtensionBridge {
                 clients[id]?.lastTab = report
                 clients[id]?.lastTabAt = .now
             }
+            onTabChange?()
         case .classify(let requestId, let url):
             reply(id, requestId, result: classification(of: url, browser: clients[id]?.browser))
         case .setCategory(let requestId, let url, let scope, let category):
@@ -402,7 +403,8 @@ final class ExtensionBridge {
 
     // MARK: - Pushing state
 
-    private func tick() {
+    /// Keeps the extensions up to date: run on each tracker tick (AppState).
+    func tick() {
         // Nothing to keep up to date until an extension connects.
         guard let appState, !clients.isEmpty else { return }
         appState.refreshMenuStats()
@@ -592,8 +594,16 @@ final class ExtensionBridge {
     private func browserActivated(_ bundleId: String?) {
         guard let bundleId else { return }
         activatedAt[bundleId] = .now
+        var asked = false
         for (id, client) in clients where client.greeted && client.browser == bundleId {
             send(RefreshCommand(), to: id)
+            asked = true
+        }
+        // Its last page stops counting after the grace (`pickTab`): look
+        // again then, in case no fresh report came.
+        guard asked else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.returnGrace + 0.1) { [weak self] in
+            MainActor.assumeIsolated { self?.onTabChange?() }
         }
     }
 

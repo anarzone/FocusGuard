@@ -8,7 +8,9 @@ import SwiftUI
 ///
 /// The status item is a template glyph whose shape carries the state (see
 /// `StatusGlyphState`), plus — during a session or break — the minutes left
-/// as a calm "24m" label (see `StatusLabel`), never a ticking mm:ss.
+/// as a calm "24m" label (see `StatusLabel`), never a ticking mm:ss. It
+/// redraws when state changes and at the next change time alone brings
+/// (`StatusItemSchedule`), so outside a session it doesn't wake at all.
 ///
 /// Dismissal: NSEvent global + local monitors close the window on any click
 /// outside our content. Same pattern Ice / Bartender / Stats use.
@@ -19,9 +21,14 @@ final class MenuBarController: NSObject {
     private let glyphProvider: () -> StatusGlyphState
     private let labelProvider: () -> StatusLabel?
     private let minuteProvider: () -> Int?
+    /// Seconds until the item changes by itself (see `StatusItemSchedule`).
+    private let changeDelayProvider: () -> TimeInterval?
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
+    /// One-shot, for the next change that comes with time alone.
     private var tickTimer: Timer?
+    private var defaultsObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
     private var animationTimer: Timer?
     private var renderedGlyph: StatusGlyphState?
     /// When the menu last closed — so the mouse-up of a click that closed it
@@ -35,6 +42,7 @@ final class MenuBarController: NSObject {
         glyphProvider: @escaping () -> StatusGlyphState,
         labelProvider: @escaping () -> StatusLabel? = { nil },
         minuteProvider: @escaping () -> Int? = { nil },
+        changeDelayProvider: @escaping () -> TimeInterval? = { nil },
         @ViewBuilder content: () -> Content
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -42,31 +50,52 @@ final class MenuBarController: NSObject {
         self.glyphProvider = glyphProvider
         self.labelProvider = labelProvider
         self.minuteProvider = minuteProvider
+        self.changeDelayProvider = changeDelayProvider
         super.init()
         configureStatusItem()
-        startTicking()
         observeChanges()
+        // "Show time in the menu bar" lives in UserDefaults, which isn't observed.
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshGlyph() }
+        }
+        // A minute may have turned while the Mac slept.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshGlyph() }
+        }
     }
 
     deinit {
         if let m = globalClickMonitor { NSEvent.removeMonitor(m) }
         if let m = localClickMonitor  { NSEvent.removeMonitor(m) }
+        if let o = defaultsObserver { NotificationCenter.default.removeObserver(o) }
+        if let o = wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(o) }
         tickTimer?.invalidate()
         animationTimer?.invalidate()
     }
 
-    /// 1 Hz poll of the glyph state. Only redraws when the state changes —
-    /// focusing progress is quantised, so that's a handful of times a session.
-    private func startTicking() {
-        tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refreshGlyph() }
+    /// Wakes for the next change that comes with time alone: the label's
+    /// next minute, the shield's next fill step, a drift outlasting its
+    /// silence window, a pass's next second. Nothing runs outside a session,
+    /// a break or a recap; never a 1 Hz poll.
+    private func scheduleNextRefresh() {
+        tickTimer?.invalidate()
+        tickTimer = nil
+        guard let delay = changeDelayProvider() else { return }
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshGlyph() }
         }
-        if let t = tickTimer { RunLoop.main.add(t, forMode: .common) }
+        // Late by a tenth at most: a minute's label may flip half a second late.
+        timer.tolerance = min(0.5, delay / 10)
+        RunLoop.main.add(timer, forMode: .common)
+        tickTimer = timer
     }
 
-    /// Re-render the moment session, break or drift state changes, instead
-    /// of waiting for the next 1 Hz tick (which stays as a backstop for
-    /// purely time-based changes, like a drift crossing its silence window).
+    /// Re-render the moment session, break or drift state changes; changes
+    /// that come with time alone are scheduled (`scheduleNextRefresh`).
     private func observeChanges() {
         withObservationTracking {
             _ = glyphProvider()
@@ -80,6 +109,11 @@ final class MenuBarController: NSObject {
     }
 
     private func refreshGlyph() {
+        render()
+        scheduleNextRefresh()
+    }
+
+    private func render() {
         let state = glyphProvider()
         let label = labelProvider()
         let mark = minuteProvider()
@@ -210,6 +244,9 @@ final class MenuBarController: NSObject {
         guard let button = statusItem.button,
               let buttonWindow = button.window else { return }
 
+        // First, so the menu lays out on fresh numbers; its clock and
+        // reloads run only while it's open.
+        OnScreen.shared.setMenu(true)
         popoverWindow.recomputeContentSize()
 
         // Menus hang from the item's leading edge, just under the menu bar.
@@ -243,6 +280,7 @@ final class MenuBarController: NSObject {
         popoverWindow.orderOut(nil)
         statusItem.button?.highlight(false)
         teardownMonitors()
+        OnScreen.shared.setMenu(false)
     }
 
     // MARK: - Click monitoring

@@ -205,9 +205,9 @@ struct StoreStats: Equatable {
 // MARK: - Diagnostics
 
 /// A plain-text report for support: the version, the Mac, the plan,
-/// permission states, settings that say how the app is set up, and this
-/// run's log lines with sites and paths taken out. No activity, no titles,
-/// no sites. Nothing is sent: the user reads it, then opens Mail or a
+/// permission states, settings that say how the app is set up, what this
+/// run has cost in CPU and wakeups (`EnergyUsage`), and this run's log
+/// lines with sites and paths taken out. No activity, no titles, no sites. Nothing is sent: the user reads it, then opens Mail or a
 /// GitHub issue themselves.
 enum DiagnosticsReport {
     struct Prepared: Identifiable {
@@ -253,6 +253,7 @@ enum DiagnosticsReport {
                           ("Rules", "\(rules)"),
                           ("Daily limits", "\(appState.limits.statuses.count)")]),
             ("Browser extension", [("Connected browsers", "\(appState.extensionBridge.connectedBrowsers.count)")]),
+            ("Energy, this run", EnergyUsage.sinceLaunch()?.rows ?? [("Usage", "unavailable")]),
         ]
     }
 

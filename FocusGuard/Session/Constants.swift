@@ -3,8 +3,7 @@ import Foundation
 /// Tunable knobs centralised here so they're easy to find and rationalise.
 enum Constants {
     enum Tracking {
-        /// Frequency of `ActivityTracker.tick()` polls.
-        static let pollInterval: TimeInterval = 1.0
+        // How often the tracker looks: see `TrackingCadence`.
         /// Save batched events at most this often (vs per-tick saves).
         static let saveCoalesceInterval: TimeInterval = 5.0
     }

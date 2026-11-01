@@ -13,6 +13,12 @@ import Foundation
 /// it on the main actor every tracker tick caused visible UI hitches, so we
 /// run scripts on a serial background queue and post the result back to the
 /// main actor via `lastFetchedURL` (an in-memory cache the tracker reads).
+/// A different address than before calls `onURLChange`, so the tracker
+/// looks again at once instead of waiting for its next tick.
+///
+/// Cost: each read wakes the browser too. It's only a fallback, used while a
+/// browser without the extension is in front, at most every `maxAge`
+/// seconds unless the window's title just changed (a new tab or page).
 ///
 /// Permission model: NSAppleEventsUsageDescription is set in Info.plist. macOS
 /// prompts the first time we send to each browser. Denials are remembered in
@@ -49,7 +55,9 @@ final class BrowserTabReader {
     private var fetchInFlight: Set<String> = []
     /// Wall-clock time of last fetch attempt per bundle id (cache TTL).
     private var lastFetchAttempt: [String: Date] = [:]
-    private let cacheTTL: TimeInterval = 2.0
+
+    /// Called on the main actor when a fetch brings a different address.
+    var onURLChange: (() -> Void)?
 
     /// Bundle ids the user denied automation access for. Persisted across launches.
     private var deniedAutomation: Set<String> {
@@ -65,10 +73,11 @@ final class BrowserTabReader {
     // MARK: - Public API
 
     /// Returns the most recently fetched URL for this browser, kicking off a
-    /// background refresh if the cache is stale. Non-blocking — the first call
-    /// for a given browser returns nil; the next call (after the script
-    /// finishes ~100ms later) returns the URL.
-    func currentURL(forBundleId bundleId: String) -> String? {
+    /// background refresh if the cache is older than `maxAge` (or `refresh`
+    /// asks for one: the title changed). Non-blocking — the first call for a
+    /// given browser returns nil; `onURLChange` fires when the script
+    /// finishes ~100ms later with the URL.
+    func currentURL(forBundleId bundleId: String, maxAge: TimeInterval = 2, refresh: Bool = false) -> String? {
         let now = Date()
         if deniedAutomation.contains(bundleId),
            !Self.shouldRetryDenied(lastDenied: deniedAt[bundleId], now: now) {
@@ -77,7 +86,7 @@ final class BrowserTabReader {
 
         let isStale: Bool
         if let last = lastFetchAttempt[bundleId] {
-            isStale = now.timeIntervalSince(last) >= cacheTTL
+            isStale = refresh || now.timeIntervalSince(last) >= maxAge
         } else {
             isStale = true
         }
@@ -119,6 +128,7 @@ final class BrowserTabReader {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.fetchInFlight.remove(bundleId)
+                let before = self.fetchedURL[bundleId] ?? nil
                 switch result {
                 case .url(let url):
                     self.fetchedURL[bundleId] = url
@@ -135,6 +145,7 @@ final class BrowserTabReader {
                 case .error:
                     self.fetchedURL[bundleId] = nil
                 }
+                if (self.fetchedURL[bundleId] ?? nil) != before { self.onURLChange?() }
             }
         }
     }

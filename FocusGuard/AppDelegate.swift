@@ -48,7 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController = MenuBarController(
             glyphProvider: { [appState = appState!] in appState.statusGlyphState },
             labelProvider: { [appState = appState!] in appState.statusLabel() },
-            minuteProvider: { [appState = appState!] in appState.sessionMinuteMark() }
+            minuteProvider: { [appState = appState!] in appState.sessionMinuteMark() },
+            changeDelayProvider: { [appState = appState!] in appState.statusItemChangeDelay() }
         ) { [weak self, appState = appState!] in
             MenuBarView(
                 permissions: appState.permissions,
@@ -215,12 +216,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 object: window
             )
 
+            // Its clocks and reloads run only while it can be seen.
+            OnScreen.shared.follow(window)
             mainWindow = window
         } else if let tab {
             // Already open: switch tabs in place, whatever the user last picked.
             NotificationCenter.default.post(name: .selectMainTab, object: tab)
         }
 
+        // Now, not when the occlusion notice arrives: the page shows fresh
+        // numbers and loads at once.
+        OnScreen.shared.setWindow(true)
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         didShowMainWindow = true

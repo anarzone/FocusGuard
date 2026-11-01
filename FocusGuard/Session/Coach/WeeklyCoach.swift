@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 
@@ -133,7 +134,9 @@ final class WeeklyCoach {
 
     private let defaults: UserDefaults
     private let calendar: Calendar
+    /// One-shot, for when something next comes due (`nextRefresh`).
     @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var wakeObserver: NSObjectProtocol?
     @ObservationIgnored private var refreshing = false
 
     static let stateKey = "coach.state"
@@ -167,10 +170,39 @@ final class WeeklyCoach {
         applier = LiveCoachApplier(limits: appState.limits, preset: { [weak engine] in engine?.preset ?? .standard },
                                    defaults: defaults)
         engine.presetOverride = { [defaults] now in CoachRules.preset(at: now, defaults) }
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.refresh() }
+        // Something may have come due while the Mac slept.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in await self?.refreshAndReschedule() }
         }
-        Task { await refresh() }
+        Task { await refreshAndReschedule() }
+    }
+
+    /// Longest wait between background looks; the coach's own views look
+    /// whenever they're shown.
+    nonisolated static let maxWait: TimeInterval = 30 * 60
+
+    /// Seconds until the coach next has something to do by itself (an
+    /// experiment's week ending, a rule running out, a new week), a second
+    /// after it's due; at most `maxWait`.
+    nonisolated static func nextRefresh(now: Date, due: [Date], maxWait: TimeInterval = maxWait) -> TimeInterval {
+        let next = due.filter { $0 > now }.min().map { $0.timeIntervalSince(now) + 1 }
+        return min(maxWait, next ?? maxWait)
+    }
+
+    private func refreshAndReschedule() async {
+        await refresh()
+        let due = [state.running?.week.end, thisWeek?.end].compactMap { $0 }
+            + monthTrials.map(\.week.end) + CoachRules.all(defaults).compactMap(\.until)
+        timer?.invalidate()
+        let delay = Self.nextRefresh(now: now(), due: due)
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in await self?.refreshAndReschedule() }
+        }
+        timer.tolerance = min(60, delay / 10)
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     // MARK: - Reading

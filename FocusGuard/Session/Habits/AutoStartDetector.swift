@@ -47,6 +47,13 @@ struct AutoStartDetector: Equatable {
         lastSampleAt = sample.at
         guard sample.eligible else { reset(); return nil }
 
+        // A blip, or a drift in it, that outlasted its allowance before this
+        // sample ends the stretch, however far apart samples are: outside a
+        // session the tracker looks when something changes, not every second.
+        let blipped = blipStart.map { sample.at.timeIntervalSince($0) } ?? 0
+        let drifted = driftStart.map { sample.at.timeIntervalSince($0) } ?? 0
+        if stretch != nil, blipped > FocusRuns.blipGrace || drifted > FocusRuns.driftBreak { reset() }
+
         guard sample.classification == .focus else {
             guard stretch != nil else { return nil }
             let blip = blipStart ?? sample.at

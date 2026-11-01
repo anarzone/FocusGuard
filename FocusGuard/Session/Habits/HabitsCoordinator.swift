@@ -4,8 +4,9 @@ import SwiftData
 
 /// The habits around the day: the morning plan, the evening wrap-up, the
 /// offer to start a session after a few focused minutes, and holding nudges
-/// during calls. Driven by the tracker's 1 s tick (`tick`); each habit has
-/// a switch in `HabitSettings`.
+/// during calls. Driven by the tracker's tick (`tick`): every second in a
+/// session or on a break, every few seconds otherwise (`TrackingCadence`).
+/// Each habit has a switch in `HabitSettings`.
 /// The call in progress, for the menu.
 struct CallInfo: Equatable {
     /// "Zoom", "FaceTime", "Google Meet".
