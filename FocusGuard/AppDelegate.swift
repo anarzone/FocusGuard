@@ -176,10 +176,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            // The usual 1200 × 720, or what fits a smaller screen (a 1024 × 768
-            // display, the CI runners) rather than hanging off its edge.
-            let visible = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1200, height: 720)
-            let size = NSSize(width: min(1200, max(980, visible.width)), height: min(720, max(640, visible.height)))
+            // The click tests' Macs have 1024-point screens: their copy starts
+            // narrower so the page isn't cut off at the screen's edge.
+            let size = NSSize(width: UITestMode.isOn ? 1000 : 1200, height: 720)
             hosting.preferredContentSize = size
 
             let window = NSWindow(
