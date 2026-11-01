@@ -8,6 +8,8 @@ enum CoachUndo: Codable, Equatable, Sendable {
     case rule(UUID)
     /// Put the morning plan's hour and switch back; nil means unset.
     case morningPlan(hour: Int?, enabled: Bool?)
+    /// Put the weekday's own goal back; nil means it had none.
+    case weekdayGoal(weekday: Int, minutes: Int?)
 }
 
 /// Puts experiments in place and takes them back.
@@ -25,17 +27,21 @@ protocol CoachApplying: AnyObject {
     func settings() -> CoachSettings
 }
 
-/// The real settings: daily limits, the coach's rules, the morning plan.
+/// The real settings: daily limits, the coach's rules, the morning plan,
+/// the goal by weekday.
 @MainActor
 final class LiveCoachApplier: CoachApplying {
     private let limits: DailyLimitsEngine
     private let preset: () -> DriftResponse
     private let defaults: UserDefaults
+    private let canReadCalendar: () -> Bool
 
-    init(limits: DailyLimitsEngine, preset: @escaping () -> DriftResponse, defaults: UserDefaults = .standard) {
+    init(limits: DailyLimitsEngine, preset: @escaping () -> DriftResponse, defaults: UserDefaults = .standard,
+         canReadCalendar: @escaping () -> Bool = { CalendarBusyTimes.hasAccess }) {
         self.limits = limits
         self.preset = preset
         self.defaults = defaults
+        self.canReadCalendar = canReadCalendar
     }
 
     func apply(_ experiment: CoachExperiment, until: Date?) -> CoachUndo? {
@@ -58,6 +64,18 @@ final class LiveCoachApplier: CoachApplying {
             defaults.set(hour, forKey: HabitSettings.morningPlanHour)
             defaults.set(true, forKey: HabitSettings.morningPlan)
             return undo
+        case let .sessionLength(minutes):
+            let rule = CoachRule(hours: .allDay, change: .sessionMinutes(minutes), until: until)
+            CoachRules.add(rule, defaults)
+            return .rule(rule.id)
+        case let .sessionBeforeFirstCall(minutes):
+            let rule = CoachRule(hours: .allDay, change: .sessionBeforeFirstCall(minutes), until: until)
+            CoachRules.add(rule, defaults)
+            return .rule(rule.id)
+        case let .weekdayGoal(weekday, minutes):
+            let undo = CoachUndo.weekdayGoal(weekday: weekday, minutes: FocusGoal.weekdayMinutes(defaults)[weekday])
+            FocusGoal.setMinutes(minutes, forWeekday: weekday, defaults)
+            return undo
         }
     }
 
@@ -70,6 +88,8 @@ final class LiveCoachApplier: CoachApplying {
         case let .morningPlan(hour, enabled):
             restore(hour, HabitSettings.morningPlanHour)
             restore(enabled, HabitSettings.morningPlan)
+        case let .weekdayGoal(weekday, minutes):
+            FocusGoal.setMinutes(minutes, forWeekday: weekday, defaults)
         }
     }
 
@@ -80,7 +100,12 @@ final class LiveCoachApplier: CoachApplying {
     func settings() -> CoachSettings {
         CoachSettings(limitedSites: Set(limits.statuses.filter(\.isSite).map(\.target)),
                       preset: preset(),
-                      morningPlanHour: HabitSchedule.morningStartHour(defaults))
+                      morningPlanHour: HabitSchedule.morningStartHour(defaults),
+                      sessionMinutes: FocusActions.usualMinutes(defaults),
+                      dailyGoal: FocusGoal.baseMinutes(defaults),
+                      weekdayGoals: FocusGoal.weekdayMinutes(defaults),
+                      canReadCalendar: canReadCalendar(),
+                      morningPlanOn: HabitSettings.isOn(HabitSettings.morningPlan, defaults))
     }
 
     private func restore(_ value: Any?, _ key: String) {

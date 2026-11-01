@@ -269,7 +269,7 @@ struct MenuBarView: View {
                     .foregroundStyle(Theme.secondaryText)
                 Spacer(minLength: 0)
                 Text(progress >= 1 ? "goal met"
-                     : "\(Int((progress * 100).rounded()))% of \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))")
+                     : "\(Int((progress * 100).rounded()))% of \(FocusGoal.format(minutes: FocusGoal.todayMinutes))")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.secondaryText)
             }

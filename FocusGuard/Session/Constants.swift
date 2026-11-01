@@ -86,6 +86,8 @@ enum SettingsKeys {
         static let dailyFocusMinutes  = "goal.dailyFocusMinutes"
         static let lastSummaryDayKey  = "goal.lastSummaryDay" // ISO yyyy-MM-dd of last summary
         static let weekendsCount      = "goal.weekendsCountTowardStreak"
+        /// Weekdays with a goal of their own: JSON, weekday number to minutes.
+        static let weekdayFocusMinutes = "goal.weekdayFocusMinutes"
     }
 
     enum SystemFocus {

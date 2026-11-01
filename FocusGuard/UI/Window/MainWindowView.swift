@@ -40,12 +40,15 @@ enum WindowSheet: Identifiable, Equatable {
     case upgrade(ProFeature?)
     case licence
     case browserExtension
+    /// The month in review (Pro), for the month starting at this date.
+    case monthReview(Date)
 
     var id: String {
         switch self {
         case .upgrade:          return "upgrade"
         case .licence:          return "licence"
         case .browserExtension: return "extension"
+        case .monthReview(let start): return "monthReview-\(start.timeIntervalSinceReferenceDate)"
         }
     }
 }
@@ -143,6 +146,8 @@ struct MainWindowView: View {
             LicenceSheet()
         case .browserExtension:
             ExtensionSheet(appState: appState)
+        case .monthReview(let start):
+            MonthReviewSheet(monthStart: start)
         }
     }
 }

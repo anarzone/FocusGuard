@@ -222,7 +222,8 @@ struct UpgradeFeature {
                        symbol: "scope", ai: true, shipped: FeatureFlags.debrief),
         UpgradeFeature(title: "Work log", body: "A standup draft and a timesheet, ready to paste.",
                        symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
-        UpgradeFeature(title: "Weekly coach", body: "Three things to try, every Monday.",
+        UpgradeFeature(title: "Weekly coach", body: FeatureFlags.monthlyReview
+                           ? "One thing to try each week, and your month in review." : "Three things to try, every Monday.",
                        symbol: "chart.bar", ai: true, shipped: FeatureFlags.coach),
         UpgradeFeature(title: "Daily limits for any site", body: "Free keeps one.", symbol: "hourglass"),
         UpgradeFeature(title: "All your history", body: "Reports for every week you have tracked.",

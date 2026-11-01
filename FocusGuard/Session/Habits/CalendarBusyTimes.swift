@@ -9,7 +9,10 @@ import Foundation
 final class CalendarBusyTimes {
     private let store = EKEventStore()
 
-    var canRead: Bool {
+    var canRead: Bool { Self.hasAccess }
+
+    /// Whether Calendar access was given.
+    nonisolated static var hasAccess: Bool {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess, .authorized: return true
         default: return false

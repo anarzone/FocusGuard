@@ -24,6 +24,7 @@ final class WeeklyCoachTests: XCTestCase {
     private var policy = OverridePolicy.standard
     private var preset = DriftResponse.standard
     private var unlocked = true
+    private var canReadCalendar = false
     private var trialStarts = 0
     /// Monday 26 Oct 2026, 10:00: the week after the fixtures' week.
     private var clock = F.at(7, 10)
@@ -39,6 +40,7 @@ final class WeeklyCoachTests: XCTestCase {
         policy = .standard
         preset = .standard
         unlocked = true
+        canReadCalendar = false
         trialStarts = 0
         clock = F.at(7, 10)
         fixture = CoachFixture()
@@ -59,12 +61,13 @@ final class WeeklyCoachTests: XCTestCase {
     private func makeCoach() -> WeeklyCoach {
         let coach = WeeklyCoach(defaults: defaults, calendar: F.calendar)
         coach.reader = { [unowned self] interval in self.fixture.data(from: -21, to: 28).clipped(to: interval) }
-        coach.applier = LiveCoachApplier(limits: limits, preset: { [unowned self] in self.preset }, defaults: defaults)
+        coach.applier = LiveCoachApplier(limits: limits, preset: { [unowned self] in self.preset }, defaults: defaults,
+                                         canReadCalendar: { [unowned self] in self.canReadCalendar })
         coach.isUnlocked = { [unowned self] in self.unlocked }
         coach.startTrial = { [unowned self] in self.trialStarts += 1; self.unlocked = true }
         coach.now = { [unowned self] in self.clock }
         coach.locale = F.locale
-        coach.goalSeconds = { 3 * 3600 }
+        coach.goalSeconds = { _ in 3 * 3600 }
         coach.model = { nil }
         return coach
     }
@@ -329,6 +332,175 @@ final class WeeklyCoachTests: XCTestCase {
         coach.tryIt()
         XCTAssertEqual(trialStarts, 1)
         XCTAssertEqual(siteLimits, ["x.com"])
+    }
+
+    // MARK: - The newer patterns' experiments
+
+    func test_weeklyRhythm_lowersThatWeekdaysGoal_forTheWeek() async throws {
+        fixture = F.slowFridays(weeks: 3, from: -2)
+        await coach.refresh()
+        XCTAssertEqual(coach.note?.experiment, .weekdayGoal(weekday: 6, minutes: 60))
+        XCTAssertEqual(coach.note?.headline, "Fridays have been your weakest day three weeks running.")
+
+        coach.tryIt()
+        XCTAssertEqual(FocusGoal.minutes(on: F.at(11, 12), defaults, calendar: F.calendar), 60)
+        XCTAssertEqual(FocusGoal.minutes(on: F.at(8, 12), defaults, calendar: F.calendar), 240)
+
+        clock = F.at(14, 9)
+        await coach.refresh()
+        XCTAssertTrue(FocusGoal.weekdayMinutes(defaults).isEmpty)
+        XCTAssertEqual(coach.state.history?.last?.experiment, .weekdayGoal(weekday: 6, minutes: 60))
+    }
+
+    func test_weekdayGoal_putsBackAGoalTheWeekdayHadBefore() async throws {
+        FocusGoal.setMinutes(150, forWeekday: 6, defaults)
+        let applier = try XCTUnwrap(coach.applier)
+        let undo = try XCTUnwrap(applier.apply(.weekdayGoal(weekday: 6, minutes: 60), until: nil))
+        XCTAssertEqual(FocusGoal.weekdayMinutes(defaults), [6: 60])
+        applier.undo(undo, weekOver: true)
+        XCTAssertEqual(FocusGoal.weekdayMinutes(defaults), [6: 150])
+    }
+
+    func test_bestSessionLength_setsTheLengthForTheWeek() async throws {
+        fixture = F.shortSessionsWin(weeks: 2, from: -1)
+        await coach.refresh()
+        XCTAssertEqual(coach.note?.experiment, .sessionLength(minutes: 25))
+
+        coach.tryIt()
+        XCTAssertEqual(CoachRules.sessionMinutes(at: F.at(8, 10), defaults, calendar: F.calendar), 25)
+        XCTAssertEqual(CoachRules.sessionMinutes(at: F.at(9, 20), defaults, calendar: F.calendar), 25)
+
+        clock = F.at(14, 9)
+        await coach.refresh()
+        XCTAssertTrue(CoachRules.all(defaults).isEmpty)
+    }
+
+    func test_callHeavyDays_putASessionBeforeTheFirstCall_whenTheCalendarCanBeRead() async throws {
+        fixture = F.callHeavy()
+        canReadCalendar = true
+        await coach.refresh()
+        XCTAssertEqual(coach.note?.experiment, .sessionBeforeFirstCall(minutes: 25))
+
+        coach.tryIt()
+        XCTAssertEqual(CoachRules.sessionBeforeFirstCall(at: F.at(8, 8), defaults, calendar: F.calendar), 25)
+        // It doesn't change the usual length.
+        XCTAssertNil(CoachRules.sessionMinutes(at: F.at(8, 8), defaults, calendar: F.calendar))
+    }
+
+    func test_callHeavyDays_withoutTheCalendar_haveNothingToTry() async throws {
+        fixture = F.callHeavy()
+        await coach.refresh()
+        XCTAssertEqual(coach.note?.headline, "Days with 3 hours of calls kept 25% of your usual focus.")
+        XCTAssertNil(coach.note?.experiment)
+    }
+
+    // MARK: - The month in review
+
+    private func makeReviewer() -> MonthReviewer {
+        let reviewer = MonthReviewer(coach: coach, defaults: defaults, calendar: F.calendar)
+        reviewer.now = { [unowned self] in self.clock }
+        reviewer.isUnlocked = { [unowned self] in self.unlocked }
+        reviewer.model = { nil }
+        reviewer.locale = F.locale
+        return reviewer
+    }
+
+    func test_monthReview_isWorkedOutFromTheMonthAndTheOneBefore() async throws {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)    // Monday 2 November
+        let reviewer = makeReviewer()
+        XCTAssertEqual(reviewer.lastFinishedMonth, F.october)
+        XCTAssertEqual(reviewer.tryHeading, "Try in November")
+
+        await reviewer.load(F.october)
+        let review = try XCTUnwrap(reviewer.review(for: F.october))
+        XCTAssertTrue(review.hasData)
+        XCTAssertFalse(review.onDevice)
+        XCTAssertEqual(review.headline, "October: 13h 20m focused at an 80% focus rate, 5 points up on September.")
+        XCTAssertEqual(review.changes.count, 3)
+        XCTAssertEqual(review.suggestions.map(\.experiment), [.shorterSessions(.afternoon, minutes: 25)])
+
+        // An older month has no suggestions: they're for the month ahead.
+        await reviewer.load(F.september)
+        XCTAssertEqual(reviewer.review(for: F.september)?.suggestions, [])
+    }
+
+    func test_monthReview_usesTheModelsHeadline_whenItSticksToTheFacts() async throws {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)
+        let reviewer = makeReviewer()
+        reviewer.model = { FakeModel(headline: "Your October ran at 80%, 5 points up on September") }
+        await reviewer.load(F.october)
+        let review = try XCTUnwrap(reviewer.review(for: F.october))
+        XCTAssertEqual(review.headline, "Your October ran at 80%, 5 points up on September.")
+        XCTAssertTrue(review.onDevice)
+    }
+
+    func test_monthReview_isLockedOnFree_andNeedsAFinishedMonth() async {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)
+        let reviewer = makeReviewer()
+        unlocked = false
+        await reviewer.load(F.october)
+        XCTAssertNil(reviewer.review(for: F.october))
+        unlocked = true
+        await reviewer.load(F.november)
+        XCTAssertNil(reviewer.review(for: F.november))
+    }
+
+    func test_monthReview_tryIt_runsToTheMonthsEnd_thenComesOff() async throws {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)
+        let reviewer = makeReviewer()
+        await reviewer.load(F.october)
+        let suggestion = try XCTUnwrap(reviewer.review(for: F.october)?.suggestions.first)
+
+        reviewer.tryIt(suggestion)
+        XCTAssertNotNil(reviewer.trial(for: suggestion))
+        XCTAssertEqual(CoachRules.all(defaults).map(\.until), [F.november.end])
+        XCTAssertEqual(CoachRules.sessionMinutes(at: F.at(16, 15), defaults, calendar: F.calendar), 25)
+        XCTAssertEqual(coach.inPlace, [.shorterSessions(.afternoon, minutes: 25)])
+        XCTAssertEqual(reviewer.trials(in: F.november).map(\.status), ["On until 30 November"])
+
+        // Trying it twice does nothing.
+        reviewer.tryIt(suggestion)
+        XCTAssertEqual(coach.monthTrials.count, 1)
+        XCTAssertNotNil(coach.monthProblem)
+
+        clock = F.at(43, 9)     // 1 December
+        await coach.refresh()
+        XCTAssertTrue(coach.monthTrials.isEmpty)
+        XCTAssertNil(coach.state.monthTrials)
+        XCTAssertTrue(CoachRules.all(defaults).isEmpty)
+        XCTAssertEqual(coach.state.history?.last?.experiment, .shorterSessions(.afternoon, minutes: 25))
+        XCTAssertEqual(reviewer.trials(in: F.november).map(\.status), ["Turned off"])
+    }
+
+    func test_monthReview_undo_takesTheExperimentBack() async throws {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)
+        let reviewer = makeReviewer()
+        await reviewer.load(F.october)
+        let suggestion = try XCTUnwrap(reviewer.review(for: F.october)?.suggestions.first)
+        reviewer.tryIt(suggestion)
+        reviewer.undo(suggestion)
+        XCTAssertNil(reviewer.trial(for: suggestion))
+        XCTAssertTrue(CoachRules.all(defaults).isEmpty)
+        XCTAssertNil(coach.state.monthTrials)
+    }
+
+    func test_monthTrials_surviveARelaunch_andEraseUndoesThem() async throws {
+        fixture = F.septemberAndOctober()
+        clock = F.at(14, 10)
+        let reviewer = makeReviewer()
+        await reviewer.load(F.october)
+        let suggestion = try XCTUnwrap(reviewer.review(for: F.october)?.suggestions.first)
+        reviewer.tryIt(suggestion)
+        XCTAssertEqual(makeCoach().monthTrials.count, 1)
+
+        coach.erase()
+        XCTAssertTrue(CoachRules.all(defaults).isEmpty)
+        XCTAssertTrue(coach.monthTrials.isEmpty)
     }
 }
 

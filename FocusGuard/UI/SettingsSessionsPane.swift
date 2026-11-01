@@ -16,6 +16,8 @@ struct SettingsSessionsPane: View {
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
     @AppStorage(SettingsKeys.Goal.dailyFocusMinutes) private var goalMinutes = GoalDefaults.dailyFocusMinutes
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
+    /// Read so a weekday's own goal coming or going redraws the pane.
+    @AppStorage(SettingsKeys.Goal.weekdayFocusMinutes) private var weekdayGoalsData: Data?
     @AppStorage(SettingsKeys.Breaks.strictMode) private var breakStrictMode = false
     @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
     @AppStorage(HabitSettings.meetingAwareness) private var meetingAwareness = true
@@ -84,6 +86,11 @@ struct SettingsSessionsPane: View {
 
     // MARK: - Defaults
 
+    private var weekdayGoals: [FocusGoal.WeekdayGoal] {
+        _ = weekdayGoalsData
+        return FocusGoal.weekdayGoals()
+    }
+
     private var defaultsSection: some View {
         SettingsSection("Defaults") {
             SettingsRow(title: "Usual length") {
@@ -113,6 +120,18 @@ struct SettingsSessionsPane: View {
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.primaryText)
                 .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.inset))
+            }
+            // A weekday's own goal, from a weekly coach experiment.
+            ForEach(weekdayGoals, id: \.weekday) { goal in
+                SettingsDivider()
+                SettingsRow(title: "Goal on \(FocusGoal.pluralWeekday(goal.weekday))", detail: "Set by the weekly coach") {
+                    HStack(spacing: 10) {
+                        Text(FocusGoal.format(minutes: goal.minutes))
+                            .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                        Button("Use the daily goal") { FocusGoal.setMinutes(nil, forWeekday: goal.weekday) }
+                            .buttonStyle(.textLink)
+                    }
+                }
             }
             SettingsDivider()
             SettingsToggle(title: "Weekends count toward the streak", isOn: $weekendsCount)

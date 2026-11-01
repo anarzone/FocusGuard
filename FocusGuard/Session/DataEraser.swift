@@ -47,6 +47,7 @@ enum DataEraser {
         appState.smartCategories.erase()
         appState.recap = nil
         WeeklyCoach.shared.erase()
+        MonthReviewer.shared.erase()
     }
 }
 

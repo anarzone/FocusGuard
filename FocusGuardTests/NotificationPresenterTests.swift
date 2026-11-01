@@ -122,6 +122,21 @@ final class NotificationPresenterTests: XCTestCase {
         XCTAssertEqual(sent.first?.content.userInfo[NotificationInfo.minutes] as? Int, 50)
     }
 
+    func testWrapUpWithATip_hasItsPlanButton() throws {
+        let slot = Date(timeIntervalSinceReferenceDate: 815_000_000)
+        let tip = EveningTip(kind: .driftHour, text: "Most of the gap was youtube.com after 15:00.", slot: slot,
+                             button: "Plan it for 15:00")
+        presenter.presentEveningWrapUp(EveningWrapUp(focusedMinutes: 100, goalMinutes: 240, streak: 0, best: nil,
+                                                     tomorrowStart: nil, tip: tip))
+        let request = try XCTUnwrap(sent.last)
+        XCTAssertEqual(request.content.title, "Day done: 1h 40m of 4h")
+        XCTAssertEqual(buttons(request), ["Plan it for 15:00"])
+        XCTAssertEqual(request.content.userInfo[NotificationInfo.slots] as? [Double], [slot.timeIntervalSinceReferenceDate])
+
+        presenter.presentEveningWrapUp(EveningWrapUp(focusedMinutes: 100, goalMinutes: 240, streak: 0, best: nil, tomorrowStart: nil))
+        XCTAssertEqual(buttons(sent.last), ["See today"])
+    }
+
     func testLimitWarningSaysHowMuchIsUsed() {
         presenter.presentLimitWarning(name: "youtube.com", minutesLeft: 5, minutesToday: 30)
         XCTAssertEqual(sent.first?.content.title, "5 minutes left on youtube.com")

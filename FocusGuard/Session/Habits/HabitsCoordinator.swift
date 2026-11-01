@@ -66,6 +66,8 @@ final class HabitsCoordinator {
     private enum Key {
         static let morningPlanDay = "habits.morningPlan.lastDay"
         static let plannedSlots = "habits.morningPlan.slots"
+        /// The morning plan's session before the first call: [start, minutes].
+        static let warmUp = "habits.morningPlan.warmUp"
     }
 
     init(sessions: SessionManager, breaks: BreakManager, tracker: ActivityTracker,
@@ -174,19 +176,34 @@ final class HabitsCoordinator {
 
     // MARK: - Morning plan
 
-    /// "Plan them": each slot gets a notification when it comes.
+    /// "Plan them", or the evening tip's "Plan it": each slot gets a
+    /// notification when it comes. Slots planned earlier stay, unless one of
+    /// these is within a few minutes of them.
     func plan(_ slots: [Date], now: Date = .now) {
-        plannedSlots = slots.filter { $0 > now }.sorted()
+        let added = slots.filter { $0 > now }
+        let kept = plannedSlots.filter { old in old > now && !added.contains { abs($0.timeIntervalSince(old)) < 5 * 60 } }
+        replacePlanned(with: kept + added)
+    }
+
+    private func replacePlanned(with slots: [Date]) {
+        plannedSlots = slots.sorted()
         defaults.set(plannedSlots.map(\.timeIntervalSinceReferenceDate), forKey: Key.plannedSlots)
     }
 
     private func offerPlannedSession(now: Date) {
         guard let first = plannedSlots.first, first <= now else { return }
         let due = plannedSlots.filter { $0 <= now }
-        plan(plannedSlots.filter { $0 > now }, now: now)
+        replacePlanned(with: plannedSlots.filter { $0 > now })
         guard let slot = due.last, now.timeIntervalSince(slot) < HabitSchedule.plannedSessionGrace,
               sessions.currentSession == nil, !breaks.isOnBreak else { return }
-        presenter.presentPlannedSession(at: slot, minutes: presenter.usualMinutes)
+        presenter.presentPlannedSession(at: slot, minutes: plannedMinutes(at: slot))
+    }
+
+    /// The usual length, or the shorter one of the session before the first call.
+    private func plannedMinutes(at slot: Date) -> Int {
+        guard let warmUp = defaults.array(forKey: Key.warmUp) as? [Double], warmUp.count == 2,
+              warmUp[0] == slot.timeIntervalSinceReferenceDate else { return presenter.usualMinutes }
+        return FocusActions.clamp(Int(warmUp[1]))
     }
 
     private func sendMorningPlanIfDue(now: Date) {
@@ -198,9 +215,17 @@ final class HabitsCoordinator {
         let calendar = Calendar.current
         let focused = ReportBuilder(context: context).breakdown(from: calendar.startOfDay(for: now), to: now).focus
         let dayEnd = calendar.date(bySettingHour: HabitSchedule.dayEndHour, minute: 0, second: 0, of: now) ?? now
-        guard let plan = MorningPlan.make(now: now, focusedMinutes: Int(focused / 60), goalMinutes: FocusGoal.dailyMinutes,
+        guard let plan = MorningPlan.make(now: now, focusedMinutes: Int(focused / 60),
+                                          goalMinutes: FocusGoal.minutes(on: now, defaults, calendar: calendar),
                                           sessionMinutes: presenter.usualMinutes,
-                                          busy: busyTimes.busy(from: now, to: dayEnd)) else { return }
+                                          busy: busyTimes.busy(from: now, to: dayEnd),
+                                          warmUpMinutes: CoachRules.sessionBeforeFirstCall(at: now, defaults, calendar: calendar),
+                                          calendar: calendar) else { return }
+        if let warmUp = plan.warmUp {
+            defaults.set([warmUp.start.timeIntervalSinceReferenceDate, Double(warmUp.minutes)], forKey: Key.warmUp)
+        } else {
+            defaults.removeObject(forKey: Key.warmUp)
+        }
         presenter.presentMorningPlan(plan)
     }
 
@@ -224,7 +249,28 @@ final class HabitsCoordinator {
                              lastActivity: Persistence.fetch(context, latest).first?.endedAt) else { return }
         defaults.set(HabitFormat.dayKey(now), forKey: SettingsKeys.Goal.lastSummaryDayKey)
         guard let wrapUp = wrapUp(now: now) else { return }
-        presenter.presentEveningWrapUp(wrapUp)
+        Task { [weak self] in
+            guard let self else { return }
+            presenter.presentEveningWrapUp(await withTip(wrapUp, now: now))
+        }
+    }
+
+    /// The wrap-up with today's focus rate and a tip for tomorrow, from two
+    /// weeks of tracked time read off the main thread.
+    func withTip(_ wrapUp: EveningWrapUp, now: Date = .now) async -> EveningWrapUp {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: now)
+        let from = calendar.date(byAdding: .day, value: -13, to: dayStart) ?? dayStart
+        let recent = await CoachDataReader.read(context.container, interval: DateInterval(start: from, end: max(now, from)))
+        let today = recent.clipped(to: DateInterval(start: dayStart, end: max(now, dayStart)))
+        let tally = CoachData.tally(today.events)
+        var tipped = wrapUp
+        tipped.focusPercent = tally.focus + tally.drift >= 60
+            ? Int((FocusRate.of(focused: tally.focus, drifted: tally.drift) * 100).rounded()) : nil
+        tipped.tip = EveningTip.choose(today: today, recent: recent, gapMinutes: wrapUp.goalMinutes - wrapUp.focusedMinutes,
+                                       tomorrowStart: wrapUp.tomorrowStart, sessionMinutes: presenter.usualMinutes,
+                                       morningHour: HabitSchedule.morningStartHour(defaults), now: now, calendar: calendar)
+        return tipped
     }
 
     /// Once a day after 21:00, when nothing has been tracked for half an
@@ -243,7 +289,7 @@ final class HabitsCoordinator {
         let dayStart = calendar.startOfDay(for: now)
         let focused = Int(ReportBuilder(context: context).breakdown(from: dayStart, to: now).focus / 60)
         guard focused > 0 else { return nil }
-        let goal = FocusGoal.dailyMinutes
+        let goal = FocusGoal.minutes(on: now, defaults, calendar: calendar)
         let streak = focused >= goal ? StreakCalculator(context: context).currentStreak(now: now, calendar: calendar) + 1 : 0
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let dayAfter = calendar.date(byAdding: .day, value: 1, to: tomorrow) ?? tomorrow.addingTimeInterval(86_400)

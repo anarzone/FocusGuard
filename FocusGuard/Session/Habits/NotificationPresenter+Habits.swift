@@ -45,13 +45,16 @@ extension NotificationPresenter {
         deliver(request, as: .general)
     }
 
-    /// "Today: 3h 40m focused" with "See today".
+    /// "Today: 3h 40m focused" with "See today"; with a tip for tomorrow,
+    /// "Day done: goal met" with the tip's "Plan it for 15:00".
     func presentEveningWrapUp(_ wrapUp: EveningWrapUp) {
+        let buttons: [(NotificationAction, String)] = wrapUp.tip.map { [(.planThem, $0.button)] } ?? [(.seeToday, "See today")]
         let request = Self.request(
             "dailySummary",
             title: wrapUp.title,
             body: wrapUp.body(),
-            category: category(.wrapUp, [(.seeToday, "See today")]),
+            category: category(.wrapUp, buttons),
+            info: wrapUp.tip.map { [NotificationInfo.slots: [$0.slot.timeIntervalSinceReferenceDate]] } ?? [:],
             level: .passive
         )
         deliver(request, as: .general)

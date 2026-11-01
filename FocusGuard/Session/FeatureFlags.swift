@@ -12,8 +12,10 @@ enum FeatureFlags {
     static let debrief = true
     /// The weekly coach note and its experiment.
     static let coach = true
+    /// The month in review, in Reports › Month.
+    static let monthlyReview = true
 
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
-    static var proAI: Bool { smartCategories || debrief || coach }
+    static var proAI: Bool { smartCategories || debrief || coach || monthlyReview }
 }

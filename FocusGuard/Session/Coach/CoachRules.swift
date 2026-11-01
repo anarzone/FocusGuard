@@ -1,13 +1,16 @@
 import Foundation
 
 /// A change by the hour that the weekly coach put in place: a shorter
-/// default length, or a stricter preset, while some hours last. There's no
-/// setting for these elsewhere, so the coach keeps them here and the menu,
-/// Shortcuts and the drift engine read them.
+/// default length, or a stricter preset, while some hours last; or a session
+/// before the first call in the morning plan. There's no setting for these
+/// elsewhere, so the coach keeps them here and the menu, Shortcuts, the
+/// drift engine and the morning plan read them.
 struct CoachRule: Codable, Equatable, Identifiable, Sendable {
     enum Change: Codable, Equatable, Sendable {
         case sessionMinutes(Int)
         case preset(DriftResponse)
+        /// The morning plan puts a session this long before the first call.
+        case sessionBeforeFirstCall(Int)
     }
 
     var id = UUID()
@@ -66,6 +69,16 @@ enum CoachRules {
                                calendar: Calendar = .current) -> Int? {
         all(defaults).lazy.filter { $0.isInForce(at: now, calendar: calendar) }.compactMap { rule -> Int? in
             if case .sessionMinutes(let minutes) = rule.change { return minutes }
+            return nil
+        }.first
+    }
+
+    /// How long the morning plan's session before the first call is, while
+    /// a coach rule asks for one.
+    static func sessionBeforeFirstCall(at now: Date = .now, _ defaults: UserDefaults = .standard,
+                                       calendar: Calendar = .current) -> Int? {
+        all(defaults).lazy.filter { $0.isInForce(at: now, calendar: calendar) }.compactMap { rule -> Int? in
+            if case .sessionBeforeFirstCall(let minutes) = rule.change { return minutes }
             return nil
         }.first
     }
