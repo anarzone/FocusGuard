@@ -7,11 +7,14 @@ import SwiftUI
 // MARK: - Goal
 
 /// "What's this session for?" on the ready screen: the goal the debrief
-/// checks. Empty, it offers the last unfinished goal and the calendar
-/// event on now. Return starts the session.
+/// checks. Empty, it offers open reminders (Pro), the calendar event on
+/// now, the Git branch and the last unfinished goal, each under a heading
+/// for where it came from. Return starts the session.
 struct SessionGoalField: View {
     @Binding var goal: String
     var suggestions: [GoalSuggestion] = []
+    /// A suggestion was picked; a reminder is kept to tick off after.
+    var onPick: (GoalSuggestion) -> Void = { _ in }
     var onSubmit: () -> Void = {}
 
     var body: some View {
@@ -26,7 +29,7 @@ struct SessionGoalField: View {
                     .foregroundStyle(Theme.secondaryText)
                 ProBadge()
             }
-            TextField("e.g. Ship the session-names PR", text: $goal)
+            TextField(suggestions.isEmpty ? "e.g. Ship the session-names PR" : "A task, or type your own", text: $goal)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .padding(.horizontal, 10)
@@ -39,36 +42,91 @@ struct SessionGoalField: View {
                     if goal.count > SessionGoal.maxLength { goal = String(goal.prefix(SessionGoal.maxLength)) }
                 }
             if goal.isEmpty && !suggestions.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(suggestions) { suggestion in
-                        Button { goal = suggestion.text } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: suggestion.source == .calendar ? "calendar" : "arrow.uturn.forward")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(Theme.focus)
-                                    .frame(width: 14)
-                                    .accessibilityHidden(true)
-                                Text(suggestion.text)
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Theme.primaryText)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            }
-                            .padding(.horizontal, 8)
-                            .frame(height: 22)
-                            .background(Capsule().fill(Theme.control))
-                            .contentShape(Capsule())
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, suggestion in
+                        if index == 0 || suggestions[index - 1].group != suggestion.group {
+                            Text(suggestion.group.uppercased())
+                                .font(.system(size: 10, weight: .semibold))
+                                .tracking(0.4)
+                                .foregroundStyle(Theme.secondaryText)
+                                .lineLimit(1)
+                                .padding(.horizontal, 4)
+                                .padding(.top, index == 0 ? 0 : 5)
+                                .padding(.bottom, 1)
+                                .accessibilityAddTraits(.isHeader)
                         }
-                        .buttonStyle(.plain)
-                        .help(suggestion.source == .calendar ? "From your calendar" : "Your last goal, not done yet")
-                        .accessibilityLabel(suggestion.source == .calendar
-                                            ? "Use the calendar event: \(suggestion.text)"
-                                            : "Pick up the last goal: \(suggestion.text)")
+                        GoalSuggestionRow(suggestion: suggestion) {
+                            goal = suggestion.text
+                            onPick(suggestion)
+                        }
                     }
                 }
             }
         }
         .menuModule(padding: EdgeInsets(top: 10, leading: 12, bottom: 12, trailing: 12))
+    }
+}
+
+/// One suggestion: where it's from, the text, and "today" or a time.
+private struct GoalSuggestionRow: View {
+    let suggestion: GoalSuggestion
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 14)
+                    .accessibilityHidden(true)
+                Text(suggestion.text)
+                    .font(isGit ? .system(size: 12, design: .monospaced) : .system(size: 13))
+                    .foregroundStyle(Theme.primaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let detail = suggestion.detail {
+                    Text(detail)
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize()
+                }
+            }
+            .padding(.horizontal, 6)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(hovered ? Theme.focusTint : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .help(help)
+        .accessibilityLabel("\(help): \(suggestion.text)")
+    }
+
+    private var isGit: Bool {
+        if case .git = suggestion.source { return true }
+        return false
+    }
+
+    private var icon: String {
+        switch suggestion.source {
+        case .reminder: return "circle"
+        case .calendar: return "calendar"
+        case .git:      return "arrow.triangle.branch"
+        case .lastGoal: return "arrow.uturn.backward"
+        }
+    }
+
+    private var help: String {
+        switch suggestion.source {
+        case .reminder: return "From Reminders, ticked off when you get it done"
+        case .calendar: return "From your calendar"
+        case .git:      return "The branch you're on"
+        case .lastGoal: return "Your last goal, not done yet"
+        }
     }
 }
 

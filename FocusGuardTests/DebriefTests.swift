@@ -150,8 +150,9 @@ final class DebriefTests: XCTestCase {
     // MARK: - Goal suggestions
 
     func testSuggestionsOfferAnUnfinishedLastGoalAndTheCalendarEvent() {
+        // The calendar comes before the last goal, as the field lists them.
         XCTAssertEqual(GoalSuggestion.make(lastGoal: "Day strip hover", lastVerdict: .partly, calendarTitle: "Design review")
-            .map(\.text), ["Day strip hover", "Design review"])
+            .map(\.text), ["Design review", "Day strip hover"])
         XCTAssertEqual(GoalSuggestion.make(lastGoal: "Done thing", lastVerdict: .done, calendarTitle: nil), [])
         XCTAssertEqual(GoalSuggestion.make(lastGoal: "Review", lastVerdict: nil, calendarTitle: "review").count, 1)
         XCTAssertEqual(GoalSuggestion.make(lastGoal: "  ", lastVerdict: nil, calendarTitle: "Standup").first?.source, .calendar)
