@@ -1,9 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// Integrations: the calendar, tasks as session goals, code, macOS and
-/// the browser. Calendar, Reminders and Things ask macOS once; Todoist and
-/// Linear take a personal token (`TaskSourceRows`).
+/// Integrations: the calendar, tasks as session goals, code, status in
+/// Slack and Discord, macOS and the browser. Calendar, Reminders and Things
+/// ask macOS once; Todoist and Linear take a personal token
+/// (`TaskSourceRows`); only Slack signs in.
 struct SettingsIntegrationsPane: View {
     @Bindable var appState: AppState
     var entitlements: Entitlements = .shared
@@ -38,6 +39,7 @@ struct SettingsIntegrationsPane: View {
             tasksSection
             codeSection
         } right: {
+            SettingsStatusSection()
             macSection
             SettingsSection("Browser and music") {
                 browserRow

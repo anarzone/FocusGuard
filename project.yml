@@ -49,6 +49,11 @@ targets:
         # Spotify developer app for search (PKCE, no secret). Development mode:
         # only accounts added in the Spotify dashboard can sign in.
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
+        # Status in Slack and Discord (Pro). Slack app with PKCE (no secret);
+        # Discord application for Rich Presence over the local app. Empty
+        # hides that app's row.
+        FGSlackClientID: $(SLACK_CLIENT_ID)
+        FGDiscordApplicationID: $(DISCORD_APPLICATION_ID)
         CFBundleDisplayName: FocusGuard
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -63,7 +68,8 @@ targets:
         CFBundleIconName: AppIcon
         CFBundleIconFile: AppIcon
         NSHumanReadableCopyright: ""
-        # focusguard:// links (FocusGuardURL), used by the paused-tab page.
+        # focusguard:// links (FocusGuardURL), used by the paused-tab page
+        # and Slack's sign-in.
         CFBundleURLTypes:
           - CFBundleURLName: com.anar.focusguard
             CFBundleURLSchemes: [focusguard]
@@ -85,6 +91,11 @@ targets:
         # Public Client ID of FocusGuard's Spotify developer app; empty hides
         # Spotify search and sign-in.
         SPOTIFY_CLIENT_ID: 9c64a61db436412583b7a2285acf92e1
+        # Public Client ID of FocusGuard's Slack app (redirect
+        # focusguard://slack-auth); empty hides Slack in Settings.
+        SLACK_CLIENT_ID: ""
+        # Application ID of FocusGuard's Discord application; empty hides Discord.
+        DISCORD_APPLICATION_ID: ""
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

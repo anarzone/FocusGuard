@@ -15,7 +15,7 @@ extension AppState {
                             sessionLabel: context?.sessionLabel, startedAt: sessionManager.currentSession?.startedAt)
     }
 
-    /// A `focusguard://` link, from the paused-tab page.
+    /// A `focusguard://` link, from the paused-tab page or Slack's sign-in.
     func open(_ route: FocusGuardURL) {
         switch route {
         case .back:
@@ -27,6 +27,8 @@ extension AppState {
         case .startBreak(let minutes):
             guard sessionManager.currentSession == nil, !breakManager.isOnBreak else { return }
             startBreak(durationMinutes: minutes)
+        case .slackAuth(let code, let state, let error):
+            finishSlackSignIn(code: code, state: state, error: error)
         }
     }
 
