@@ -388,15 +388,17 @@ enum PrivacyStatement {
 enum PrivacyNote {
     static var onThisMac: String {
         make(smartCategories: FeatureFlags.smartCategories, debrief: FeatureFlags.debrief, coach: FeatureFlags.coach,
-             monthlyReview: FeatureFlags.monthlyReview)
+             ask: FeatureFlags.ask, monthlyReview: FeatureFlags.monthlyReview)
     }
 
-    static func make(smartCategories: Bool, debrief: Bool, coach: Bool, monthlyReview: Bool = false) -> String {
+    static func make(smartCategories: Bool, debrief: Bool, coach: Bool, ask: Bool = false,
+                     monthlyReview: Bool = false) -> String {
         var parts: [String] = []
         if smartCategories { parts.append("smart categories") }
         parts += ["highlights", "session names"]
         if debrief { parts += ["debriefs", "the work log"] }
         if coach { parts.append("the weekly coach") }
+        if ask { parts.append("answers in Ask") }
         if monthlyReview { parts.append("the month in review") }
         let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + " and " + (parts.last ?? "") : parts.joined()
         return list.prefix(1).uppercased() + list.dropFirst() + " are worked out on this Mac."

@@ -18,10 +18,15 @@ struct DaySummary {
     var bar = ClassificationTally()
     /// Focused seconds by hour, counted like `bar`, for the heatmap.
     var focusByHour = [TimeInterval](repeating: 0, count: 24)
+    /// Drifted seconds by hour, counted the same way, for focus rate by hour.
+    var driftByHour = [TimeInterval](repeating: 0, count: 24)
     /// First and last hour with any activity.
     var hours: ClosedRange<Int>?
     var apps: [String: ReportBuilder.AppGroup] = [:]
     var distractions: [String: ReportBuilder.DistractionGroup] = [:]
+    /// Seconds of each distraction by hour, keyed like `distractions` (whose
+    /// groups name them), for what pulls you away at a time of day.
+    var distractionsByHour: [Int: [String: TimeInterval]] = [:]
 
     var dailyBreakdown: DailyBreakdown {
         DailyBreakdown(date: day, focus: breakdown.focus, neutral: breakdown.neutral, distraction: breakdown.distraction)
@@ -73,7 +78,11 @@ struct DaySummary {
                     let slice = min(slot.end, end).timeIntervalSince(cursor)
                     let hours = summaries[index].hours
                     summaries[index].hours = min(hours?.lowerBound ?? slot.hour, slot.hour)...max(hours?.upperBound ?? slot.hour, slot.hour)
-                    if classification == .focus { summaries[index].focusByHour[slot.hour] += slice }
+                    switch classification {
+                    case .focus:       summaries[index].focusByHour[slot.hour] += slice
+                    case .distraction: summaries[index].driftByHour[slot.hour] += slice
+                    case .neutral:     break
+                    }
                     cursor = slot.end
                 }
             }
@@ -85,8 +94,29 @@ struct DaySummary {
             summaries[index].apps = ReportBuilder.appGroups(byDay[index], from: span.start, to: span.end, hosts: &hosts)
             summaries[index].distractions = ReportBuilder.distractionGroups(byDay[index], from: span.start, to: span.end,
                                                                             hosts: &hosts)
+            summaries[index].distractionsByHour = distractionsByHour(byDay[index], in: span, hosts: &hosts,
+                                                                     cursor: &hourCursor)
         }
         return summaries
+    }
+
+    /// Distracting seconds by hour and by group, cut the way
+    /// `ReportBuilder.distractionGroups` counts them.
+    private static func distractionsByHour(_ events: [ActivityEvent], in span: DateInterval, hosts: inout HostCache,
+                                           cursor hourCursor: inout HourCursor) -> [Int: [String: TimeInterval]] {
+        let dRaw = Classification.distraction.rawValue
+        var byHour: [Int: [String: TimeInterval]] = [:]
+        for event in events where event.classificationRaw == dRaw {
+            let key = event.url.flatMap { hosts.host(of: $0) } ?? event.bundleIdentifier
+            var cursor = max(event.startedAt, span.start)
+            let end = min(event.endedAt, span.end)
+            while cursor < end {
+                let slot = hourCursor.slot(at: cursor)
+                byHour[slot.hour, default: [:]][key, default: 0] += min(slot.end, end).timeIntervalSince(cursor)
+                cursor = slot.end
+            }
+        }
+        return byHour
     }
 }
 

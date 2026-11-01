@@ -26,7 +26,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .blocking:      return "What happens when you stay on a distracting site. Levels add up."
         case .limits:        return "A little of a site each day, then it pauses. Counts in and out of sessions."
         case .notifications: return "Few, quiet, and never with a sound."
-        case .integrations:  return "Let your calendar, macOS and your other apps start and show your sessions."
+        case .integrations:  return "Your calendar, tasks and other apps, working with your sessions."
         case .privacy:       return "What FocusGuard keeps, what leaves your Mac, and how to take it all back."
         case .pro:           return "Your plan, your trial and your licence key."
         case .about:         return ""

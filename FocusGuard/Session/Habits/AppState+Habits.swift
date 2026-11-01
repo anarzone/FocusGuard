@@ -74,6 +74,10 @@ extension AppState {
             habits.dismissAutoStartOffer(now: now)
         case .planSessions(let slots):
             habits.plan(slots, now: now)
+            let minutes = notificationPresenter.usualMinutes
+            Task { await integrations.planned(slots, minutes: minutes, now: now) }
+        case .skipPlannedSession(let slot):
+            Task { await integrations.skipPlanned(slot) }
         case .openToday:
             (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: .home)
         case .openPlans:

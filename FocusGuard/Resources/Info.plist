@@ -42,11 +42,15 @@
 	<key>NSAppleEventsUsageDescription</key>
 	<string>FocusGuard reads the active browser tab to detect distraction sites during focus sessions, and plays your focus music in Spotify or Apple Music.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
+	<string>FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>FocusGuard reads your calendar to auto-start focus sessions for events matching your keyword.</string>
+	<string>FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string></string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>FocusGuard offers your open reminders as session goals, and ticks one off when you finish it in a session.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>FocusGuard offers your open reminders as session goals, and ticks one off when you finish it in a session.</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
