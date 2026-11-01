@@ -41,7 +41,7 @@ final class DiscordPresence: @unchecked Sendable {
         if fd >= 0 { close(fd) }
     }
 
-    nonisolated static var bundledApplicationID: String? { StatusSync.infoValue("FGDiscordApplicationID") }
+    static var bundledApplicationID: String? { StatusSync.infoValue("FGDiscordApplicationID") }
 
     /// Shows `activity`, or clears it with nil.
     func show(_ activity: DiscordIPC.Activity?) {
