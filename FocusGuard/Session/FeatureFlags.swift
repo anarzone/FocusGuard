@@ -19,7 +19,10 @@ enum FeatureFlags {
     /// (Settings › Integrations › Tasks as session goals).
     static let taskGoals = true
 
+    /// The month in review, in Reports › Month.
+    static let monthlyReview = true
+
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
-    static var proAI: Bool { smartCategories || debrief || coach || ask }
+    static var proAI: Bool { smartCategories || debrief || coach || ask || monthlyReview }
 }

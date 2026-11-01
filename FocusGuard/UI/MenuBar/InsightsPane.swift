@@ -358,7 +358,7 @@ struct InsightsWeekView: View {
     }
 
     private var goalDays: Int {
-        week.days.filter { $0.focus >= FocusGoal.dailySeconds }.count
+        week.days.filter { $0.focus >= FocusGoal.seconds(on: $0.date) }.count
     }
 }
 

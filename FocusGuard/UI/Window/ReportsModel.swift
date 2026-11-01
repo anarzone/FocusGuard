@@ -30,6 +30,8 @@ struct CalendarDay: Identifiable, Equatable {
     let isToday: Bool
     let isFuture: Bool
     let isLocked: Bool
+    /// The day's goal, for its ring; 0 for padding cells.
+    var goal: TimeInterval = 0
 
     var day: Int? { date.map { Calendar.current.component(.day, from: $0) } }
 }
@@ -87,10 +89,10 @@ enum ReportsModelBuilder {
 
     /// `summaries` adds whole days up from their summaries instead of
     /// reading their events; `StatsStore` passes one backed by the summaries
-    /// it keeps for finished days.
+    /// it keeps for finished days. `goal` is a day's goal, from its start.
     static func build(period: ReportPeriod, offset: Int, context: ModelContext, now: Date = .now,
                       calendar: Calendar = .current, historyStart: Date? = nil,
-                      weekendsCount: Bool = false, goal: TimeInterval = FocusGoal.dailySeconds,
+                      weekendsCount: Bool = false, goal: (Date) -> TimeInterval = { FocusGoal.seconds(on: $0) },
                       summaries: DaySummaries? = nil) -> ReportsModel {
         let interval = period.interval(offset: offset, now: now, calendar: calendar)
         let start = max(interval.start, historyStart ?? .distantPast)
@@ -177,7 +179,7 @@ enum ReportsModelBuilder {
                     data.heat.reduce(0) { $0 + $1[hour] } / Double(active)
                 }
             }
-            calendarGrid = monthGrid(interval: interval, buckets: data.buckets, now: now, calendar: calendar)
+            calendarGrid = monthGrid(interval: interval, buckets: data.buckets, now: now, calendar: calendar, goal: goal)
         default:
             break
         }
@@ -291,6 +293,12 @@ enum ReportsModelBuilder {
 
     static func goalDays(_ days: [ReportBucket], now: Date, calendar: Calendar, weekendsCount: Bool,
                          goal: TimeInterval) -> GoalDays {
+        goalDays(days, now: now, calendar: calendar, weekendsCount: weekendsCount, goal: { _ in goal })
+    }
+
+    /// Each day measured against its own goal (a weekday can have one).
+    static func goalDays(_ days: [ReportBucket], now: Date, calendar: Calendar, weekendsCount: Bool,
+                         goal: (Date) -> TimeInterval) -> GoalDays {
         var met = 0, counted = 0
         var misses: [Date] = []
         let today = calendar.startOfDay(for: now)
@@ -299,7 +307,7 @@ enum ReportsModelBuilder {
             let weekday = calendar.component(.weekday, from: date)
             if !weekendsCount && (weekday == 1 || weekday == 7) { continue }
             let isToday = calendar.isDate(date, inSameDayAs: today)
-            if day.focus >= goal {
+            if day.focus >= goal(date) {
                 met += 1
                 counted += 1
             } else if !isToday {
@@ -312,7 +320,8 @@ enum ReportsModelBuilder {
 
     /// Weeks of the month, the calendar's first weekday first; padding
     /// cells have no date.
-    static func monthGrid(interval: DateInterval, buckets: [ReportBucket], now: Date, calendar: Calendar) -> [[CalendarDay]] {
+    static func monthGrid(interval: DateInterval, buckets: [ReportBucket], now: Date, calendar: Calendar,
+                          goal: (Date) -> TimeInterval = { FocusGoal.seconds(on: $0) }) -> [[CalendarDay]] {
         let lead = (calendar.component(.weekday, from: interval.start) - calendar.firstWeekday + 7) % 7
         var cells: [CalendarDay] = (0..<lead).map {
             CalendarDay(id: -1 - $0, date: nil, focus: 0, isToday: false, isFuture: false, isLocked: false)
@@ -320,7 +329,8 @@ enum ReportsModelBuilder {
         for (index, bucket) in buckets.enumerated() {
             cells.append(CalendarDay(id: index, date: bucket.interval.start, focus: bucket.focus,
                                      isToday: calendar.isDate(bucket.interval.start, inSameDayAs: now),
-                                     isFuture: bucket.isFuture, isLocked: bucket.isLocked))
+                                     isFuture: bucket.isFuture, isLocked: bucket.isLocked,
+                                     goal: goal(bucket.interval.start)))
         }
         while cells.count % 7 != 0 {
             cells.append(CalendarDay(id: 1000 + cells.count, date: nil, focus: 0, isToday: false, isFuture: false, isLocked: false))
@@ -341,7 +351,7 @@ enum ReportsModelBuilder {
 
     // MARK: - Highlights
 
-    static func highlights(_ model: ReportsModel, goal: TimeInterval, calendar: Calendar) -> [ReportHighlight] {
+    static func highlights(_ model: ReportsModel, goal: (Date) -> TimeInterval, calendar: Calendar) -> [ReportHighlight] {
         var out: [ReportHighlight] = []
         let data = model.data
         guard data.breakdown.focus >= 600 else { return out }
@@ -367,7 +377,7 @@ enum ReportsModelBuilder {
         let past = data.buckets.filter { !$0.isFuture && !$0.isLocked }
         if let worst = past.max(by: { $0.drift < $1.drift }), worst.drift >= 300 {
             let day = worst.interval.start.formatted(.dateTime.weekday(.wide))
-            let goalPart = worst.focus >= goal ? "and still met the goal" : "and missed the goal"
+            let goalPart = worst.focus >= goal(worst.interval.start) ? "and still met the goal" : "and missed the goal"
             out.append(ReportHighlight(kind: .other, text: "\(day) drifted most, \(WindowFormat.minutes(worst.drift)), \(goalPart)."))
         }
         return out

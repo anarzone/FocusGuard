@@ -11,6 +11,13 @@ enum CoachExperiment: Codable, Hashable, Sendable {
     case stricterPreset(CoachHours, DriftResponse)
     /// The morning plan arrives at this hour instead.
     case earlierMorningPlan(hour: Int)
+    /// Every session starts at this length.
+    case sessionLength(minutes: Int)
+    /// The morning plan puts a session this long right before the day's
+    /// first call on the calendar.
+    case sessionBeforeFirstCall(minutes: Int)
+    /// One weekday (1 is Sunday) gets a goal of its own.
+    case weekdayGoal(weekday: Int, minutes: Int)
 
     /// "A 20-minute daily limit on x.com", for the "Try this week" card.
     func title(locale: Locale = .current, calendar: Calendar = .current) -> String {
@@ -23,6 +30,12 @@ enum CoachExperiment: Codable, Hashable, Sendable {
             return "\(preset.title) \(hours.phrase(locale: locale, calendar: calendar))"
         case let .earlierMorningPlan(hour):
             return "The morning plan at \(Self.clock(hour, locale: locale, calendar: calendar))"
+        case let .sessionLength(minutes):
+            return "\(minutes) minutes as your session length"
+        case let .sessionBeforeFirstCall(minutes):
+            return "A \(minutes)-minute session before your first call"
+        case let .weekdayGoal(weekday, minutes):
+            return "A \(Self.goalWords(minutes)) goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar))"
         }
     }
 
@@ -38,6 +51,12 @@ enum CoachExperiment: Codable, Hashable, Sendable {
             return "\(preset.title) \(hours.phrase(locale: locale, calendar: calendar))"
         case .earlierMorningPlan:
             return "an earlier morning plan"
+        case let .sessionLength(minutes):
+            return "\(minutes)-minute sessions"
+        case .sessionBeforeFirstCall:
+            return "a session before the first call"
+        case let .weekdayGoal(weekday, _):
+            return "a lower goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar))"
         }
     }
 
@@ -52,6 +71,12 @@ enum CoachExperiment: Codable, Hashable, Sendable {
             return "Sessions use \(preset.title) \(hours.phrase(locale: locale, calendar: calendar))."
         case let .earlierMorningPlan(hour):
             return "The morning plan arrives at \(Self.clock(hour, locale: locale, calendar: calendar))."
+        case let .sessionLength(minutes):
+            return "Sessions start at \(minutes) minutes."
+        case let .sessionBeforeFirstCall(minutes):
+            return "The morning plan puts a \(minutes)-minute session before your first call."
+        case let .weekdayGoal(weekday, minutes):
+            return "The goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar)) is \(FocusGoal.format(minutes: minutes))."
         }
     }
 
@@ -62,6 +87,9 @@ enum CoachExperiment: Codable, Hashable, Sendable {
         case let .shorterSessions(hours, _):  return .sessionRate(hours)
         case let .stricterPreset(hours, _):   return .sessionRate(hours)
         case .earlierMorningPlan:             return .firstSession
+        case .sessionLength:                  return .sessionRate(.allDay)
+        case .sessionBeforeFirstCall:         return .callDayFocus
+        case let .weekdayGoal(weekday, _):    return .weekdayFocus(weekday)
         }
     }
 
@@ -73,8 +101,12 @@ enum CoachExperiment: Codable, Hashable, Sendable {
         case let (.shorterSessions(a, _), .shorterSessions(b, _)),
              let (.stricterPreset(a, _), .stricterPreset(b, _)):
             return a.from < b.to && b.from < a.to
-        case (.earlierMorningPlan, .earlierMorningPlan):
+        case (.earlierMorningPlan, .earlierMorningPlan),
+             (.sessionLength, .sessionLength), (.sessionLength, .shorterSessions), (.shorterSessions, .sessionLength),
+             (.sessionBeforeFirstCall, .sessionBeforeFirstCall):
             return true
+        case let (.weekdayGoal(a, _), .weekdayGoal(b, _)):
+            return a == b
         default:
             return false
         }
@@ -83,6 +115,16 @@ enum CoachExperiment: Codable, Hashable, Sendable {
     static func clock(_ hour: Int, locale: Locale = .current, calendar: Calendar = .current) -> String {
         let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date(timeIntervalSince1970: 0)) ?? .now
         return HabitFormat.time(date, locale: locale, calendar: calendar)
+    }
+
+    /// "Fridays", for a `Calendar` weekday.
+    static func weekdays(_ number: Int, locale: Locale = .current, calendar: Calendar = .current) -> String {
+        FocusGoal.pluralWeekday(number, locale: locale, calendar: calendar)
+    }
+
+    /// "2-hour", "1h 30m": a goal before "goal".
+    static func goalWords(_ minutes: Int) -> String {
+        minutes % 60 == 0 ? "\(minutes / 60)-hour" : FocusGoal.format(minutes: minutes)
     }
 }
 
@@ -115,10 +157,26 @@ enum CoachMetric: Codable, Hashable, Sendable {
     case siteMinutes(String)
     /// The day's first session, on average, in minutes after midnight.
     case firstSession
+    /// Average focused seconds a day over days with 3 hours of calls or more.
+    case callDayFocus
+    /// Average focused seconds on this weekday (1 is Sunday), over the ones
+    /// with anything tracked.
+    case weekdayFocus(Int)
 
     /// Nil when there's too little to tell.
     func measure(_ data: CoachData, calendar: Calendar = .current) -> Double? {
         switch self {
+        case .callDayFocus:
+            let focus = data.focusByDay(calendar: calendar)
+            let days = data.callSecondsByDay(calendar: calendar)
+                .filter { $0.value >= CoachPatternFinder.callHeavySeconds }.keys
+            guard !days.isEmpty else { return nil }
+            return days.reduce(0) { $0 + (focus[$1] ?? 0) } / Double(days.count)
+        case .weekdayFocus(let weekday):
+            let focus = data.focusByDay(calendar: calendar)
+            let days = data.activeDays(calendar: calendar).filter { calendar.component(.weekday, from: $0) == weekday }
+            guard !days.isEmpty else { return nil }
+            return days.reduce(0) { $0 + (focus[$1] ?? 0) } / Double(days.count)
         case .sessionRate(let hours):
             let sessions = Set(data.sessions.filter { hours.contains($0.start, calendar: calendar) }.map(\.id))
             let tally = CoachData.tally(data.events.filter { $0.session.map(sessions.contains) == true })
@@ -154,6 +212,10 @@ enum CoachMetric: Codable, Hashable, Sendable {
             if abs(minutes) < 5 { return "about the same start" }
             let amount = HabitFormat.amount(minutes: abs(minutes))
             return minutes > 0 ? "first session \(amount) earlier" : "first session \(amount) later"
+        case .callDayFocus:
+            return "\(CoachDraft.duration(before)) → \(CoachDraft.duration(after)) focused on call-heavy days"
+        case .weekdayFocus(let weekday):
+            return "\(CoachDraft.duration(before)) → \(CoachDraft.duration(after)) focused on \(CoachExperiment.weekdays(weekday))"
         }
     }
 
@@ -167,8 +229,8 @@ enum CoachMetric: Codable, Hashable, Sendable {
     /// Whether `after` is better than `before`.
     func improved(from before: Double, to after: Double) -> Bool {
         switch self {
-        case .sessionRate:               return after > before
-        case .siteMinutes, .firstSession: return after < before
+        case .sessionRate, .callDayFocus, .weekdayFocus: return after > before
+        case .siteMinutes, .firstSession:                return after < before
         }
     }
 }
@@ -182,6 +244,14 @@ struct CoachSettings: Equatable, Sendable {
     var morningPlanHour = 9
     /// Experiments running or kept; a new one mustn't overlap them.
     var inPlace: [CoachExperiment] = []
+    /// The length a session starts at.
+    var sessionMinutes = 50
+    /// The daily goal, and the weekdays with one of their own (1 is Sunday).
+    var dailyGoal = GoalDefaults.dailyFocusMinutes
+    var weekdayGoals: [Int: Int] = [:]
+    /// Whether the calendar can be read, so the morning plan knows the first call.
+    var canReadCalendar = false
+    var morningPlanOn = true
 }
 
 /// Turns a finding into one experiment the app can apply.
@@ -224,7 +294,27 @@ enum CoachPlanner {
         case .lateStarts:
             guard settings.morningPlanHour > earliestMorningHour else { return [] }
             return [.earlierMorningPlan(hour: settings.morningPlanHour - 1)]
+        case .switching(let f):
+            return [settings.preset.stricter.map { CoachExperiment.stricterPreset(f.hours, $0) }].compactMap { $0 }
+        case .sessionLength(let f):
+            return settings.sessionMinutes > f.minutes ? [.sessionLength(minutes: f.minutes)] : []
+        case .meetingDays:
+            // The first call comes from the calendar, and the morning plan places the session.
+            guard settings.canReadCalendar, settings.morningPlanOn else { return [] }
+            return [.sessionBeforeFirstCall(minutes: shortMinutes)]
+        case .appChain(let f):
+            return f.isSite ? limit(on: f.target, dailySeconds: f.dailySeconds, settings: settings) : []
+        case .weeklyRhythm(let f):
+            let goal = settings.weekdayGoals[f.weekday] ?? settings.dailyGoal
+            let minutes = Self.weekdayGoal(focus: f.focus)
+            return minutes <= goal - 30 ? [.weekdayGoal(weekday: f.weekday, minutes: minutes)] : []
         }
+    }
+
+    /// A goal around what the weekday usually manages: its average focus to
+    /// the nearest 15 minutes, half an hour at least.
+    static func weekdayGoal(focus: TimeInterval) -> Int {
+        max(30, Int((focus / 60 / 15).rounded()) * 15)
     }
 
     /// A limit around 60% of the site's usual daily time, in 5-minute

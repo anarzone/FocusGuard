@@ -13,18 +13,18 @@ struct CoachWeekStats: Codable, Equatable, Sendable {
     let goalOf: Int
     let weekendsCount: Bool
 
-    static func make(_ week: CoachData, before: CoachData, goal: TimeInterval, weekendsCount: Bool,
+    /// - Parameter goal: a day's goal, from its start (a weekday can have its own).
+    static func make(_ week: CoachData, before: CoachData, goal: (Date) -> TimeInterval, weekendsCount: Bool,
                      calendar: Calendar = .current) -> CoachWeekStats {
         let now = CoachData.tally(week.events), then = CoachData.tally(before.events)
-        let focusByDay = Dictionary(grouping: week.events.filter { $0.kind == .focus }) { calendar.startOfDay(for: $0.start) }
-            .mapValues { $0.reduce(0) { $0 + $1.duration } }
+        let focusByDay = week.focusByDay(calendar: calendar)
         let countable = { (day: Date) in weekendsCount || !calendar.isDateInWeekend(day) }
         return CoachWeekStats(
             focused: now.focus,
             focusedBefore: before.events.isEmpty ? nil : then.focus,
             rate: FocusRate.of(focused: now.focus, drifted: now.drift),
             rateBefore: then.focus + then.drift >= 60 ? FocusRate.of(focused: then.focus, drifted: then.drift) : nil,
-            goalDays: focusByDay.filter { countable($0.key) && $0.value >= goal }.count,
+            goalDays: focusByDay.filter { countable($0.key) && $0.value >= goal($0.key) }.count,
             goalOf: weekendsCount ? 7 : 5,
             weekendsCount: weekendsCount
         )
@@ -93,6 +93,11 @@ struct CoachState: Codable, Equatable, Sendable {
     var finished: CoachTrial?
     /// Experiments the user kept on; each can be stopped.
     var kept: [CoachTrial] = []
+    /// Experiments that ended, newest last, for the month review.
+    var history: [CoachTrial]?
+    /// Experiments started from the month review; each runs to the end of
+    /// its own stretch (`CoachTrial.week`).
+    var monthTrials: [CoachTrial]?
 }
 
 /// The Pro weekly coach. Once a week it finds one pattern in last week's
@@ -109,7 +114,10 @@ final class WeeklyCoach {
     private(set) var isMakingNote = false
     /// Why "Try it this week" didn't apply, for a moment.
     private(set) var problem: String?
+    /// Why a month review's "Try it" didn't apply, for a moment.
+    private(set) var monthProblem: String?
 
+    /// The tracked data for a stretch of days, with the calendar's busy times.
     @ObservationIgnored var reader: (DateInterval) async -> CoachData = { CoachData.empty($0) }
     @ObservationIgnored var applier: CoachApplying?
     /// Apple's on-device model, or nil without Apple Intelligence (the note
@@ -118,7 +126,8 @@ final class WeeklyCoach {
     @ObservationIgnored var isUnlocked: () -> Bool = { Entitlements.shared.isUnlocked(.coach) }
     /// A free user's first use: starts the 14-day trial.
     @ObservationIgnored var startTrial: () -> Void = { Entitlements.shared.startTrialIfNeeded(for: .coach) }
-    @ObservationIgnored var goalSeconds: () -> TimeInterval = { FocusGoal.dailySeconds }
+    /// A day's goal, from its start.
+    @ObservationIgnored var goalSeconds: (Date) -> TimeInterval
     @ObservationIgnored var now: () -> Date = { .now }
     @ObservationIgnored var locale: Locale = .current
 
@@ -128,21 +137,32 @@ final class WeeklyCoach {
     @ObservationIgnored private var refreshing = false
 
     static let stateKey = "coach.state"
+    /// Ended experiments kept for the month review.
+    static let historyLimit = 60
+    /// Weeks of data the note is worked out from, last week included.
+    static let historyWeeks = 3
     private static let logger = Logger(subsystem: "com.anar.focusguard", category: "coach")
 
     init(defaults: UserDefaults = .standard, calendar: Calendar = .current) {
         self.defaults = defaults
         self.calendar = calendar
+        self.goalSeconds = { FocusGoal.seconds(on: $0, defaults, calendar: calendar) }
         self.state = defaults.data(forKey: Self.stateKey)
             .flatMap { try? JSONDecoder().decode(CoachState.self, from: $0) } ?? CoachState()
     }
 
-    /// Hooks the coach up to the app: reads the store off the main thread,
-    /// applies experiments through the daily limits and settings, and lets
-    /// the drift engine follow a stricter preset by the hour.
+    /// Hooks the coach up to the app: reads the store off the main thread
+    /// (and the calendar's busy times, when it may), applies experiments
+    /// through the daily limits and settings, and lets the drift engine
+    /// follow a stricter preset by the hour.
     func attach(_ appState: AppState) {
         let container = appState.container
-        reader = { await CoachDataReader.read(container, interval: $0) }
+        let busyTimes = CalendarBusyTimes()
+        reader = { interval in
+            var data = await CoachDataReader.read(container, interval: interval)
+            data.busy = busyTimes.busy(from: interval.start, to: interval.end) ?? []
+            return data
+        }
         let engine = appState.escalationEngine
         applier = LiveCoachApplier(limits: appState.limits, preset: { [weak engine] in engine?.preset ?? .standard },
                                    defaults: defaults)
@@ -173,9 +193,26 @@ final class WeeklyCoach {
     /// Whether last week's experiment can be kept on now.
     var canKeepLastResult: Bool {
         guard let trial = lastResult, !trial.kept else { return false }
-        let inPlace = state.kept.map(\.experiment) + [state.running?.experiment].compactMap { $0 }
-            + (state.choice == .open ? [note?.experiment].compactMap { $0 } : [])
-        return !inPlace.contains { $0.overlaps(trial.experiment) }
+        let offered = state.choice == .open ? [note?.experiment].compactMap { $0 } : []
+        return !(inPlace + offered).contains { $0.overlaps(trial.experiment) }
+    }
+
+    /// Experiments on right now: kept ones, this week's, and the month review's.
+    var inPlace: [CoachExperiment] {
+        (state.kept + [state.running].compactMap { $0 } + monthTrials).map(\.experiment)
+    }
+
+    /// Experiments started from the month review that are still on.
+    var monthTrials: [CoachTrial] { state.monthTrials ?? [] }
+
+    /// Every experiment the coach knows of: ended, kept, running, and the
+    /// month review's, each once.
+    var allTrials: [CoachTrial] {
+        var seen = Set<UUID>()
+        let all = (state.history ?? []) + [state.finished].compactMap { $0 } + state.kept
+            + [state.running].compactMap { $0 } + monthTrials
+        // The latest copy of each: a kept one over its history entry.
+        return Array(all.reversed().filter { seen.insert($0.id).inserted }.reversed())
     }
 
     // MARK: - The week
@@ -191,6 +228,7 @@ final class WeeklyCoach {
         let at = now()
         CoachRules.pruneExpired(now: at, defaults)
         await finishTrialIfDue(at: at)
+        await finishMonthTrialsIfDue(at: at)
         guard FeatureFlags.coach, isUnlocked(), let week = calendar.dateInterval(of: .weekOfYear, for: at),
               state.week != week.start else { return }
         isMakingNote = true
@@ -211,16 +249,40 @@ final class WeeklyCoach {
         }
         state.finished = trial
         state.running = nil
+        remember(trial)
         save()
+    }
+
+    /// The same for the month review's experiments.
+    private func finishMonthTrialsIfDue(at now: Date) async {
+        let due = monthTrials.filter { $0.week.end <= now }
+        guard !due.isEmpty else { return }
+        for var trial in due {
+            let data = await reader(DateInterval(start: min(trial.appliedAt, trial.week.end), end: trial.week.end))
+            trial.after = trial.experiment.metric.measure(data, calendar: calendar)
+            if trial.kept { state.kept.append(trial) } else { applier?.undo(trial.undo, weekOver: true) }
+            remember(trial)
+        }
+        let ended = Set(due.map(\.id))
+        let left = monthTrials.filter { !ended.contains($0.id) }
+        state.monthTrials = left.isEmpty ? nil : left
+        save()
+    }
+
+    /// Adds an ended experiment to the history the month review reads.
+    private func remember(_ trial: CoachTrial) {
+        let earlier = (state.history ?? []).filter { $0.id != trial.id }
+        state.history = Array((earlier + [trial]).suffix(Self.historyLimit))
     }
 
     private func makeNote(for week: DateInterval) async {
         guard let lastStart = calendar.date(byAdding: .weekOfYear, value: -1, to: week.start),
-              let beforeStart = calendar.date(byAdding: .weekOfYear, value: -2, to: week.start) else { return }
+              let beforeStart = calendar.date(byAdding: .weekOfYear, value: -2, to: week.start),
+              let historyStart = calendar.date(byAdding: .weekOfYear, value: -Self.historyWeeks, to: week.start) else { return }
         let lastWeek = DateInterval(start: lastStart, end: week.start)
-        let data = await reader(DateInterval(start: beforeStart, end: week.start))
-        let last = data.clipped(to: lastWeek)
-        let before = data.clipped(to: DateInterval(start: beforeStart, end: lastStart))
+        let history = await reader(DateInterval(start: historyStart, end: week.start))
+        let last = history.clipped(to: lastWeek)
+        let before = history.clipped(to: DateInterval(start: beforeStart, end: lastStart))
 
         state.week = week.start
         state.choice = .open
@@ -232,9 +294,15 @@ final class WeeklyCoach {
         }
 
         var settings = applier?.settings() ?? CoachSettings()
-        settings.inPlace = state.kept.map(\.experiment) + [state.running?.experiment].compactMap { $0 }
+        settings.inPlace = inPlace
         let cutoff = (HabitSchedule.morningStartHour(defaults) + 1) * 60
-        let findings = CoachPatternFinder.find(in: last, lateStartCutoff: cutoff, calendar: calendar)
+        let weekendsCount = defaults.bool(forKey: SettingsKeys.Goal.weekendsCount)
+        let weekCalendar = calendar
+        // Three weeks of events: worked out off the main thread.
+        let findings = await Task.detached(priority: .utility) {
+            CoachPatternFinder.find(in: last, history: history, lateStartCutoff: cutoff,
+                                    weekendsCount: weekendsCount, calendar: weekCalendar)
+        }.value
         let plan = CoachPlanner.plan(findings, settings: settings)
         let experiment = plan?.1
         let draft = CoachDraft.make(plan?.0, experiment: experiment, locale: locale, calendar: calendar)
@@ -244,9 +312,8 @@ final class WeeklyCoach {
         if case .timeOfDay(let f)? = plan?.0, case .sessionRate(let hours)? = experiment?.metric, hours == f.weak {
             baseline = f.weakRate
         }
-        let stats = CoachWeekStats.make(last, before: before, goal: goalSeconds(),
-                                        weekendsCount: defaults.bool(forKey: SettingsKeys.Goal.weekendsCount),
-                                        calendar: calendar)
+        let stats = CoachWeekStats.make(last, before: before, goal: goalSeconds,
+                                        weekendsCount: weekendsCount, calendar: calendar)
         state.note = CoachNote(week: week, about: lastWeek, headline: wording.headline, points: draft.points,
                                experiment: experiment, why: wording.why, baseline: baseline, stats: stats,
                                onDevice: wording.onDevice)
@@ -311,6 +378,41 @@ final class WeeklyCoach {
         save()
     }
 
+    // MARK: - From the month review
+
+    /// The month review's "Try it": applies `experiment` until `period` ends,
+    /// measured against `baseline`. False when it couldn't, with
+    /// `monthProblem` saying why.
+    @discardableResult
+    func tryForMonth(_ experiment: CoachExperiment, baseline: Double?, until period: DateInterval) -> Bool {
+        monthProblem = nil
+        guard let applier else { return false }
+        if !isUnlocked() { startTrial() }
+        guard isUnlocked() else { return false }
+        guard !inPlace.contains(where: { $0.overlaps(experiment) }) else {
+            monthProblem = "Something like this is already on."
+            return false
+        }
+        guard let undo = applier.apply(experiment, until: period.end) else {
+            monthProblem = "That's already set up, so there's nothing to try."
+            return false
+        }
+        state.monthTrials = monthTrials + [CoachTrial(experiment: experiment, before: baseline, week: period,
+                                                      appliedAt: now(), kept: false, undo: undo)]
+        save()
+        return true
+    }
+
+    /// Takes back a month review's "Try it".
+    func undoMonthTrial(_ trial: CoachTrial) {
+        monthProblem = nil
+        guard monthTrials.contains(where: { $0.id == trial.id }) else { return }
+        applier?.undo(trial.undo, weekOver: false)
+        let left = monthTrials.filter { $0.id != trial.id }
+        state.monthTrials = left.isEmpty ? nil : left
+        save()
+    }
+
     /// Stops an experiment that was kept on.
     func stop(_ trial: CoachTrial) {
         guard state.kept.contains(where: { $0.id == trial.id }) else { return }
@@ -324,7 +426,7 @@ final class WeeklyCoach {
     /// erased activity. This week's experiment is undone unless it was kept;
     /// kept changes stay on, and can still be stopped.
     func erase() {
-        if let trial = state.running {
+        for trial in [state.running].compactMap({ $0 }) + monthTrials {
             if trial.kept { state.kept.append(trial) } else { applier?.undo(trial.undo, weekOver: true) }
         }
         let kept = state.kept.map { trial -> CoachTrial in
@@ -335,6 +437,7 @@ final class WeeklyCoach {
         }
         state = CoachState(kept: kept)
         problem = nil
+        monthProblem = nil
         save()
     }
 

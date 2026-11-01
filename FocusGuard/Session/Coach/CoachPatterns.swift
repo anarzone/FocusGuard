@@ -8,6 +8,8 @@ struct CoachHours: Codable, Hashable, Sendable {
     static let morning = CoachHours(from: 0, to: 12)
     static let afternoon = CoachHours(from: 12, to: 17)
     static let evening = CoachHours(from: 17, to: 24)
+    /// The whole day, for a change that isn't by the hour.
+    static let allDay = CoachHours(from: 0, to: 24)
     /// The parts sessions are grouped into, in order.
     static let parts = [morning, afternoon, evening]
 
@@ -22,6 +24,7 @@ struct CoachHours: Codable, Hashable, Sendable {
             let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date(timeIntervalSince1970: 0)) ?? .now
             return HabitFormat.time(date, locale: locale, calendar: calendar)
         }
+        if from == 0 && to == 24 { return "all day" }
         if from == 0 { return to == 12 ? "before noon" : "before \(clock(to))" }
         if to == 24 { return "after \(clock(from))" }
         return "between \(clock(from)) and \(clock(to))"
@@ -49,6 +52,16 @@ enum CoachFinding: Equatable, Sendable {
     case driftDay(DriftDay)
     /// Days whose first session started late focused less.
     case lateStarts(LateStarts)
+    /// One day's sessions changed app far more often than usual.
+    case switching(Switching)
+    /// Sessions of one length went clearly better than longer ones.
+    case sessionLength(SessionLength)
+    /// Days with hours of calls focused clearly less.
+    case meetingDays(MeetingDays)
+    /// The same app led straight to the same distraction again and again.
+    case appChain(AppChain)
+    /// One weekday came in well below the rest, week after week.
+    case weeklyRhythm(WeeklyRhythm)
 
     struct TimeOfDay: Equatable, Sendable {
         let weak: CoachHours
@@ -100,6 +113,62 @@ enum CoachFinding: Equatable, Sendable {
         let earlyFocus: TimeInterval
     }
 
+    struct Switching: Equatable, Sendable {
+        let day: Date
+        /// Minutes in that day's sessions for each change of app, and the
+        /// same over the other days.
+        let minutesPerSwitch: Double
+        let usualMinutesPerSwitch: Double
+        let switches: Int
+        /// The part of the day most of those sessions ran in.
+        let hours: CoachHours
+    }
+
+    struct SessionLength: Equatable, Sendable {
+        /// The length that went best, and how its sessions went.
+        let minutes: Int
+        let rate: Double
+        let sessions: Int
+        /// Sessions at least 15 minutes longer.
+        let longerRate: Double
+        let longerSessions: Int
+        /// Calendar weeks the sessions came from.
+        let weeks: Int
+    }
+
+    struct MeetingDays: Equatable, Sendable {
+        /// Days with at least `callHours` of calls, and the other days.
+        let heavyDays: Int
+        let otherDays: Int
+        /// Average focused time a day on each.
+        let heavyFocus: TimeInterval
+        let otherFocus: TimeInterval
+        let callHours: Int
+    }
+
+    struct AppChain: Equatable, Sendable {
+        /// The app it started from (a bundle id) and its name.
+        let source: String
+        let sourceName: String
+        /// The distraction it led to.
+        let target: String
+        let name: String
+        let isSite: Bool
+        let count: Int
+        /// Average time a day on the distraction, over the days with anything tracked.
+        let dailySeconds: TimeInterval
+    }
+
+    struct WeeklyRhythm: Equatable, Sendable {
+        /// `Calendar` weekday: 1 is Sunday, 7 Saturday.
+        let weekday: Int
+        /// Weeks running it was the lowest.
+        let weeks: Int
+        /// Its average focused time, and the other days' in the same weeks.
+        let focus: TimeInterval
+        let othersFocus: TimeInterval
+    }
+
     /// 0...1: how clear and how useful the finding is, to rank them.
     var strength: Double {
         switch self {
@@ -112,6 +181,18 @@ enum CoachFinding: Equatable, Sendable {
             return min(1, (f.drift - f.othersAverage) / max(1, f.drift)) * 0.8
         case .lateStarts(let f):
             return min(1, (f.earlyFocus - f.lateFocus) / max(1, f.earlyFocus)) * 0.75
+        case .switching(let f):
+            // Twice as often is a start; four times as often is as clear as it gets.
+            let times = f.usualMinutesPerSwitch / max(0.1, f.minutesPerSwitch)
+            return min(1, (times - 1) / 3) * 0.7
+        case .sessionLength(let f):
+            return min(1, (f.rate - f.longerRate) / 0.3) * min(1, Double(min(f.sessions, f.longerSessions)) / 4) * 0.85
+        case .meetingDays(let f):
+            return min(1, (f.otherFocus - f.heavyFocus) / max(1, f.otherFocus)) * 0.7
+        case .appChain(let f):
+            return min(1, Double(f.count) / 10) * 0.85
+        case .weeklyRhythm(let f):
+            return min(1, 1 - f.focus / max(1, f.othersFocus)) * 0.8
         }
     }
 }
@@ -125,14 +206,26 @@ enum CoachPatternFinder {
     static let afterSessionWindow: TimeInterval = 3 * 60
 
     /// Every pattern found, strongest first.
-    /// - Parameter lateStartCutoff: minutes after midnight from which a
-    ///   day's first session counts as late (10:00 by default).
-    static func find(in data: CoachData, lateStartCutoff: Int = 600,
-                     calendar: Calendar = .current) -> [CoachFinding] {
-        [timeOfDay(data, calendar: calendar),
-         afterSessions(data, calendar: calendar),
-         driftDay(data, calendar: calendar),
-         lateStarts(data, cutoff: lateStartCutoff, calendar: calendar)]
+    /// - Parameters:
+    ///   - data: the week to look at.
+    ///   - history: a longer stretch ending with it, for the patterns that
+    ///     need several weeks (session length, weekly rhythm) or a usual to
+    ///     compare against (switching, call-heavy days). Nil: `data` alone.
+    ///   - lateStartCutoff: minutes after midnight from which a day's first
+    ///     session counts as late (10:00 by default).
+    ///   - weekendsCount: whether weekends count as days of the week's rhythm.
+    static func find(in data: CoachData, history: CoachData? = nil, lateStartCutoff: Int = 600,
+                     weekendsCount: Bool = false, calendar: Calendar = .current) -> [CoachFinding] {
+        let longer = history ?? data
+        return [timeOfDay(data, calendar: calendar),
+                afterSessions(data, calendar: calendar),
+                driftDay(data, calendar: calendar),
+                lateStarts(data, cutoff: lateStartCutoff, calendar: calendar),
+                switching(data, history: longer, calendar: calendar),
+                sessionLength(longer, calendar: calendar),
+                meetingDays(longer, calendar: calendar),
+                appChain(data, calendar: calendar),
+                weeklyRhythm(longer, weekendsCount: weekendsCount, calendar: calendar)]
             .compactMap { $0 }
             .sorted { $0.strength > $1.strength }
     }
@@ -251,5 +344,197 @@ enum CoachPatternFinder {
         guard earlyFocus >= lateFocus * 1.3, earlyFocus - lateFocus >= 45 * 60 else { return nil }
         return .lateStarts(.init(cutoff: cutoff, lateDays: late.count, earlyDays: early.count,
                                  lateFocus: lateFocus, earlyFocus: earlyFocus))
+    }
+
+    // MARK: - Switching a lot
+
+    /// The day in `data` whose sessions changed app at least twice as often
+    /// as sessions on the other days of `history` (at most every 5 minutes,
+    /// 10 changes or more).
+    static func switching(_ data: CoachData, history: CoachData? = nil,
+                          calendar: Calendar = .current) -> CoachFinding? {
+        struct Day {
+            var seconds: TimeInterval = 0
+            var switches = 0
+            var byPart: [CoachHours: TimeInterval] = [:]
+        }
+        var days: [Date: Day] = [:]
+        for (_, events) in (history ?? data).eventsBySession {
+            let ordered = events.sorted { $0.start < $1.start }
+            for (index, event) in ordered.enumerated() {
+                let day = calendar.startOfDay(for: event.start)
+                var entry = days[day] ?? Day()
+                entry.seconds += event.duration
+                if let part = CoachHours.parts.first(where: { $0.contains(event.start, calendar: calendar) }) {
+                    entry.byPart[part, default: 0] += event.duration
+                }
+                if index > 0, ordered[index - 1].target != event.target { entry.switches += 1 }
+                days[day] = entry
+            }
+        }
+        let counted = days.filter { $0.value.seconds >= 20 * 60 }
+        guard counted.count >= 4 else { return nil }
+
+        var best: (finding: CoachFinding.Switching, times: Double)?
+        for (day, entry) in counted where data.interval.start <= day && day < data.interval.end {
+            guard entry.seconds >= 40 * 60, entry.switches >= 10 else { continue }
+            let others = counted.filter { $0.key != day }.map(\.value)
+            let otherMinutes = others.reduce(0) { $0 + $1.seconds } / 60
+            let otherSwitches = others.reduce(0) { $0 + $1.switches }
+            let mine = entry.seconds / 60 / Double(entry.switches)
+            let usual = otherMinutes / Double(max(1, otherSwitches))
+            let times = usual / mine
+            guard mine <= 5, times >= 2, best.map({ times > $0.times }) ?? true,
+                  let part = entry.byPart.max(by: { ($0.value, $1.key.from) < ($1.value, $0.key.from) }) else { continue }
+            best = (.init(day: day, minutesPerSwitch: mine, usualMinutesPerSwitch: usual,
+                          switches: entry.switches, hours: part.key), times)
+        }
+        return best.map { .switching($0.finding) }
+    }
+
+    // MARK: - Best session length
+
+    /// The length whose sessions ran at least 12 points above sessions 15
+    /// minutes longer or more, at 70% or better, over two weeks or more.
+    static func sessionLength(_ data: CoachData, calendar: Calendar = .current) -> CoachFinding? {
+        struct Rated {
+            let minutes: Int
+            let focus: TimeInterval
+            let drift: TimeInterval
+            let week: Date
+        }
+        let bySession = data.eventsBySession
+        let rated: [Rated] = data.sessions.compactMap { session in
+            let tally = CoachData.tally(bySession[session.id] ?? [])
+            guard tally.focus + tally.drift >= 5 * 60,
+                  let week = calendar.dateInterval(of: .weekOfYear, for: session.start)?.start else { return nil }
+            // The planned length, unless the session ended well short of it.
+            let planned = session.plannedMinutes.flatMap { session.minutes * 10 >= $0 * 8 ? $0 : nil }
+            let minutes = planned ?? Int((Double(session.minutes) / 5).rounded()) * 5
+            guard (10...180).contains(minutes) else { return nil }
+            return Rated(minutes: minutes, focus: tally.focus, drift: tally.drift, week: week)
+        }
+        let weeks = Set(rated.map(\.week)).count
+        guard weeks >= 2 else { return nil }
+        func rate(_ sessions: [Rated]) -> Double {
+            FocusRate.of(focused: sessions.reduce(0) { $0 + $1.focus }, drifted: sessions.reduce(0) { $0 + $1.drift })
+        }
+
+        var best: CoachFinding.SessionLength?
+        for minutes in Set(rated.map(\.minutes)).sorted() {
+            let at = rated.filter { $0.minutes == minutes }
+            let longer = rated.filter { $0.minutes >= minutes + 15 }
+            guard at.count >= 3, longer.count >= 3, Set(at.map(\.week)).count >= 2 else { continue }
+            let atRate = rate(at), longerRate = rate(longer)
+            guard atRate >= 0.7, atRate - longerRate >= 0.12,
+                  best.map({ atRate - longerRate > $0.rate - $0.longerRate }) ?? true else { continue }
+            best = .init(minutes: minutes, rate: atRate, sessions: at.count,
+                         longerRate: longerRate, longerSessions: longer.count, weeks: weeks)
+        }
+        return best.map { .sessionLength($0) }
+    }
+
+    // MARK: - Meeting-heavy days
+
+    /// A day with this much of calls counts as call-heavy.
+    static let callHeavySeconds: TimeInterval = 3 * 3600
+
+    /// Days with 3 hours of calls or more against the other days, when they
+    /// focused at most 70% as much and 45 minutes less or more.
+    static func meetingDays(_ data: CoachData, calendar: Calendar = .current) -> CoachFinding? {
+        let calls = data.callSecondsByDay(calendar: calendar)
+        let tracked = data.trackedByDay(calendar: calendar)
+        let focus = data.focusByDay(calendar: calendar)
+        var heavy: [TimeInterval] = [], other: [TimeInterval] = []
+        for day in Set(tracked.keys).union(calls.keys) {
+            let callTime = calls[day] ?? 0
+            if callTime >= callHeavySeconds {
+                heavy.append(focus[day] ?? 0)
+            } else if (tracked[day] ?? 0) >= 30 * 60 {
+                other.append(focus[day] ?? 0)
+            }
+        }
+        guard heavy.count >= 2, other.count >= 2 else { return nil }
+        let heavyFocus = heavy.reduce(0, +) / Double(heavy.count)
+        let otherFocus = other.reduce(0, +) / Double(other.count)
+        guard heavyFocus <= otherFocus * 0.7, otherFocus - heavyFocus >= 45 * 60 else { return nil }
+        return .meetingDays(.init(heavyDays: heavy.count, otherDays: other.count, heavyFocus: heavyFocus,
+                                  otherFocus: otherFocus, callHours: Int(callHeavySeconds / 3600)))
+    }
+
+    // MARK: - One app leads to another
+
+    /// A distraction counts as opened from an app when it came within this
+    /// long of the app, quick hops (a redirect, a new tab) aside.
+    static let chainGap: TimeInterval = 15
+
+    /// The same app (one that's neither focus nor a distraction, like Slack)
+    /// leading straight to the same distraction 5 times or more.
+    static func appChain(_ data: CoachData, calendar: Calendar = .current) -> CoachFinding? {
+        let events = data.events.sorted { $0.start < $1.start }
+        func isHop(_ event: CoachEvent) -> Bool {
+            event.duration < 10 && event.kind != .distraction
+                && (event.isSite || BrowserTabReader.isBrowser(bundleIdentifier: event.target))
+        }
+        var counts: [String: (source: CoachEvent, target: CoachEvent, count: Int)] = [:]
+        for index in events.indices.dropFirst() where events[index].kind == .distraction {
+            let event = events[index]
+            guard events[index - 1].target != event.target else { continue }
+            var back = index - 1
+            while back > 0, index - back <= 3, isHop(events[back]) { back -= 1 }
+            let source = events[back]
+            guard source.kind == .neutral, !source.isSite, !BrowserTabReader.isBrowser(bundleIdentifier: source.target),
+                  event.start.timeIntervalSince(source.end) <= chainGap else { continue }
+            let key = source.target + "\u{1}" + event.target
+            counts[key] = (source, event, (counts[key]?.count ?? 0) + 1)
+        }
+        guard let best = counts.max(by: { ($0.value.count, $1.key) < ($1.value.count, $0.key) }),
+              best.value.count >= 5 else { return nil }
+        let target = best.value.target
+        let total = data.events.filter { $0.target == target.target }.reduce(0) { $0 + $1.duration }
+        return .appChain(.init(source: best.value.source.target, sourceName: best.value.source.name,
+                               target: target.target, name: target.name, isSite: target.isSite,
+                               count: best.value.count,
+                               dailySeconds: total / Double(max(1, data.activeDays(calendar: calendar).count))))
+    }
+
+    // MARK: - Weekly rhythm
+
+    /// One weekday was the lowest of its week, at 60% of the other days or
+    /// less, in each of the last `weeks` whole weeks of `data`. Days with
+    /// under half an hour tracked don't count; weekends only when they
+    /// count toward the goal.
+    static func weeklyRhythm(_ data: CoachData, weeks: Int = 3, weekendsCount: Bool = false,
+                             calendar: Calendar = .current) -> CoachFinding? {
+        var spans: [DateInterval] = []
+        var cursor = calendar.dateInterval(of: .weekOfYear, for: data.interval.end.addingTimeInterval(-1))
+        while let week = cursor, spans.count < weeks, week.end > data.interval.start {
+            if week.start >= data.interval.start && week.end <= data.interval.end { spans.append(week) }
+            cursor = calendar.dateInterval(of: .weekOfYear, for: week.start.addingTimeInterval(-1))
+        }
+        guard spans.count == weeks else { return nil }
+        let tracked = data.trackedByDay(calendar: calendar)
+        let focus = data.focusByDay(calendar: calendar)
+
+        var weekday: Int?
+        var low: [TimeInterval] = [], rest: [TimeInterval] = []
+        for week in spans {
+            let days = tracked.filter { day, seconds in
+                week.start <= day && day < week.end && seconds >= 30 * 60
+                    && (weekendsCount || !calendar.isDateInWeekend(day))
+            }.map { (weekday: calendar.component(.weekday, from: $0.key), focus: focus[$0.key] ?? 0) }
+            guard days.count >= 3,
+                  let lowest = days.min(by: { ($0.focus, $0.weekday) < ($1.focus, $1.weekday) }),
+                  weekday == nil || weekday == lowest.weekday else { return nil }
+            let others = days.filter { $0.weekday != lowest.weekday }.map(\.focus)
+            let othersAverage = others.reduce(0, +) / Double(max(1, others.count))
+            guard othersAverage >= 3600, lowest.focus <= othersAverage * 0.6 else { return nil }
+            weekday = lowest.weekday
+            low.append(lowest.focus)
+            rest.append(othersAverage)
+        }
+        guard let weekday else { return nil }
+        return .weeklyRhythm(.init(weekday: weekday, weeks: weeks, focus: low.reduce(0, +) / Double(low.count),
+                                   othersFocus: rest.reduce(0, +) / Double(rest.count)))
     }
 }
