@@ -28,8 +28,19 @@ final class WindowClickTests: XCTestCase {
         app.terminate()
     }
 
+    /// A sidebar row; its label may carry a badge ("Work log, PRO").
     private func open(_ page: String) {
-        window.buttons[page].click()
+        click(window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", page)).firstMatch)
+    }
+
+    /// A real mouse click at the element's centre. XCUITest's own `click()`
+    /// first asks accessibility what's at that point, and for the page
+    /// header it answers with the window's empty toolbar strip, so it
+    /// refuses; a click there does reach the button, which is what this
+    /// checks.
+    private func click(_ element: XCUIElement) {
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "\(element) is missing")
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
     }
 
     private func waitFor(_ element: XCUIElement, _ message: String) {
@@ -69,12 +80,12 @@ final class WindowClickTests: XCTestCase {
         waitFor(next, "Today's day arrows are missing")
         XCTAssertFalse(next.isEnabled, "Next day should be off on today")
 
-        window.buttons["Previous day"].click()
+        click(window.buttons["Previous day"])
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
         waitFor(text(containing: yesterday.formatted(.dateTime.weekday(.wide))), "Previous day didn't go back a day")
         XCTAssertTrue(next.isEnabled, "Next day should be on for yesterday")
 
-        next.click()
+        click(next)
         let backToToday = expectation(for: NSPredicate(format: "isEnabled == false"), evaluatedWith: next)
         wait(for: [backToToday], timeout: 5)
     }
@@ -83,16 +94,16 @@ final class WindowClickTests: XCTestCase {
         open("Reports")
         waitFor(window.buttons["Month"], "Reports' period switch is missing")
 
-        window.buttons["Month"].click()
+        click(window.buttons["Month"])
         let thisMonth = Date.now.formatted(.dateTime.month(.wide))
         waitFor(text(containing: thisMonth), "Month didn't switch the report")
         XCTAssertFalse(window.buttons["Share week"].exists, "Share week only belongs to a week")
 
-        window.buttons["Previous month"].click()
+        click(window.buttons["Previous month"])
         let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: .now)!.formatted(.dateTime.month(.wide))
         waitFor(text(containing: lastMonth), "Previous month didn't go back a month")
 
-        window.buttons["Week"].click()
+        click(window.buttons["Week"])
         waitFor(window.buttons["Share week"], "Week didn't switch back")
     }
 
@@ -100,9 +111,9 @@ final class WindowClickTests: XCTestCase {
         open("Apps & Sites")
         let rules = window.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Rules'")).firstMatch
         waitFor(rules, "The Used | Rules switch is missing")
-        rules.click()
+        click(rules)
         waitFor(text(containing: "Rules decide how new activity is sorted"), "Rules didn't open")
-        window.buttons["Used"].click()
+        click(window.buttons["Used"])
         waitFor(text(containing: "Decide what counts as focus"), "Used didn't come back")
     }
 
@@ -116,7 +127,7 @@ final class WindowClickTests: XCTestCase {
         assertStays(window.staticTexts["Your day"], "Today")
         open("Reports")
         assertStays(window.staticTexts["Focus and drift per day"], "Reports › Week")
-        window.buttons["Month"].click()
+        click(window.buttons["Month"])
         assertStays(window.staticTexts["Daily goal"], "Reports › Month")
     }
 
