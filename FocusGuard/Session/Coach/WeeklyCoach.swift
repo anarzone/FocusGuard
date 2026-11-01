@@ -220,7 +220,9 @@ final class WeeklyCoach {
     /// Ends an experiment whose week is over, then makes this week's note
     /// if there isn't one. Runs every minute and when a coach view opens.
     func refresh() async {
-        guard !refreshing else { return }
+        // The UI tests' copy shares the real app's settings, where the
+        // coach's state lives: it leaves them alone.
+        guard !refreshing, !UITestMode.isOn else { return }
         refreshing = true
         defer { refreshing = false }
         let at = now()

@@ -36,6 +36,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSClassFromString("XCTestCase") != nil { return }
 
         appState = AppState()
+        // The UI tests' copy: straight into the window, with no menu bar
+        // item or onboarding beside the real app's.
+        if UITestMode.isOn {
+            openMainWindow(tab: .home)
+            return
+        }
         AppAppearance.applyStored()
         // Starts the trial's reminder and end-of-trial timer.
         Entitlements.shared.refresh()
@@ -193,6 +199,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 980, height: 640)
             window.center()
+            // The click tests' Macs can have screens narrower than the window
+            // (1024 points): their copy sits at the left edge, sidebar in view.
+            if UITestMode.isOn, let visible = NSScreen.main?.visibleFrame {
+                window.setFrameTopLeftPoint(NSPoint(x: visible.minX, y: visible.maxY))
+            }
 
             // When the user clicks the red traffic light, drop the Dock icon
             // and go back to accessory mode. The app stays alive through the

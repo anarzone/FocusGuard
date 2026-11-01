@@ -149,3 +149,40 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.tests
         GENERATE_INFOPLIST_FILE: YES
+
+  # Clicks the window with real mouse events (FocusGuardUITests scheme). The
+  # app runs in UITestMode: an in-memory store, beside any real FocusGuard.
+  FocusGuardUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: FocusGuardUITests
+    dependencies:
+      - target: FocusGuard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anar.focusguard.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: FocusGuard
+
+# Spelled out so `-scheme FocusGuard test` runs only the unit tests: the UI
+# tests take over the mouse, so they run on their own scheme, in CI.
+schemes:
+  FocusGuard:
+    build:
+      targets:
+        FocusGuard: all
+        FocusGuardTests: [test]
+    test:
+      config: Debug
+      targets:
+        - FocusGuardTests
+  FocusGuardUITests:
+    build:
+      targets:
+        FocusGuard: all
+        FocusGuardUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - FocusGuardUITests

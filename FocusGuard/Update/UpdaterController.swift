@@ -32,7 +32,8 @@ final class UpdaterController: ObservableObject {
         // unsigned/headless CI environment — aborts. `startingUpdater: false`
         // defers all of that; production launch starts normally. XCTest is
         // only loaded into the process when running tests.
-        let isTesting = NSClassFromString("XCTestCase") != nil
+        // The UI tests' copy (UITestMode) doesn't load XCTest, so it's checked too.
+        let isTesting = NSClassFromString("XCTestCase") != nil || UITestMode.isOn
 
         controller = SPUStandardUpdaterController(
             startingUpdater: !isTesting,
