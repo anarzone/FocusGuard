@@ -11,12 +11,16 @@ extension Notification.Name {
 }
 
 enum MainTab: Hashable, CaseIterable {
-    case home, reports, workLog, apps, settings
+    case home, reports, ask, workLog, apps, settings
+
+    /// The sidebar's sections: Ask only once it has shipped.
+    static var shown: [MainTab] { allCases.filter { $0 != .ask || FeatureFlags.ask } }
 
     var title: String {
         switch self {
         case .home:     return "Today"
         case .reports:  return "Reports"
+        case .ask:      return "Ask"
         case .workLog:  return "Work log"
         case .apps:     return "Apps & Sites"
         case .settings: return "Settings"
@@ -27,6 +31,7 @@ enum MainTab: Hashable, CaseIterable {
         switch self {
         case .home:     return "clock"
         case .reports:  return "chart.bar"
+        case .ask:      return "sparkle"
         case .workLog:  return "doc.text"
         case .apps:     return "square.grid.2x2"
         case .settings: return "slider.horizontal.3"
@@ -77,6 +82,8 @@ struct MainWindowView: View {
     @State private var sheet: WindowSheet?
     @State private var appsMode: AppsMode = .used
     @State private var settingsPane: SettingsPane = .general
+    /// Ask's questions and answers, kept while the window is open.
+    @State private var ask = AskConversation()
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
 
     init(appState: AppState, initialTab: MainTab = .home) {
@@ -125,6 +132,8 @@ struct MainWindowView: View {
             TodayPage(appState: appState) { tab = $0 }
         case .reports:
             ReportsPage(appState: appState)
+        case .ask:
+            AskPage(appState: appState, conversation: ask)
         case .workLog:
             WorkLogPage(appState: appState)
         case .apps:
@@ -159,7 +168,7 @@ private struct WindowSidebar: View {
             // Room for the window's traffic lights.
             Spacer().frame(height: 46)
 
-            ForEach(MainTab.allCases, id: \.self) { item in
+            ForEach(MainTab.shown, id: \.self) { item in
                 navRow(item)
             }
 
@@ -187,9 +196,7 @@ private struct WindowSidebar: View {
                     .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if item == .workLog && !WorkLogAccess.isOpen(shipped: FeatureFlags.debrief, unlocked: entitlements.isUnlocked(.workLog)) {
-                    ProBadge()
-                }
+                if isLocked(item) { ProBadge() }
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
@@ -199,6 +206,15 @@ private struct WindowSidebar: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Pro pages show PRO until they're unlocked.
+    private func isLocked(_ item: MainTab) -> Bool {
+        switch item {
+        case .workLog: return !WorkLogAccess.isOpen(shipped: FeatureFlags.debrief, unlocked: entitlements.isUnlocked(.workLog))
+        case .ask:     return !AskAccess.isOpen(shipped: FeatureFlags.ask, unlocked: entitlements.isUnlocked(.ask))
+        default:       return false
+        }
     }
 }
 

@@ -159,6 +159,78 @@ actor StatsStore {
                                       summaries: days(context, now: now))
         }
     }
+
+    // MARK: - Ask
+
+    /// The facts behind an answer on the Ask page, added up from day
+    /// summaries, plus the sessions for "how long should my sessions be".
+    /// The coach's question, and ones it can't answer, don't need the
+    /// store (`AskEngine`).
+    func askFacts(_ question: AskQuestion, settings: AskContext, now: Date,
+                  calendar: Calendar = .current, locale: Locale = .current) -> AskFacts {
+        read { context in
+            let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale, context: settings)
+            let summaries = days(context, now: now, calendar: calendar)
+            let today = calendar.startOfDay(for: now)
+            let monthStart = calendar.date(byAdding: .day, value: 1 - AskFactsBuilder.lookbackDays, to: today) ?? today
+            let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? today
+            switch question.intent {
+            case .bestHours:
+                return builder.bestHours(summaries.summaries(from: monthStart, to: now) ?? [],
+                                         sessionCount: sessionCount(context, from: monthStart, to: now))
+            case .pullsAway:
+                return builder.pullsAway(summaries.summaries(from: monthStart, to: now) ?? [], hours: question.hours,
+                                         sessionCount: sessionCount(context, from: monthStart, to: now))
+            case .weekCompare:
+                let lastStart = calendar.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? weekStart
+                let sameEnd = min(weekStart, lastStart.addingTimeInterval(now.timeIntervalSince(weekStart)))
+                return builder.weekCompare(thisWeek: summaries.breakdown(from: weekStart, to: now),
+                                           sameDaysLast: summaries.breakdown(from: lastStart, to: sameEnd),
+                                           lastWeek: summaries.breakdown(from: lastStart, to: weekStart),
+                                           sessionsThisWeek: sessionCount(context, from: weekStart, to: now),
+                                           sessionsLastWeek: sessionCount(context, from: lastStart, to: weekStart))
+            case .driftDay:
+                // Finished days only: today's part-day would look light.
+                let from = calendar.date(byAdding: .day, value: -AskFactsBuilder.lookbackDays, to: today) ?? today
+                return builder.driftDay(summaries.summaries(from: from, to: today) ?? [],
+                                        sessionCount: sessionCount(context, from: from, to: today))
+            case .sessionLength:
+                return builder.sessionLength(askSessions(context, from: monthStart, to: now))
+            case .appTime:
+                let from = min(monthStart, calendar.date(byAdding: .weekOfYear, value: -3, to: weekStart) ?? monthStart)
+                return builder.appTime(summaries.summaries(from: from, to: now) ?? [], question: question.text,
+                                       period: question.period)
+            case .coachExperiment, .unknown:
+                return builder.cantAnswer(suggestion: nil)
+            }
+        }
+    }
+
+    private func sessionCount(_ context: ModelContext, from: Date, to: Date) -> Int {
+        Persistence.fetchCount(context, FetchDescriptor<Session>(
+            predicate: #Predicate { $0.startedAt >= from && $0.startedAt < to }
+        ))
+    }
+
+    /// Finished sessions started in `[from, to)`, with their focus and
+    /// drift, from one read of the events inside sessions (as Reports does).
+    private func askSessions(_ context: ModelContext, from: Date, to: Date) -> [AskSession] {
+        let finished = Persistence.fetch(context, FetchDescriptor<Session>(
+            predicate: #Predicate { $0.startedAt >= from && $0.startedAt < to && $0.endedAt != nil },
+            sortBy: [SortDescriptor(\.startedAt)]
+        ))
+        var tallies: [PersistentIdentifier: ClassificationTally] = [:]
+        for event in ReportsModelBuilder.sessionEvents(around: finished, from: from, to: to, context: context) {
+            guard let id = event.session?.persistentModelID else { continue }
+            tallies[id, default: ClassificationTally()].add(event.duration, event.classification ?? .neutral)
+        }
+        return finished.compactMap { session in
+            guard let end = session.endedAt else { return nil }
+            let running = max(0, end.timeIntervalSince(session.startedAt) - session.pausedSeconds)
+            let tally = tallies[session.persistentModelID] ?? ClassificationTally()
+            return AskSession(start: session.startedAt, minutes: Int(running / 60), focus: tally.focus, drift: tally.distraction)
+        }
+    }
 }
 
 
