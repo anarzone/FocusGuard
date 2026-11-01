@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Integrations: the calendar, tasks as session goals, code, macOS and
-/// the browser. Nothing here signs in anywhere; Calendar and Reminders ask
-/// macOS once.
+/// the browser. Calendar, Reminders and Things ask macOS once; Todoist and
+/// Linear take a personal token (`TaskSourceRows`).
 struct SettingsIntegrationsPane: View {
     @Bindable var appState: AppState
     var entitlements: Entitlements = .shared
@@ -223,7 +223,7 @@ struct SettingsIntegrationsPane: View {
 
     private var tasksSection: some View {
         SettingsSection(title: "Tasks as session goals", trailing: { ProBadge() }) {
-            SettingsRow(title: "Reminders", detail: remindersDetail) {
+            TaskSourceRow(source: .reminders, detail: remindersDetail) {
                 if tasksUnlocked || entitlements.canStartTrial {
                     Toggle("Reminders", isOn: Binding(get: { remindersOn && tasksUnlocked }, set: setReminders))
                         .toggleStyle(.switch)
@@ -252,6 +252,7 @@ struct SettingsIntegrationsPane: View {
                     }
                 }
             }
+            TaskSourceRows(integrations: appState.integrations, entitlements: entitlements)
         }
     }
 

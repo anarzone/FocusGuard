@@ -57,12 +57,12 @@ private final class FakeCalendarStore: CalendarStore {
 
 /// Stands in for Reminders.
 private final class FakeReminderStore: ReminderStore {
-    var items: [ReminderItem] = []
+    var items: [TaskItem] = []
     var completed: Set<String> = []
     var completions: [(String, Bool)] = []
 
     func lists() async -> [CalendarChoice] { [] }
-    func incomplete(listIDs: [String]) async -> [ReminderItem]? { items.filter { !completed.contains($0.id) } }
+    func incomplete(listIDs: [String]) async -> [TaskItem]? { items.filter { !completed.contains($0.id) } }
     func setCompleted(_ id: String, _ done: Bool) async -> Bool {
         completions.append((id, done))
         if done { completed.insert(id) } else { completed.remove(id) }
@@ -296,8 +296,8 @@ final class GoalSourcesTests: XCTestCase {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))!
     }
 
-    private func item(_ title: String, due: Date? = nil, created: Date? = nil, list: String = "Work") -> ReminderItem {
-        ReminderItem(id: title, title: title, list: list, due: due, created: created)
+    private func item(_ title: String, due: Date? = nil, created: Date? = nil, list: String = "Work") -> TaskItem {
+        TaskItem(id: title, title: title, list: list, due: due, created: created)
     }
 
     func testRemindersDueTodayComeFirst() {
@@ -309,12 +309,12 @@ final class GoalSourcesTests: XCTestCase {
             item("Write the Q4 report", due: at(17)),
             item("Reply to Lena", due: at(8)),
         ]
-        XCTAssertEqual(ReminderGoals.ordered(items, now: at(10), calendar: calendar).map(\.title),
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), calendar: calendar).map(\.title),
                        ["Reply to Lena", "Write the Q4 report", "Late", "Next week", "Someday", "Someday, added later"])
-        XCTAssertEqual(ReminderGoals.dueNote(items[4], now: at(10), calendar: calendar), "today")
-        XCTAssertEqual(ReminderGoals.dueNote(items[3], now: at(10), calendar: calendar), "overdue")
-        XCTAssertNil(ReminderGoals.dueNote(items[2], now: at(10), calendar: calendar))
-        XCTAssertEqual(ReminderGoals.next(after: "Reply to Lena", in: items, now: at(10), calendar: calendar)?.title,
+        XCTAssertEqual(TaskGoals.dueNote(items[4], now: at(10), calendar: calendar), "today")
+        XCTAssertEqual(TaskGoals.dueNote(items[3], now: at(10), calendar: calendar), "overdue")
+        XCTAssertNil(TaskGoals.dueNote(items[2], now: at(10), calendar: calendar))
+        XCTAssertEqual(TaskGoals.next(after: items[5], in: items, now: at(10), calendar: calendar)?.title,
                        "Write the Q4 report")
     }
 
@@ -323,23 +323,23 @@ final class GoalSourcesTests: XCTestCase {
         let review = at(10).addingTimeInterval(600)
         let suggestions = GoalSuggestion.make(lastGoal: "Finish the Today page", lastVerdict: .partly,
                                               calendarTitle: "Prepare the design review", calendarStart: review,
-                                              reminders: reminders, git: GitGoal(repo: "focusguard", branch: "fix/header-clicks"),
+                                              tasks: reminders, git: GitGoal(repo: "focusguard", branch: "fix/header-clicks"),
                                               now: at(10), calendar: calendar)
         XCTAssertEqual(suggestions.map(\.text), ["Write the Q4 report", "Reply to Lena", "Prepare the design review",
                                                  "fix/header-clicks", "Finish the Today page"])
         XCTAssertEqual(suggestions.map(\.group), ["Reminders · Work", "Reminders · Work", "Calendar", "Git · focusguard", "Last time"])
         XCTAssertEqual(suggestions.map(\.detail), ["today", nil, HabitFormat.time(review, calendar: calendar), nil, "partly done"])
-        XCTAssertEqual(suggestions.first?.source, .reminder(id: "Write the Q4 report", list: "Work"))
+        XCTAssertEqual(suggestions.first?.source, .task(.reminders, id: "Write the Q4 report", list: "Work"))
     }
 
     func testTheSameTextIsOfferedOnce() {
         let suggestions = GoalSuggestion.make(lastGoal: "Write the Q4 report", lastVerdict: nil, calendarTitle: nil,
-                                              reminders: [item("Write the Q4 report")], now: at(10), calendar: calendar)
-        XCTAssertEqual(suggestions.map(\.source), [.reminder(id: "Write the Q4 report", list: "Work")])
+                                              tasks: [item("Write the Q4 report")], now: at(10), calendar: calendar)
+        XCTAssertEqual(suggestions.map(\.source), [.task(.reminders, id: "Write the Q4 report", list: "Work")])
     }
 
     func testDoneTicksTheReminderOffAndUndoSticksAgainstTheDebrief() {
-        let link = TaskLink(reminder: item("Write the Q4 report"), linkedAt: at(10))
+        let link = TaskLink(task: item("Write the Q4 report"), linkedAt: at(10))
         XCTAssertEqual(link.change(for: .done, byUser: false), .tick)
         XCTAssertEqual(link.change(for: .partly, byUser: true), .none)
 
@@ -456,8 +456,8 @@ final class IntegrationsCoordinatorTests: XCTestCase {
         calendarStore = FakeCalendarStore()
         reminderStore = FakeReminderStore()
         reminderStore.items = [
-            ReminderItem(id: "q4", title: "Write the Q4 report", list: "Work", due: .now, created: nil),
-            ReminderItem(id: "lena", title: "Reply to Lena about the contract", list: "Work", due: nil, created: nil),
+            TaskItem(id: "q4", title: "Write the Q4 report", list: "Work", due: .now, created: nil),
+            TaskItem(id: "lena", title: "Reply to Lena about the contract", list: "Work", due: nil, created: nil),
         ]
     }
 
@@ -475,6 +475,7 @@ final class IntegrationsCoordinatorTests: XCTestCase {
         defaults.set(remindersOn, forKey: IntegrationSettings.reminders)
         defaults.set(false, forKey: IntegrationSettings.gitBranch)
         let coordinator = IntegrationsCoordinator(calendar: calendarStore, reminders: reminderStore,
+                                                  tasks: [ReminderTasks(store: reminderStore, defaults: defaults)],
                                                   entitlements: entitlements, defaults: defaults)
         coordinator.isShipped = true
         return coordinator
@@ -490,27 +491,27 @@ final class IntegrationsCoordinatorTests: XCTestCase {
     func testRemindersAreOfferedOnlyOnProWithTheSwitchOn() async {
         let free = make(pro: false)
         await free.refreshGoalSources()
-        XCTAssertTrue(free.reminderGoals.isEmpty)
+        XCTAssertTrue(free.taskGoals.isEmpty)
 
         let off = make(remindersOn: false)
         await off.refreshGoalSources()
-        XCTAssertTrue(off.reminderGoals.isEmpty)
+        XCTAssertTrue(off.taskGoals.isEmpty)
 
         let on = make()
         await on.refreshGoalSources()
-        XCTAssertEqual(on.reminderGoals.map(\.id), ["q4", "lena"])
+        XCTAssertEqual(on.taskGoals.map(\.id), ["q4", "lena"])
     }
 
     func testAPickedReminderIsTickedOffWhenTheGoalIsDoneWithUndo() async {
         let coordinator = make()
         await coordinator.refreshGoalSources()
-        let pick = GoalSuggestion(text: "Write the Q4 report", source: .reminder(id: "q4", list: "Work"))
+        let pick = GoalSuggestion(text: "Write the Q4 report", source: .task(.reminders, id: "q4", list: "Work"))
         coordinator.goalPicked(pick)
 
         let session = session(goal: "Write the Q4 report")
         await coordinator.sessionStarted(session, startedByEvent: false)
-        XCTAssertEqual(coordinator.taskLinks[session.id]?.reminder.id, "q4")
-        XCTAssertNil(coordinator.pickedReminder)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.task.id, "q4")
+        XCTAssertNil(coordinator.pickedTask)
 
         session.goalVerdict = .done
         await coordinator.verdictChanged(session, byUser: false)
@@ -533,7 +534,7 @@ final class IntegrationsCoordinatorTests: XCTestCase {
     func testAnEditedGoalIsntLinkedToTheReminder() async {
         let coordinator = make()
         await coordinator.refreshGoalSources()
-        coordinator.goalPicked(GoalSuggestion(text: "Write the Q4 report", source: .reminder(id: "q4", list: "Work")))
+        coordinator.goalPicked(GoalSuggestion(text: "Write the Q4 report", source: .task(.reminders, id: "q4", list: "Work")))
         let session = session(goal: "Write the Q4 report intro only")
         await coordinator.sessionStarted(session, startedByEvent: false)
         XCTAssertNil(coordinator.taskLinks[session.id])
@@ -542,9 +543,9 @@ final class IntegrationsCoordinatorTests: XCTestCase {
     func testPickingSomethingElseForgetsThePickedReminder() async {
         let coordinator = make()
         await coordinator.refreshGoalSources()
-        coordinator.goalPicked(GoalSuggestion(text: "Write the Q4 report", source: .reminder(id: "q4", list: "Work")))
+        coordinator.goalPicked(GoalSuggestion(text: "Write the Q4 report", source: .task(.reminders, id: "q4", list: "Work")))
         coordinator.goalPicked(GoalSuggestion(text: "Standup notes", source: .calendar))
-        XCTAssertNil(coordinator.pickedReminder)
+        XCTAssertNil(coordinator.pickedTask)
     }
 
     func testASessionStartedByTheUsersOwnEventIsntWrittenAgain() async {

@@ -41,16 +41,6 @@ struct OwnEventRef: Equatable, Sendable {
     let start: Date
 }
 
-/// An open reminder, offered as a goal.
-struct ReminderItem: Equatable, Identifiable, Codable, Sendable {
-    let id: String
-    let title: String
-    /// The list's name: "Work".
-    let list: String
-    let due: Date?
-    let created: Date?
-}
-
 /// The calendar as `SessionCalendarWriter` and `IntegrationsCoordinator`
 /// use it. EventKit's own (`EventKitBridge`) works off the main thread;
 /// tests pass a fake.
@@ -74,7 +64,7 @@ protocol CalendarStore: AnyObject {
 protocol ReminderStore: AnyObject {
     func lists() async -> [CalendarChoice]
     /// Open reminders in the chosen lists (all when empty); nil without access.
-    func incomplete(listIDs: [String]) async -> [ReminderItem]?
+    func incomplete(listIDs: [String]) async -> [TaskItem]?
     /// Ticks a reminder off, or back on. True when it's saved.
     func setCompleted(_ id: String, _ completed: Bool) async -> Bool
     func requestAccess() async -> Bool
@@ -191,7 +181,7 @@ actor EventKitBridge: CalendarStore, ReminderStore {
         return current().calendars(for: .reminder).map(Self.choice).sorted(by: Self.order)
     }
 
-    func incomplete(listIDs: [String]) async -> [ReminderItem]? {
+    func incomplete(listIDs: [String]) async -> [TaskItem]? {
         guard EventKitAccess.reminders == .granted else { return nil }
         let store = current()
         let chosen = Set(listIDs)
@@ -201,12 +191,12 @@ actor EventKitBridge: CalendarStore, ReminderStore {
         return await withCheckedContinuation { continuation in
             store.fetchReminders(matching: predicate) { reminders in
                 let calendar = Calendar.current
-                let items = (reminders ?? []).compactMap { reminder -> ReminderItem? in
+                let items = (reminders ?? []).compactMap { reminder -> TaskItem? in
                     let title = (reminder.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !title.isEmpty else { return nil }
-                    return ReminderItem(id: reminder.calendarItemIdentifier, title: title, list: reminder.calendar?.title ?? "",
-                                        due: reminder.dueDateComponents.flatMap { calendar.date(from: $0) },
-                                        created: reminder.creationDate)
+                    return TaskItem(id: reminder.calendarItemIdentifier, title: title, list: reminder.calendar?.title ?? "",
+                                    due: reminder.dueDateComponents.flatMap { calendar.date(from: $0) },
+                                    created: reminder.creationDate)
                 }
                 continuation.resume(returning: items)
             }
