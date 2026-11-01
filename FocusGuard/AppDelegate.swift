@@ -176,13 +176,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            // The click tests' Macs have 1024-point screens: their copy starts
-            // narrower so the page isn't cut off at the screen's edge.
-            let size = NSSize(width: UITestMode.isOn ? 1000 : 1200, height: 720)
-            hosting.preferredContentSize = size
+            hosting.preferredContentSize = NSSize(width: 1200, height: 720)
 
             let window = NSWindow(
-                contentRect: NSRect(origin: .zero, size: size),
+                contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -202,6 +199,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 980, height: 640)
             window.center()
+            // The click tests' Macs can have screens narrower than the window
+            // (1024 points): their copy sits at the left edge, sidebar in view.
+            if UITestMode.isOn, let visible = NSScreen.main?.visibleFrame {
+                window.setFrameTopLeftPoint(NSPoint(x: visible.minX, y: visible.maxY))
+            }
 
             // When the user clicks the red traffic light, drop the Dock icon
             // and go back to accessory mode. The app stays alive through the
