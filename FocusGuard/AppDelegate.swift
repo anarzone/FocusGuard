@@ -36,6 +36,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if NSClassFromString("XCTestCase") != nil { return }
 
         appState = AppState()
+        // The UI tests' copy: straight into the window, with no menu bar
+        // item or onboarding beside the real app's.
+        if UITestMode.isOn {
+            openMainWindow(tab: .home)
+            return
+        }
         AppAppearance.applyStored()
         // Starts the trial's reminder and end-of-trial timer.
         Entitlements.shared.refresh()

@@ -62,7 +62,8 @@ final class AppState {
             AppRule.self,
             DailyLimit.self,
         ])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        // The UI tests' copy never touches the real store.
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: UITestMode.isOn)
         do {
             self.container = try ModelContainer(for: schema, configurations: [config])
         } catch {
@@ -71,6 +72,7 @@ final class AppState {
         }
 
         let context = container.mainContext
+        if UITestMode.isOn { UITestMode.seed(context) }
         let stats = StatsStore(container: container)
         self.stats = stats
         // Reclassified or erased events: the stats store's past-day totals are stale.
@@ -221,10 +223,14 @@ final class AppState {
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
-        wireNotifications()
         tabPause.isEnabled = defaults.object(forKey: SettingsWindowKey.pauseTab) as? Bool ?? true
-        tracker.start()
-        bridge.start(appState: self)
+        // The UI tests' copy runs beside the real app: it neither tracks nor
+        // talks to the browser extension or Notification Center.
+        if !UITestMode.isOn {
+            wireNotifications()
+            tracker.start()
+            bridge.start(appState: self)
+        }
         setupAutoPauseObservers()
 
         // One-time cleanup of pre-fix idle events (loginwindow / screensaver)
@@ -240,6 +246,10 @@ final class AppState {
                 RetentionPolicy.prune(context: self.container.mainContext)
             }
         }
+
+        // The UI tests' copy stops here: the widgets' shared snapshot and the
+        // coach's notes belong to the real app.
+        guard !UITestMode.isOn else { return }
 
         // Shortcuts, Siri, Spotlight, the Focus filter, the widgets and the
         // Control Center control act on this state.
