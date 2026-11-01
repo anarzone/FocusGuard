@@ -50,7 +50,7 @@ final class CalendarAutostartCoordinator {
     private var activeAutostartEventId: String?
     /// The session that event started. Only that one is "ours" to stop: if
     /// the user ended it and started their own, theirs keeps running.
-    private var startedSessionID: UUID?
+    private(set) var startedSessionID: UUID?
 
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
@@ -193,13 +193,16 @@ final class CalendarAutostartCoordinator {
         let windowEnd = now.addingTimeInterval(60 * 60 * 12)  // look ahead 12h
 
         let predicate = eventStore.predicateForEvents(
-            withStart: windowStart, end: windowEnd, calendars: nil
+            withStart: windowStart, end: windowEnd, calendars: IntegrationSettings.readCalendars(in: eventStore)
         )
         let kw = keyword.trimmingCharacters(in: .whitespaces).lowercased()
         guard !kw.isEmpty else { return }
 
+        // FocusGuard's own "Focus · …" events would match "focus"; they
+        // never start a session.
+        let own = OwnEvents.ids()
         let matches = eventStore.events(matching: predicate)
-            .filter { ($0.title ?? "").lowercased().contains(kw) }
+            .filter { ($0.title ?? "").lowercased().contains(kw) && !OwnEvents.isOwn($0, ids: own) }
             .sorted { $0.startDate < $1.startDate }
 
         let active = matches.first { $0.startDate <= now && now < $0.endDate }

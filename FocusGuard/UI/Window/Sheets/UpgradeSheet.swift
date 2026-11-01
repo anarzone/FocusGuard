@@ -224,6 +224,8 @@ struct UpgradeFeature {
                        symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
         UpgradeFeature(title: "Weekly coach", body: "Three things to try, every Monday.",
                        symbol: "chart.bar", ai: true, shipped: FeatureFlags.coach),
+        UpgradeFeature(title: "Ask", body: "Questions about your focus, answered on this Mac.",
+                       symbol: "questionmark.bubble", ai: true, shipped: FeatureFlags.ask),
         UpgradeFeature(title: "Daily limits for any site", body: "Free keeps one.", symbol: "hourglass"),
         UpgradeFeature(title: "All your history", body: "Reports for every week you have tracked.",
                        symbol: "clock.arrow.circlepath"),

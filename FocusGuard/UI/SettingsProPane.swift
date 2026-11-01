@@ -219,6 +219,7 @@ enum PlanComparison {
         Row(name: "Session goals, debriefs and work log", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
         Row(name: "Standup draft and timesheet", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
         Row(name: "Weekly coach", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.coach),
+        Row(name: "Ask about your focus", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.ask),
         Row(name: "Daily site limits", free: .text("\(Plan.freeDailyLimits)"), pro: .text("Any")),
     ]
 

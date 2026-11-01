@@ -44,6 +44,9 @@ final class DebriefCoordinator {
     @ObservationIgnored private let model: () -> (any OnDeviceModel)?
     /// Whether the switch is on; tests turn it on before it ships.
     @ObservationIgnored var isShipped: Bool = FeatureFlags.debrief
+    /// A goal's verdict changed: from the debrief (false) or the user
+    /// (true). A reminder behind the goal gets ticked off on Done.
+    @ObservationIgnored var onVerdict: (Session, _ byUser: Bool) -> Void = { _, _ in }
 
     private static let logger = Logger(subsystem: "com.anar.focusguard", category: "debrief")
 
@@ -79,9 +82,10 @@ final class DebriefCoordinator {
         Persistence.save(context)
     }
 
-    /// Goals to offer under the empty field: the last one if it wasn't done,
-    /// and the calendar event on now.
-    func goalSuggestions(now: Date = .now) -> [GoalSuggestion] {
+    /// Goals to offer under the empty field: open reminders and the Git
+    /// branch (from `IntegrationsCoordinator`), the calendar event on now,
+    /// and the last goal if it wasn't done.
+    func goalSuggestions(now: Date = .now, reminders: [ReminderItem] = [], git: GitGoal? = nil) -> [GoalSuggestion] {
         guard isEnabled else { return [] }
         var descriptor = FetchDescriptor<Session>(
             predicate: #Predicate { $0.goal != nil && $0.endedAt != nil },
@@ -89,8 +93,10 @@ final class DebriefCoordinator {
         )
         descriptor.fetchLimit = 1
         let last = Persistence.fetch(context, descriptor).first
+        let event = calendarSource.current(now: now)
         return GoalSuggestion.make(lastGoal: last?.goal, lastVerdict: last?.goalVerdict,
-                                   calendarTitle: calendarSource.currentTitle(now: now))
+                                   calendarTitle: event?.title, calendarStart: event?.start,
+                                   reminders: reminders, git: git, now: now)
     }
 
     // MARK: - Debrief
@@ -123,12 +129,14 @@ final class DebriefCoordinator {
                                                 hasGoal: facts.goal != nil)
                 guard !session.isDeleted, session.modelContext != nil else { return }
                 session.storedDebrief = draft
+                let verdictSet = session.goalVerdict == nil && draft.verdict != nil
                 if session.goalVerdict == nil { session.goalVerdict = draft.verdict }
                 if draft.project != nil {
                     session.project = ProjectGuess.guess(goal: facts.goal, modelProject: draft.project,
                                                          titles: facts.titles, apps: facts.apps, known: known)
                 }
                 Persistence.save(context)
+                if verdictSet { onVerdict(session, false) }
             } catch {
                 failed.insert(id)
                 Self.logger.error("debrief failed: \(error.localizedDescription, privacy: .public)")
@@ -176,6 +184,7 @@ final class DebriefCoordinator {
         guard session.goal != nil else { return }
         session.goalVerdict = verdict
         Persistence.save(context)
+        onVerdict(session, true)
     }
 
     /// Projects earlier sessions counted toward, most used first.
