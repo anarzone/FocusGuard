@@ -88,11 +88,17 @@ struct MenuBarView: View {
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
         .onAppear { appState.refreshMenuStats(force: true) }
-        .onAppear { goalSuggestions = appState.debriefs.goalSuggestions() }
+        .onAppear(perform: refreshGoalSuggestions)
+        .task {
+            // The next meeting, open reminders and the Git branch, off the main thread.
+            await appState.integrations.refreshForMenu()
+            refreshGoalSuggestions()
+        }
+        .onChange(of: appState.integrations.nextMeeting) { fitLengthToMeeting() }
         .onChange(of: appState.habits.autoStartOffer) { pickingLength = false }
         .onChange(of: appState.sessionManager.currentSession?.id) {
             pickingLength = false
-            goalSuggestions = appState.debriefs.goalSuggestions()
+            refreshGoalSuggestions()
         }
         .onReceive(ticker) { tick in
             now = tick
@@ -217,6 +223,10 @@ struct MenuBarView: View {
                                 onStop: { appState.habits.stopOfferingAutoStart() })
             }
 
+            if let meeting = appState.integrations.nextMeeting, meeting.isShown(at: now) {
+                NextMeetingRow(meeting: meeting, now: now)
+            }
+
             todayModule(offer: folded ? offer : nil, preview: !folded || offer != nil)
 
             if folded {
@@ -229,23 +239,49 @@ struct MenuBarView: View {
             } else {
                 if FeatureFlags.debrief {
                     if entitlements.isUnlocked(.debrief) {
-                        SessionGoalField(goal: $sessionGoal, suggestions: goalSuggestions, onSubmit: start)
+                        SessionGoalField(goal: $sessionGoal, suggestions: goalSuggestions,
+                                         onPick: { appState.integrations.goalPicked($0) }, onSubmit: start)
                     } else {
                         LockedProRow(feature: .debrief, title: "Add a goal for this session",
                                      detail: "Say what the session is for. When it ends, the debrief checks whether you got there.",
                                      systemImage: "scope",
-                                     onTrialStarted: { goalSuggestions = appState.debriefs.goalSuggestions() })
+                                     onTrialStarted: { refreshGoalSuggestions() })
                     }
                 }
 
                 LengthModule(minutes: $minutes, now: now)
 
-                CapsuleButton(title: "Start \(lengthText(minutes)) of focus", prominent: true) { start() }
+                CapsuleButton(title: startTitle, prominent: true) { start() }
                     .padding(.horizontal, 4)
             }
 
             NowRow(snapshot: appState.tracker.currentSnapshot, reachedLimit: limit?.isUsedUp == true ? limit : nil)
         }
+    }
+
+    /// "Start 50 minutes of focus", or "Start 25 minutes · ends before
+    /// Standup" when the next meeting is near.
+    private var startTitle: String {
+        if let meeting = appState.integrations.nextMeeting, meeting.isShown(at: now),
+           MeetingFit.endsBefore(minutes, now: now, meeting: meeting.start) {
+            return "Start \(lengthText(minutes)) · ends before \(meeting.shortTitle)"
+        }
+        return "Start \(lengthText(minutes)) of focus"
+    }
+
+    /// A session started now would run into the next meeting: the ruler
+    /// moves to the longest length that ends before it.
+    private func fitLengthToMeeting() {
+        let now = Date()
+        guard case .ready = appState.menuPhase(now: now),
+              let meeting = appState.integrations.nextMeeting, meeting.isShown(at: now),
+              let fitted = MeetingFit.minutes(minutes, now: now, meeting: meeting.start) else { return }
+        minutes = fitted
+    }
+
+    private func refreshGoalSuggestions() {
+        goalSuggestions = appState.debriefs.goalSuggestions(reminders: appState.integrations.reminderGoals,
+                                                            git: appState.integrations.gitGoal)
     }
 
     /// An offer starts the usual length, never shorter than the time it counts.
@@ -291,6 +327,7 @@ struct MenuBarView: View {
     private func restoreLength() {
         let saved = CoachRules.sessionMinutes() ?? (lastSessionMinutes > 0 ? lastSessionMinutes : defaultMinutes)
         minutes = min(RulerMath.range.upperBound, max(RulerMath.range.lowerBound, saved))
+        fitLengthToMeeting()
     }
 
     private func start() {
@@ -466,6 +503,15 @@ struct MenuBarView: View {
             .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Theme.module))
             .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
 
+            if FeatureFlags.taskGoals, entitlements.isUnlocked(.taskGoals), let goal = recap.session.goal,
+               let link = appState.integrations.taskLinks[recap.session.id] {
+                let id = recap.session.id
+                TaskGoalCard(goal: goal, verdict: recap.session.goalVerdict, link: link,
+                             onVerdict: { appState.debriefs.correct(recap.session, to: $0) },
+                             onUndo: { Task { await appState.integrations.undoTick(session: id) } },
+                             onTick: { Task { await appState.integrations.tickOff(session: id) } })
+            }
+
             if FeatureFlags.debrief {
                 if entitlements.isUnlocked(.debrief) {
                     DebriefRow(session: recap.session, status: appState.debriefs.status(for: recap.session)) {
@@ -480,6 +526,11 @@ struct MenuBarView: View {
                                      openPane = .debrief
                                  })
                 }
+            }
+
+            if FeatureFlags.taskGoals, entitlements.isUnlocked(.taskGoals),
+               let next = appState.integrations.nextTasks[recap.session.id] {
+                NextTaskRow(item: next, minutes: minutes) { start(task: next) }
             }
 
             HStack {
@@ -512,6 +563,15 @@ struct MenuBarView: View {
             .padding(.horizontal, 4)
             .onAppear { seedNextLength(from: recap) }
         }
+    }
+
+    /// "Start 25 min" on the next reminder: it's the new session's goal.
+    private func start(task item: ReminderItem) {
+        sessionGoal = String(item.title.prefix(SessionGoal.maxLength))
+        appState.integrations.pick(item)
+        lastSessionMinutes = minutes
+        appState.sessionManager.startSession(label: defaultLabel.isEmpty ? nil : defaultLabel,
+                                             plannedDurationMinutes: minutes)
     }
 
     /// The recap's ruler starts on the length of the session just finished,

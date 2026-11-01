@@ -17,10 +17,12 @@ enum NotificationCommand: Equatable {
     case snoozeAutoStart
     /// The morning plan's "Plan them".
     case planSessions([Date])
+    /// "Skip this one" on a planned session: its slot comes off the calendar.
+    case skipPlannedSession(at: Date)
     case openToday
     case openPlans
 
-    /// Nil for buttons that only dismiss ("Not today", "Skip this one").
+    /// Nil for buttons that only dismiss ("Not today").
     init?(action: String, category identifier: String, info: [AnyHashable: Any]) {
         guard let category = NotificationCategory(identifier: identifier) else {
             // Notifications without buttons (the daily-limit warning): a
@@ -64,6 +66,9 @@ enum NotificationCommand: Equatable {
         case (.morningPlan, .planThem?):
             let slots = (info[NotificationInfo.slots] as? [Double]) ?? []
             self = .planSessions(slots.map(Date.init(timeIntervalSinceReferenceDate:)))
+        case (.plannedSession, .skip?):
+            guard let slot = info[NotificationInfo.slot] as? Double else { return nil }
+            self = .skipPlannedSession(at: Date(timeIntervalSinceReferenceDate: slot))
         case (.wrapUp, .seeToday?):
             self = .openToday
         case (.trialEnding, .seePlans?):

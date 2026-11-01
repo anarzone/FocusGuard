@@ -16,6 +16,8 @@ final class SessionManager {
     var onSessionEnded: ((Session) -> Void)?
     /// True on pause (by the user or idle auto-pause), false on resume.
     var onSessionPauseChanged: ((Bool) -> Void)?
+    /// The planned length grew ("5 more min").
+    var onSessionExtended: ((Session) -> Void)?
 
     init(context: ModelContext, tracker: ActivityTracker) {
         self.context = context
@@ -136,6 +138,7 @@ final class SessionManager {
         guard let session = currentSession, let planned = session.plannedDurationMinutes else { return }
         session.plannedDurationMinutes = planned + minutes
         Persistence.save(context)
+        onSessionExtended?(session)
     }
 
     /// Called every tracker tick. If the active session has a planned duration

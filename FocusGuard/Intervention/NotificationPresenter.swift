@@ -263,4 +263,6 @@ enum NotificationInfo {
     static let since = "since"
     /// The morning plan's free slots (seconds since 1970).
     static let slots = "slots"
+    /// The planned slot a "Time for your session" notification is about.
+    static let slot = "slot"
 }

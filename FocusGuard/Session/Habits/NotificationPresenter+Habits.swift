@@ -25,7 +25,7 @@ extension NotificationPresenter {
             body: "\(Self.plural(minutes, "minute")), as you planned this morning.",
             category: category(.plannedSession, [(.startSession, "Start \(Self.plural(minutes, "minute"))"),
                                                  (.skip, "Skip this one")]),
-            info: [NotificationInfo.minutes: minutes]
+            info: [NotificationInfo.minutes: minutes, NotificationInfo.slot: slot.timeIntervalSinceReferenceDate]
         )
         deliver(request, as: .general)
     }
