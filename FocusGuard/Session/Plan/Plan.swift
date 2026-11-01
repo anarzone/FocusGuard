@@ -44,6 +44,7 @@ enum ProFeature: String, CaseIterable {
     case workLog
     case coach
     case taskGoals
+    case ask
     case fullHistory
 
     var title: String {
@@ -58,6 +59,7 @@ enum ProFeature: String, CaseIterable {
         case .workLog:         return "Work log"
         case .coach:           return "Weekly coach"
         case .taskGoals:       return "Tasks as session goals"
+        case .ask:             return "Ask"
         case .fullHistory:     return "Full history"
         }
     }

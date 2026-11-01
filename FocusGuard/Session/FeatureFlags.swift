@@ -12,6 +12,8 @@ enum FeatureFlags {
     static let debrief = true
     /// The weekly coach note and its experiment.
     static let coach = true
+    /// Ask: questions about your own focus, answered on this Mac.
+    static let ask = true
 
     /// Open reminders as session goals, ticked off when the session's done
     /// (Settings › Integrations › Tasks as session goals).
@@ -19,5 +21,5 @@ enum FeatureFlags {
 
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
-    static var proAI: Bool { smartCategories || debrief || coach }
+    static var proAI: Bool { smartCategories || debrief || coach || ask }
 }
