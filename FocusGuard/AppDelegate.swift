@@ -198,6 +198,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 980, height: 640)
+            // On a screen smaller than the usual 1200 × 720 (a 1024 × 768
+            // display, the CI runners), start at what fits, not half off it.
+            if let visible = NSScreen.main?.visibleFrame {
+                window.setContentSize(NSSize(width: min(1200, max(980, visible.width)),
+                                             height: min(720, max(640, visible.height))))
+            }
             window.center()
 
             // When the user clicks the red traffic light, drop the Dock icon
