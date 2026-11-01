@@ -158,7 +158,7 @@ final class AppState {
                 // break — interruptions defeat the point.
                 // Time in FocusGuard's own windows never counts as drift:
                 // the engine sees a neutral moment, which resets any streak.
-                let observed = tracker?.isFrontmostSelf == true ? snap.asNeutral(at: .now) : snap
+                let observed = tracker?.isFrontmostSelf == true ? snap.asNeutral(at: .now) : snap.observed(at: .now)
                 if !onBreak {
                     engine?.observe(snapshot: observed, isInSession: inActiveSession)
                     self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession)
@@ -167,7 +167,11 @@ final class AppState {
             self?.habits.tick()
             self?.integrations.tick()
             self?.maybeAutoPauseOrResume()
+            self?.extensionBridge.tick()
         }
+        // Every second while something is timed to the second or FocusGuard
+        // is on screen; otherwise tracking follows events (see TrackingCadence).
+        tracker.needsSecondTicks = { [weak self] in self?.needsSecondTicks ?? true }
 
         // Session boundaries: reset escalation, prompt for break, send notif.
         manager.onSessionStarted = { [weak self, weak manager] in
@@ -225,6 +229,7 @@ final class AppState {
         // connected; its block pages follow the preset, the daily limits and
         // the escalation engine's passes.
         tracker.extensionTab = { [weak bridge] id in bridge?.tab(forBrowser: id) }
+        bridge.onTabChange = { [weak tracker] in tracker?.lookSoon() }
         bridge.presetProvider = { [weak engine] in engine?.presetInForce() ?? .standard }
         bridge.limitsProvider = { [weak limits] in limits?.statuses ?? [] }
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }

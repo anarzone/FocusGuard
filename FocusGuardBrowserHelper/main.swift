@@ -28,7 +28,10 @@ final class Relay {
     private let stdoutLock = NSLock()
     private var socketFD: Int32 = -1
     private var reportedRunning: Bool?
+    /// Tries the app's socket again every 2 s, only while it's not connected:
+    /// connected, the helper sleeps until something arrives.
     private var retryTimer: DispatchSourceTimer?
+    private var retrying = false
 
     init(origin: String?, browser: String?) {
         self.origin = origin
@@ -36,16 +39,30 @@ final class Relay {
     }
 
     func run() -> Never {
-        queue.async { self.connect() }
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        timer.schedule(deadline: .now() + 2, repeating: 2)
+        timer.schedule(deadline: .now() + 2, repeating: 2, leeway: .milliseconds(500))
         timer.setEventHandler { [weak self] in
             guard let self, self.socketFD < 0 else { return }
             self.connect()
         }
-        timer.resume()
         retryTimer = timer
+        queue.async {
+            self.connect()
+            if self.socketFD < 0 { self.setRetrying(true) }
+        }
         readExtension()
+    }
+
+    /// Runs on `queue`. Suspends and resumes stay balanced.
+    private func setRetrying(_ on: Bool) {
+        guard on != retrying, let retryTimer else { return }
+        retrying = on
+        if on {
+            retryTimer.schedule(deadline: .now() + 2, repeating: 2, leeway: .milliseconds(500))
+            retryTimer.resume()
+        } else {
+            retryTimer.suspend()
+        }
     }
 
     // MARK: - Extension (stdin)
@@ -112,6 +129,7 @@ final class Relay {
             return
         }
         socketFD = fd
+        setRetrying(false)
         var hello: [String: Any] = ["type": "helperHello"]
         hello["browser"] = browser
         hello["origin"] = origin
@@ -145,6 +163,7 @@ final class Relay {
         close(socketFD)
         socketFD = -1
         sendStatus(running: false)
+        setRetrying(true)
     }
 
     private func sendStatus(running: Bool, force: Bool = false) {

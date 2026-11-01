@@ -35,6 +35,7 @@ private struct WorkLogView: View {
 
     @State private var offset = 0
     @State private var model: WorkLogModel
+    @Environment(\.isOnScreen) private var isOnScreen
 
     init(appState: AppState, calendar: Calendar = .current) {
         self._appState = Bindable(wrappedValue: appState)
@@ -50,12 +51,8 @@ private struct WorkLogView: View {
             appState.debriefs.correct(session, to: verdict)
             reload()
         }
-        .task(id: offset) {
-            while !Task.isCancelled {
-                reload()
-                try? await Task.sleep(for: .seconds(60))
-            }
-        }
+        // Every minute while the window can be seen.
+        .repeating(every: .seconds(60), while: isOnScreen, id: offset) { reload() }
         .onChange(of: appState.debriefs.writing) { reload() }
         .onChange(of: appState.sessionManager.currentSession?.id) { reload() }
     }

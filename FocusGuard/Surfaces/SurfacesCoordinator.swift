@@ -9,11 +9,16 @@ import WidgetKit
 /// state (start, pause, end, a break) and otherwise every ten minutes at
 /// most; between reloads the widgets count down on their own. The control
 /// shows whole minutes, so it reloads when that number changes.
+///
+/// Nothing polls: a change of state is observed, and a one-shot timer
+/// wakes for the control's next minute, the 5-minute refresh of today's
+/// numbers or midnight, whichever comes first (`nextCheck`).
 @MainActor
 final class SurfacesCoordinator {
     private weak var appState: AppState?
     private let store: SurfaceStore
     private let stats: SurfaceStats
+    /// One-shot, for the next check (`nextCheck`).
     private var timer: Timer?
     private var activityObserver: NSObjectProtocol?
 
@@ -52,15 +57,69 @@ final class SurfacesCoordinator {
                                                                   queue: .main) { [stats] _ in
             Task { await stats.forgetPastDays() }
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
-        }
         let now = Date()
         lastState = stateKey(now: now)
         lastMinute = shownMinute(now: now)
         refresh(widgets: true, controls: true)
         // A tap while FocusGuard wasn't running launched it; carry it out.
         takeCommands()
+        watchState()
+        scheduleNextCheck(now: now)
+        // Minutes and days may have turned while the Mac slept.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil,
+                                                          queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
+    }
+
+    /// Looks the moment a session or break starts, pauses, resumes or ends.
+    private func watchState() {
+        withObservationTracking {
+            _ = stateKey(now: .now)
+        } onChange: { [weak self] in
+            // Called before the change lands: look on the next turn.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self?.watchState()
+                    self?.tick()
+                }
+            }
+        }
+    }
+
+    /// The 5-minute refresh of today's numbers, outside sessions too.
+    nonisolated static let todayRefreshInterval: TimeInterval = 5 * 60
+
+    /// Seconds until the next look: the control's minute changing, today's
+    /// numbers being due, or midnight; a hair past, so the change has landed.
+    nonisolated static func nextCheck(minuteChangesIn: TimeInterval?, sinceWrite: TimeInterval,
+                                      untilMidnight: TimeInterval) -> TimeInterval {
+        let refresh = max(0, todayRefreshInterval - sinceWrite)
+        let soonest = [minuteChangesIn, refresh, untilMidnight].compactMap { $0 }.min() ?? refresh
+        return max(0, soonest) + StatusItemSchedule.slack
+    }
+
+    private func scheduleNextCheck(now: Date) {
+        timer?.invalidate()
+        let calendar = Calendar.current
+        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now.addingTimeInterval(86_400)
+        let delay = Self.nextCheck(minuteChangesIn: minuteChangesIn(now: now),
+                                   sinceWrite: now.timeIntervalSince(lastWrite),
+                                   untilMidnight: midnight.timeIntervalSince(now))
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
+        timer.tolerance = min(1, delay / 10)
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    /// Seconds until `shownMinute` changes by itself; nil when it won't.
+    private func minuteChangesIn(now: Date) -> TimeInterval? {
+        guard let appState else { return nil }
+        if let state = appState.breakManager.current { return MinuteClock.untilMinuteDrops(remaining: state.remaining(now: now)) }
+        guard let session = appState.sessionManager.currentSession, session.pausedAt == nil else { return nil }
+        return MinuteClock.untilNextMinute(elapsed: appState.sessionManager.runningSeconds(for: session, now: now))
     }
 
     // MARK: - Changes
@@ -100,6 +159,7 @@ final class SurfacesCoordinator {
     }
 
     private func tick(now: Date = .now) {
+        defer { scheduleNextCheck(now: now) }
         let state = stateKey(now: now)
         if state != lastState {
             lastState = state
@@ -114,7 +174,7 @@ final class SurfacesCoordinator {
             return
         }
         // Today's numbers grow outside sessions too.
-        if now.timeIntervalSince(lastWrite) >= 5 * 60 {
+        if now.timeIntervalSince(lastWrite) >= Self.todayRefreshInterval {
             refresh(widgets: now.timeIntervalSince(lastWidgetReload) >= Self.widgetReloadInterval, controls: false)
         }
     }

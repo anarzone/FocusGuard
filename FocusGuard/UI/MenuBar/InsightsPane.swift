@@ -23,6 +23,7 @@ struct InsightsPane: View {
     /// 0 is this week, -1 last week, and so on.
     @State private var weekOffset = 0
     @State private var now: Date = .now
+    @Environment(\.isOnScreen) private var isOnScreen
 
     /// Opens on the last results, so nothing pops in or resizes while the
     /// pane slides in; fresh numbers arrive from `StatsStore` a moment later.
@@ -51,13 +52,9 @@ struct InsightsPane: View {
             Spacer(minLength: 0)
             footer
         }
-        .task(id: "\(range.rawValue)\(weekOffset)") {
-            while !Task.isCancelled {
-                await load()
-                // The week's numbers barely move; today's do.
-                try? await Task.sleep(for: .seconds(range == .week ? 30 : 5))
-            }
-        }
+        // The week's numbers barely move; today's do. Only while the menu's open.
+        .repeating(every: .seconds(range == .week ? 30 : 5), while: isOnScreen,
+                   id: "\(range.rawValue)\(weekOffset)") { await load() }
     }
 
     /// Builds off the main thread (`StatsStore`); only the result lands here.

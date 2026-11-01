@@ -107,6 +107,8 @@ struct MainWindowView: View {
         .ignoresSafeArea()
         .frame(minWidth: 980, minHeight: 640)
         .environment(\.openWindowSheet, WindowSheetAction { sheet = $0 })
+        // Closed, minimised or covered: the pages' clocks and reloads stop.
+        .environment(\.isOnScreen, OnScreen.shared.window)
         .sheet(item: $sheet) { item in
             sheetView(item)
         }
@@ -242,12 +244,14 @@ private struct SidebarGlass: View {
 /// start. Everything in it truncates, so it never widens the sidebar.
 private struct SidebarSessionCard: View {
     @Bindable var appState: AppState
-    @State private var now = Date.now
+    /// The clock, ticking while the window can be seen.
+    @State private var tickedAt = Date.now
+    /// Never older than the window's showing, so it shows fresh numbers.
+    private var now: Date { max(tickedAt, OnScreen.shared.windowShownAt) }
     @AppStorage(WindowDefaultsKey.sessionLength) private var lengthChoice = 0
     @AppStorage(SessionDefaultsKey.durationMinutes) private var defaultMinutes = 50
     @AppStorage(SessionDefaultsKey.label) private var defaultLabel = ""
-
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @Environment(\.isOnScreen) private var isOnScreen
 
     var body: some View {
         Group {
@@ -292,7 +296,10 @@ private struct SidebarSessionCard: View {
                 .buttonStyle(.capsule(.primary, height: 36, fullWidth: true))
             }
         }
-        .onReceive(ticker) { now = $0 }
+        // The clock runs only for a session or break, with the window in view.
+        .repeating(every: .seconds(1),
+                   while: isOnScreen && (appState.breakManager.current != nil || appState.sessionManager.currentSession != nil),
+                   id: 0) { tickedAt = .now }
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

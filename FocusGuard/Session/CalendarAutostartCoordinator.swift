@@ -9,8 +9,10 @@ import os
 /// remaining time. When the event ends (or is cancelled), the session
 /// auto-stops.
 ///
-/// We use a 30s polling timer plus the `.EKEventStoreChanged` notification so
-/// edits in Calendar.app propagate quickly without us hammering EventKit.
+/// We look just after the next matching event starts or ends, on the
+/// `.EKEventStoreChanged` notification (so edits in Calendar.app propagate
+/// quickly), on wake, and every 15 minutes regardless — not on a polling
+/// timer, so EventKit is asked a few times an hour rather than 120.
 @MainActor
 @Observable
 final class CalendarAutostartCoordinator {
@@ -26,7 +28,11 @@ final class CalendarAutostartCoordinator {
 
     var keyword: String {
         get { UserDefaults.standard.string(forKey: "calendarAutostart.keyword") ?? "focus" }
-        set { UserDefaults.standard.set(newValue, forKey: "calendarAutostart.keyword") }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "calendarAutostart.keyword")
+            // Look again with the new word, once the typing settles.
+            if changeObserver != nil { scheduleEvaluation(after: 1) }
+        }
     }
 
     // MARK: - Live state observable by SwiftUI
@@ -43,8 +49,10 @@ final class CalendarAutostartCoordinator {
 
     private let eventStore = EKEventStore()
     private weak var sessionManager: SessionManager?
+    /// One-shot, for the next look (`nextCheck`).
     private var timer: Timer?
     private var changeObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
     /// EKEvent identifier for the calendar event that triggered the currently
     /// active session, if any, so it isn't started twice.
     private var activeAutostartEventId: String?
@@ -154,15 +162,18 @@ final class CalendarAutostartCoordinator {
     // MARK: - Watch loop
 
     private func startWatching() {
-        guard timer == nil, hasCalendarAccess else { return }
+        guard changeObserver == nil, hasCalendarAccess else { return }
 
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.evaluate() }
-        }
         changeObserver = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged,
             object: eventStore,
             queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.evaluate() }
+        }
+        // A start or end may have passed while the Mac slept.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.evaluate() }
         }
@@ -176,6 +187,10 @@ final class CalendarAutostartCoordinator {
             NotificationCenter.default.removeObserver(changeObserver)
             self.changeObserver = nil
         }
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+            self.wakeObserver = nil
+        }
         nextMatchTitle = nil
         nextMatchStart = nil
         // Don't auto-stop a session if the user disabled the feature mid-session;
@@ -184,11 +199,14 @@ final class CalendarAutostartCoordinator {
         startedSessionID = nil
     }
 
-    /// Single evaluation pass — called on tick and on calendar change.
+    /// Single evaluation pass — at the next start or end of a matching
+    /// event, on calendar change, on wake and every `maxWait` regardless.
     private func evaluate() {
         guard enabled, hasCalendarAccess, let sessionManager else { return }
 
         let now = Date()
+        // Looked again at least this often; sooner when an event starts or ends.
+        scheduleEvaluation(after: Self.maxWait)
         let windowStart = now.addingTimeInterval(-60)
         let windowEnd = now.addingTimeInterval(60 * 60 * 12)  // look ahead 12h
 
@@ -207,6 +225,7 @@ final class CalendarAutostartCoordinator {
 
         let active = matches.first { $0.startDate <= now && now < $0.endDate }
         let upcoming = matches.first { $0.startDate > now }
+        scheduleEvaluation(after: Self.nextCheck(now: now, starts: matches.map(\.startDate), ends: matches.map(\.endDate)))
 
         // Surface the next match for the Settings UI.
         if let active {
@@ -226,6 +245,26 @@ final class CalendarAutostartCoordinator {
         } else {
             stopSessionIfOurs(sessionManager: sessionManager)
         }
+    }
+
+    /// Longest wait between looks, for edits EventKit doesn't announce.
+    nonisolated static let maxWait: TimeInterval = 15 * 60
+
+    /// Seconds until the next look: just after the next start or end of a
+    /// matching event (so it has begun or ended), or `maxWait`.
+    nonisolated static func nextCheck(now: Date, starts: [Date], ends: [Date], maxWait: TimeInterval = maxWait) -> TimeInterval {
+        let next = (starts + ends).filter { $0 > now }.min().map { $0.timeIntervalSince(now) + 1 }
+        return min(maxWait, next ?? maxWait)
+    }
+
+    private func scheduleEvaluation(after delay: TimeInterval) {
+        timer?.invalidate()
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.evaluate() }
+        }
+        timer.tolerance = 0.5
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     private func startSessionIfNeeded(for event: EKEvent, now: Date, sessionManager: SessionManager) {

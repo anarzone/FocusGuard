@@ -54,6 +54,32 @@ final class AutoStartDetectorTests: XCTestCase {
         XCTAssertFalse(detector.isOngoing(since: t0))
     }
 
+    /// Outside a session the tracker looks when something changes, so a
+    /// detour may be seen only where it starts and ends.
+    func testADetourSeenOnlyAtItsEndsStillCounts() {
+        func look(_ app: String, _ classification: Classification, at second: Int) {
+            _ = detector.observe(.init(appName: app, bundleId: "id.\(app)", classification: classification,
+                                       at: t0.addingTimeInterval(TimeInterval(second)), eligible: true))
+        }
+        look("Xcode", .focus, at: 0)
+        look("Xcode", .focus, at: 10)
+        look("YouTube", .distraction, at: 11)
+        look("Xcode", .focus, at: 26)                       // 15 s of drift
+        XCTAssertFalse(detector.isOngoing(since: t0))
+
+        detector.reset()
+        look("Xcode", .focus, at: 0)
+        look("Finder", .neutral, at: 5)
+        look("Xcode", .focus, at: 45)                       // 40 s away
+        XCTAssertFalse(detector.isOngoing(since: t0))
+
+        detector.reset()
+        look("Xcode", .focus, at: 0)
+        look("Mail", .distraction, at: 5)
+        look("Xcode", .focus, at: 13)                       // 8 s: a glance
+        XCTAssertTrue(detector.isOngoing(since: t0))
+    }
+
     func testSessionsBreaksAndCallsReset() {
         feed(from: 0, to: 250)
         feed(from: 251, to: 260, eligible: false)

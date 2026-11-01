@@ -15,7 +15,10 @@ struct MenuBarView: View {
     @State private var seededRecap: Date?
     /// Length of the next session, set on the ruler.
     @State private var minutes: Int = 50
-    @State private var now: Date = .now
+    /// The clock, ticking while the menu's open.
+    @State private var tickedAt: Date = .now
+    /// Never older than the menu's opening, so it opens on fresh numbers.
+    private var now: Date { max(tickedAt, OnScreen.shared.menuShownAt) }
     /// Side pane slid out next to the session column, if any.
     @State private var openPane: MenuPane?
     /// The music pane, slid out on the column's left.
@@ -36,8 +39,6 @@ struct MenuBarView: View {
     /// Goals offered under the empty field.
     @State private var goalSuggestions: [GoalSuggestion] = []
     var entitlements: Entitlements = .shared
-
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         let phase = appState.menuPhase(now: now)
@@ -84,6 +85,7 @@ struct MenuBarView: View {
             }
         }
         .padding(6)
+        .environment(\.isOnScreen, OnScreen.shared.menu)
         .preference(key: MenuLeadingExtensionKey.self, value: musicOpen ? MusicPane.width + 6 : 0)
         .task { await permissions.refresh() }
         .onAppear(perform: restoreLength)
@@ -100,8 +102,10 @@ struct MenuBarView: View {
             pickingLength = false
             refreshGoalSuggestions()
         }
-        .onReceive(ticker) { tick in
-            now = tick
+        // Ticks only while the menu is open; the view stays alive between
+        // openings, and opening it ticks at once.
+        .repeating(every: .seconds(1), while: OnScreen.shared.menu, id: 0) {
+            tickedAt = .now
             // Never waits: the numbers come back from StatsStore.
             appState.refreshMenuStats()
             // Follow Spotify while the music pane is open, and in a session for
