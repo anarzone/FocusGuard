@@ -52,6 +52,19 @@ aggregated summary — focus minutes, percentages, streaks, and the names/hosts 
 your top distractions — never window titles, full URLs, or raw activity. The
 exact payload is previewable in Settings → AI.
 
+## Languages
+
+FocusGuard runs in English, German and Azerbaijani. It follows the Mac's language; to set it for
+FocusGuard alone, use **System Settings → General → Language & Region → Applications**.
+
+To add a string, write it in English in the code: `Text("Literal")` is picked up as it is, and anything
+built as a `String` goes through `String(localized: "Whole sentence with \\(value)")`. Keep sentences
+whole, because word order differs between languages. Then build in Xcode, which adds the key to
+`FocusGuard/Resources/Localizable.xcstrings` (widgets: `FocusGuardWidgets/Localizable.xcstrings`), and fill in
+`de` and `az` there. `AppShortcuts.xcstrings` has the Siri phrases, `InfoPlist.xcstrings` the permission
+prompts, and `paused.html` its own table. CI runs `scripts/check-translations.py --built`, which fails on a
+missing translation, on a mismatched format specifier, and on a string that isn't in a catalog yet.
+
 ## Build from source
 
 Requires macOS 14+, Xcode 16+, and [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).

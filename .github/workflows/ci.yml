@@ -61,6 +61,11 @@ jobs:
             ENABLE_HARDENED_RUNTIME=NO \
             build
 
+      # German and Azerbaijani must be complete, including strings the build
+      # just found in the code.
+      - name: Check translations
+        run: python3 scripts/check-translations.py --built
+
       - name: Run tests
         run: |
           set -o pipefail

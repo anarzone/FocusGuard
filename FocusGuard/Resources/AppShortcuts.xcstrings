@@ -1,0 +1,246 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "End my focus session in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində fokus sessiyamı bitir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beende meine Fokus-Session in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Focus with ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} ilə fokus"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus mit ${applicationName}"
+          }
+        }
+      }
+    },
+    "Get my focused time from ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqindən fokus vaxtımı göstər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hol meine Fokuszeit aus ${applicationName}"
+          }
+        }
+      }
+    },
+    "How focused am I in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində nə qədər fokusdayam"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie fokussiert bin ich in ${applicationName}"
+          }
+        }
+      }
+    },
+    "How focused was I ${period} in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində ${period} nə qədər fokusda idim"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie fokussiert war ich ${period} in ${applicationName}"
+          }
+        }
+      }
+    },
+    "How long is left in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində nə qədər qalıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie lange noch in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Pause ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqini dayandır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} pausieren"
+          }
+        }
+      }
+    },
+    "Pause my session in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində sessiyamı dayandır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiere meine Session in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Resume ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində davam et"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} fortsetzen"
+          }
+        }
+      }
+    },
+    "Start a break in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində fasilə başlat"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte eine Pause in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Start a focus session in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} ilə fokus sessiyası başlat"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte eine Fokus-Session in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Start focusing with ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} ilə fokuslan"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit ${applicationName} fokussieren"
+          }
+        }
+      }
+    },
+    "Stop focusing in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində fokusu bitir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus beenden in ${applicationName}"
+          }
+        }
+      }
+    },
+    "Take a break in ${applicationName}" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} tətbiqində fasilə ver"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mach eine Pause in ${applicationName}"
+          }
+        }
+      }
+    },
+    "What's my ${applicationName} session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} sessiyam necə gedir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie läuft meine ${applicationName}-Session"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,5 +1,121 @@
 {
   "sourceLanguage" : "en",
-  "strings" : {},
+  "strings" : {
+    "NSAppleEventsUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard fokus sessiyaları zamanı yayındıran saytları tanımaq üçün brauzerdəki aktiv tabı oxuyur, fokus musiqinizi Spotify və ya Apple Music-də oxudur, Things-dəki bugünkü tapşırıqlarınızı isə sessiya hədəfi kimi təklif edir və bitirdiyinizi işarələyir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard liest den aktiven Browser-Tab, um während Fokus-Sessions ablenkende Websites zu erkennen, spielt deine Fokusmusik in Spotify oder Apple Music ab und bietet deine heutigen Things-To-dos als Session-Ziele an. Eines hakt es ab, sobald du es erledigt hast."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard reads the active browser tab to detect distraction sites during focus sessions, plays your focus music in Spotify or Apple Music, and offers your Things to-dos for today as session goals, ticking one off when you finish it."
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard hadisələrinizdən sessiya başlatmaq və növbəti görüşünüzü göstərmək üçün təqviminizi oxuyur, bunu aktiv etsəniz, fokus sessiyalarınızı məşğul vaxt kimi əlavə edir. Öz hadisələrinizi heç vaxt dəyişmir və silmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard liest deinen Kalender, um Sessions aus deinen Terminen zu starten und dein nächstes Meeting anzuzeigen, und trägt deine Fokus-Sessions als belegte Zeit ein, wenn du das einschaltest. Deine eigenen Termine ändert oder löscht es nie."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events."
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard hadisələrinizdən sessiya başlatmaq və növbəti görüşünüzü göstərmək üçün təqviminizi oxuyur, bunu aktiv etsəniz, fokus sessiyalarınızı məşğul vaxt kimi əlavə edir. Öz hadisələrinizi heç vaxt dəyişmir və silmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard liest deinen Kalender, um Sessions aus deinen Terminen zu starten und dein nächstes Meeting anzuzeigen, und trägt deine Fokus-Sessions als belegte Zeit ein, wenn du das einschaltest. Deine eigenen Termine ändert oder löscht es nie."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard reads your calendar to start sessions from your events and show your next meeting, and adds your focus sessions as busy time if you turn that on. It never changes or deletes your own events."
+          }
+        }
+      }
+    },
+    "NSRemindersFullAccessUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard açıq xatırladıcılarınızı sessiya hədəfi kimi təklif edir və sessiyada bitirdiyinizi işarələyir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard bietet deine offenen Erinnerungen als Session-Ziele an und hakt eine ab, sobald du sie in einer Session erledigst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard offers your open reminders as session goals, and ticks one off when you finish it in a session."
+          }
+        }
+      }
+    },
+    "NSRemindersUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard açıq xatırladıcılarınızı sessiya hədəfi kimi təklif edir və sessiyada bitirdiyinizi işarələyir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard bietet deine offenen Erinnerungen als Session-Ziele an und hakt eine ab, sobald du sie in einer Session erledigst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard offers your open reminders as session goals, and ticks one off when you finish it in a session."
+          }
+        }
+      }
+    }
+  },
   "version" : "1.0"
 }

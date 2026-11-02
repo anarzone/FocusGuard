@@ -277,7 +277,8 @@ struct ReportsPage: View {
         let data = model.data
         let against = model.period == .week
             ? String(localized: "last week", comment: "What drift is compared with: 26 min less than last week")
-            : previousMonthName
+            : String(localized: "compared.month", defaultValue: "\(previousMonthName)",
+                     comment: "What drift is compared with: 26 min less than September. German needs: im September")
         let focusedChange = WindowFormat.percentChange(data.breakdown.focus, data.previous.focus)
             .map { model.period == .week
                 ? String(localized: "\($0) vs last week", comment: "Change in focused time: +12% vs last week")
