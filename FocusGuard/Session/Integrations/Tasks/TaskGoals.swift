@@ -174,6 +174,15 @@ protocol TokenTaskStore: ConnectedTaskStore {
     func connect(token: String) async -> TokenCheck
 }
 
+/// One that can also be signed in to, instead of pasting a token: Linear and
+/// GitHub.
+protocol SignInTaskStore: TokenTaskStore {
+    /// Connected by signing in.
+    var isSignedIn: Bool { get }
+    /// The service ended the sign-in; the user connects again.
+    var wasSignedOut: Bool { get }
+}
+
 enum TokenCheck: Equatable {
     case accepted, rejected, unreachable
     /// The address isn't one credentials may go to (Jira).

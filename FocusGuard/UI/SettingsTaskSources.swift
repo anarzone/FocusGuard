@@ -4,7 +4,8 @@ import SwiftUI
 // Settings › Integrations › Tasks as session goals, after Reminders:
 // Things (when it's installed), Todoist, Linear, GitHub and Jira, each its
 // own switch. All but Things take a personal token, kept in the Keychain;
-// Jira takes its site and email too.
+// Jira takes its site and email too. GitHub and Linear offer signing in first
+// once their apps are registered (`SettingsTaskSignIn`).
 
 /// A task source's row: its letter, its name and a line on what it
 /// offers, and its switch.
@@ -55,6 +56,12 @@ struct TaskSourceRows: View {
     @State private var thingsInstalled = ThingsTasks.isInstalled
     /// Sources with a token saved.
     @State private var connected: Set<TaskSource>
+    /// Those connected by signing in, not with a pasted token.
+    @State private var signedIn: Set<TaskSource> = []
+    /// Those whose service ended the sign-in.
+    @State private var signedOut: Set<TaskSource> = []
+    /// Those showing the token field although signing in is offered.
+    @State private var usingToken: Set<TaskSource> = []
     /// What's typed in each token field.
     @State private var typed: [TaskSource: String] = [:]
     /// Jira's site and email, typed above its token.
@@ -97,12 +104,12 @@ struct TaskSourceRows: View {
             TaskSourceRow(source: .linear, detail: String(localized: "Issues assigned to you, moved to done when you finish")) {
                 sourceSwitch(.linear, isOn: $linearOn)
             }
-            if linearOn && unlocked { tokenRow(.linear) }
+            if linearOn && unlocked { connectionRow(.linear) }
             SettingsDivider()
             TaskSourceRow(source: .github, detail: String(localized: "Open issues assigned to you, closed when you finish")) {
                 sourceSwitch(.github, isOn: $githubOn)
             }
-            if githubOn && unlocked { tokenRow(.github) }
+            if githubOn && unlocked { connectionRow(.github) }
             SettingsDivider()
             TaskSourceRow(source: .jira, detail: String(localized: "Issues assigned to you, moved to done when you finish")) {
                 sourceSwitch(.jira, isOn: $jiraOn)
@@ -111,11 +118,16 @@ struct TaskSourceRows: View {
         }
         .task { reload() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in reload() }
+        .onChange(of: integrations.taskProblems) { reload() }
+        .onChange(of: integrations.githubSignIn?.phase) { reload() }
+        .onChange(of: integrations.linearSignIn?.phase) { reload() }
     }
 
     private func reload() {
         thingsInstalled = ThingsTasks.isInstalled
         connected = Self.savedTokens(in: integrations)
+        signedIn = connected.filter { integrations.isSignedIn($0) }
+        signedOut = Set([TaskSource.linear, .github].filter { integrations.wasSignedOut($0) })
     }
 
     private static func savedTokens(in integrations: IntegrationsCoordinator) -> Set<TaskSource> {
@@ -154,6 +166,26 @@ struct TaskSourceRows: View {
         }
     }
 
+    // MARK: - Signing in
+
+    /// Signing in when it's offered; otherwise, or by choice, the token field.
+    @ViewBuilder
+    private func connectionRow(_ source: TaskSource) -> some View {
+        if integrations.offersSignIn(source) && !connected.contains(source) && !usingToken.contains(source) {
+            SettingsDivider()
+            if source == .github, let signIn = integrations.githubSignIn {
+                GitHubSignInRow(signIn: signIn, signedOut: signedOut.contains(source)) { usingToken.insert(source) }
+            } else if source == .linear, let signIn = integrations.linearSignIn {
+                LinearSignInRow(signIn: signIn, signedOut: signedOut.contains(source)) { usingToken.insert(source) }
+            }
+        } else {
+            tokenRow(source)
+            if source == .github && signedIn.contains(source) {
+                GitHubAccessRow(integrations: integrations, installURL: integrations.githubSignIn?.installURL)
+            }
+        }
+    }
+
     // MARK: - Tokens
 
     @ViewBuilder
@@ -163,10 +195,10 @@ struct TaskSourceRows: View {
             let rejected = integrations.taskProblems[source] == .rejected
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(rejected ? "\(source.name) no longer takes this token" : connectedTitle(source))
+                    Text(rejected ? rejectedTitle(source) : connectedTitle(source))
                         .font(.system(size: 13))
                         .foregroundStyle(rejected ? Theme.distraction : Theme.primaryText)
-                    Text(rejected ? "Disconnect, then paste a new one" : "The token is in your Keychain")
+                    Text(connectedDetail(source, rejected: rejected))
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)
                 }
@@ -209,6 +241,11 @@ struct TaskSourceRows: View {
                         .foregroundStyle(Theme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if integrations.offersSignIn(source) {
+                    Button("Sign in instead") { usingToken.remove(source) }
+                        .buttonStyle(.link)
+                        .font(.system(size: 11))
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -232,6 +269,21 @@ struct TaskSourceRows: View {
     private func connectedTitle(_ source: TaskSource) -> String {
         guard source == .jira, let site = integrations.jiraAccount?.site else { return String(localized: "Connected") }
         return String(localized: "Connected to \(site)")
+    }
+
+    private func rejectedTitle(_ source: TaskSource) -> String {
+        signedIn.contains(source)
+            ? String(localized: "\(source.name) no longer takes this sign-in")
+            : String(localized: "\(source.name) no longer takes this token")
+    }
+
+    private func connectedDetail(_ source: TaskSource, rejected: Bool) -> String {
+        switch (rejected, signedIn.contains(source)) {
+        case (true, true):   return String(localized: "Disconnect, then connect again")
+        case (true, false):  return String(localized: "Disconnect, then paste a new one")
+        case (false, true):  return String(localized: "Your sign-in is in your Keychain")
+        case (false, false): return String(localized: "The token is in your Keychain")
+        }
     }
 
     /// Everything Connect needs is filled in.

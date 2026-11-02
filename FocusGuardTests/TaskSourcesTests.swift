@@ -10,7 +10,7 @@ import XCTest
 // MARK: - Fakes
 
 /// Answers every request from `handler`, and keeps what was asked.
-private final class StubProtocol: URLProtocol {
+final class StubProtocol: URLProtocol {
     static var handler: ((URLRequest) -> (Int, String))?
     /// Response headers, for paging and rate limits.
     static var headers: ((URLRequest) -> [String: String])?
@@ -68,7 +68,7 @@ private final class StubProtocol: URLProtocol {
     }
 }
 
-private final class FakeTokens: TokenStore {
+final class FakeTokens: TokenStore {
     var token: String?
     init(_ token: String? = nil) { self.token = token }
     func read() -> String? { token }
@@ -111,7 +111,7 @@ private final class FakeTaskStore: TaskStore {
     }
 }
 
-private final class NoCalendar: CalendarStore {
+final class NoCalendar: CalendarStore {
     func calendars() async -> [CalendarChoice] { [] }
     func defaultCalendarID() async -> String? { nil }
     func events(from start: Date, to end: Date, calendarIDs: [String], ownIDs: Set<String>) async -> [CalendarEntry]? { [] }
@@ -120,7 +120,7 @@ private final class NoCalendar: CalendarStore {
     func remove(_ ref: OwnEventRef) async -> Bool { true }
 }
 
-private final class NoReminders: ReminderStore {
+final class NoReminders: ReminderStore {
     func lists() async -> [CalendarChoice] { [] }
     func incomplete(listIDs: [String]) async -> [TaskItem]? { [] }
     func setCompleted(_ id: String, _ completed: Bool) async -> Bool { false }
