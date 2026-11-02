@@ -39,7 +39,9 @@ enum YouTubeVideos {
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'.")).lowercased()
         let words = kind.split(separator: " ").count
         guard (1...5).contains(words), kind.count <= 32, !title.lowercased().contains(kind) else {
-            return classification == .focus ? "talk or tutorial" : "not about work"
+            return classification == .focus
+                ? String(localized: "talk or tutorial", comment: "Kind of YouTube video, when the model gave none")
+                : String(localized: "not about work", comment: "Kind of YouTube video, when the model gave none")
         }
         return kind
     }

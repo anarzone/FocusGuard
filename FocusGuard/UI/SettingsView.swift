@@ -7,28 +7,28 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .general:       return "General"
-        case .sessions:      return "Sessions"
-        case .blocking:      return "Blocking"
-        case .limits:        return "Daily limits"
-        case .notifications: return "Notifications"
-        case .integrations:  return "Integrations"
-        case .privacy:       return "Privacy & data"
-        case .pro:           return "Pro & licence"
-        case .about:         return "About"
+        case .general:       return String(localized: "General", comment: "Settings pane title")
+        case .sessions:      return String(localized: "Sessions")
+        case .blocking:      return String(localized: "Blocking", comment: "Settings pane title")
+        case .limits:        return String(localized: "Daily limits")
+        case .notifications: return String(localized: "Notifications")
+        case .integrations:  return String(localized: "Integrations")
+        case .privacy:       return String(localized: "Privacy & data")
+        case .pro:           return String(localized: "Pro & licence")
+        case .about:         return String(localized: "About", comment: "Settings pane title: about the app")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .general:       return "Changes save straight away."
-        case .sessions:      return "Names, defaults, and how hard FocusGuard pushes back."
-        case .blocking:      return "What happens when you stay on a distracting site. Levels add up."
-        case .limits:        return "A little of a site each day, then it pauses. Counts in and out of sessions."
-        case .notifications: return "Few, quiet, and never with a sound."
-        case .integrations:  return "Your calendar, tasks and other apps, working with your sessions."
-        case .privacy:       return "What FocusGuard keeps, what leaves your Mac, and how to take it all back."
-        case .pro:           return "Your plan, your trial and your licence key."
+        case .general:       return String(localized: "Changes save straight away.")
+        case .sessions:      return String(localized: "Names, defaults, and how hard FocusGuard pushes back.")
+        case .blocking:      return String(localized: "What happens when you stay on a distracting site. Levels add up.")
+        case .limits:        return String(localized: "A little of a site each day, then it pauses. Counts in and out of sessions.")
+        case .notifications: return String(localized: "Few, quiet, and never with a sound.")
+        case .integrations:  return String(localized: "Your calendar, tasks and other apps, working with your sessions.")
+        case .privacy:       return String(localized: "What FocusGuard keeps, what leaves your Mac, and how to take it all back.")
+        case .pro:           return String(localized: "Your plan, your trial and your licence key.")
         case .about:         return ""
         }
     }
@@ -148,20 +148,20 @@ struct SettingsGeneralPane: View {
 
     var body: some View {
         SettingsColumns {
-            SettingsSection("Startup and menu bar") {
-                SettingsToggle(title: "Open at login", isOn: Binding(
+            SettingsSection(String(localized: "Startup and menu bar")) {
+                SettingsToggle(title: String(localized: "Open at login"), isOn: Binding(
                     get: { launchAtLogin },
                     set: { value in
                         LoginItemController.setEnabled(value)
                         launchAtLogin = LoginItemController.isEnabled
                     }))
                 SettingsDivider()
-                SettingsToggle(title: "Show in the Dock", detail: "Off keeps FocusGuard in the menu bar only", isOn: $showInDock)
+                SettingsToggle(title: String(localized: "Show in the Dock"), detail: String(localized: "Off keeps FocusGuard in the menu bar only"), isOn: $showInDock)
                 SettingsDivider()
-                SettingsToggle(title: "Show time in the menu bar", detail: "Minutes left next to the shield", isOn: $menuBarShowTime)
+                SettingsToggle(title: String(localized: "Show time in the menu bar"), detail: String(localized: "Minutes left next to the shield"), isOn: $menuBarShowTime)
             }
-            SettingsSection("Look and language") {
-                SettingsRow(title: "Appearance") {
+            SettingsSection(String(localized: "Look and language")) {
+                SettingsRow(title: String(localized: "Appearance")) {
                     SettingsSegments(options: AppAppearance.allCases.map { ($0.rawValue, $0.title) },
                                      selection: Binding(get: { appearance }, set: { value in
                                          appearance = value
@@ -169,19 +169,19 @@ struct SettingsGeneralPane: View {
                                      }))
                 }
                 SettingsDivider()
-                SettingsRow(title: "Language", detail: "Deutsch and Azərbaycan dili are on the way") {
+                SettingsRow(title: String(localized: "Language"), detail: String(localized: "Deutsch and Azərbaycan dili are on the way")) {
                     Text("English").font(.system(size: 12)).foregroundStyle(Theme.bodyText)
                 }
                 if reduceMotion {
                     // The old in-app switch, kept only so it can be turned off.
                     SettingsDivider()
-                    SettingsToggle(title: "Reduce motion in FocusGuard",
-                                   detail: "Turn off to follow the system setting", isOn: $reduceMotion)
+                    SettingsToggle(title: String(localized: "Reduce motion in FocusGuard"),
+                                   detail: String(localized: "Turn off to follow the system setting"), isOn: $reduceMotion)
                 }
             }
         } right: {
-            SettingsSection("Updates") {
-                SettingsToggle(title: "Check for updates automatically", isOn: Binding(
+            SettingsSection(String(localized: "Updates")) {
+                SettingsToggle(title: String(localized: "Check for updates automatically"), isOn: Binding(
                     get: { updater.automaticallyChecksForUpdates },
                     set: { updater.setAutomaticChecks($0) }))
                 SettingsDivider()
@@ -192,7 +192,7 @@ struct SettingsGeneralPane: View {
                 }
             }
             SettingsNote(systemImage: "figure.walk.motion",
-                         text: "Animations follow Reduce motion in System Settings › Accessibility › Display.")
+                         text: String(localized: "Animations follow Reduce motion in System Settings › Accessibility › Display."))
         }
     }
 }
@@ -213,13 +213,13 @@ enum AppVersion {
 enum UpdateWords {
     static func lastChecked(_ date: Date? = UserDefaults.standard.object(forKey: "SULastCheckTime") as? Date,
                             now: Date = .now, calendar: Calendar = .current) -> String {
-        guard let date else { return "Not checked yet" }
+        guard let date else { return String(localized: "Not checked yet") }
         let time = WindowFormat.clock(date)
-        if calendar.isDate(date, inSameDayAs: now) { return "Last checked today at \(time)" }
+        if calendar.isDate(date, inSameDayAs: now) { return String(localized: "Last checked today at \(time)") }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
-            return "Last checked yesterday at \(time)"
+            return String(localized: "Last checked yesterday at \(time)")
         }
-        return "Last checked \(date.formatted(.dateTime.day().month(.wide))) at \(time)"
+        return String(localized: "Last checked \(date.formatted(.dateTime.day().month(.wide))) at \(time)")
     }
 }
 
@@ -277,9 +277,11 @@ struct SettingsAboutPane: View {
 
     private var planLine: String {
         switch entitlements.plan {
-        case .free: return "Free"
+        case .free: return String(localized: "Free", comment: "Plan name")
         case .pro: return "Pro"
-        case .trial: return "Pro trial, \(WindowFormat.count(entitlements.plan.daysLeft(at: .now) ?? 0, "day")) left"
+        case .trial:
+            let days = entitlements.plan.daysLeft(at: .now) ?? 0
+            return String(localized: "Pro trial, \(days) days left", comment: "Plural on days: 1 day left / 2 days left")
         }
     }
 }

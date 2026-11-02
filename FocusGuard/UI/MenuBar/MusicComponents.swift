@@ -41,7 +41,7 @@ struct MusicButton: View {
         }
         .animation(.snappy(duration: 0.18), value: showingTrack)
         .accessibilityLabel("Music")
-        .accessibilityValue(track.map { "\($0.isPlaying ? "Playing" : "Paused"): \($0.summary)" } ?? "")
+        .accessibilityValue(track.map { $0.isPlaying ? String(localized: "Playing: \($0.summary)") : String(localized: "Paused: \($0.summary)") } ?? "")
         .accessibilityAddTraits(isOpen ? .isSelected : [])
     }
 
@@ -111,7 +111,7 @@ struct MusicPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            PaneTitle(title: "Music", close: close) {
+            PaneTitle(title: String(localized: "Music"), close: close) {
                 Button {
                     if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: music.service.bundleID) {
                         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
@@ -234,7 +234,7 @@ struct PlayerSection: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                Text(context.map { "from \($0)" } ?? track.album)
+                Text(context.map { String(localized: "from \($0)", comment: "Under the song: the playlist it's playing from") } ?? track.album)
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
@@ -245,9 +245,9 @@ struct PlayerSection: View {
             SeekBar(position: track.position(at: now), duration: track.duration) { player.seek(to: $0) }
 
             HStack(spacing: 0) {
-                toggle("shuffle", "Shuffle", on: track.shuffling, action: player.toggleShuffle)
+                toggle("shuffle", String(localized: "Shuffle", comment: "Music player control"), on: track.shuffling, action: player.toggleShuffle)
                 Spacer()
-                transport("backward.fill", "Previous track", action: player.previous)
+                transport("backward.fill", String(localized: "Previous track"), action: player.previous)
                 Spacer()
                 Button(action: player.togglePlayPause) {
                     Image(systemName: track.isPlaying ? "pause.fill" : "play.fill")
@@ -260,9 +260,9 @@ struct PlayerSection: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(track.isPlaying ? "Pause" : "Play")
                 Spacer()
-                transport("forward.fill", "Next track", action: player.next)
+                transport("forward.fill", String(localized: "Next track"), action: player.next)
                 Spacer()
-                toggle("repeat", "Repeat", on: track.repeating, action: player.toggleRepeat)
+                toggle("repeat", String(localized: "Repeat", comment: "Music player control"), on: track.repeating, action: player.toggleRepeat)
             }
             .padding(.horizontal, 4)
 
@@ -588,8 +588,8 @@ struct PlaylistList: View {
         let pinned = music.playlists(for: service)
         if pinned.isEmpty {
             note(service == .appleMusic
-                 ? "Pin playlists from your library below to keep them here."
-                 : "Pin playlists from your own or from search, or add one by link.")
+                 ? String(localized: "Pin playlists from your library below to keep them here.")
+                 : String(localized: "Pin playlists from your own or from search, or add one by link."))
         } else {
             ForEach(pinned) { playlist in
                 PlaylistRow(
@@ -607,7 +607,7 @@ struct PlaylistList: View {
                 )
             }
             if music.selectedURI == nil {
-                note("Nothing plays with your sessions yet. Choose Sessions on a playlist.")
+                note(String(localized: "Nothing plays with your sessions yet. Choose Sessions on a playlist."))
             }
         }
     }
@@ -615,28 +615,28 @@ struct PlaylistList: View {
     @ViewBuilder private var librarySection: some View {
         switch service {
         case .appleMusic:
-            sectionHeader("Your library")
+            sectionHeader(String(localized: "Your library"))
             switch libraryState {
             case .idle:
-                actionRow("Show your Music library", systemImage: "music.note.list") {
+                actionRow(String(localized: "Show your Music library"), systemImage: "music.note.list") {
                     Task { await loadLibrary(launching: true) }
                 }
             case .loading:
                 ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 6)
             case .notAuthorized:
-                note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
+                note(String(localized: "FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation."))
             case .failed:
-                note("Couldn't read your Music library. Is the Music app signed in?")
+                note(String(localized: "Couldn't read your Music library. Is the Music app signed in?"))
             case .loaded:
                 let rest = (library ?? []).filter { !music.isPinned($0.uri) }
                 if rest.isEmpty {
-                    note(library?.isEmpty == true ? "No playlists in your library yet." : "Everything in your library is pinned.")
+                    note(library?.isEmpty == true ? String(localized: "No playlists in your library yet.") : String(localized: "Everything in your library is pinned."))
                 }
                 ForEach(rest) { appleRow($0) }
             }
         case .spotify:
             if account.isConfigured {
-                sectionHeader("Your Spotify playlists") { accountMenu }
+                sectionHeader(String(localized: "Your Spotify playlists")) { accountMenu }
                 if account.needsMoreAccess {
                     HStack(spacing: 8) {
                         Text("Sign in again so FocusGuard can see what Spotify is playing and start playlists reliably.")
@@ -656,7 +656,7 @@ struct PlaylistList: View {
                     if spotifyMine == nil && account.problem == nil {
                         ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 6)
                     } else if rest.isEmpty && account.problem == nil {
-                        note(spotifyMine?.isEmpty == true ? "You haven't made or followed any playlists yet." : "All your playlists are pinned.")
+                        note(spotifyMine?.isEmpty == true ? String(localized: "You haven't made or followed any playlists yet.") : String(localized: "All your playlists are pinned."))
                     }
                     ForEach(rest) { spotifyRow($0) }
                 } else {
@@ -670,19 +670,19 @@ struct PlaylistList: View {
         switch service {
         case .appleMusic:
             if library == nil {
-                actionRow("Show your Music library to search it", systemImage: "music.note.list") {
+                actionRow(String(localized: "Show your Music library to search it"), systemImage: "music.note.list") {
                     Task { await loadLibrary(launching: true) }
                 }
             } else {
                 let results = AppleMusicLibrary.filter(library ?? [], by: trimmedQuery)
-                if results.isEmpty { note("No playlists match “\(trimmedQuery)”.") }
+                if results.isEmpty { note(String(localized: "No playlists match “\(trimmedQuery)”.")) }
                 ForEach(results) { appleRow($0) }
             }
         case .spotify:
             if account.isSignedIn {
                 spotifyProblems
                 if let results = spotifyResults {
-                    if results.isEmpty && !searching { note("Nothing on Spotify matches “\(trimmedQuery)”.") }
+                    if results.isEmpty && !searching { note(String(localized: "Nothing on Spotify matches “\(trimmedQuery)”.")) }
                     ForEach(results) { spotifyRow($0) }
                 }
             } else {
@@ -747,7 +747,7 @@ struct PlaylistList: View {
                 Button(saving ? "Adding…" : "Add", action: save)
                     .disabled(link.trimmingCharacters(in: .whitespaces).isEmpty || saving)
             }
-            Text(problem ?? "In Spotify: ··· › Share › Copy link to playlist")
+            Text(problem ?? String(localized: "In Spotify: ··· › Share › Copy link to playlist"))
                 .font(.system(size: 11))
                 .foregroundStyle(problem == nil ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Theme.distractionInk))
         }
@@ -783,7 +783,7 @@ struct PlaylistList: View {
                 .buttonStyle(.plain)
             }
             if account.problem == .signInFailed {
-                note("Signing in didn't work. Try again.")
+                note(String(localized: "Signing in didn't work. Try again."))
             }
             Text("Spotify only opens search to a few approved accounts. Adding playlists by link works for everyone.")
                 .font(.system(size: 10))
@@ -795,9 +795,9 @@ struct PlaylistList: View {
 
     @ViewBuilder private var spotifyProblems: some View {
         if account.problem == .notAllowed {
-            note("Spotify hasn't approved this account for FocusGuard's search. You can still add playlists by link.")
+            note(String(localized: "Spotify hasn't approved this account for FocusGuard's search. You can still add playlists by link."))
         } else if account.problem == .requestFailed {
-            note("Couldn't reach Spotify. Check your connection.")
+            note(String(localized: "Couldn't reach Spotify. Check your connection."))
         }
     }
 
@@ -911,7 +911,7 @@ struct PlaylistList: View {
             let result = await music.add(link: link)
             saving = false
             if result == .notALink {
-                problem = "That isn't a Spotify playlist or album link."
+                problem = String(localized: "That isn't a Spotify playlist or album link.")
             } else {
                 link = ""
                 problem = nil
@@ -1067,7 +1067,8 @@ struct PlaylistRef: Equatable {
     let title: String
     let imageURL: URL?
 
-    var kind: String { uri.contains(":album:") ? "Album" : "Playlist" }
+    var isAlbum: Bool { uri.contains(":album:") }
+    var kind: String { isAlbum ? String(localized: "Album") : String(localized: "Playlist") }
 }
 
 /// A cover that plays its playlist when clicked, with a play mark on hover.
@@ -1180,7 +1181,7 @@ struct PlaylistDetail: View {
                             Button {
                                 withAnimation(.snappy(duration: 0.2)) { pin() }
                             } label: {
-                                Label("Pin", systemImage: "pin")
+                                Label(String(localized: "Pin", comment: "Verb: keep this playlist in your list"), systemImage: "pin")
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Theme.focus)
                                     .padding(.horizontal, 10)
@@ -1221,7 +1222,7 @@ struct PlaylistDetail: View {
         case nil:
             ProgressView().controlSize(.small).frame(maxWidth: .infinity).padding(.vertical, 12)
         case .tracks(let tracks) where tracks.isEmpty:
-            note("No songs in this \(ref.kind.lowercased()).")
+            note(ref.isAlbum ? String(localized: "No songs in this album.") : String(localized: "No songs in this playlist."))
         case .tracks(let tracks):
             ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                 trackRow(index + 1, track)
@@ -1229,16 +1230,16 @@ struct PlaylistDetail: View {
         case .notShared:
             notSharedContent
         case .needsSignIn:
-            note("Sign in to Spotify to see the songs. Play works without it.")
+            note(String(localized: "Sign in to Spotify to see the songs. Play works without it."))
             if !music.spotifyAccount.signingIn {
                 Button("Sign in with Spotify") { Task { await music.spotifyAccount.signIn() } }
                     .font(.system(size: 11))
                     .padding(.horizontal, 6)
             }
         case .notAuthorized:
-            note("FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation.")
+            note(String(localized: "FocusGuard isn't allowed to control Music. Allow it in Privacy & Security › Automation."))
         case .failed:
-            note("Couldn't load the songs.")
+            note(String(localized: "Couldn't load the songs."))
             Button("Try again") {
                 Task {
                     list = nil
@@ -1255,21 +1256,21 @@ struct PlaylistDetail: View {
     @ViewBuilder private var notSharedContent: some View {
         let account = music.spotifyAccount
         if isPlayingThis, let current = music.spotify.nowPlaying {
-            sectionLabel("Now playing")
+            sectionLabel(String(localized: "Now playing"))
             trackRow(nil, PlaylistTrack(id: current.trackID, title: current.title, artist: current.artist,
                                         duration: current.duration))
             if let upNext, !upNext.isEmpty {
-                sectionLabel("Up next")
+                sectionLabel(String(localized: "Up next"))
                 ForEach(Array(upNext.prefix(20).enumerated()), id: \.offset) { index, track in
                     trackRow(index + 1, track)
                 }
             }
-            note("Spotify only lists every song of playlists you made, so this shows what's coming up.")
+            note(String(localized: "Spotify only lists every song of playlists you made, so this shows what's coming up."))
         } else if account.needsMoreAccess {
-            note("Spotify only lists every song of playlists you made. Sign in again to see what's playing and up next while this one plays.")
+            note(String(localized: "Spotify only lists every song of playlists you made. Sign in again to see what's playing and up next while this one plays."))
             reconsentButton
         } else {
-            note("Spotify only lists every song of playlists you made. Play it to see what's coming up.")
+            note(String(localized: "Spotify only lists every song of playlists you made. Play it to see what's coming up."))
         }
     }
 
@@ -1338,12 +1339,12 @@ struct PlaylistDetail: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 ? track.id : (hovered == track.id ? nil : hovered) }
         .help("Play \(track.title)")
-        .accessibilityLabel("\(track.title), \(track.artist)\(playing ? ", playing" : "")")
+        .accessibilityLabel(playing ? "\(track.title), \(track.artist), playing" : "\(track.title), \(track.artist)")
     }
 
     private var countLine: String {
         guard case .tracks(let tracks) = list else { return ref.kind }
-        let songs = tracks.count == 1 ? "1 song" : "\(tracks.count) songs"
+        let songs = String(localized: "\(tracks.count) songs", comment: "Plural on count: 1 song / 2 songs")
         let total = tracks.reduce(0) { $0 + $1.duration }
         return [ref.kind, songs, PlaylistDetail.length(total)].compactMap { $0 }.joined(separator: " · ")
     }
@@ -1352,7 +1353,9 @@ struct PlaylistDetail: View {
     static func length(_ seconds: TimeInterval) -> String? {
         let minutes = Int((seconds / 60).rounded())
         guard minutes > 0 else { return nil }
-        return minutes >= 60 ? "\(minutes / 60) hr \(minutes % 60) min" : "\(minutes) min"
+        return minutes >= 60
+            ? String(localized: "\(minutes / 60) hr \(minutes % 60) min", comment: "Compact duration")
+            : String(localized: "\(minutes) min", comment: "Compact minutes")
     }
 
     private func pin() {

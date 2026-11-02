@@ -57,7 +57,7 @@ struct DayBarsChart: View {
                 let py = plot - y(mark, plot: plot)
                 Rectangle().fill(mark == 0 ? Theme.hairline : Theme.track).frame(width: width, height: 0.5)
                     .offset(x: axisWidth, y: py)
-                Text("\(Int(mark / 3600))h")
+                Text("\(Int(mark / 3600))h", comment: "Compact duration")
                     .font(.system(size: 10).monospacedDigit())
                     .foregroundStyle(Theme.tertiaryText)
                     .offset(y: py - 7)
@@ -117,7 +117,7 @@ struct DayBarsChart: View {
                 let isToday = index == todayIndex
                 VStack(spacing: 1) {
                     if weekLabels {
-                        Text(isToday ? "Today" : bucket.label)
+                        Text(isToday ? String(localized: "Today") : bucket.label)
                             .font(.system(size: 11, weight: isToday ? .bold : .regular))
                             .foregroundStyle(bucket.isFuture ? Theme.tertiaryText : Theme.primaryText)
                         Text(bucket.isFuture || bucket.isLocked ? " " : WindowFormat.hm(bucket.focus))
@@ -139,18 +139,20 @@ struct DayBarsChart: View {
 
     private func tooltip(_ bucket: ReportBucket) -> String {
         let day = bucket.interval.start.formatted(.dateTime.weekday(.wide).day().month(.wide))
-        var parts = ["\(day): \(WindowFormat.hm(bucket.focus)) focused", "\(WindowFormat.hm(bucket.drift)) drifted"]
+        var parts = [String(localized: "\(day): \(WindowFormat.hm(bucket.focus)) focused"),
+                     String(localized: "\(WindowFormat.hm(bucket.drift)) drifted")]
         if bucket.focus + bucket.drift >= 60 {
-            parts.append("\(Int((bucket.focusRate * 100).rounded()))% focus rate")
+            parts.append(String(localized: "\(Int((bucket.focusRate * 100).rounded()))% focus rate"))
         }
         return parts.joined(separator: " · ")
     }
 
     private var summary: String {
         let shown = buckets.filter { !$0.isFuture && !$0.isLocked }
-        guard !shown.isEmpty else { return "No days to show yet." }
+        guard !shown.isEmpty else { return String(localized: "No days to show yet.") }
         let list = shown.map { "\($0.interval.start.formatted(.dateTime.weekday(.wide).day())) \(WindowFormat.hm($0.focus))" }
-        return "Focused time per day against a \(FocusGoal.format(minutes: Int(goal / 60))) goal: " + list.joined(separator: ", ")
+            .joined(separator: ", ")
+        return String(localized: "Focused time per day against a \(FocusGoal.format(minutes: Int(goal / 60))) goal: \(list)")
     }
 }
 
@@ -213,8 +215,9 @@ struct HeatGrid: View {
     }
 
     private func summary(_ names: [String]) -> String {
-        guard let stretch = ReportsModelBuilder.bestStretch(heat, length: 3) else { return "No focus to show yet." }
-        return "Focus by hour and weekday. Strongest from \(String(format: "%02d:00", stretch.start)) to \(String(format: "%02d:00", stretch.start + 3))."
+        guard let stretch = ReportsModelBuilder.bestStretch(heat, length: 3) else { return String(localized: "No focus to show yet.") }
+        let from = String(format: "%02d:00", stretch.start), to = String(format: "%02d:00", stretch.start + 3)
+        return String(localized: "Focus by hour and weekday. Strongest from \(from) to \(to).")
     }
 }
 
@@ -222,11 +225,11 @@ struct HeatGrid: View {
 struct HeatLegend: View {
     var body: some View {
         HStack(spacing: 4) {
-            Text("Less").padding(.trailing, 2)
+            Text("Less", comment: "Heat map legend: less focus at this end of the scale").padding(.trailing, 2)
             ForEach(HeatGrid.levels, id: \.self) { level in
                 RoundedRectangle(cornerRadius: 3).fill(Theme.focus.opacity(level)).frame(width: 12, height: 10)
             }
-            Text("More").padding(.leading, 2)
+            Text("More", comment: "Heat map legend: more focus at this end of the scale").padding(.leading, 2)
         }
         .font(.system(size: 10))
         .foregroundStyle(Theme.secondaryText)
@@ -251,7 +254,8 @@ struct TrendBars: View {
                     ForEach(weeks) { week in
                         VStack(spacing: 3) {
                             if week.isCurrent {
-                                Text(String(format: "%.1fh", week.focus / 3600))
+                                let hours = String(format: "%.1f", locale: Locale.current, week.focus / 3600)
+                                Text("\(hours)h", comment: "Compact hours with one decimal: 12.5h")
                                     .font(.system(size: 10, weight: .semibold).monospacedDigit())
                                     .foregroundStyle(Theme.primaryText)
                                     .fixedSize()
@@ -277,8 +281,12 @@ struct TrendBars: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Focused hours per week for the last \(weeks.count) weeks: " +
-                            weeks.map { WindowFormat.hm($0.focus) }.joined(separator: ", "))
+        .accessibilityLabel(spokenSummary)
+    }
+
+    private var spokenSummary: String {
+        let hours = weeks.map { WindowFormat.hm($0.focus) }.joined(separator: ", ")
+        return String(localized: "Focused hours per week for the last \(weeks.count) weeks: \(hours)")
     }
 
     /// "Up from about 14 hours a week in early September."
@@ -290,9 +298,9 @@ struct TrendBars: View {
         let hours = Int((before / 3600).rounded())
         let month = early.first.map { $0.start.formatted(.dateTime.month(.wide)) } ?? ""
         let change = (current.focus - before) / before
-        if change >= 0.1 { return "Up from about \(hours) hours a week in early \(month)." }
-        if change <= -0.1 { return "Down from about \(hours) hours a week in early \(month)." }
-        return "About the same as early \(month), around \(hours) hours a week."
+        if change >= 0.1 { return String(localized: "Up from about \(hours) hours a week in early \(month).") }
+        if change <= -0.1 { return String(localized: "Down from about \(hours) hours a week in early \(month).") }
+        return String(localized: "About the same as early \(month), around \(hours) hours a week.")
     }
 }
 
@@ -334,7 +342,7 @@ struct HourBars: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(caption(averages) ?? "No focus to show yet.")
+        .accessibilityLabel(caption(averages) ?? String(localized: "No focus to show yet."))
     }
 
     /// "10:00 to 12:00 is your strongest stretch. Protect it."
@@ -348,7 +356,8 @@ struct HourBars: View {
         for start in 0..<23 where averages[start] + averages[start + 1] > best.value {
             best = (start, averages[start] + averages[start + 1])
         }
-        return "\(String(format: "%02d:00", best.start)) to \(String(format: "%02d:00", best.start + 2)) is your strongest stretch. Protect it."
+        let from = String(format: "%02d:00", best.start), to = String(format: "%02d:00", best.start + 2)
+        return String(localized: "\(from) to \(to) is your strongest stretch. Protect it.")
     }
 }
 
@@ -416,7 +425,7 @@ struct MonthCalendarGrid: View {
     private var summary: String {
         let days = weeks.flatMap { $0 }.filter { $0.day != nil && !$0.isFuture && !$0.isLocked }
         let met = days.filter { $0.focus >= goal(of: $0) }.count
-        return "Calendar: goal met on \(met) of \(days.count) days so far."
+        return String(localized: "Calendar: goal met on \(met) of \(days.count) days so far.")
     }
 
     /// The day's own goal (a weekday can have one), else the daily goal.
@@ -471,7 +480,7 @@ struct PatternBars: View {
         VStack(spacing: 6) {
             ForEach(patterns, id: \.pattern) { item in
                 HStack(spacing: 8) {
-                    Text(item.pattern.rawValue)
+                    Text(Self.title(item.pattern))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
@@ -485,6 +494,21 @@ struct PatternBars: View {
                 .frame(height: 20)
                 .accessibilityElement(children: .combine)
             }
+        }
+    }
+
+    /// The pattern's name to show. Its rawValue stays English: it's stored
+    /// in session names.
+    static func title(_ pattern: SessionNamer.Pattern) -> String {
+        switch pattern {
+        case .lockedIn:  return String(localized: "Locked-in", comment: "How a session went: focused throughout")
+        case .slowStart: return String(localized: "Slow-start", comment: "How a session went: slow to start, then steady")
+        case .comeback:  return String(localized: "Comeback", comment: "How a session went: drifted early, finished strong")
+        case .fading:    return String(localized: "Fading", comment: "How a session went: strong start, faded at the end")
+        case .steady:    return String(localized: "Steady", comment: "How a session went: steady, with a few drifts")
+        case .bumpy:     return String(localized: "Bumpy", comment: "How a session went: on and off")
+        case .wandering: return String(localized: "Wandering", comment: "How a session went: mostly drifting")
+        case .quiet:     return String(localized: "Quiet", comment: "How a session went: little to go on")
         }
     }
 

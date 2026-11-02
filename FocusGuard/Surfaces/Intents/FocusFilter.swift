@@ -46,9 +46,12 @@ struct FocusGuardFocusFilter: SetFocusFilterIntent {
     var endSession: Bool
 
     var displayRepresentation: DisplayRepresentation {
-        guard startSession else { return "Don't start a session" }
-        let length = length.minutes.map { "\($0)-minute session" } ?? "session while it's on"
-        return DisplayRepresentation(stringLiteral: "Start a \(length)")
+        guard startSession else { return DisplayRepresentation(stringLiteral: String(localized: "Don't start a session")) }
+        if let minutes = length.minutes {
+            return DisplayRepresentation(stringLiteral: String(localized: "Start a \(minutes)-minute session"))
+        }
+        return DisplayRepresentation(stringLiteral: String(localized: "Start a session while it's on",
+                                                           comment: "It: the Focus (Do Not Disturb, Work…) this filter belongs to"))
     }
 
     static func suggestedFocusFilters(for context: FocusFilterSuggestionContext) async -> [FocusGuardFocusFilter] {

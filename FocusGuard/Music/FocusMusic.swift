@@ -82,7 +82,7 @@ final class FocusMusic {
         }
         let preview = await SpotifyLink.preview(for: uri)
         playlists.append(SavedPlaylist(uri: uri,
-                                       title: preview?.title ?? "Spotify playlist",
+                                       title: preview?.title ?? String(localized: "Spotify playlist"),
                                        imageURL: preview?.thumbnail))
         select(uri)
         return .added

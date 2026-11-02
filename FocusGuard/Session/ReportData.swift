@@ -43,10 +43,10 @@ enum ReportPeriod: String, CaseIterable, Identifiable {
     /// "vs last week", for comparisons.
     var previousLabel: String {
         switch self {
-        case .day:   return "vs the day before"
-        case .week:  return "vs last week"
-        case .month: return "vs last month"
-        case .year:  return "vs last year"
+        case .day:   return String(localized: "vs the day before")
+        case .week:  return String(localized: "vs last week")
+        case .month: return String(localized: "vs last month")
+        case .year:  return String(localized: "vs last year")
         }
     }
 }

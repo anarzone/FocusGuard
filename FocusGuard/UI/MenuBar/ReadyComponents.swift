@@ -243,7 +243,7 @@ enum RulerMath {
     /// Presets in minutes, the hour, then whole hours from two.
     static func label(for minutes: Int) -> String? {
         if Constants.SessionDurations.presets.contains(minutes) || minutes == 60 { return "\(minutes)" }
-        if minutes >= 120, minutes % 60 == 0 { return "\(minutes / 60)h" }
+        if minutes >= 120, minutes % 60 == 0 { return String(localized: "\(minutes / 60)h", comment: "Compact duration") }
         return nil
     }
 }
@@ -330,9 +330,8 @@ struct DayStripView: View, Animatable {
 
     private func accessibilitySummary(previewEnd: Date?) -> String {
         let focused = spans.filter { $0.kind == .focus }.reduce(0) { $0 + $1.end.timeIntervalSince($1.start) }
-        let base = "Today so far: \(formatDuration(focused)) focused"
-        guard let previewEnd else { return base }
-        return base + ". The session would end at \(previewEnd.formatted(date: .omitted, time: .shortened))"
+        guard let previewEnd else { return String(localized: "Today so far: \(formatDuration(focused)) focused") }
+        return String(localized: "Today so far: \(formatDuration(focused)) focused. The session would end at \(previewEnd.formatted(date: .omitted, time: .shortened))")
     }
 }
 

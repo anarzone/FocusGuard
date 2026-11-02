@@ -40,7 +40,7 @@ final class ShareComposerWindow {
                 defer: false
             )
             window.contentViewController = hosting
-            window.title = "Share your focus week"
+            window.title = String(localized: "Share your focus week")
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.isMovableByWindowBackground = true

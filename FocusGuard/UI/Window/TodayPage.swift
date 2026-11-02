@@ -113,10 +113,10 @@ struct TodayPage: View {
 
     private var header: some View {
         let date = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
-        return PageHeader(title: isToday ? "Today" : day.formatted(.dateTime.weekday(.wide)),
-                          subtitle: showFirstDay ? "\(date) · your first day" : date) {
+        return PageHeader(title: isToday ? String(localized: "Today") : day.formatted(.dateTime.weekday(.wide)),
+                          subtitle: showFirstDay ? String(localized: "\(date) · your first day") : date) {
             if !showFirstDay {
-                PeriodStepper(offset: $dayOffset, unit: "day", maxOffset: maxOffset)
+                PeriodStepper(offset: $dayOffset, unit: .day, maxOffset: maxOffset)
                 Button(action: exportDay) {
                     Label("Export", systemImage: "square.and.arrow.up")
                         .labelStyle(.titleAndIcon)
@@ -173,25 +173,27 @@ struct TodayPage: View {
 
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(spacing: 7) {
-                        goalLegend(Theme.goalInSession, "In sessions", model.focusedInSessions)
-                        goalLegend(Theme.goalBetweenSessions, "Between sessions", model.focusedBetweenSessions)
+                        goalLegend(Theme.goalInSession, String(localized: "In sessions"), model.focusedInSessions)
+                        goalLegend(Theme.goalBetweenSessions, String(localized: "Between sessions"), model.focusedBetweenSessions)
                     }
                     Rectangle().fill(Theme.hairline).frame(height: 0.5)
                     HStack(alignment: .top, spacing: 12) {
-                        WindowStat(label: "Focus rate",
-                                 value: model.hasRate ? "\(Int((model.focusRate * 100).rounded()))%" : "–",
-                                 detail: "focus vs drift; other apps don't count")
-                        WindowStat(label: "Best in the zone",
+                        WindowStat(label: String(localized: "Focus rate"),
+                                 value: model.hasRate ? String(localized: "\(Int((model.focusRate * 100).rounded()))%", comment: "Percentage") : "–",
+                                 detail: String(localized: "focus vs drift; other apps don't count"))
+                        WindowStat(label: String(localized: "Best in the zone"),
                                  value: WindowFormat.minutes(model.bestZone),
-                                 detail: model.bestZoneSession ?? (model.sessions.isEmpty ? "no sessions yet" : "longest run"))
+                                 detail: model.bestZoneSession ?? (model.sessions.isEmpty ? String(localized: "no sessions yet") : String(localized: "longest run")))
                         if isToday {
-                            WindowStat(label: "Streak",
-                                     value: WindowFormat.count(streak, "day"),
+                            WindowStat(label: String(localized: "Streak"),
+                                     value: String(localized: "\(streak) days", comment: "Plural on streak: 1 day / 3 days"),
                                      detail: StreakWords.detail(count: streak, now: now, weekendsCount: weekendsCount))
                         } else {
-                            WindowStat(label: "Goal",
-                                     value: model.goalProgress >= 1 ? "Met" : "Missed",
-                                     detail: "\(Int((model.goalProgress * 100).rounded()))% of \(FocusGoal.format(minutes: Int(model.goal / 60)))")
+                            WindowStat(label: String(localized: "Goal"),
+                                     value: model.goalProgress >= 1
+                                        ? String(localized: "Met", comment: "A past day's daily goal: reached")
+                                        : String(localized: "Missed", comment: "A past day's daily goal: not reached"),
+                                     detail: String(localized: "\(Int((model.goalProgress * 100).rounded()))% of \(FocusGoal.format(minutes: Int(model.goal / 60)))"))
                         }
                     }
                 }
@@ -222,9 +224,9 @@ struct TodayPage: View {
                     if showFirstDay {
                         Text(firstDayNote).font(.system(size: 11)).foregroundStyle(Theme.tertiaryText).lineLimit(1)
                     } else {
-                        WindowLegend(color: Theme.focus, title: "Focused")
-                        WindowLegend(color: Theme.distraction, title: "Drifted")
-                        WindowLegend(color: Theme.other, title: "Other")
+                        WindowLegend(color: Theme.focus, title: String(localized: "Focused"))
+                        WindowLegend(color: Theme.distraction, title: String(localized: "Drifted"))
+                        WindowLegend(color: Theme.other, title: String(localized: "Other", comment: "Chart legend: time in apps that count as neither focus nor drift"))
                         if isToday && previewKind != nil {
                             WindowLegend(color: Theme.focus, title: previewKind ?? "", dashed: true)
                         }
@@ -240,17 +242,17 @@ struct TodayPage: View {
 
     private var firstDayNote: String {
         guard let started = model.trackingStarted else {
-            return "Nothing is recorded while your Mac is locked or idle."
+            return String(localized: "Nothing is recorded while your Mac is locked or idle.")
         }
-        return "Tracking started at \(WindowFormat.clock(started)). Nothing is recorded while your Mac is locked or idle."
+        return String(localized: "Tracking started at \(WindowFormat.clock(started)). Nothing is recorded while your Mac is locked or idle.")
     }
 
     /// "Rest of session" while one runs, "Next session" between them.
     private var previewKind: String? {
         if let session = appState.sessionManager.currentSession {
-            return session.plannedDurationMinutes == nil ? nil : "Rest of session"
+            return session.plannedDurationMinutes == nil ? nil : String(localized: "Rest of session")
         }
-        return appState.breakManager.current == nil && lengthChoice >= 0 ? "Next session" : nil
+        return appState.breakManager.current == nil && lengthChoice >= 0 ? String(localized: "Next session") : nil
     }
 
     private var preview: DateInterval? {
@@ -275,7 +277,7 @@ struct TodayPage: View {
     private var appsCard: some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 20, bottom: 10, trailing: 20)) {
             VStack(alignment: .leading, spacing: 2) {
-                WindowCardTitle(title: "Top apps & sites") {
+                WindowCardTitle(title: String(localized: "Top apps & sites")) {
                     Button("Manage ›") { onNavigate(.apps) }.buttonStyle(.textLink)
                 }
                 .padding(.bottom, 6)
@@ -379,7 +381,8 @@ private struct SessionsCard: View {
     var body: some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 12, bottom: 10, trailing: 12)) {
             VStack(alignment: .leading, spacing: 2) {
-                WindowCardTitle("Sessions", note: sessions.isEmpty ? "" : "Named from how they went · hover to rename")
+                WindowCardTitle(String(localized: "Sessions"),
+                                note: sessions.isEmpty ? "" : String(localized: "Named from how they went · hover to rename"))
                     .padding(.horizontal, 8)
                     .padding(.bottom, 6)
                 if sessions.isEmpty {
@@ -399,7 +402,7 @@ private struct SessionsCard: View {
                 }
             }
         }
-        .confirmationDialog("Delete \(pendingDelete?.name ?? "this session")?",
+        .confirmationDialog(deleteTitle,
                             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
                             presenting: pendingDelete) { session in
             Button("Delete Session", role: .destructive) {
@@ -409,6 +412,11 @@ private struct SessionsCard: View {
         } message: { _ in
             Text("Its activity stays in your reports.")
         }
+    }
+
+    private var deleteTitle: String {
+        if let name = pendingDelete?.name { return String(localized: "Delete \(name)?") }
+        return String(localized: "Delete this session?")
     }
 
     private var emptyState: some View {
@@ -464,12 +472,12 @@ private struct SessionsCard: View {
             Spacer(minLength: 4)
             if !session.isLive && renaming != session.id {
                 HStack(spacing: 2) {
-                    iconButton("pencil", "Rename") {
+                    iconButton("pencil", String(localized: "Rename")) {
                         draft = session.name
                         renaming = session.id
                         fieldFocused = true
                     }
-                    iconButton("trash", "Delete") { pendingDelete = session }
+                    iconButton("trash", String(localized: "Delete")) { pendingDelete = session }
                 }
                 .opacity(isHovered ? 1 : 0)
                 .accessibilityHidden(!isHovered)
@@ -493,11 +501,13 @@ private struct SessionsCard: View {
     }
 
     private func when(_ s: TodaySession) -> String {
+        let minutes = String(localized: "\(s.minutes) min", comment: "Compact minutes")
         if s.isLive {
-            let planned = s.plannedMinutes.map { " of \($0) min" } ?? " min"
-            return "\(WindowFormat.clock(s.start))–now · \(s.minutes)\(planned)"
+            let time = String(localized: "\(WindowFormat.clock(s.start))–now", comment: "A session still running: 14:05–now")
+            let length = s.plannedMinutes.map { String(localized: "\(s.minutes) of \($0) min", comment: "A running session's minutes so far, of its planned length") } ?? minutes
+            return "\(time) · \(length)"
         }
-        return "\(WindowFormat.clock(s.start))–\(s.end.map(WindowFormat.clock) ?? "") · \(s.minutes) min"
+        return "\(WindowFormat.clock(s.start))–\(s.end.map(WindowFormat.clock) ?? "") · \(minutes)"
     }
 
     private func commitRename(_ session: TodaySession) {
@@ -564,7 +574,7 @@ private struct SessionNow: View {
                 Text(paused ? "Paused" : "Current session").font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 8)
                 Text(left.map { WindowFormat.span(session.startedAt, now.addingTimeInterval($0)) }
-                     ?? "since \(WindowFormat.clock(session.startedAt))")
+                     ?? String(localized: "since \(WindowFormat.clock(session.startedAt))", comment: "When an open-ended session started: since 14:05"))
                     .font(.system(size: 12).monospacedDigit())
                     .foregroundStyle(Theme.secondaryText)
             }
@@ -578,7 +588,7 @@ private struct SessionNow: View {
                             .font(.system(size: 28, weight: .semibold).monospacedDigit())
                             .kerning(-0.8)
                             .contentTransition(.numericText(countsDown: left != nil))
-                        Text(left == nil ? "min in" : "min left")
+                        Text(left == nil ? "min in" : "min left", comment: "Under a big number in the session ring: minutes so far / minutes to go")
                             .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                     }
                     .foregroundStyle(Theme.primaryText)
@@ -593,8 +603,7 @@ private struct SessionNow: View {
                         .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
                     VStack(alignment: .leading, spacing: 5) {
-                        (Text("In the zone ") + Text(WindowFormat.minutes(runs.current)).fontWeight(.semibold).foregroundColor(Theme.primaryText)
-                         + Text(best >= 60 ? " · best today \(Int(best / 60))" : ""))
+                        zoneLine(current: runs.current, best: best)
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.secondaryText)
                             .lineLimit(1)
@@ -624,11 +633,18 @@ private struct SessionNow: View {
         }
     }
 
+    /// "In the zone 12 min · best today 20", the run's length in bold.
+    private func zoneLine(current: TimeInterval, best: TimeInterval) -> Text {
+        let run = Text(WindowFormat.minutes(current)).fontWeight(.semibold).foregroundColor(Theme.primaryText)
+        return best >= 60 ? Text("In the zone \(run) · best today \(Int(best / 60))") : Text("In the zone \(run)")
+    }
+
     private func ringLabel(timeline: SessionTimeline, elapsed: TimeInterval, left: TimeInterval?) -> String {
-        var parts = ["Session ring: \(Int(elapsed / 60)) minutes in"]
-        if let planned = session.plannedDurationMinutes { parts[0] += " of \(planned)" }
-        if timeline.classifiedCells > 0 { parts.append("\(timeline.focusPercent) percent focused so far") }
-        if let left { parts.append("\(AppState.minutesRoundedUp(left)) minutes left") }
+        let minutes = Int(elapsed / 60)
+        var parts = [session.plannedDurationMinutes.map { String(localized: "Session ring: \(minutes) minutes in of \($0)") }
+                     ?? String(localized: "Session ring: \(minutes) minutes in")]
+        if timeline.classifiedCells > 0 { parts.append(String(localized: "\(timeline.focusPercent) percent focused so far")) }
+        if let left { parts.append(String(localized: "\(AppState.minutesRoundedUp(left)) minutes left")) }
         return parts.joined(separator: ", ") + "."
     }
 }
@@ -709,9 +725,10 @@ private struct ReadyNow: View {
             }
             HStack(spacing: 6) {
                 ForEach(Self.lengths, id: \.self) { minutes in
-                    choice("\(minutes) min", picked: chosen == minutes) { lengthChoice = minutes }
+                    choice(String(localized: "\(minutes) min", comment: "Compact minutes"), picked: chosen == minutes) { lengthChoice = minutes }
                 }
-                choice("Open", picked: chosen == nil) { lengthChoice = -1 }
+                choice(String(localized: "session.length.open", defaultValue: "Open", comment: "A session length with no set end"),
+                       picked: chosen == nil) { lengthChoice = -1 }
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Session length")
@@ -726,7 +743,7 @@ private struct ReadyNow: View {
             .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.inset))
 
             Spacer(minLength: 0)
-            Button(chosen.map { "Start \($0) minutes of focus" } ?? "Start an open session") {
+            Button(chosen.map { String(localized: "Start \($0) minutes of focus") } ?? String(localized: "Start an open session")) {
                 appState.sessionManager.startSession(label: defaultLabel.isEmpty ? nil : defaultLabel,
                                                      plannedDurationMinutes: chosen)
             }
@@ -750,24 +767,26 @@ private struct ReadyNow: View {
 
     private var lastLine: String {
         guard let last = model.sessions.first(where: { !$0.isLive }) else {
-            return "Pick a length and go. The shield in the menu bar fills as the session runs."
+            return String(localized: "Pick a length and go. The shield in the menu bar fills as the session runs.")
         }
-        var parts = ["Last one: \(last.name)", "\(Int((last.rate * 100).rounded()))% focused"]
-        if last.bestRun >= 60 { parts.append("\(Int(last.bestRun / 60)) min in the zone") }
-        return parts.joined(separator: ", ") + "."
+        let rate = Int((last.rate * 100).rounded())
+        if last.bestRun >= 60 {
+            return String(localized: "Last one: \(last.name), \(rate)% focused, \(Int(last.bestRun / 60)) min in the zone.")
+        }
+        return String(localized: "Last one: \(last.name), \(rate)% focused.")
     }
 
     private var driftLine: String {
         let engine = appState.escalationEngine
         let preset = engine.preset
-        if engine.strictMode { return "When you drift: \(preset.title) · pause screen right away" }
-        return "When you drift: \(preset.title) · nudge at \(Self.seconds(engine.notifyThreshold)), pause at \(Self.seconds(engine.blockThreshold))"
+        if engine.strictMode { return String(localized: "When you drift: \(preset.title) · pause screen right away") }
+        return String(localized: "When you drift: \(preset.title) · nudge at \(Self.seconds(engine.notifyThreshold)), pause at \(Self.seconds(engine.blockThreshold))")
     }
 
     static func seconds(_ value: TimeInterval) -> String {
         let s = Int(value)
-        if s >= 60 && s % 60 == 0 { return "\(s / 60) min" }
-        return "\(s) s"
+        if s >= 60 && s % 60 == 0 { return String(localized: "\(s / 60) min", comment: "Compact minutes") }
+        return String(localized: "\(s) s", comment: "Compact seconds")
     }
 }
 
@@ -781,13 +800,15 @@ private struct DaySummaryCard: View {
                 Text("The day in numbers").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.primaryText)
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 14) {
                     GridRow {
-                        WindowStat(label: "Sessions", value: "\(model.sessions.count)",
-                                 detail: model.sessions.isEmpty ? "none" : "\(model.sessions.reduce(0) { $0 + $1.minutes }) min in sessions")
-                        WindowStat(label: "Drifted", value: WindowFormat.hm(model.drifted), detail: nil)
+                        WindowStat(label: String(localized: "Sessions"), value: "\(model.sessions.count)",
+                                 detail: model.sessions.isEmpty
+                                    ? String(localized: "none", comment: "No sessions on that day")
+                                    : String(localized: "\(model.sessions.reduce(0) { $0 + $1.minutes }) min in sessions"))
+                        WindowStat(label: String(localized: "Drifted"), value: WindowFormat.hm(model.drifted), detail: nil)
                     }
                     GridRow {
-                        WindowStat(label: "First activity", value: model.trackingStarted.map(WindowFormat.clock) ?? "–", detail: nil)
-                        WindowStat(label: "Focused", value: WindowFormat.hm(model.focused), detail: nil)
+                        WindowStat(label: String(localized: "First activity"), value: model.trackingStarted.map(WindowFormat.clock) ?? "–", detail: nil)
+                        WindowStat(label: String(localized: "Focused"), value: WindowFormat.hm(model.focused), detail: nil)
                     }
                 }
             }
@@ -838,19 +859,19 @@ private struct SetupCard: View {
 
     private var steps: [TodaySetupStep] {
         [
-            TodaySetupStep(title: "Allow Screen Recording and notifications",
-                      detail: "So FocusGuard can see what's in front.",
+            TodaySetupStep(title: String(localized: "Allow Screen Recording and notifications"),
+                      detail: String(localized: "So FocusGuard can see what's in front."),
                       done: appState.permissions.allGranted,
-                      action: ("Set up", { NotificationCenter.default.post(name: .showOnboarding, object: nil) })),
-            TodaySetupStep(title: "Pick a daily goal: \(Self.goalWords(FocusGoal.dailyMinutes))",
-                      detail: "Change it any time in Settings.",
+                      action: (String(localized: "Set up"), { NotificationCenter.default.post(name: .showOnboarding, object: nil) })),
+            TodaySetupStep(title: String(localized: "Pick a daily goal: \(Self.goalWords(FocusGoal.dailyMinutes))"),
+                      detail: String(localized: "Change it any time in Settings."),
                       done: true, action: nil),
-            TodaySetupStep(title: "Sort your apps",
-                      detail: "Check FocusGuard's guesses in about 2 minutes.",
+            TodaySetupStep(title: String(localized: "Sort your apps"),
+                      detail: String(localized: "Check FocusGuard's guesses in about 2 minutes."),
                       done: appsSorted,
-                      action: ("Sort now", { NotificationCenter.default.post(name: .openAppsSort, object: nil) })),
-            TodaySetupStep(title: "Start your first session",
-                      detail: "It gets a name from how it goes, like Steady Deep Dive.",
+                      action: (String(localized: "Sort now"), { NotificationCenter.default.post(name: .openAppsSort, object: nil) })),
+            TodaySetupStep(title: String(localized: "Start your first session"),
+                      detail: String(localized: "It gets a name from how it goes, like Steady Deep Dive."),
                       done: false, action: nil),
         ]
     }
@@ -860,10 +881,9 @@ extension SetupCard {
     /// "4 hours", "3 hours 30 minutes", "45 minutes".
     static func goalWords(_ minutes: Int) -> String {
         let h = minutes / 60, m = minutes % 60
-        var parts: [String] = []
-        if h > 0 { parts.append(WindowFormat.count(h, "hour")) }
-        if m > 0 { parts.append(WindowFormat.count(m, "minute")) }
-        return parts.joined(separator: " ")
+        if h > 0 && m > 0 { return String(localized: "\(h) hours \(m) minutes", comment: "Plural on h and m: 1 hour 5 minutes") }
+        if h > 0 { return String(localized: "\(h) hours", comment: "Plural on h: 1 hour / 2 hours") }
+        return m > 0 ? String(localized: "\(m) minutes", comment: "Plural on m: 1 minute / 2 minutes") : ""
     }
 }
 

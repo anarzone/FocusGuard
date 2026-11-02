@@ -132,37 +132,45 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
     /// Settings' "Send test notification": always delivers, so the user can
     /// check macOS lets notifications through even with nudges switched off.
     func presentTestNotification() {
-        deliver(distractionWarning(appName: "Test app", currentURL: nil, context: nil), as: .driftWarning, force: true)
+        deliver(distractionWarning(appName: String(localized: "Test app"), currentURL: nil, context: nil), as: .driftWarning, force: true)
     }
 
     private func distractionWarning(appName: String, currentURL: String?, context: NudgeContext?) -> UNNotificationRequest {
         let place = BlockRequest.displayHost(currentURL) ?? appName
         let body: String
         if let context {
-            let session = context.minutesLeft.map { "\(context.sessionName) has \(Self.plural($0, "minute")) left." }
-                ?? "\(context.sessionName) is still running."
-            body = session + (context.backTo.map { " \($0) is one click away." } ?? "")
+            switch (context.minutesLeft, context.backTo) {
+            case let (minutes?, app?):
+                body = String(localized: "\(context.sessionName) has \(minutes) minutes left. \(app) is one click away.", comment: "Plural on minutes: 1 minute / 2 minutes")
+            case let (minutes?, nil):
+                body = String(localized: "\(context.sessionName) has \(minutes) minutes left.", comment: "Plural on minutes: 1 minute / 2 minutes")
+            case let (nil, app?):
+                body = String(localized: "\(context.sessionName) is still running. \(app) is one click away.")
+            case (nil, nil):
+                body = String(localized: "\(context.sessionName) is still running.")
+            }
         } else {
-            body = "You've drifted to \(place)."
+            body = String(localized: "You've drifted to \(place).")
         }
         var info: [String: Any] = [:]
         if let currentURL { info[NotificationInfo.url] = currentURL }
         if let id = context?.bundleId { info[NotificationInfo.bundleId] = id }
-        let back = context?.backTo.map { "Back to \($0)" } ?? "Back to work"
-        return Self.request(title: "Still on \(place)?", body: body,
-                            category: category(.nudge, [(.backToWork, back), (.forWork, "It's for work")]),
+        let back = context?.backTo.map { String(localized: "Back to \($0)") } ?? String(localized: "Back to work")
+        return Self.request(title: String(localized: "Still on \(place)?"), body: body,
+                            category: category(.nudge, [(.backToWork, back), (.forWork, String(localized: "It's for work"))]),
                             info: info)
     }
 
     /// "Session complete: Locked-in Deep Dive", with a break and another session.
     func presentSessionComplete(name: String, minutes: Int, focusPercent: Int, zoneMinutes: Int, breakMinutes: Int) {
-        var parts = ["\(minutes) min", "\(focusPercent)% focused"]
-        if zoneMinutes > 0 { parts.append("\(zoneMinutes) min in the zone") }
+        let body = zoneMinutes > 0
+            ? String(localized: "\(minutes) min · \(focusPercent)% focused · \(zoneMinutes) min in the zone.", comment: "Compact minutes")
+            : String(localized: "\(minutes) min · \(focusPercent)% focused.", comment: "Compact minutes")
         let request = Self.request(
-            title: "Session complete: \(name)",
-            body: parts.joined(separator: " · ") + ".",
-            category: category(.sessionComplete, [(.takeBreak, "Take a \(breakMinutes)-minute break"),
-                                                  (.startSession, "Start another")]),
+            title: String(localized: "Session complete: \(name)"),
+            body: body,
+            category: category(.sessionComplete, [(.takeBreak, String(localized: "Take a \(breakMinutes)-minute break")),
+                                                  (.startSession, String(localized: "Start another"))]),
             info: [NotificationInfo.minutes: breakMinutes, NotificationInfo.nextMinutes: usualMinutes]
         )
         deliver(request, as: .general)
@@ -173,10 +181,10 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         let minutes = usualMinutes
         let request = Self.request(
             "breakOver",
-            title: "Break's over",
-            body: "Ready for another \(Self.plural(minutes, "minute"))? Blocking comes back when you start.",
-            category: category(.breakOver, [(.startSession, "Start \(Self.plural(minutes, "minute"))"),
-                                            (.extendBreak, "5 more minutes")]),
+            title: String(localized: "Break's over"),
+            body: String(localized: "Ready for another \(minutes) minutes? Blocking comes back when you start.", comment: "Plural on minutes: 1 minute / 2 minutes"),
+            category: category(.breakOver, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes")),
+                                            (.extendBreak, String(localized: "5 more minutes"))]),
             info: [NotificationInfo.minutes: minutes]
         )
         deliver(request, as: .general)
@@ -190,9 +198,9 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         let minutes = usualMinutes
         let request = Self.request(
             "driftPrompt-\(host)",
-            title: "Drifting?",
-            body: "You've been on \(host) a few times in the last 10 min. Start a focus session?",
-            category: category(.driftPrompt, [(.startSession, "Start \(Self.plural(minutes, "minute"))")]),
+            title: String(localized: "Drifting?"),
+            body: String(localized: "You've been on \(host) a few times in the last 10 min. Start a focus session?"),
+            category: category(.driftPrompt, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes"))]),
             info: [NotificationInfo.minutes: minutes]
         )
         deliver(request, as: .general)
@@ -203,8 +211,8 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         let used = max(0, minutesToday - minutesLeft)
         let request = Self.request(
             "limitWarning-\(name)",
-            title: "\(Self.plural(minutesLeft, "minute")) left on \(name)",
-            body: "You've used \(used) of your \(Self.plural(minutesToday, "minute")) today."
+            title: String(localized: "\(minutesLeft) minutes left on \(name)", comment: "Plural on minutesLeft: 1 minute / 2 minutes"),
+            body: String(localized: "You've used \(used) of your \(minutesToday) minutes today.", comment: "Plural on minutesToday: 1 minute / 2 minutes")
         )
         deliver(request, as: .general)
     }

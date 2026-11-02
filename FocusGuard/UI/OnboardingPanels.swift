@@ -77,7 +77,7 @@ private struct WelcomePanel: View {
 
             HStack(spacing: 8) {
                 MiniShield(fill: 0.5)
-                Text("24m").font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.primaryText)
+                Text("24m", comment: "Compact duration: 24 minutes").font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(Theme.primaryText)
                 Text("in your menu bar").font(.system(size: 13)).foregroundStyle(Theme.secondaryText)
             }
             .padding(.horizontal, 12)
@@ -121,8 +121,9 @@ private struct RecordedPanel: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What gets recorded").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.secondaryText)
                     row(AppGlyph(kind: .xcode, bundleId: "com.apple.dt.Xcode", size: 30), "Xcode", "BlockOverlayView.swift",
-                        categoryTag(Theme.focus, "Focus"))
-                    row(AppGlyph(kind: .twitter, size: 30), "x.com", "in Safari", categoryTag(Theme.distraction, "Distracting"))
+                        categoryTag(Theme.focus, String(localized: "Focus", comment: "Category of an app or site")))
+                    row(AppGlyph(kind: .twitter, size: 30), "x.com", String(localized: "in Safari"),
+                        categoryTag(Theme.distraction, String(localized: "Distracting", comment: "Category of an app or site")))
                     Rectangle().fill(OnboardingPalette.cardStroke).frame(height: 0.5)
                     Text("Not recorded: keystrokes, screen contents, page text. Hide titles for any app in Settings.")
                         .font(.system(size: 12))
@@ -158,11 +159,11 @@ struct SetupPanel: View {
 
     /// "Standard: a nudge at 0:30, the block screen at 1:30."
     static func presetLine(_ preset: DriftResponse?) -> String {
-        guard let preset else { return "Your own timings from Settings." }
+        guard let preset else { return String(localized: "Your own timings from Settings.") }
         let v = preset.values
-        if v.strict { return "\(preset.title): the block screen at once. No passes; “It's for work” after 10 s." }
+        if v.strict { return String(localized: "\(preset.title): the block screen at once. No passes; “It's for work” after 10 s.") }
         func clock(_ s: Int) -> String { "\(s / 60):\(String(format: "%02d", s % 60))" }
-        return "\(preset.title): a nudge at \(clock(v.notify)), the block screen at \(clock(v.block))."
+        return String(localized: "\(preset.title): a nudge at \(clock(v.notify)), the block screen at \(clock(v.block)).")
     }
 
     var body: some View {
@@ -233,7 +234,7 @@ private struct ExtensionPanel: View {
                         .frame(width: 54, height: 34)
                     Text("SwiftUI layout, in depth").font(.system(size: 12)).foregroundStyle(Theme.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    categoryTag(Theme.focus, "Focus")
+                    categoryTag(Theme.focus, String(localized: "Focus", comment: "Category of an app or site"))
                 }
                 .padding(12)
             }

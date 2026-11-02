@@ -24,7 +24,7 @@ struct QuickSettingsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            PaneTitle(title: "Quick settings", close: close) {
+            PaneTitle(title: String(localized: "Quick settings"), close: close) {
                 if entitlements.isUnlocked(.unlimitedLimits) { ProBadge() } else { FreeBadge() }
             }
 
@@ -33,22 +33,22 @@ struct QuickSettingsPane: View {
             limitsSection
 
             VStack(spacing: 2) {
-                row("Daily goal") {
+                row(String(localized: "Daily goal")) {
                     HStack(spacing: 8) {
-                        RoundIconButton(systemImage: "minus", label: "Lower the daily goal") {
+                        RoundIconButton(systemImage: "minus", label: String(localized: "Lower the daily goal")) {
                             goalMinutes = max(FocusGoal.range.lowerBound, goalMinutes - 15)
                         }
                         .disabled(goalMinutes <= FocusGoal.range.lowerBound)
                         Text(FocusGoal.format(minutes: goalMinutes))
                             .font(.system(size: 13, weight: .semibold).monospacedDigit())
                             .frame(minWidth: 52)
-                        RoundIconButton(systemImage: "plus", label: "Raise the daily goal") {
+                        RoundIconButton(systemImage: "plus", label: String(localized: "Raise the daily goal")) {
                             goalMinutes = min(FocusGoal.range.upperBound, goalMinutes + 15)
                         }
                         .disabled(goalMinutes >= FocusGoal.range.upperBound)
                     }
                 }
-                row("Show time in menu bar") {
+                row(String(localized: "Show time in menu bar")) {
                     Toggle("Show time in menu bar", isOn: $menuBarShowTime)
                         .toggleStyle(.switch).labelsHidden().controlSize(.mini)
                         .tint(Theme.focusFill)
@@ -76,7 +76,7 @@ struct QuickSettingsPane: View {
     private var driftSection: some View {
         let locked = appState.isStrictLocked
         return VStack(alignment: .leading, spacing: 7) {
-            paneHeading("When you drift")
+            paneHeading(String(localized: "When you drift"))
             HStack(spacing: 0) {
                 ForEach(DriftResponse.allCases) { preset in
                     let on = drift == preset
@@ -102,7 +102,7 @@ struct QuickSettingsPane: View {
             .disabled(locked)
             .opacity(locked ? 0.6 : 1)
 
-            Text(locked ? "Strict stays on until this session ends." : presetLine)
+            Text(locked ? String(localized: "Strict stays on until this session ends.") : presetLine)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.primaryText.opacity(0.85))
                 .padding(.horizontal, 2)
@@ -119,29 +119,48 @@ struct QuickSettingsPane: View {
 
     /// How fast each preset steps in, in the blocking level's own words.
     private var presetLine: String {
-        let action = entitlements.isUnlocked(.blockInBrowser) ? "block" : "pause the tab"
+        let blocks = entitlements.isUnlocked(.blockInBrowser)
         switch drift {
-        case .gentle:   return "Nudge after 1 min · \(action) after 3 min"
-        case .standard: return "Nudge after 30 s · \(action) after 90 s"
-        case .strict:   return "\(action.prefix(1).uppercased() + action.dropFirst()) as soon as you drift"
-        case nil:       return "Custom timings, set in Settings"
+        case .gentle:
+            return blocks ? String(localized: "Nudge after 1 min · block after 3 min")
+                          : String(localized: "Nudge after 1 min · pause the tab after 3 min")
+        case .standard:
+            return blocks ? String(localized: "Nudge after 30 s · block after 90 s")
+                          : String(localized: "Nudge after 30 s · pause the tab after 90 s")
+        case .strict:
+            return blocks ? String(localized: "Block as soon as you drift")
+                          : String(localized: "Pause the tab as soon as you drift")
+        case nil:
+            return String(localized: "Custom timings, set in Settings")
         }
     }
 
     /// What the preset lets you do once blocked, from `OverridePolicy`.
     static func rules(_ policy: OverridePolicy) -> String {
-        let pass = policy.allowsPass
-            ? "Let me through \(policy.passWaitSeconds == 0 ? "right away" : "after \(policy.passWaitSeconds) s"), for \(Int(policy.passSeconds / 60)) min"
-            : "No Let me through"
-        let forWork = policy.forWorkWaitSeconds > 0 ? "It’s for work after a \(policy.forWorkWaitSeconds) s wait" : nil
+        let passMinutes = Int(policy.passSeconds / 60)
+        let pass: String
+        if !policy.allowsPass {
+            pass = String(localized: "No Let me through", comment: "“Let me through” is the block screen's button")
+        } else if policy.passWaitSeconds == 0 {
+            pass = String(localized: "Let me through right away, for \(passMinutes) min", comment: "“Let me through” is the block screen's button")
+        } else {
+            pass = String(localized: "Let me through after \(policy.passWaitSeconds) s, for \(passMinutes) min", comment: "“Let me through” is the block screen's button")
+        }
+        let forWork = policy.forWorkWaitSeconds > 0
+            ? String(localized: "It’s for work after a \(policy.forWorkWaitSeconds) s wait", comment: "“It’s for work” is the block screen's button")
+            : nil
         let extra = policy.extraTime
         let limits: String
-        if extra.isOffered {
-            let often = extra.timesPerDay == 1 ? " once a day" : ", up to \(extra.timesPerDay) times a day"
-            let wait = extra.waitSeconds > 0 ? ", after \(extra.waitSeconds) s" : ""
-            limits = "daily limits: \(extra.minutes) more min\(often)\(wait)"
+        if !extra.isOffered {
+            limits = String(localized: "no extra time on daily limits")
+        } else if extra.timesPerDay == 1 {
+            limits = extra.waitSeconds > 0
+                ? String(localized: "daily limits: \(extra.minutes) more min once a day, after \(extra.waitSeconds) s")
+                : String(localized: "daily limits: \(extra.minutes) more min once a day")
         } else {
-            limits = "no extra time on daily limits"
+            limits = extra.waitSeconds > 0
+                ? String(localized: "daily limits: \(extra.minutes) more min, up to \(extra.timesPerDay) times a day, after \(extra.waitSeconds) s")
+                : String(localized: "daily limits: \(extra.minutes) more min, up to \(extra.timesPerDay) times a day")
         }
         return [pass, forWork, limits].compactMap { $0 }.joined(separator: " · ")
     }
@@ -151,20 +170,20 @@ struct QuickSettingsPane: View {
     private var blockingSection: some View {
         let pro = entitlements.isUnlocked(.blockInBrowser)
         return VStack(alignment: .leading, spacing: 7) {
-            paneHeading("What blocking does")
+            paneHeading(String(localized: "What blocking does"))
             VStack(spacing: 0) {
-                levelRow(title: "Pause the tab",
-                         detail: pro ? "Used in browsers without the extension." : "The tab switches to a calm FocusGuard page.",
+                levelRow(title: String(localized: "Pause the tab"),
+                         detail: pro ? String(localized: "Used in browsers without the extension.") : String(localized: "The tab switches to a calm FocusGuard page."),
                          selected: !pro, badge: AnyView(FreeBadge())) {}
                 divider(leading: 37)
-                levelRow(title: "Block in the browser",
+                levelRow(title: String(localized: "Block in the browser"),
                          detail: browserDetail(pro: pro),
                          selected: pro, badge: AnyView(ProBadge())) {
                     if !pro { trialFor = trialFor == .blockInBrowser ? nil : .blockInBrowser }
                 }
                 if trialFor == .blockInBrowser { trialLine(for: .blockInBrowser) }
                 divider(leading: 37)
-                levelRow(title: "Block on the whole Mac", detail: "Every browser and app. Coming later.",
+                levelRow(title: String(localized: "Block on the whole Mac"), detail: String(localized: "Every browser and app. Coming later."),
                          selected: false, badge: AnyView(ProBadge()), enabled: false) {}
             }
             .paneCard(padding: EdgeInsets())
@@ -172,9 +191,10 @@ struct QuickSettingsPane: View {
     }
 
     private func browserDetail(pro: Bool) -> String {
-        let base = "Pages never load. Works on parts of sites, like youtube.com/shorts."
-        guard pro, appState.extensionBridge.connectedBrowsers.isEmpty else { return base }
-        return base + " Needs the browser extension."
+        guard pro, appState.extensionBridge.connectedBrowsers.isEmpty else {
+            return String(localized: "Pages never load. Works on parts of sites, like youtube.com/shorts.")
+        }
+        return String(localized: "Pages never load. Works on parts of sites, like youtube.com/shorts. Needs the browser extension.")
     }
 
     private func levelRow(title: String, detail: String, selected: Bool, badge: AnyView, enabled: Bool = true,
@@ -250,7 +270,7 @@ struct QuickSettingsPane: View {
         let statuses = appState.limits.statuses
         let atCap = entitlements.dailyLimitCap.map { statuses.count >= $0 } ?? false
         return VStack(alignment: .leading, spacing: 7) {
-            paneHeading("Daily limits", note: "reset at \(menuClock(Calendar.current.startOfDay(for: .now)))")
+            paneHeading(String(localized: "Daily limits"), note: String(localized: "reset at \(menuClock(Calendar.current.startOfDay(for: .now)))", comment: "Beside Daily limits: the time they reset"))
             VStack(spacing: 0) {
                 ForEach(statuses) { status in
                     limitRow(status)
@@ -261,7 +281,7 @@ struct QuickSettingsPane: View {
                 } else {
                     Button {
                         if atCap {
-                            limitNote = "Free includes one limit. Pro has no cap."
+                            limitNote = String(localized: "Free includes one limit. Pro has no cap.")
                             trialFor = trialFor == .unlimitedLimits ? nil : .unlimitedLimits
                         } else {
                             adding = true
@@ -275,7 +295,7 @@ struct QuickSettingsPane: View {
                                 .frame(width: 22, height: 22)
                                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.lockedStroke,
                                                                                       style: StrokeStyle(lineWidth: 1, dash: [2, 2])))
-                            Text(atCap ? (limitNote ?? "Add another limit") : (statuses.isEmpty ? "Add a limit" : "Add another limit"))
+                            Text(atCap ? (limitNote ?? String(localized: "Add another limit")) : (statuses.isEmpty ? String(localized: "Add a limit") : String(localized: "Add another limit")))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Theme.primaryText.opacity(0.85))
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -311,24 +331,24 @@ struct QuickSettingsPane: View {
                     }
                     LimitBar(fraction: status.allowance > 0 ? status.used / status.allowance : 1, height: 4)
                 }
-                PillButton(title: editing ? "Done" : "Edit", height: 22) {
+                PillButton(title: editing ? String(localized: "Done", comment: "Button: finish editing this limit") : String(localized: "Edit"), height: 22) {
                     editingLimit = editing ? nil : status.id
                 }
                 .accessibilityLabel(editing ? "Done editing the \(status.name) limit" : "Edit the \(status.name) limit")
             }
             if let pending = status.pending {
-                Text(pending == .removal ? "Removed from tomorrow." : pendingText(pending))
+                Text(pending == .removal ? String(localized: "Removed from tomorrow.") : pendingText(pending))
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.secondaryText)
                     .padding(.leading, 32)
             }
             if editing {
                 HStack(spacing: 8) {
-                    RoundIconButton(systemImage: "minus", label: "Five minutes less") { change(status, by: -5) }
+                    RoundIconButton(systemImage: "minus", label: String(localized: "Five minutes less")) { change(status, by: -5) }
                         .disabled(status.minutes <= 5)
                     Text("\(pendingMinutes(status) ?? status.minutes) min a day")
                         .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                    RoundIconButton(systemImage: "plus", label: "Five minutes more") { change(status, by: 5) }
+                    RoundIconButton(systemImage: "plus", label: String(localized: "Five minutes more")) { change(status, by: 5) }
                     Spacer(minLength: 4)
                     Button("Remove") {
                         if appState.limits.removeLimit(status.id) == .fromTomorrow {
@@ -357,7 +377,7 @@ struct QuickSettingsPane: View {
     }
 
     private func pendingText(_ pending: DailyLimit.PendingChange) -> String {
-        if case .minutes(let m) = pending { return "\(m) min a day from tomorrow." }
+        if case .minutes(let m) = pending { return String(localized: "\(m) min a day from tomorrow.") }
         return ""
     }
 
@@ -377,10 +397,10 @@ struct QuickSettingsPane: View {
                 .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
                 .onSubmit(addLimit)
             HStack(spacing: 8) {
-                RoundIconButton(systemImage: "minus", label: "Five minutes less") { newMinutes = max(5, newMinutes - 5) }
+                RoundIconButton(systemImage: "minus", label: String(localized: "Five minutes less")) { newMinutes = max(5, newMinutes - 5) }
                 Text("\(newMinutes) min a day")
                     .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                RoundIconButton(systemImage: "plus", label: "Five minutes more") { newMinutes = min(600, newMinutes + 5) }
+                RoundIconButton(systemImage: "plus", label: String(localized: "Five minutes more")) { newMinutes = min(600, newMinutes + 5) }
                 Spacer(minLength: 4)
                 Button("Cancel") {
                     adding = false
@@ -403,7 +423,7 @@ struct QuickSettingsPane: View {
 
     private func addLimit() {
         guard appState.limits.addLimit(target: newSite, isSite: true, minutes: newMinutes) != nil else {
-            limitNote = "That doesn't look like a site. Try something like youtube.com."
+            limitNote = String(localized: "That doesn't look like a site. Try something like youtube.com.")
             return
         }
         newSite = ""

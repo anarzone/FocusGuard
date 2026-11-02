@@ -30,10 +30,10 @@ struct SettingsAIPane: View {
 
                 statusBanner
 
-                sectionHeader("Enable", topPad: 20)
+                sectionHeader(String(localized: "Enable"), topPad: 20)
                 groupCard {
-                    settingsRow(title: "Offer AI tips",
-                                help: "Adds a “Get AI tips” button to Reports. Data is sent only when you click it.") {
+                    settingsRow(title: String(localized: "Offer AI tips"),
+                                help: String(localized: "Adds a “Get AI tips” button to Reports. Data is sent only when you click it.")) {
                         Toggle("", isOn: $settings.enabled)
                             .toggleStyle(.switch).labelsHidden()
                             .onChange(of: settings.enabled) { _, on in
@@ -80,24 +80,24 @@ struct SettingsAIPane: View {
 
     private var status: Status {
         if !settings.enabled {
-            return Status(symbol: "moon.zzz.fill", color: .gray, text: "AI tips are off.")
+            return Status(symbol: "moon.zzz.fill", color: .gray, text: String(localized: "AI tips are off."))
         }
         if !canConnect {
             return Status(symbol: "key.fill", color: Theme.warning,
-                          text: "On — add your API key below to start.")
+                          text: String(localized: "On — add your API key below to start."))
         }
         switch testResult {
         case .success:
             return Status(symbol: "checkmark.seal.fill", color: Theme.focus,
-                          text: "Connected to \(settings.provider.label). Use “Get AI tips” on Reports.")
+                          text: String(localized: "Connected to \(settings.provider.label). Use “Get AI tips” on Reports."))
         case .failure(let message):
             return Status(symbol: "exclamationmark.triangle.fill", color: Theme.distraction, text: message)
         case nil where !secretSaved:
             return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
-                          text: "Local server — no API key needed. Run Test to verify.")
+                          text: String(localized: "Local server — no API key needed. Run Test to verify."))
         case nil:
             return Status(symbol: "checkmark.circle.fill", color: Theme.focus,
-                          text: "API key saved (\(settings.provider.label)). Run Test to verify.")
+                          text: String(localized: "API key saved (\(settings.provider.label)). Run Test to verify."))
         }
     }
 
@@ -108,7 +108,7 @@ struct SettingsAIPane: View {
             } else {
                 Image(systemName: status.symbol).foregroundStyle(status.color)
             }
-            Text(testing ? "Checking connection…" : status.text)
+            Text(testing ? String(localized: "Checking connection…") : status.text)
                 .font(.system(size: 12)).foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -124,25 +124,25 @@ struct SettingsAIPane: View {
 
     private var providerSection: some View {
         Group {
-            sectionHeader("Provider")
+            sectionHeader(String(localized: "Provider"))
             groupCard {
-                settingsRow(title: "Service",
-                            help: "Anthropic uses Claude; OpenAI-compatible works with OpenRouter, Groq, Ollama, and more.") {
+                settingsRow(title: String(localized: "Service", comment: "The AI service"),
+                            help: String(localized: "Anthropic uses Claude; OpenAI-compatible works with OpenRouter, Groq, Ollama, and more.")) {
                     Picker("", selection: $settings.provider) {
                         ForEach(ProviderKind.allCases) { Text($0.label).tag($0) }
                     }
                     .labelsHidden().pickerStyle(.menu).frame(width: 180)
                 }
                 Rectangle().fill(Theme.separator).frame(height: 0.5)
-                settingsRow(title: "Model") {
+                settingsRow(title: String(localized: "Model", comment: "The AI model")) {
                     TextField(settings.provider.defaultModel, text: $settings.model)
                         .textFieldStyle(.roundedBorder).frame(width: 200)
                         .onSubmit(persist)
                 }
                 if settings.provider == .openAICompatible {
                     Rectangle().fill(Theme.separator).frame(height: 0.5)
-                    settingsRow(title: "Base URL",
-                                help: "Origin only, e.g. http://localhost:11434 for Ollama.") {
+                    settingsRow(title: String(localized: "Base URL"),
+                                help: String(localized: "Origin only, e.g. http://localhost:11434 for Ollama.")) {
                         TextField(OpenAIProvider.defaultBaseURL, text: $settings.baseURL)
                             .textFieldStyle(.roundedBorder).frame(width: 200)
                             .onSubmit(persist)
@@ -156,10 +156,10 @@ struct SettingsAIPane: View {
 
     @ViewBuilder
     private var credentialSection: some View {
-        sectionHeader("Credentials")
+        sectionHeader(String(localized: "Credentials"))
         groupCard {
-            settingsRow(title: "API key",
-                        help: secretSaved ? "Saved to your Keychain." : keyHelp) {
+            settingsRow(title: String(localized: "API key"),
+                        help: secretSaved ? String(localized: "Saved to your Keychain.") : keyHelp) {
                 HStack(spacing: 8) {
                     SecureField(secretSaved ? "••••••••" : "Paste here", text: $secret)
                         .textFieldStyle(.roundedBorder).frame(width: 200)
@@ -177,8 +177,8 @@ struct SettingsAIPane: View {
             }
 
             Rectangle().fill(Theme.separator).frame(height: 0.5)
-            settingsRow(title: "Test connection",
-                        help: "Sends a tiny request to check that the key works.") {
+            settingsRow(title: String(localized: "Test connection", comment: "Check that the AI service can be reached"),
+                        help: String(localized: "Sends a tiny request to check that the key works.")) {
                 HStack(spacing: 8) {
                     if testing { ProgressView().controlSize(.small) }
                     testResultBadge
@@ -210,7 +210,7 @@ struct SettingsAIPane: View {
 
     private var disclosureSection: some View {
         Group {
-            sectionHeader("Privacy")
+            sectionHeader(String(localized: "Privacy"))
             groupCard {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("FocusGuard only sends an aggregated summary — minutes, percentages, streaks, and the names/hosts of your top distractions. It never sends window titles, full URLs, or raw activity.")
@@ -239,12 +239,12 @@ struct SettingsAIPane: View {
 
     private var keyHelp: String {
         switch settings.provider {
-        case .anthropic:        return "A key from console.anthropic.com (sk-ant-…). Stored only in your Keychain."
-        case .openAI:           return "An OpenAI API key (sk-…). Stored only in your Keychain."
+        case .anthropic:        return String(localized: "A key from console.anthropic.com (sk-ant-…). Stored only in your Keychain.")
+        case .openAI:           return String(localized: "An OpenAI API key (sk-…). Stored only in your Keychain.")
         case .openAICompatible:
             return settings.isLocalEndpoint
-                ? "Not needed for a server on this Mac, like Ollama. Stored only in your Keychain."
-                : "The API key for your endpoint. Stored only in your Keychain."
+                ? String(localized: "Not needed for a server on this Mac, like Ollama. Stored only in your Keychain.")
+                : String(localized: "The API key for your endpoint. Stored only in your Keychain.")
         }
     }
 
@@ -329,7 +329,7 @@ struct SettingsAIPane: View {
 
     @ViewBuilder
     private func sectionHeader(_ title: String, topPad: CGFloat = 24) -> some View {
-        Text(title.uppercased())
+        Text(title.localizedUppercase)
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.4)
             .foregroundStyle(.secondary)

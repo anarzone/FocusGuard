@@ -22,12 +22,12 @@ enum StatusGlyphState: Equatable {
 
     var accessibilityLabel: String {
         switch self {
-        case .ready:                  return "FocusGuard, ready"
-        case .focusing(let progress): return "FocusGuard, focusing, \(Int((progress * 100).rounded())) percent through session"
-        case .paused:                 return "FocusGuard, session paused"
-        case .drifted:                return "FocusGuard, drifted off task"
-        case .complete:               return "FocusGuard, session complete"
-        case .onBreak:                return "FocusGuard, on a break"
+        case .ready:                  return String(localized: "FocusGuard, ready")
+        case .focusing(let progress): return String(localized: "FocusGuard, focusing, \(Int((progress * 100).rounded())) percent through session")
+        case .paused:                 return String(localized: "FocusGuard, session paused")
+        case .drifted:                return String(localized: "FocusGuard, drifted off task")
+        case .complete:               return String(localized: "FocusGuard, session complete")
+        case .onBreak:                return String(localized: "FocusGuard, on a break")
         }
     }
 

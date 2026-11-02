@@ -177,12 +177,13 @@ struct WindowDayStrip: View {
     }
 
     private var accessibilitySummary: String {
-        let range = "\(WindowFormat.clock(window.start)) to \(WindowFormat.clock(window.end))"
-        guard !sessions.isEmpty else { return "Timeline from \(range). No sessions yet." }
+        let from = WindowFormat.clock(window.start), to = WindowFormat.clock(window.end)
+        guard !sessions.isEmpty else { return String(localized: "Timeline from \(from) to \(to). No sessions yet.") }
         let list = sessions.reversed().map { s in
-            "\(s.name) at \(WindowFormat.clock(s.start)), \(FocusRate.percent(focused: s.rate, drifted: 1 - s.rate))% focused"
-        }
-        return "Timeline from \(range). " + WindowFormat.count(sessions.count, "session") + ": " + list.joined(separator: "; ")
+            String(localized: "\(s.name) at \(WindowFormat.clock(s.start)), \(FocusRate.percent(focused: s.rate, drifted: 1 - s.rate))% focused")
+        }.joined(separator: "; ")
+        return String(localized: "Timeline from \(from) to \(to). \(sessions.count) sessions: \(list)",
+                      comment: "Plural on sessions.count: 1 session / 2 sessions")
     }
 }
 
@@ -236,7 +237,9 @@ struct SessionTooltip: View {
     }
 
     private var subtitle: String {
-        let end = session.end.map(WindowFormat.clock) ?? "now"
-        return "\(WindowFormat.clock(session.start))–\(end) · \(session.minutes) min · \(session.shape)"
+        let time = session.end.map { WindowFormat.span(session.start, $0) }
+            ?? String(localized: "\(WindowFormat.clock(session.start))–now", comment: "A session still running: 14:05–now")
+        let minutes = String(localized: "\(session.minutes) min", comment: "Compact minutes")
+        return "\(time) · \(minutes) · \(session.shape)"
     }
 }

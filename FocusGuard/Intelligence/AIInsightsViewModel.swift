@@ -39,7 +39,7 @@ final class AIInsightsViewModel: ObservableObject {
         task?.cancel()
         let settings = AISettings.load()
         guard AISettings.isAvailable, settings.enabled else {
-            state = .failed("AI tips are turned off. Turn them on in Settings → AI tips.")
+            state = .failed(String(localized: "AI tips are turned off. Turn them on in Settings → AI tips."))
             return
         }
         guard let provider = settings.makeProvider(session: session) else {
@@ -61,7 +61,7 @@ final class AIInsightsViewModel: ObservableObject {
                 let tips = try await AIInsightsService.tips(summary: summary, provider: provider)
                 if Task.isCancelled { return }
                 self?.state = tips.isEmpty
-                    ? .failed("The model didn't return any tips. Try again.")
+                    ? .failed(String(localized: "The model didn't return any tips. Try again."))
                     : .loaded(tips)
             } catch {
                 if Task.isCancelled { return }

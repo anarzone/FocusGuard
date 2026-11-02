@@ -14,10 +14,10 @@ enum RuleMatchKind: Int, Codable, CaseIterable {
 
     var label: String {
         switch self {
-        case .bundleId:   return "App"
-        case .host:       return "Site"
-        case .titleRegex: return "Title regex"
-        case .urlPrefix:  return "Part of a site"
+        case .bundleId:   return String(localized: "App", comment: "What a rule matches")
+        case .host:       return String(localized: "Site", comment: "What a rule matches")
+        case .titleRegex: return String(localized: "Title regex", comment: "What a rule matches")
+        case .urlPrefix:  return String(localized: "Part of a site", comment: "What a rule matches")
         }
     }
 }

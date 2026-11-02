@@ -60,8 +60,8 @@ struct ShareComposerView: View {
                 .padding(.top, 8)
 
             HStack(alignment: .top, spacing: 16) {
-                choice("Size", selection: $options.size)
-                choice("Look", selection: $options.look)
+                choice(String(localized: "Size", comment: "The share image's shape"), selection: $options.size, label: \.title)
+                choice(String(localized: "Look", comment: "Noun: the share image's light or dark appearance"), selection: $options.look, label: \.title)
             }
             .padding(.top, 24)
 
@@ -70,12 +70,12 @@ struct ShareComposerView: View {
                 .foregroundStyle(Theme.primaryText)
                 .padding(.top, 22)
             VStack(spacing: 0) {
-                toggle("Time per day", detail: nil, isOn: $options.timePerDay)
+                toggle(String(localized: "Time per day"), detail: nil, isOn: $options.timePerDay)
                 Divider().padding(.leading, 14)
-                toggle("Session names", detail: "Like Locked-in Deep Dive. They never say what you worked on.",
+                toggle(String(localized: "Session names"), detail: String(localized: "Like Locked-in Deep Dive. They never say what you worked on."),
                        isOn: $options.sessionNames)
                 Divider().padding(.leading, 14)
-                toggle("Top apps and sites", detail: "Off unless you turn it on. Adds names like Xcode or github.com.",
+                toggle(String(localized: "Top apps and sites"), detail: String(localized: "Off unless you turn it on. Adds names like Xcode or github.com."),
                        isOn: $options.topPlaces)
             }
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.windowCard))
@@ -99,15 +99,15 @@ struct ShareComposerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func choice<Value: Hashable & Identifiable & RawRepresentable & CaseIterable>(
-        _ title: String, selection: Binding<Value>
-    ) -> some View where Value.RawValue == String, Value.AllCases: RandomAccessCollection {
+    private func choice<Value: Hashable & Identifiable & CaseIterable>(
+        _ title: String, selection: Binding<Value>, label: @escaping (Value) -> String
+    ) -> some View where Value.AllCases: RandomAccessCollection {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.primaryText)
             Picker(title, selection: selection) {
-                ForEach(Value.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(Value.allCases) { Text(label($0)).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -188,7 +188,7 @@ struct ShareImageExporter {
     let icon: NSImage?
 
     /// "My focus week, 12–18 Oct.png".
-    var fileName: String { "My focus week, \(week.rangeLabel()).png" }
+    var fileName: String { String(localized: "My focus week, \(week.rangeLabel())", comment: "Name of the saved image, before .png") + ".png" }
 
     /// The image at exactly 1080 px wide, in plain 8-bit sRGB. Drawn into
     /// an sRGB context: the renderer's own image can come back in an HDR

@@ -46,21 +46,27 @@ struct StatusLabel: Equatable {
         if case .pass(let name) = kind {
             return "\(name) \(seconds / 60):\(String(format: "%02d", seconds % 60))"
         }
-        if minutes >= 60 { return "\(minutes / 60)h \(minutes % 60)m" }
-        return "\(minutes)m"
+        if minutes >= 60 { return String(localized: "\(minutes / 60)h \(minutes % 60)m", comment: "Compact duration") }
+        return String(localized: "\(minutes)m", comment: "Compact duration")
     }
 
     var accessibilityText: String {
-        let unit = minutes == 1 ? "minute" : "minutes"
         switch kind {
-        case .sessionLeft:    return "\(minutes) \(unit) left\(dimmed ? ", paused" : "")"
-        case .sessionElapsed: return "\(minutes) \(unit) so far\(dimmed ? ", paused" : "")"
-        case .breakLeft:      return "\(minutes) \(unit) of break left"
+        case .sessionLeft:
+            return dimmed
+                ? String(localized: "\(minutes) minutes left, paused", comment: "Plural on minutes: 1 minute left, paused")
+                : String(localized: "\(minutes) minutes left", comment: "Plural on minutes: 1 minute left")
+        case .sessionElapsed:
+            return dimmed
+                ? String(localized: "\(minutes) minutes so far, paused", comment: "Plural on minutes: 1 minute so far, paused")
+                : String(localized: "\(minutes) minutes so far", comment: "Plural on minutes: 1 minute so far")
+        case .breakLeft:
+            return String(localized: "\(minutes) minutes of break left", comment: "Plural on minutes: 1 minute of break left")
         case .pass(let name):
             let m = seconds / 60, s = seconds % 60
-            let parts = [m > 0 ? "\(m) \(m == 1 ? "minute" : "minutes")" : nil,
-                         s > 0 || m == 0 ? "\(s) \(s == 1 ? "second" : "seconds")" : nil]
-            return "\(name) allowed for \(parts.compactMap { $0 }.joined(separator: " "))"
+            if m == 0 { return String(localized: "\(name) allowed for \(s) seconds", comment: "Plural on s: x.com allowed for 1 second") }
+            if s == 0 { return String(localized: "\(name) allowed for \(m) minutes", comment: "Plural on m: x.com allowed for 1 minute") }
+            return String(localized: "\(name) allowed for \(m) minutes \(s) seconds", comment: "Plural on m and s: x.com allowed for 1 minute 52 seconds")
         }
     }
 }
@@ -71,11 +77,9 @@ extension AutoStartOffer {
 
     /// "Xcode and Terminal", "Xcode, Terminal and Safari".
     var appList: String {
-        switch appNames.count {
-        case 0:  return "focus apps"
-        case 1:  return appNames[0]
-        default: return appNames.dropLast().joined(separator: ", ") + " and " + (appNames.last ?? "")
-        }
+        appNames.isEmpty
+            ? String(localized: "focus apps", comment: "Stands in for app names: \"12 minutes in focus apps\"")
+            : HabitFormat.list(appNames)
     }
 }
 

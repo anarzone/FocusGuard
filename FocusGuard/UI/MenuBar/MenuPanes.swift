@@ -13,11 +13,11 @@ enum MenuPane: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .insights: return "Insights"
-        case .apps:     return "Apps & sites"
-        case .settings: return "Quick settings"
-        case .debrief:  return "Debrief"
-        case .coach:    return "Weekly coach"
+        case .insights: return String(localized: "Insights")
+        case .apps:     return String(localized: "Apps & sites")
+        case .settings: return String(localized: "Quick settings")
+        case .debrief:  return String(localized: "Debrief")
+        case .coach:    return String(localized: "Weekly coach")
         }
     }
 
@@ -62,7 +62,7 @@ struct PaneButtons: View {
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help(isOpen ? "Close \(pane.title)" : pane.title)
+                .help(isOpen ? String(localized: "Close \(pane.title)") : pane.title)
                 .accessibilityLabel(pane.title)
                 .accessibilityAddTraits(isOpen ? .isSelected : [])
             }
@@ -120,7 +120,7 @@ struct PaneTitle<Trailing: View>: View {
                 .font(.system(size: 15, weight: .semibold))
             Spacer(minLength: 0)
             trailing()
-            RoundIconButton(systemImage: "xmark", label: "Close \(title)", action: close)
+            RoundIconButton(systemImage: "xmark", label: String(localized: "Close \(title)"), action: close)
         }
     }
 }
@@ -152,9 +152,9 @@ func sectionLabel(_ text: String) -> some View {
 func formatDuration(_ seconds: TimeInterval) -> String {
     let total = Int(max(0, seconds)) / 60
     let h = total / 60, m = total % 60
-    if h == 0 { return "\(m)m" }
-    if m == 0 { return "\(h)h" }
-    return "\(h)h \(m)m"
+    if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+    if m == 0 { return String(localized: "\(h)h", comment: "Compact duration") }
+    return String(localized: "\(h)h \(m)m", comment: "Compact duration")
 }
 
 /// "1 day", "3 days": a count with its noun in the right number.
@@ -174,9 +174,9 @@ func kindColor(_ classification: Classification) -> Color {
 /// distracting apps is "Drifted" in charts.)
 func categoryName(_ classification: Classification) -> String {
     switch classification {
-    case .focus:       return "Focus"
-    case .neutral:     return "Neutral"
-    case .distraction: return "Distracting"
+    case .focus:       return String(localized: "category.focus", defaultValue: "Focus", comment: "Category of an app or site: it helps you focus. Not a verb")
+    case .neutral:     return String(localized: "Neutral", comment: "Category of an app or site")
+    case .distraction: return String(localized: "Distracting", comment: "Category of an app or site")
     }
 }
 
@@ -285,7 +285,7 @@ struct SessionRow: View {
                 } else {
                     Text(summary.label).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 }
-                Text(confirmingDelete ? "Delete this session? Activity stays in reports." : subtitle)
+                Text(confirmingDelete ? String(localized: "Delete this session? Activity stays in reports.") : subtitle)
                     .font(.system(size: 11))
                     .foregroundStyle(confirmingDelete ? Theme.distractionInk : .secondary)
                     .lineLimit(1)
@@ -299,17 +299,17 @@ struct SessionRow: View {
                 Button("Delete", role: .destructive) { onDelete() }
                     .buttonStyle(.plain).font(.system(size: 11, weight: .semibold)).foregroundStyle(.red)
             } else if hovering && !editing {
-                iconButton("pencil", "Rename session") {
+                iconButton("pencil", String(localized: "Rename session")) {
                     draft = summary.label
                     editing = true
                     NSApp.activate(ignoringOtherApps: true)
                     fieldFocused = true
                 }
                 if !summary.isRunning {
-                    iconButton("trash", "Delete session", tint: .red) { confirmingDelete = true }
+                    iconButton("trash", String(localized: "Delete session"), tint: .red) { confirmingDelete = true }
                 }
             } else {
-                Text("\(Int((summary.focusShare * 100).rounded()))%")
+                Text("\(Int((summary.focusShare * 100).rounded()))%", comment: "Percentage")
                     .font(.system(size: 13, weight: .semibold).monospacedDigit())
             }
         }
@@ -323,12 +323,14 @@ struct SessionRow: View {
     private var subtitle: String {
         let start = summary.start.formatted(date: .omitted, time: .shortened)
         if summary.isRunning {
-            if let runningDetail { return "\(start)–now · \(runningDetail)" }
-            let planned = summary.plannedMinutes.map { " of \($0)" } ?? ""
-            return "\(start) – now · \(summary.minutes)\(planned) min"
+            if let runningDetail { return String(localized: "\(start)–now · \(runningDetail)") }
+            if let planned = summary.plannedMinutes {
+                return String(localized: "\(start) – now · \(summary.minutes) of \(planned) min")
+            }
+            return String(localized: "\(start) – now · \(summary.minutes) min")
         }
         let end = (summary.end ?? now).formatted(date: .omitted, time: .shortened)
-        return "\(start)–\(end) · \(summary.minutes) min"
+        return String(localized: "\(start)–\(end) · \(summary.minutes) min")
     }
 
     private func commit() {
@@ -404,7 +406,8 @@ struct DayTimelineView: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel("Day timeline: \(counted(insights.sessions.count, "session")), \(formatDuration(insights.focused)) focused")
+        .accessibilityLabel(String(localized: "Day timeline: \(insights.sessions.count) sessions, \(formatDuration(insights.focused)) focused",
+                                   comment: "Plural on the session count: 1 session / 2 sessions"))
     }
 }
 
@@ -428,7 +431,7 @@ struct AppsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let close {
-                PaneTitle(title: "Apps & sites", close: close) { EmptyView() }
+                PaneTitle(title: String(localized: "Apps & sites"), close: close) { EmptyView() }
             }
 
             HStack(spacing: 7) {
@@ -443,7 +446,7 @@ struct AppsPane: View {
             .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.cardBackground))
 
             HStack(spacing: 6) {
-                filterChip(nil, "All")
+                filterChip(nil, String(localized: "All", comment: "Filter chip: every category"))
                 filterChip(.focus, "\(categoryName(.focus)) \(count(.focus))")
                 filterChip(.neutral, "\(categoryName(.neutral)) \(count(.neutral))")
                 filterChip(.distraction, "\(categoryName(.distraction)) \(count(.distraction))")
@@ -456,7 +459,8 @@ struct AppsPane: View {
                         ForEach(visibleRows) { row in
                             AppRuleRow(
                                 title: row.name,
-                                subtitle: "\(row.isSite ? "Site" : "App") · \(formatDuration(row.seconds)) today",
+                                subtitle: row.isSite ? String(localized: "Site · \(formatDuration(row.seconds)) today")
+                                                     : String(localized: "App · \(formatDuration(row.seconds)) today"),
                                 bundleId: row.isSite ? nil : row.bundleId,
                                 host: row.host,
                                 classification: row.classification,
@@ -470,7 +474,7 @@ struct AppsPane: View {
                         ForEach(visibleRules, id: \.id) { rule in
                             AppRuleRow(
                                 title: rule.pattern,
-                                subtitle: "\(rule.matchKind.label) · your rule",
+                                subtitle: String(localized: "\(rule.matchKind.label) · your rule"),
                                 bundleId: rule.matchKind == .bundleId ? rule.pattern : nil,
                                 host: rule.matchKind == .host ? rule.pattern : nil,
                                 classification: rule.classification,

@@ -94,12 +94,12 @@ struct MonthReviewSheet: View {
             .fixedSize(horizontal: false, vertical: true)
 
         if !review.changes.isEmpty {
-            section("What changed") {
+            section(String(localized: "What changed")) {
                 ForEach(review.changes, id: \.self) { CoachPointRow(point: $0, size: 13) }
             }
         }
 
-        section("Your experiments") { experiments }
+        section(String(localized: "Your experiments")) { experiments }
 
         if isLatest && !review.suggestions.isEmpty {
             section(reviewer.tryHeading) {

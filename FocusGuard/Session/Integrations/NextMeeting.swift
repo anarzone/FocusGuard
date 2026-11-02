@@ -16,7 +16,11 @@ struct NextMeeting: Equatable, Identifiable {
         entries
             .filter { !$0.isAllDay && !$0.isOwn && !$0.isDeclined && !ownIDs.contains($0.id) && $0.start > now }
             .min { $0.start < $1.start }
-            .map { NextMeeting(id: $0.id, title: $0.title.isEmpty ? "A meeting" : $0.title, start: $0.start) }
+            .map {
+                NextMeeting(id: $0.id,
+                            title: $0.title.isEmpty ? String(localized: "A meeting", comment: "Stands in for a calendar event with no title") : $0.title,
+                            start: $0.start)
+            }
     }
 
     func isShown(at now: Date) -> Bool {
@@ -26,13 +30,13 @@ struct NextMeeting: Equatable, Identifiable {
     /// "in 25 min", "in 1 min".
     func countdown(at now: Date) -> String {
         let minutes = max(1, Int((start.timeIntervalSince(now) / 60).rounded(.up)))
-        return "in \(minutes) min"
+        return String(localized: "in \(minutes) min", comment: "Countdown to the next meeting, on its own line")
     }
 
     /// The name as the start button says it: "ends before Standup". A long
     /// title is just "the meeting".
     var shortTitle: String {
-        title.count <= 14 ? title : "the meeting"
+        title.count <= 14 ? title : String(localized: "the meeting", comment: "Stands in for a long title on the start button: Start 25 min · ends before the meeting")
     }
 }
 

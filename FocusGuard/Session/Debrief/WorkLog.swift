@@ -46,7 +46,7 @@ struct WorkLogProject: Identifiable, Equatable {
     let seconds: TimeInterval
 
     var id: String { name ?? "" }
-    var title: String { name ?? "No project" }
+    var title: String { name ?? String(localized: "No project", comment: "Focused time that belongs to no project") }
 }
 
 /// Focused hours per project and day.
@@ -56,7 +56,7 @@ struct Timesheet: Equatable {
         /// Seconds for each of `days`.
         let seconds: [TimeInterval]
         var total: TimeInterval { seconds.reduce(0, +) }
-        var title: String { project ?? "No project" }
+        var title: String { project ?? String(localized: "No project", comment: "Focused time that belongs to no project") }
     }
 
     /// Monday to Friday, plus a weekend day that has time on it, in order,
@@ -76,7 +76,7 @@ struct Timesheet: Equatable {
 
     /// Hours as CSV: a header of dates, a row per project, then the totals.
     /// Dates are written in the calendar's own time zone, the one `days`
-    /// were cut in.
+    /// were cut in. The labels stay in English, as in the other exports.
     func csv(calendar: Calendar = .current) -> String {
         let format = DateFormatter()
         format.calendar = calendar
@@ -86,7 +86,7 @@ struct Timesheet: Equatable {
         func number(_ seconds: TimeInterval) -> String { String(format: "%.2f", seconds / 3600) }
         var lines = [(["Project"] + days.map { format.string(from: $0) } + ["Total"]).map(Self.field).joined(separator: ",")]
         for row in rows {
-            lines.append(([Self.field(row.title)] + row.seconds.map(number) + [number(row.total)]).joined(separator: ","))
+            lines.append(([Self.field(row.project ?? "No project")] + row.seconds.map(number) + [number(row.total)]).joined(separator: ","))
         }
         lines.append((["Total"] + dayTotals.map(number) + [number(total)]).joined(separator: ","))
         return lines.joined(separator: "\n") + "\n"
@@ -108,14 +108,14 @@ struct StandupDraft: Equatable {
 
     var text: String {
         [
-            "Done: " + Self.list(done, empty: "nothing marked done yet"),
-            "Next: " + Self.list(next, empty: "pick up from the work log"),
-            "Blocked: nothing.",
+            done.isEmpty ? String(localized: "Done: nothing marked done yet.") : String(localized: "Done: \(Self.list(done))"),
+            next.isEmpty ? String(localized: "Next: pick up from the work log.") : String(localized: "Next: \(Self.list(next))"),
+            String(localized: "Blocked: nothing."),
         ].joined(separator: "\n")
     }
 
-    private static func list(_ items: [String], empty: String) -> String {
-        let joined = items.isEmpty ? empty : items.joined(separator: "; ")
+    private static func list(_ items: [String]) -> String {
+        let joined = items.joined(separator: "; ")
         return joined.hasSuffix(".") ? joined : joined + "."
     }
 }
@@ -138,25 +138,42 @@ struct WorkLogModel: Equatable {
     /// "11 goals done and 3 partly this week." and "Most of it went to
     /// FocusGuard." `offset` counts weeks back from this one.
     func headline(offset: Int) -> (lead: String, rest: String) {
-        let when = offset == 0 ? "this week" : (offset == 1 ? "last week" : "that week")
         let done = goalsDone, partly = goalsPartly
-        let goals = "\(done) \(done == 1 ? "goal" : "goals")"
         let lead: String
         if done > 0 && partly > 0 {
-            lead = "\(goals) done and \(partly) partly \(when)."
+            switch offset {
+            case 0:  lead = String(localized: "\(done) goals done and \(partly) partly this week.", comment: "Plural on done: 1 goal done and 2 partly")
+            case 1:  lead = String(localized: "\(done) goals done and \(partly) partly last week.", comment: "Plural on done: 1 goal done and 2 partly")
+            default: lead = String(localized: "\(done) goals done and \(partly) partly that week.", comment: "Plural on done: 1 goal done and 2 partly")
+            }
         } else if done > 0 {
-            lead = "\(goals) done \(when)."
+            switch offset {
+            case 0:  lead = String(localized: "\(done) goals done this week.", comment: "Plural on done: 1 goal done")
+            case 1:  lead = String(localized: "\(done) goals done last week.", comment: "Plural on done: 1 goal done")
+            default: lead = String(localized: "\(done) goals done that week.", comment: "Plural on done: 1 goal done")
+            }
         } else if partly > 0 {
-            lead = "\(partly) \(partly == 1 ? "goal" : "goals") partly done \(when)."
+            switch offset {
+            case 0:  lead = String(localized: "\(partly) goals partly done this week.", comment: "Plural on partly: 1 goal partly done")
+            case 1:  lead = String(localized: "\(partly) goals partly done last week.", comment: "Plural on partly: 1 goal partly done")
+            default: lead = String(localized: "\(partly) goals partly done that week.", comment: "Plural on partly: 1 goal partly done")
+            }
         } else if !entries.isEmpty {
-            let count = entries.count
-            lead = "\(count) \(count == 1 ? "session" : "sessions"), \(WindowFormat.hm(focused)) focused \(when)."
+            let count = entries.count, hours = WindowFormat.hm(focused)
+            switch offset {
+            case 0:  lead = String(localized: "\(count) sessions, \(hours) focused this week.", comment: "Plural on count: 1 session, 3h focused")
+            case 1:  lead = String(localized: "\(count) sessions, \(hours) focused last week.", comment: "Plural on count: 1 session, 3h focused")
+            default: lead = String(localized: "\(count) sessions, \(hours) focused that week.", comment: "Plural on count: 1 session, 3h focused")
+            }
         } else {
-            return (offset == 0 ? "No sessions yet this week." : "No sessions \(when).",
-                    offset == 0 ? "Start one, and give it a goal." : "")
+            switch offset {
+            case 0:  return (String(localized: "No sessions yet this week."), String(localized: "Start one, and give it a goal."))
+            case 1:  return (String(localized: "No sessions last week."), "")
+            default: return (String(localized: "No sessions that week."), "")
+            }
         }
-        if let top = topProject { return (lead, "Most of it went to \(top).") }
-        return (lead, entries.contains(where: \.hasGoal) ? "" : "Give the next session a goal to see it here.")
+        if let top = topProject { return (lead, String(localized: "Most of it went to \(top).")) }
+        return (lead, entries.contains(where: \.hasGoal) ? "" : String(localized: "Give the next session a goal to see it here."))
     }
 
     static func empty(_ interval: DateInterval) -> WorkLogModel {
@@ -231,11 +248,11 @@ enum WorkLogBuilder {
             state = .open
         }
         let mostly = facts.apps.first { $0.classification == .focus } ?? facts.apps.first
-        let title = input.goal ?? input.stored?.workedOn.first.map { "\($0.app) · \($0.what)" }
-            ?? mostly.map { "Mostly \($0.name)" } ?? "Nothing tracked"
+        let fallback = mostly.map { String(localized: "Mostly \($0.name)") } ?? String(localized: "Nothing tracked")
+        let title = input.goal ?? input.stored?.workedOn.first.map { "\($0.app) · \($0.what)" } ?? fallback
         let note: String?
         if input.end == nil {
-            note = "Running. Its debrief is written when it ends."
+            note = String(localized: "Running. Its debrief is written when it ends.")
         } else if let stored = input.stored {
             note = stored.evidence ?? (input.goal == nil ? nil : stored.workedOn.first.map { "\($0.app): \($0.what)" })
         } else {
@@ -253,7 +270,8 @@ enum WorkLogBuilder {
     static func appsLine(_ facts: DebriefFacts) -> String {
         var parts = facts.apps.filter { $0.classification != .distraction }.prefix(2).map(\.name)
         if let drift = facts.topDrift, drift.seconds >= 60 {
-            parts.append("\(drift.name) \(Int((drift.seconds / 60).rounded()))m")
+            let minutes = Int((drift.seconds / 60).rounded())
+            parts.append("\(drift.name) " + String(localized: "\(minutes)m", comment: "Compact duration"))
         }
         return parts.joined(separator: " · ")
     }
@@ -297,7 +315,8 @@ enum WorkLogBuilder {
         }
         if done.isEmpty && next.isEmpty {
             let focused = WindowFormat.hm(last.focused)
-            done = ["\(last.entries.count) \(last.entries.count == 1 ? "session" : "sessions"), \(focused) focused"]
+            let count = last.entries.count
+            done = [String(localized: "\(count) sessions, \(focused) focused", comment: "Plural on count: 1 session, 3h focused")]
         }
         return StandupDraft(day: nextWorkingDay(after: last.day, calendar: calendar), done: dedupe(done), next: dedupe(next))
     }

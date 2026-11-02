@@ -43,8 +43,8 @@ struct StartWidgetView: View {
     private func heading(_ s: SurfaceSnapshot) -> String {
         switch s.phase {
         case .ready:             return "FocusGuard"
-        case .focusing, .paused: return s.session?.name ?? "Focusing"
-        case .onBreak:           return "Break"
+        case .focusing, .paused: return s.session?.name ?? String(localized: "Focusing")
+        case .onBreak:           return String(localized: "Break", comment: "Noun: a break between sessions")
         }
     }
 
@@ -72,8 +72,9 @@ struct StartWidgetView: View {
     }
 
     private func caption(_ s: SurfaceSnapshot) -> String {
-        if s.phase == .paused { return "paused" }
-        return s.sessionEndsAt.map { "ends \(SurfaceWords.clock($0))" } ?? "so far"
+        if s.phase == .paused { return String(localized: "paused", comment: "Under the session's clock") }
+        return s.sessionEndsAt.map { String(localized: "ends \(SurfaceWords.clock($0))", comment: "Under the session's clock") }
+            ?? String(localized: "so far", comment: "Under the session's clock")
     }
 
     @ViewBuilder
@@ -81,7 +82,7 @@ struct StartWidgetView: View {
         switch s.phase {
         case .ready:
             Button(intent: WidgetStartIntent(minutes: s.usualMinutes)) {
-                PillLabel(title: "Start \(s.usualMinutes) min", prominent: true, palette: palette)
+                PillLabel(title: String(localized: "Start \(s.usualMinutes) min"), prominent: true, palette: palette)
             }
             .buttonStyle(.plain)
         case .focusing, .paused:

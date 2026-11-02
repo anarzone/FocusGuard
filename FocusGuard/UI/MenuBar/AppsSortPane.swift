@@ -30,7 +30,7 @@ struct MenuAppsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PaneTitle(title: "Apps & sites", close: close) { EmptyView() }
+            PaneTitle(title: String(localized: "Apps & sites"), close: close) { EmptyView() }
 
             if FeatureFlags.smartCategories {
                 modeTabs
@@ -181,7 +181,7 @@ struct MenuAppsPane: View {
         }
         lastSorted = row
         handled += 1
-        lastLine = "\(row.name) → \(categoryName(c)). Press ⌘Z to undo."
+        lastLine = String(localized: "\(row.name) → \(categoryName(c)). Press ⌘Z to undo.")
         reload()
     }
 
@@ -189,7 +189,7 @@ struct MenuAppsPane: View {
         skipped.insert(row.id)
         handled += 1
         lastSorted = nil
-        lastLine = "Skipped \(row.name). It stays neutral for now."
+        lastLine = String(localized: "Skipped \(row.name). It stays neutral for now.")
     }
 
     private func undoLast() {
@@ -197,7 +197,7 @@ struct MenuAppsPane: View {
         appState.clearCategory(for: row)
         lastSorted = nil
         handled = max(0, handled - 1)
-        lastLine = "Put \(row.name) back."
+        lastLine = String(localized: "Put \(row.name) back.", comment: "After undo: the app is back in the queue to sort")
         reload()
     }
 
@@ -237,7 +237,7 @@ struct MenuAppsPane: View {
         guard !text.isEmpty, visibleRows.isEmpty else { return }
         addFailed = !appState.addSiteRule(text, classification: .distraction)
         if !addFailed {
-            lastLine = "\(text) → Distracting."
+            lastLine = String(localized: "\(text) → Distracting.")
             query = ""
             reload()
         }
@@ -291,8 +291,8 @@ struct SortCard: View {
             }
 
             HStack(spacing: 6) {
-                timeTile("In sessions", row.inSession)
-                timeTile("Outside sessions", row.outsideSession)
+                timeTile(String(localized: "In sessions"), row.inSession)
+                timeTile(String(localized: "Outside sessions"), row.outsideSession)
             }
 
             HStack(spacing: 6) {
@@ -301,7 +301,7 @@ struct SortCard: View {
                 sortButton(.distraction, key: "d")
             }
 
-            Text(lastLine ?? "Press F, N or D. Your choice also updates past reports.")
+            Text(lastLine ?? String(localized: "Press F, N or D. Your choice also updates past reports.", comment: "F, N and D are fixed shortcut keys for the three categories"))
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.secondaryText)
                 .frame(maxWidth: .infinity)
@@ -388,12 +388,12 @@ struct SortedCard: View {
                 .accessibilityHidden(true)
             Text(nothingYet ? "Nothing used yet today" : "All sorted for today")
                 .font(.system(size: 14, weight: .semibold))
-            Text(line ?? (nothingYet ? "Apps and sites show up here as you use them." : "Past reports use your choices too."))
+            Text(line ?? (nothingYet ? String(localized: "Apps and sites show up here as you use them.") : String(localized: "Past reports use your choices too.")))
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.secondaryText)
                 .multilineTextAlignment(.center)
             if canStartOver {
-                PillButton(title: "Start over", action: onStartOver)
+                PillButton(title: String(localized: "Start over"), action: onStartOver)
                     .padding(.top, 4)
             }
         }
@@ -413,7 +413,7 @@ struct UsedTodayList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            paneHeading("Used today", note: "in sessions · outside")
+            paneHeading(String(localized: "Used today"), note: String(localized: "in sessions · outside", comment: "Beside Used today: what the two times on each row are"))
             if rows.isEmpty {
                 Text(query.isEmpty ? "Nothing tracked yet today." : "No matches. Press Return to add “\(query)” as distracting.")
                     .font(.system(size: 12))
@@ -463,8 +463,8 @@ struct MenuSmartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !entitlements.isUnlocked(.smartCategories) {
-                LockedProRow(feature: .smartCategories, title: "Smart categories",
-                             detail: "New apps and sites sorted on this Mac from how you use them, each with a reason. You can undo any of it.",
+                LockedProRow(feature: .smartCategories, title: String(localized: "Smart categories"),
+                             detail: String(localized: "New apps and sites sorted on this Mac from how you use them, each with a reason. You can undo any of it."),
                              systemImage: "sparkles", onTrialStarted: { smart.turnOn() }, onUpgrade: openUpgrade)
             } else if !smart.isModelAvailable {
                 SmartUnavailableCard(availability: smart.availability, sortByHand: sortByHand)
@@ -486,13 +486,13 @@ struct MenuSmartView: View {
                         }
                         if !smart.needsYou.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
-                                paneHeading("Needs you", note: "not sure enough to change")
+                                paneHeading(String(localized: "Needs you"), note: String(localized: "not sure enough to change", comment: "Beside Needs you: smart categories weren't sure enough to change these"))
                                 ForEach(smart.needsYou) { record in guessCard(record) }
                             }
                         }
                         if !smart.sortedForYou.isEmpty {
                             VStack(alignment: .leading, spacing: 2) {
-                                paneHeading("Sorted for you")
+                                paneHeading(String(localized: "Sorted for you"))
                                 ForEach(smart.sortedForYou.prefix(12)) { record in sortedRow(record) }
                             }
                         }
@@ -571,14 +571,14 @@ struct MenuSmartView: View {
                 .foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 6) {
-                Button("Make it \(categoryName(record.suggested))") { accept(record, as: record.suggested) }
+                Button(Self.makeItTitle(record.suggested)) { accept(record, as: record.suggested) }
                     .buttonStyle(.capsule(.secondary, height: 24))
                 Menu {
                     ForEach([Classification.focus, .neutral, .distraction].filter { $0 != record.suggested }, id: \.self) { c in
                         Button(categoryName(c)) { accept(record, as: c) }
                     }
                 } label: {
-                    Text("Other…").font(.system(size: 12))
+                    Text("Other…", comment: "Menu: pick a different category for this app or site").font(.system(size: 12))
                 }
                 .menuStyle(.button)
                 .buttonStyle(.textLink)
@@ -606,7 +606,7 @@ struct MenuSmartView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 CategoryChip(classification: record.suggested)
                 Button("Undo") {
-                    refused = smart.undo(record) ? nil : "Strict keeps \(record.name) blocked until the session ends."
+                    refused = smart.undo(record) ? nil : String(localized: "Strict keeps \(record.name) blocked until the session ends.")
                     changed()
                 }
                 .buttonStyle(.textLink)
@@ -665,7 +665,7 @@ struct MenuSmartView: View {
                         ProBadge()
                     }
                     Text(smart.isModelAvailable
-                         ? "Talks and tutorials count as focus, the rest as distracting."
+                         ? String(localized: "Talks and tutorials count as focus, the rest as distracting.")
                          : OnDeviceAI.unavailableNote)
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)
@@ -681,14 +681,14 @@ struct MenuSmartView: View {
             }
             .paneCard()
         } else {
-            LockedProRow(feature: .youtubePerVideo, title: "YouTube video by video",
-                         detail: "Each video judged by its title on this Mac: talks and tutorials count as focus, the rest as distracting.",
+            LockedProRow(feature: .youtubePerVideo, title: String(localized: "YouTube video by video"),
+                         detail: String(localized: "Each video judged by its title on this Mac: talks and tutorials count as focus, the rest as distracting."),
                          systemImage: "play.rectangle", onTrialStarted: { smart.setPerVideo(true) }, onUpgrade: openUpgrade)
         }
     }
 
     private func accept(_ record: SmartRecord, as c: Classification) {
-        refused = smart.accept(record, as: c) ? nil : "Strict keeps \(record.name) blocked until the session ends."
+        refused = smart.accept(record, as: c) ? nil : String(localized: "Strict keeps \(record.name) blocked until the session ends.")
         changed()
     }
 
@@ -696,6 +696,16 @@ struct MenuSmartView: View {
         (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: .settings)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NotificationCenter.default.post(name: .presentWindowSheet, object: WindowSheet.upgrade(.smartCategories))
+        }
+    }
+
+    /// "Make it Focus": one whole phrase per category, since languages word
+    /// and inflect each one differently.
+    static func makeItTitle(_ c: Classification) -> String {
+        switch c {
+        case .focus:       return String(localized: "Make it Focus", comment: "Button: accept this category for an app or site")
+        case .neutral:     return String(localized: "Make it Neutral", comment: "Button: accept this category for an app or site")
+        case .distraction: return String(localized: "Make it Distracting", comment: "Button: accept this category for an app or site")
         }
     }
 }
@@ -729,10 +739,10 @@ extension OnDeviceAI.Availability {
     /// Why smart categories can't sort, and what to do meanwhile.
     var sortingNote: String {
         switch self {
-        case .available:   return "New apps and sites get sorted on this Mac."
-        case .turnedOff:   return "Turn on Apple Intelligence in System Settings and new apps get sorted here. Until then, sort them by hand."
-        case .notReady:    return "Apple Intelligence is still getting ready on this Mac. Until then, sort them by hand."
-        case .unsupported: return "Smart categories run on this Mac with Apple Intelligence, on macOS 26. Until then, sort them by hand."
+        case .available:   return String(localized: "New apps and sites get sorted on this Mac.")
+        case .turnedOff:   return String(localized: "Turn on Apple Intelligence in System Settings and new apps get sorted here. Until then, sort them by hand.")
+        case .notReady:    return String(localized: "Apple Intelligence is still getting ready on this Mac. Until then, sort them by hand.")
+        case .unsupported: return String(localized: "Smart categories run on this Mac with Apple Intelligence, on macOS 26. Until then, sort them by hand.")
         }
     }
 }
@@ -747,7 +757,8 @@ struct SmartHint: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Theme.focus)
                 .accessibilityHidden(true)
-            (Text("Looks like \(categoryName(record.suggested).lowercased()). ").fontWeight(.semibold)
+            (verdict.fontWeight(.semibold)
+             + Text(verbatim: " ")
              + Text(record.reason))
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.primaryText)
@@ -758,6 +769,16 @@ struct SmartHint: View {
         .padding(.vertical, 7)
         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.focusTint.opacity(0.6)))
         .accessibilityElement(children: .combine)
+    }
+
+    /// One whole phrase per category, since German keeps the noun's capital
+    /// and other languages inflect the word.
+    private var verdict: Text {
+        switch record.suggested {
+        case .focus:       return Text("Looks like focus.")
+        case .neutral:     return Text("Looks like neutral.")
+        case .distraction: return Text("Looks like distracting.")
+        }
     }
 }
 

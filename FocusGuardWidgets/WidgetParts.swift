@@ -190,7 +190,8 @@ struct WeekBars: View {
             let value = week.focused.indices.contains(day) ? week.focused[day] : 0
             return "\(name) \(SurfaceWords.duration(value))"
         }
-        return "Focus per day this week, against a \(SurfaceWords.duration(goal)) goal: " + days.joined(separator: ", ")
+        return String(localized: "Focus per day this week, against a \(SurfaceWords.duration(goal)) goal: \(days.joined(separator: ", "))",
+                      comment: "VoiceOver. The end is a list of weekdays with their focused time")
     }
 }
 

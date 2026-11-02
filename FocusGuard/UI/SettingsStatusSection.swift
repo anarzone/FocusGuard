@@ -22,7 +22,7 @@ struct SettingsStatusSection: View {
 
     var body: some View {
         if sync.isAvailable {
-            SettingsSection(title: "Status in Slack and Discord", trailing: { ProBadge() }) {
+            SettingsSection(title: String(localized: "Status in Slack and Discord"), trailing: { ProBadge() }) {
                 if sync.slack.isConfigured { slackRows }
                 if sync.slack.isConfigured && sync.discord.isConfigured { SettingsDivider() }
                 if sync.discord.isConfigured { discordRow }
@@ -42,7 +42,7 @@ struct SettingsStatusSection: View {
         if slack.isConnected && unlocked && slackOn && !slack.isWaiting {
             SettingsDivider()
             HStack(spacing: 8) {
-                Text("Shows").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                Text("Shows", comment: "Before a preview of your Slack status: Shows Focusing until 19:32").font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                 Text(showsText)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.primaryText)
@@ -64,16 +64,15 @@ struct SettingsStatusSection: View {
     }
 
     private var slackDetail: String {
-        let line = "Status and paused notifications while you focus"
         if !unlocked && entitlements.canStartTrial {
-            return "\(line). Connecting starts your \(Plan.trialDays)-day Pro trial"
+            return String(localized: "Status and paused notifications while you focus. Connecting starts your \(Plan.trialDays)-day Pro trial")
         }
-        if !unlocked { return "\(line). Part of Pro" }
-        if slack.isWaiting { return "Finish in your browser, then come back here" }
+        if !unlocked { return String(localized: "Status and paused notifications while you focus. Part of Pro") }
+        if slack.isWaiting { return String(localized: "Finish in your browser, then come back here") }
         switch slack.problem {
-        case .connectFailed: return "Slack didn't connect. Try again"
-        case .signedOut:     return "Slack signed FocusGuard out. Connect again"
-        case nil:            return line
+        case .connectFailed: return String(localized: "Slack didn't connect. Try again")
+        case .signedOut:     return String(localized: "Slack signed FocusGuard out. Connect again")
+        case nil:            return String(localized: "Status and paused notifications while you focus")
         }
     }
 
@@ -102,7 +101,7 @@ struct SettingsStatusSection: View {
     /// The status as it would read now, or what else Slack does.
     private var showsText: String {
         if setStatus { return StatusText.render(statusText, end: sync.previewEnd()) }
-        return snooze ? "Notifications paused" : "Nothing"
+        return snooze ? String(localized: "Notifications paused") : String(localized: "Nothing", comment: "Slack shows nothing during a session")
     }
 
     // MARK: - Discord
@@ -122,10 +121,11 @@ struct SettingsStatusSection: View {
     }
 
     private var discordDetail: String {
-        let line = "Shows “Focusing” under your name while it's open"
-        if !unlocked && entitlements.canStartTrial { return "\(line). Turning it on starts your \(Plan.trialDays)-day Pro trial" }
-        if !unlocked { return "\(line). Part of Pro" }
-        return line
+        if !unlocked && entitlements.canStartTrial {
+            return String(localized: "Shows “Focusing” under your name while it's open. Turning it on starts your \(Plan.trialDays)-day Pro trial")
+        }
+        if !unlocked { return String(localized: "Shows “Focusing” under your name while it's open. Part of Pro") }
+        return String(localized: "Shows “Focusing” under your name while it's open")
     }
 
     private func setDiscord(_ on: Bool) {
@@ -236,7 +236,7 @@ struct SlackStatusSheet: View {
 
     private var choices: some View {
         VStack(spacing: 0) {
-            SettingsToggle(title: "Set my status", detail: "With the time the session ends", isOn: $setStatus)
+            SettingsToggle(title: String(localized: "Set my status"), detail: String(localized: "With the time the session ends"), isOn: $setStatus)
             if setStatus {
                 HStack(spacing: 12) {
                     Text("Status").font(.system(size: 12)).foregroundStyle(Theme.secondaryText).frame(width: 64, alignment: .leading)
@@ -255,14 +255,14 @@ struct SlackStatusSheet: View {
                 .padding(.bottom, 10)
             }
             SettingsDivider()
-            SettingsToggle(title: "Pause my notifications", detail: "Slack's Do Not Disturb, until the session ends",
+            SettingsToggle(title: String(localized: "Pause my notifications"), detail: String(localized: "Slack's Do Not Disturb, until the session ends"),
                            isOn: $snooze)
         }
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.inset))
     }
 
     private var preview: some View {
-        let name = NSFullUserName().isEmpty ? "You" : NSFullUserName()
+        let name = NSFullUserName().isEmpty ? String(localized: "You", comment: "Stands in for your name in the Slack preview") : NSFullUserName()
         return VStack(alignment: .leading, spacing: 6) {
             Text("What teammates see")
                 .font(.system(size: 11, weight: .semibold))

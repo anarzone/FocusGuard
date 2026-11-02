@@ -97,6 +97,9 @@ extension BreakdownSnapshot {
 /// seconds while a pane is open.
 /// Plain reads of a context, so `StatsStore` can run them off the main thread.
 enum MenuInsightsBuilder {
+    /// How much of the week's drift one app or site took, for the takeaway.
+    private enum DriftPortion { case nearlyAll, most, half, third }
+
     static func today(context: ModelContext, now: Date = .now, calendar: Calendar = .current) -> TodayInsights {
         day(now, context: context, now: now, calendar: calendar)
     }
@@ -188,22 +191,23 @@ enum MenuInsightsBuilder {
         if drift >= 10 * 60 {
             let share = between.distraction / drift
             if share >= 0.6 {
-                return "Most of today's drift came between sessions: \(formatDuration(between.distraction)) of \(formatDuration(drift))."
+                return String(localized: "Most of today's drift came between sessions: \(formatDuration(between.distraction)) of \(formatDuration(drift)).")
             }
             if share <= 0.4 {
-                return "Most of today's drift came in sessions: \(formatDuration(inSessions.distraction)) of \(formatDuration(drift))."
+                return String(localized: "Most of today's drift came in sessions: \(formatDuration(inSessions.distraction)) of \(formatDuration(drift)).")
             }
         }
         let rated: (BreakdownSnapshot) -> Bool = { $0.focus + $0.distraction >= 10 * 60 }
         if rated(inSessions), rated(between), inSessions.focusRate - between.focusRate >= 0.15 {
-            return "Sessions help: a \(FocusRate.percent(focused: inSessions.focus, drifted: inSessions.distraction))% "
-                + "focus rate in them, \(FocusRate.percent(focused: between.focus, drifted: between.distraction))% between."
+            let inside = FocusRate.percent(focused: inSessions.focus, drifted: inSessions.distraction)
+            let outside = FocusRate.percent(focused: between.focus, drifted: between.distraction)
+            return String(localized: "Sessions help: a \(inside)% focus rate in them, \(outside)% between.")
         }
         if goalProgress >= 1 {
-            return "Goal met: \(formatDuration(focused)) focused today."
+            return String(localized: "Goal met: \(formatDuration(focused)) focused today.")
         }
         if focused >= 60 {
-            return "\(formatDuration(focused)) focused so far, \(Int((goalProgress * 100).rounded()))% of your goal."
+            return String(localized: "\(formatDuration(focused)) focused so far, \(Int((goalProgress * 100).rounded()))% of your goal.")
         }
         return nil
     }
@@ -264,29 +268,39 @@ enum MenuInsightsBuilder {
                              calendar: Calendar = .current) -> String? {
         var parts: [String] = []
         if let bestDay {
-            parts.append("\(bestDay.formatted(.dateTime.weekday(.wide))) was your best day.")
+            parts.append(String(localized: "\(bestDay.formatted(.dateTime.weekday(.wide))) was your best day."))
         }
         let drift = driftByHour.reduce(0, +)
         guard drift >= 10 * 60 else { return parts.isEmpty ? nil : parts.joined(separator: " ") }
 
         let lateHour = [17, 15, 12].first { hour in driftByHour[hour...].reduce(0, +) / drift >= 0.6 }
         let share = topDistraction.map { $0.seconds / drift } ?? 0
-        let portion: String? = switch share {
-        case 0.9...:      "nearly all"
-        case 0.6..<0.9:   "most"
-        case 0.45..<0.6:  "half"
-        case 0.3..<0.45:  "a third"
+        let portion: DriftPortion? = switch share {
+        case 0.9...:      .nearlyAll
+        case 0.6..<0.9:   .most
+        case 0.45..<0.6:  .half
+        case 0.3..<0.45:  .third
         default:          nil
         }
         let at = lateHour.flatMap { calendar.date(bySettingHour: $0, minute: 0, second: 0, of: .now) }
             .map { $0.formatted(date: .omitted, time: .shortened) }
         switch (at, portion, topDistraction?.name) {
         case let (at?, portion?, name?):
-            parts.append("Most drift lands after \(at), and \(name) is \(portion) of it.")
+            switch portion {
+            case .nearlyAll: parts.append(String(localized: "Most drift lands after \(at), and \(name) is nearly all of it."))
+            case .most:      parts.append(String(localized: "Most drift lands after \(at), and \(name) is most of it."))
+            case .half:      parts.append(String(localized: "Most drift lands after \(at), and \(name) is half of it."))
+            case .third:     parts.append(String(localized: "Most drift lands after \(at), and \(name) is a third of it."))
+            }
         case let (at?, _, _):
-            parts.append("Most drift lands after \(at).")
+            parts.append(String(localized: "Most drift lands after \(at)."))
         case let (nil, portion?, name?):
-            parts.append("\(name) is \(portion) of your drift.")
+            switch portion {
+            case .nearlyAll: parts.append(String(localized: "\(name) is nearly all of your drift."))
+            case .most:      parts.append(String(localized: "\(name) is most of your drift."))
+            case .half:      parts.append(String(localized: "\(name) is half of your drift."))
+            case .third:     parts.append(String(localized: "\(name) is a third of your drift."))
+            }
         default:
             break
         }

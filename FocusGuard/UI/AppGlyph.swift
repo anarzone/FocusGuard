@@ -136,11 +136,11 @@ struct AppGlyph: View {
                 .font(.system(size: size * 0.5, weight: .semibold))
                 .foregroundStyle(.white)
         case .slack:
-            Text("#")
+            Text(verbatim: "#")
                 .font(.system(size: size * 0.55, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
         case .twitter:
-            Text("𝕏")
+            Text(verbatim: "𝕏")
                 .font(.system(size: size * 0.55, weight: .bold))
                 .foregroundStyle(.white)
         case .youtube:
@@ -152,7 +152,7 @@ struct AppGlyph: View {
                 .font(.system(size: size * 0.5, weight: .bold))
                 .foregroundStyle(.white)
         case .notion:
-            Text("N")
+            Text(verbatim: "N")
                 .font(.system(size: size * 0.55, weight: .heavy, design: .rounded))
                 .foregroundStyle(.black)
         case .github:
@@ -173,11 +173,11 @@ struct AppGlyph: View {
                 .font(.system(size: size * 0.5, weight: .bold))
                 .foregroundStyle(.white)
         case .terminal:
-            Text(">_")
+            Text(verbatim: ">_")
                 .font(.system(size: size * 0.4, weight: .heavy, design: .monospaced))
                 .foregroundStyle(.green)
         case .phpstorm:
-            Text("PS")
+            Text(verbatim: "PS")
                 .font(.system(size: size * 0.4, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
         case .figma:

@@ -71,7 +71,7 @@ struct StarterPackSheet: View {
     // MARK: - Row
 
     private func row(_ item: StarterShortcut) -> some View {
-        let isInstalled = installed.contains(item.shortcutName)
+        let isInstalled = item.isInstalled(in: installed)
         return HStack(alignment: .top, spacing: 12) {
             roleBadge(item.role)
             VStack(alignment: .leading, spacing: 4) {
@@ -106,7 +106,9 @@ struct StarterPackSheet: View {
     }
 
     private func roleBadge(_ role: StarterShortcut.Role) -> some View {
-        let label = role == .start ? "START" : "END"
+        let label = role == .start
+            ? String(localized: "START", comment: "Badge: this shortcut runs when a focus session starts")
+            : String(localized: "END", comment: "Badge: this shortcut runs when a focus session ends")
         let color: Color = role == .start ? Theme.focus : Color.secondary
         return Text(label)
             .font(.system(size: 9, weight: .heavy))

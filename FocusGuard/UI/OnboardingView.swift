@@ -103,34 +103,34 @@ enum BlockingLevel: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pauseTab: return "Pause the tab"
-        case .browser:  return "Block in the browser"
-        case .wholeMac: return "Block on the whole Mac"
+        case .pauseTab: return String(localized: "Pause the tab")
+        case .browser:  return String(localized: "Block in the browser")
+        case .wholeMac: return String(localized: "Block on the whole Mac")
         }
     }
 
     var detail: String {
         switch self {
-        case .pauseTab: return "The tab switches to a calm page while you're blocked."
-        case .browser:  return "Pages never load. Parts of sites too, like youtube.com/shorts."
-        case .wholeMac: return "Every browser and app. Whole sites only."
+        case .pauseTab: return String(localized: "The tab switches to a calm page while you're blocked.")
+        case .browser:  return String(localized: "Pages never load. Parts of sites too, like youtube.com/shorts.")
+        case .wholeMac: return String(localized: "Every browser and app. Whole sites only.")
         }
     }
 
     /// The setup step's preview: what drifting to x.com looks like.
     var previewTitle: String {
         switch self {
-        case .pauseTab: return "x.com is paused while you focus"
-        case .browser:  return "x.com won't load"
-        case .wholeMac: return "x.com is blocked on this Mac"
+        case .pauseTab: return String(localized: "x.com is paused while you focus")
+        case .browser:  return String(localized: "x.com won't load")
+        case .wholeMac: return String(localized: "x.com is blocked on this Mac")
         }
     }
 
     var previewDetail: String {
         switch self {
-        case .pauseTab: return "The tab switches to a calm FocusGuard page."
-        case .browser:  return "The browser extension stops it before it opens."
-        case .wholeMac: return "In every browser and app, until the session ends."
+        case .pauseTab: return String(localized: "The tab switches to a calm FocusGuard page.")
+        case .browser:  return String(localized: "The browser extension stops it before it opens.")
+        case .wholeMac: return String(localized: "In every browser and app, until the session ends.")
         }
     }
 

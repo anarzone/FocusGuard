@@ -48,9 +48,9 @@ struct TodayWidgetView: View {
 
     private func title(_ s: SurfaceSnapshot) -> String {
         switch s.phase {
-        case .ready:              return "Today"
-        case .focusing, .paused:  return s.session?.name ?? "Focusing"
-        case .onBreak:            return "Break"
+        case .ready:              return String(localized: "Today")
+        case .focusing, .paused:  return s.session?.name ?? String(localized: "Focusing")
+        case .onBreak:            return String(localized: "Break", comment: "Noun: a break between sessions")
         }
     }
 
@@ -76,7 +76,8 @@ struct TodayWidgetView: View {
                 VStack(spacing: 0) {
                     SessionClock(snapshot: s, date: entry.date)
                         .font(.system(size: size > 100 ? 22 : 17, weight: .semibold))
-                    Text(s.phase == .paused ? "paused" : (s.session?.plannedSeconds == nil ? "so far" : "left"))
+                    Text(s.phase == .paused ? "paused" : (s.session?.plannedSeconds == nil ? "so far" : "left"),
+                         comment: "Under the session's clock. Left: the time remaining")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
@@ -96,20 +97,20 @@ struct TodayWidgetView: View {
             }
             .frame(width: size, height: size)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(s.onBreak.map { "On a break, back at \(SurfaceWords.clock($0.endsAt))" } ?? "On a break")
+            .accessibilityLabel(s.onBreak.map { String(localized: "On a break, back at \(SurfaceWords.clock($0.endsAt))") } ?? String(localized: "On a break"))
         }
     }
 
     private func sessionLabel(_ s: SurfaceSnapshot) -> String {
-        guard let session = s.session else { return "Focusing" }
+        guard let session = s.session else { return String(localized: "Focusing") }
         var parts = [session.name]
-        if s.phase == .paused { parts.append("paused") }
+        if s.phase == .paused { parts.append(String(localized: "paused", comment: "Under the session's clock")) }
         if let left = s.timeLeft(at: entry.date) {
-            parts.append("\(SurfaceWords.minutesLeft(left)) left")
+            parts.append(String(localized: "\(SurfaceWords.minutesLeft(left)) left", comment: "Time left in a session, as in 18 min left"))
         } else {
-            parts.append("\(Int(s.running(at: entry.date) / 60)) min so far")
+            parts.append(String(localized: "\(Int(s.running(at: entry.date) / 60)) min so far"))
         }
-        parts.append("focused \(Int(session.focused / 60)) min, drifted \(Int(session.drifted / 60)) min")
+        parts.append(String(localized: "focused \(Int(session.focused / 60)) min, drifted \(Int(session.drifted / 60)) min"))
         return parts.joined(separator: ", ")
     }
 
@@ -148,13 +149,13 @@ struct TodayWidgetView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Today").font(.system(size: 11)).foregroundStyle(.secondary)
                 Text("\(FocusRate.percent(focused: s.today.focused, drifted: s.today.drifted))% focus rate").font(.system(size: 14, weight: .semibold))
-                Text(s.today.sessions == 1 ? "1 session" : "\(s.today.sessions) sessions")
+                Text("\(s.today.sessions) sessions", comment: "Plural on sessions: 1 session / 2 sessions")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
         HStack(spacing: 6) {
             Button(intent: WidgetStartIntent(minutes: s.usualMinutes)) {
-                PillLabel(title: "Start \(s.usualMinutes) min", prominent: true, palette: palette, height: 32)
+                PillLabel(title: String(localized: "Start \(s.usualMinutes) min"), prominent: true, palette: palette, height: 32)
             }
             .buttonStyle(.plain)
             let other = s.usualMinutes == 25 ? 50 : 25
@@ -178,8 +179,8 @@ struct TodayWidgetView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
             }
             VStack(alignment: .leading, spacing: 4) {
-                LegendRow(color: palette.focus, text: "Focused \(Int(session.focused / 60)) min")
-                LegendRow(color: palette.drift, text: "Drifted \(Int(session.drifted / 60)) min")
+                LegendRow(color: palette.focus, text: String(localized: "Focused \(Int(session.focused / 60)) min"))
+                LegendRow(color: palette.drift, text: String(localized: "Drifted \(Int(session.drifted / 60)) min"))
             }
             SessionButtons(paused: s.phase == .paused, palette: palette)
         }
@@ -189,7 +190,7 @@ struct TodayWidgetView: View {
     private func breakDetails(_ s: SurfaceSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("Break").font(.system(size: 14, weight: .semibold))
-            Text(s.lastSession.map { "After \($0.name)" } ?? "Time to stretch").font(.system(size: 12))
+            Text(s.lastSession.map { String(localized: "After \($0.name)", comment: "On a break: the session it follows") } ?? String(localized: "Time to stretch")).font(.system(size: 12))
                 .foregroundStyle(.secondary).lineLimit(1)
         }
         BreakButtons(canEnd: s.onBreak?.canEndEarly ?? true, palette: palette)
@@ -209,7 +210,7 @@ struct TodayWidgetView: View {
                 HStack(spacing: 16) {
                     ZStack {
                         ProgressRing(progress: s.today.goalProgress, palette: palette, lineWidth: 9)
-                        Text("\(Int((s.today.goalProgress * 100).rounded()))%").font(.system(size: 15, weight: .semibold)).monospacedDigit()
+                        Text("\(Int((s.today.goalProgress * 100).rounded()))%", comment: "Percentage").font(.system(size: 15, weight: .semibold)).monospacedDigit()
                     }
                     .frame(width: 92, height: 92)
                     .accessibilityHidden(true)
@@ -239,7 +240,7 @@ struct TodayWidgetView: View {
             }
             if s.phase == .ready {
                 Button(intent: WidgetStartIntent(minutes: s.usualMinutes)) {
-                    PillLabel(title: "Start \(s.usualMinutes) minutes of focus", prominent: true, palette: palette, height: 34)
+                    PillLabel(title: String(localized: "Start \(s.usualMinutes) minutes of focus"), prominent: true, palette: palette, height: 34)
                 }
                 .buttonStyle(.plain)
             }
@@ -250,10 +251,13 @@ struct TodayWidgetView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(SurfaceWords.duration(s.today.focused)).font(.system(size: 24, weight: .semibold)).monospacedDigit()
-                Text("of \(SurfaceWords.duration(s.today.goalSeconds))\(s.phase == .ready ? "" : " goal")")
+                Text(s.phase == .ready
+                     ? "of \(SurfaceWords.duration(s.today.goalSeconds))"
+                     : "of \(SurfaceWords.duration(s.today.goalSeconds)) goal")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            Text("\(FocusRate.percent(focused: s.today.focused, drifted: s.today.drifted))% focus rate · \(s.today.sessions == 1 ? "1 session" : "\(s.today.sessions) sessions")")
+            Text("\(FocusRate.percent(focused: s.today.focused, drifted: s.today.drifted))% focus rate · \(s.today.sessions) sessions",
+                 comment: "Plural on sessions: 1 session / 2 sessions")
                 .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
         }
     }
@@ -261,14 +265,17 @@ struct TodayWidgetView: View {
     private func largeStatus(_ s: SurfaceSnapshot) -> String {
         switch s.phase {
         case .ready:
-            return s.today.streak >= 2 ? "\(s.today.streak)-day streak" : ""
+            return s.today.streak >= 2 ? String(localized: "\(s.today.streak)-day streak") : ""
         case .focusing, .paused:
-            let name = s.session?.name ?? "Focusing"
-            if s.phase == .paused { return "\(name) · paused" }
-            if let left = s.timeLeft(at: entry.date) { return "\(name) · \(SurfaceWords.minutesLeft(left)) left" }
+            let name = s.session?.name ?? String(localized: "Focusing")
+            if s.phase == .paused { return String(localized: "\(name) · paused", comment: "A session's name and its state") }
+            if let left = s.timeLeft(at: entry.date) {
+                return String(localized: "\(name) · \(SurfaceWords.minutesLeft(left)) left", comment: "A session's name and the time left, as in 18 min left")
+            }
             return name
         case .onBreak:
-            return s.onBreak.map { "Break · back at \(SurfaceWords.clock($0.endsAt))" } ?? "Break"
+            return s.onBreak.map { String(localized: "Break · back at \(SurfaceWords.clock($0.endsAt))") }
+                ?? String(localized: "Break", comment: "Noun: a break between sessions")
         }
     }
 }
@@ -322,7 +329,7 @@ struct BreakClock: View {
             if let end = snapshot.onBreak?.endsAt, end > date {
                 Text(timerInterval: date...end, countsDown: true)
             } else {
-                Text("0:00")
+                Text(verbatim: "0:00")
             }
         }
         .monospacedDigit()
@@ -349,11 +356,12 @@ struct SessionButtons: View {
     var body: some View {
         HStack(spacing: 6) {
             Button(intent: WidgetPauseIntent()) {
-                PillLabel(title: paused ? "Resume" : "Pause", prominent: false, palette: palette)
+                PillLabel(title: paused ? String(localized: "Resume", comment: "Verb, button on a widget") : String(localized: "Pause", comment: "Verb, button on a widget"),
+                          prominent: false, palette: palette)
             }
             .buttonStyle(.plain)
             Button(intent: WidgetEndIntent()) {
-                PillLabel(title: "End", prominent: false, palette: palette)
+                PillLabel(title: String(localized: "End", comment: "Verb, button on a widget: ends the session or break"), prominent: false, palette: palette)
             }
             .buttonStyle(.plain)
         }
@@ -367,12 +375,12 @@ struct BreakButtons: View {
     var body: some View {
         HStack(spacing: 6) {
             Button(intent: WidgetExtendBreakIntent()) {
-                PillLabel(title: "+5 min", prominent: false, palette: palette)
+                PillLabel(title: String(localized: "+5 min", comment: "Button that adds five minutes to the break"), prominent: false, palette: palette)
             }
             .buttonStyle(.plain)
             if canEnd {
                 Button(intent: WidgetEndBreakIntent()) {
-                    PillLabel(title: "End", prominent: false, palette: palette)
+                    PillLabel(title: String(localized: "End", comment: "Verb, button on a widget: ends the session or break"), prominent: false, palette: palette)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("End break")

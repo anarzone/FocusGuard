@@ -32,16 +32,16 @@ struct SettingsSessionsPane: View {
             defaultsSection
         } right: {
             driftSection
-            SettingsSection("Breaks") {
-                SettingsToggle(title: "Strict breaks", detail: "No ending a break early", isOn: $breakStrictMode)
+            SettingsSection(String(localized: "Breaks", comment: "Rest breaks between sessions")) {
+                SettingsToggle(title: String(localized: "Strict breaks"), detail: String(localized: "No ending a break early"), isOn: $breakStrictMode)
             }
-            SettingsSection("Starting and calls") {
-                SettingsToggle(title: "Offer a session when you're already focused",
-                               detail: "After 5 focused minutes outside a session. It counts from when you began",
+            SettingsSection(String(localized: "Starting and calls")) {
+                SettingsToggle(title: String(localized: "Offer a session when you're already focused"),
+                               detail: String(localized: "After 5 focused minutes outside a session. It counts from when you began"),
                                isOn: $autoStartOffer)
                 SettingsDivider()
-                SettingsToggle(title: "Calls never count as drift",
-                               detail: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls",
+                SettingsToggle(title: String(localized: "Calls never count as drift"),
+                               detail: String(localized: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls"),
                                isOn: $meetingAwareness)
             }
         }
@@ -54,9 +54,9 @@ struct SettingsSessionsPane: View {
     // MARK: - Names
 
     private var namesSection: some View {
-        SettingsSection("Names") {
-            SettingsToggle(title: "Name sessions automatically",
-                           detail: "From how the focus went and how long it ran",
+        SettingsSection(String(localized: "Names", comment: "Settings section: how sessions are named")) {
+            SettingsToggle(title: String(localized: "Name sessions automatically"),
+                           detail: String(localized: "From how the focus went and how long it ran"),
                            isOn: Binding(get: { namesOn }, set: { on in
                                namesOn = on
                                if on { defaultLabel = "" }
@@ -65,7 +65,7 @@ struct SettingsSessionsPane: View {
             if namesOn {
                 VStack(alignment: .leading, spacing: 10) {
                     FlowChips(items: [SessionNamer.Pattern.lockedIn, .steady, .slowStart, .comeback, .fading, .bumpy, .wandering]
-                        .map(\.rawValue))
+                        .map(\.title))
                     Text("Sprint, under 20 min · Run, under 45 · Deep Dive, up to 90 · Marathon")
                         .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                     Text("So a 50-minute session that drifted early and finished strong is a Comeback Deep Dive. While it runs it's Morning, Afternoon, Evening or Late-night focus. Rename any session from Today.")
@@ -75,7 +75,7 @@ struct SettingsSessionsPane: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             } else {
-                SettingsRow(title: "Name every session", detail: "Used for every session instead") {
+                SettingsRow(title: String(localized: "Name every session"), detail: String(localized: "Used for every session instead")) {
                     TextField("Deep work", text: $defaultLabel)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 180)
@@ -92,8 +92,8 @@ struct SettingsSessionsPane: View {
     }
 
     private var defaultsSection: some View {
-        SettingsSection("Defaults") {
-            SettingsRow(title: "Usual length") {
+        SettingsSection(String(localized: "Defaults")) {
+            SettingsRow(title: String(localized: "Usual length")) {
                 Picker("Usual length", selection: $defaultMinutes) {
                     ForEach([25, 45, 50, 60, 90, 120], id: \.self) { Text("\($0) minutes").tag($0) }
                 }
@@ -102,7 +102,7 @@ struct SettingsSessionsPane: View {
                 .fixedSize()
             }
             SettingsDivider()
-            SettingsRow(title: "Daily focus goal") {
+            SettingsRow(title: String(localized: "Daily focus goal")) {
                 HStack(spacing: 0) {
                     Button { goalMinutes = max(FocusGoal.range.lowerBound, goalMinutes - 15) } label: {
                         Text("−").frame(width: 26, height: 26).contentShape(Rectangle())
@@ -124,7 +124,7 @@ struct SettingsSessionsPane: View {
             // A weekday's own goal, from a weekly coach experiment.
             ForEach(weekdayGoals, id: \.weekday) { goal in
                 SettingsDivider()
-                SettingsRow(title: "Goal on \(FocusGoal.pluralWeekday(goal.weekday))", detail: "Set by the weekly coach") {
+                SettingsRow(title: String(localized: "Goal on \(FocusGoal.pluralWeekday(goal.weekday))"), detail: String(localized: "Set by the weekly coach")) {
                     HStack(spacing: 10) {
                         Text(FocusGoal.format(minutes: goal.minutes))
                             .font(.system(size: 12, weight: .semibold).monospacedDigit())
@@ -134,14 +134,14 @@ struct SettingsSessionsPane: View {
                 }
             }
             SettingsDivider()
-            SettingsToggle(title: "Weekends count toward the streak", isOn: $weekendsCount)
+            SettingsToggle(title: String(localized: "Weekends count toward the streak"), isOn: $weekendsCount)
         }
     }
 
     // MARK: - When you drift
 
     private var driftSection: some View {
-        SettingsSection("When you drift") {
+        SettingsSection(String(localized: "When you drift")) {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(DriftResponse.allCases) { response in
                     presetCard(response)
@@ -195,9 +195,9 @@ struct SettingsSessionsPane: View {
     /// What each preset does, passes included (coordinator rulings).
     static func summary(_ response: DriftResponse) -> String {
         switch response {
-        case .gentle:   return "Nudge after 1 min, pause screen after 3 min. Let me through right away, for 2 minutes."
-        case .standard: return "Nudge after 30 s, pause screen after 90 s. Let me through after a 5-second wait, for 2 minutes."
-        case .strict:   return "Pause screen as soon as you drift. No passes; “It's for work” unlocks after a 10-second wait."
+        case .gentle:   return String(localized: "Nudge after 1 min, pause screen after 3 min. Let me through right away, for 2 minutes.")
+        case .standard: return String(localized: "Nudge after 30 s, pause screen after 90 s. Let me through after a 5-second wait, for 2 minutes.")
+        case .strict:   return String(localized: "Pause screen as soon as you drift. No passes; “It's for work” unlocks after a 10-second wait.")
         }
     }
 }
@@ -280,17 +280,17 @@ struct DriftTimingsSheet: View {
             Text("Fine-tune the timings")
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(Theme.primaryText)
-            SettingsSection("Stages") {
-                stepper("Ignore drift shorter than", value: $silence, range: 0...300, step: 5,
-                        detail: "Still logged, just no nudge")
+            SettingsSection(String(localized: "Stages", comment: "The steps from a nudge to the pause screen")) {
+                stepper(String(localized: "Ignore drift shorter than"), value: $silence, range: 0...300, step: 5,
+                        detail: String(localized: "Still logged, just no nudge"))
                 SettingsDivider()
-                SettingsToggle(title: "Nudge with a notification", isOn: $nudges)
+                SettingsToggle(title: String(localized: "Nudge with a notification"), isOn: $nudges)
                 SettingsDivider()
-                stepper("Nudge after", value: $notify, range: 5...600, step: 5, detail: nil).disabled(!nudges)
+                stepper(String(localized: "Nudge after"), value: $notify, range: 5...600, step: 5, detail: nil).disabled(!nudges)
                 SettingsDivider()
-                stepper("Nudge again after", value: $cooldown, range: 15...600, step: 15, detail: "For the same drift").disabled(!nudges)
+                stepper(String(localized: "Nudge again after"), value: $cooldown, range: 15...600, step: 15, detail: String(localized: "For the same drift")).disabled(!nudges)
                 SettingsDivider()
-                stepper("Pause screen after", value: $block, range: 10...900, step: 10, detail: nil)
+                stepper(String(localized: "Pause screen after"), value: $block, range: 10...900, step: 10, detail: nil)
             }
             HStack {
                 Spacer()
@@ -326,8 +326,8 @@ struct DriftTimingsSheet: View {
 
     /// "30 s", "1 min 30 s", "3 min".
     static func seconds(_ value: Int) -> String {
-        if value < 60 { return "\(value) s" }
+        if value < 60 { return String(localized: "\(value) s", comment: "Compact seconds") }
         let m = value / 60, s = value % 60
-        return s == 0 ? "\(m) min" : "\(m) min \(s) s"
+        return s == 0 ? String(localized: "\(m) min", comment: "Compact minutes") : String(localized: "\(m) min \(s) s", comment: "Compact duration")
     }
 }

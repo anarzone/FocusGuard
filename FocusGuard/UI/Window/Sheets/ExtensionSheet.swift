@@ -87,15 +87,17 @@ struct ExtensionSheet: View {
 
     private var steps: some View {
         VStack(spacing: 10) {
-            step(1, title: Self.storeURL == nil ? "Load the extension in \(first)" : "Open the extension's page in \(first)",
-                 detail: Self.storeURL == nil ? "Not in the Chrome Web Store yet; the guide shows how" : "On the Chrome Web Store",
+            step(1, title: Self.storeURL == nil ? String(localized: "Load the extension in \(first)") : String(localized: "Open the extension's page in \(first)"),
+                 detail: Self.storeURL == nil ? String(localized: "Not in the Chrome Web Store yet; the guide shows how") : String(localized: "On the Chrome Web Store"),
                  current: true) {
                 Button(Self.storeURL == nil ? "Open the guide" : "Open in \(first)") { openFirstStep() }
                     .buttonStyle(.capsule(.primary, height: 28))
             }
-            step(2, title: Self.storeURL == nil ? "Turn on Developer mode, then Load unpacked" : "Click Add to \(first), then Add extension",
-                 detail: "\(first) lists what it can see; the box below explains it", current: false) { EmptyView() }
-            step(3, title: "Come back here", detail: "FocusGuard notices the extension by itself", current: false) { EmptyView() }
+            step(2, title: Self.storeURL == nil
+                    ? String(localized: "Turn on Developer mode, then Load unpacked", comment: "Developer mode and Load unpacked are the browser's own labels")
+                    : String(localized: "Click Add to \(first), then Add extension", comment: "Add to Chrome and Add extension are the Chrome Web Store's own labels"),
+                 detail: String(localized: "\(first) lists what it can see; the box below explains it"), current: false) { EmptyView() }
+            step(3, title: String(localized: "Come back here"), detail: String(localized: "FocusGuard notices the extension by itself"), current: false) { EmptyView() }
         }
     }
 

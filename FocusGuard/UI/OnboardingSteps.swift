@@ -9,16 +9,16 @@ import SwiftUI
 struct WelcomeStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingEyebrow("Welcome")
-            OnboardingHeading(title: "Focus that keeps itself honest.",
-                              detail: "FocusGuard lives in your menu bar. Start a session, and it quietly notices when you drift and helps you back.",
+            OnboardingEyebrow(String(localized: "Welcome"))
+            OnboardingHeading(title: String(localized: "Focus that keeps itself honest."),
+                              detail: String(localized: "FocusGuard lives in your menu bar. Start a session, and it quietly notices when you drift and helps you back."),
                               size: 30)
             VStack(alignment: .leading, spacing: 20) {
-                feature("play.fill", "Start from the shield",
-                        "Click the shield in the menu bar, pick any length and start. It fills as you go.")
-                feature("exclamationmark.shield", "A nudge when you drift",
-                        "Wander to x.com and you'll get a nudge, then a pause screen if you stay.")
-                feature("lock", "Your activity stays on this Mac", PrivacyStatement.short)
+                feature("play.fill", String(localized: "Start from the shield"),
+                        String(localized: "Click the shield in the menu bar, pick any length and start. It fills as you go."))
+                feature("exclamationmark.shield", String(localized: "A nudge when you drift"),
+                        String(localized: "Wander to x.com and you'll get a nudge, then a pause screen if you stay."))
+                feature("lock", String(localized: "Your activity stays on this Mac"), PrivacyStatement.short)
             }
             .padding(.top, 30)
         }
@@ -99,23 +99,23 @@ struct PermissionsStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingEyebrow("Permissions · \(ready) of 4 ready")
-            OnboardingHeading(title: "What FocusGuard can see",
-                              detail: "Only what it needs to tell focus from drift. This screen updates as you allow each one.")
+            OnboardingEyebrow(String(localized: "Permissions · \(ready) of 4 ready"))
+            OnboardingHeading(title: String(localized: "What FocusGuard can see"),
+                              detail: String(localized: "Only what it needs to tell focus from drift. This screen updates as you allow each one."))
             VStack(spacing: 10) {
-                PermissionRow(symbol: "globe", title: "Browser access", optional: false,
-                              detail: "Reads the front tab's address, so x.com counts as drift and github.com as focus. macOS asks once per browser.",
+                PermissionRow(symbol: "globe", title: String(localized: "Browser access"), optional: false,
+                              detail: String(localized: "Reads the front tab's address, so x.com counts as drift and github.com as focus. macOS asks once per browser."),
                               status: browserStatus, action: askBrowsers)
-                PermissionRow(symbol: "bell", title: "Notifications", optional: false,
-                              detail: "For nudges, session ends, and a morning plan if you want one.",
+                PermissionRow(symbol: "bell", title: String(localized: "Notifications"), optional: false,
+                              detail: String(localized: "For nudges, session ends, and a morning plan if you want one."),
                               status: status(permissions.notifications)) {
                     Task { await permissions.requestNotifications() }
                 }
-                PermissionRow(symbol: "calendar", title: "Calendar", optional: true,
-                              detail: "Starts sessions from events with “focus” in the title, finds free slots, and keeps meetings out of your drift.",
+                PermissionRow(symbol: "calendar", title: String(localized: "Calendar"), optional: true,
+                              detail: String(localized: "Starts sessions from events with “focus” in the title, finds free slots, and keeps meetings out of your drift."),
                               status: calendarStatus, action: askCalendar)
-                PermissionRow(symbol: "macwindow", title: "Window titles", optional: true,
-                              detail: "Shows which file or doc you were in. macOS calls this Screen Recording; FocusGuard never records your screen.",
+                PermissionRow(symbol: "macwindow", title: String(localized: "Window titles"), optional: true,
+                              detail: String(localized: "Shows which file or doc you were in. macOS calls this Screen Recording; FocusGuard never records your screen."),
                               status: permissions.screenRecording == .granted ? .allowed : .ask) {
                     permissions.requestScreenRecording()
                 }
@@ -140,7 +140,7 @@ struct PermissionsStep: View {
         case .allowed:      return .allowed
         case .ask:          return .ask
         case .openSettings: return .openSettings
-        case .asksOnUse:    return .note("macOS asks on first use")
+        case .asksOnUse:    return .note(String(localized: "macOS asks on first use"))
         }
     }
 
@@ -288,9 +288,9 @@ struct SetupStep: View {
     /// What each preset does, on its card.
     static func summary(_ preset: DriftResponse) -> String {
         switch preset {
-        case .gentle:   return "Nudge after 1 min, block after 3."
-        case .standard: return "Nudge after 30 s, block after 90 s."
-        case .strict:   return "Block as soon as you drift. No passes; “It's for work” after 10 s."
+        case .gentle:   return String(localized: "Nudge after 1 min, block after 3.")
+        case .standard: return String(localized: "Nudge after 30 s, block after 90 s.")
+        case .strict:   return String(localized: "Block as soon as you drift. No passes; “It's for work” after 10 s.")
         }
     }
 
@@ -299,43 +299,44 @@ struct SetupStep: View {
     static func planNote(_ entitlements: Entitlements, now: Date = .now) -> String {
         switch entitlements.plan {
         case .pro:
-            return "Pro is on, so every level is yours."
+            return String(localized: "Pro is on, so every level is yours.")
         case .trial:
             let days = entitlements.plan.daysLeft(at: now) ?? 0
-            return "Your Pro trial has \(days == 1 ? "1 day" : "\(days) days") left."
+            return String(localized: "Your Pro trial has \(days) days left.", comment: "Plural on days: 1 day / 2 days")
         case .free:
             return entitlements.canStartTrial
-                ? "A Pro level starts a \(Plan.trialDays)-day free trial. No card, and a reminder \(Plan.trialReminderDays) days before it ends."
-                : "Your free trial has been used, so the Pro levels need Pro."
+                ? String(localized: "A Pro level starts a \(Plan.trialDays)-day free trial. No card, and a reminder \(Plan.trialReminderDays) days before it ends.")
+                : String(localized: "Your free trial has been used, so the Pro levels need Pro.")
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingEyebrow("Your setup")
-            OnboardingHeading(title: "Make it yours", detail: "Sensible defaults. Change them any time from the menu.")
+            OnboardingEyebrow(String(localized: "Your setup"))
+            OnboardingHeading(title: String(localized: "Make it yours"),
+                              detail: String(localized: "Sensible defaults. Change them any time from the menu."))
 
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    rowTitle("Daily focus goal")
+                    rowTitle(String(localized: "Daily focus goal"))
                     Text(FocusGoal.format(minutes: goalMinutes))
                         .font(.system(size: 15, weight: .semibold).monospacedDigit())
                         .foregroundStyle(Theme.primaryText)
                         .frame(minWidth: 56, alignment: .trailing)
                     HStack(spacing: 0) {
-                        stepButton("minus", "Lower the goal") { goalMinutes = max(FocusGoal.range.lowerBound, goalMinutes - 15) }
-                        stepButton("plus", "Raise the goal") { goalMinutes = min(FocusGoal.range.upperBound, goalMinutes + 15) }
+                        stepButton("minus", String(localized: "Lower the goal")) { goalMinutes = max(FocusGoal.range.lowerBound, goalMinutes - 15) }
+                        stepButton("plus", String(localized: "Raise the goal")) { goalMinutes = min(FocusGoal.range.upperBound, goalMinutes + 15) }
                     }
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.control))
                 }
                 HStack(spacing: 12) {
-                    rowTitle("Usual session length")
+                    rowTitle(String(localized: "Usual session length"))
                     lengthPicker
                 }
             }
             .padding(.top, 20)
 
-            sectionTitle("When you drift").padding(.top, 20)
+            sectionTitle(String(localized: "When you drift")).padding(.top, 20)
             HStack(spacing: 8) {
                 ForEach(DriftResponse.allCases) { preset in
                     card(selected: drift == preset, enabled: !presetLocked) {
@@ -349,13 +350,13 @@ struct SetupStep: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 8)
             if presetLocked {
-                note("Strict stays on until this session ends.")
+                note(String(localized: "Strict stays on until this session ends."))
             } else if drift == nil {
-                note("You've set your own timings in Settings. Pick one to replace them.")
+                note(String(localized: "You've set your own timings in Settings. Pick one to replace them."))
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                sectionTitle("Blocking")
+                sectionTitle(String(localized: "Blocking", comment: "Section title: how a site gets blocked"))
                 Text("what happens when the block screen comes up")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.secondaryText)
@@ -411,7 +412,7 @@ struct SetupStep: View {
                     sessionMinutes = minutes
                     lastSessionMinutes = minutes
                 } label: {
-                    Text("\(minutes) min")
+                    Text("\(minutes) min", comment: "Compact minutes")
                         .font(.system(size: 13, weight: selected ? .semibold : .regular))
                         .foregroundStyle(Theme.primaryText)
                         .padding(.horizontal, 14)
@@ -433,7 +434,7 @@ struct SetupStep: View {
 
     private func levelCard(_ option: BlockingLevel) -> some View {
         let available = option.isAvailable(entitlements)
-        let detail = option == .browser && !available ? "Your free trial has been used. This needs Pro." : option.detail
+        let detail = option == .browser && !available ? String(localized: "Your free trial has been used. This needs Pro.") : option.detail
         return card(selected: level == option, enabled: available) {
             level = option
         } content: {
@@ -511,25 +512,25 @@ struct ExtensionStep: View {
     /// Adding the extension never starts a trial; a Pro level picked in
     /// setup already did.
     static func note(level: BlockingLevel, plan: Plan) -> String {
-        let base = "Free to add, and adding it never starts a trial."
+        let base = String(localized: "Free to add, and adding it never starts a trial.")
         guard level == .browser else { return base }
         switch plan {
-        case .trial: return base + " Your Pro trial covers the extras."
-        case .pro:   return base + " Pro covers the extras."
+        case .trial: return String(localized: "Free to add, and adding it never starts a trial. Your Pro trial covers the extras.")
+        case .pro:   return String(localized: "Free to add, and adding it never starts a trial. Pro covers the extras.")
         case .free:  return base
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingEyebrow(text: "Browser extension · optional") { FreeBadge() }
-            OnboardingHeading(title: "Add FocusGuard to your browser",
-                              detail: "It's free. FocusGuard sees the exact page you're on, so your day is tracked more accurately and a tab pauses the moment you drift.")
+            OnboardingEyebrow(text: String(localized: "Browser extension · optional")) { FreeBadge() }
+            OnboardingHeading(title: String(localized: "Add FocusGuard to your browser"),
+                              detail: String(localized: "It's free. FocusGuard sees the exact page you're on, so your day is tracked more accurately and a tab pauses the moment you drift."))
 
             VStack(alignment: .leading, spacing: 8) {
-                check("More accurate tracking, page by page")
-                check("Pause the tab, in any window")
-                check("Change a site's category from the toolbar")
+                check(String(localized: "More accurate tracking, page by page"))
+                check(String(localized: "Pause the tab, in any window"))
+                check(String(localized: "Change a site's category from the toolbar"))
             }
             .padding(.top, 16)
 
@@ -539,14 +540,14 @@ struct ExtensionStep: View {
             }
             .padding(.top, 14)
             VStack(alignment: .leading, spacing: 6) {
-                bullet("Pages never load during a session")
-                bullet("Block parts of sites, like youtube.com/shorts")
-                bullet("YouTube decided video by video, and as many daily limits as you like")
+                bullet(String(localized: "Pages never load during a session"))
+                bullet(String(localized: "Block parts of sites, like youtube.com/shorts"))
+                bullet(String(localized: "YouTube decided video by video, and as many daily limits as you like"))
             }
             .padding(.top, 8)
 
             VStack(spacing: 8) {
-                browserRow("Chrome", "Also works in Arc, Brave and Edge.") {
+                browserRow("Chrome", String(localized: "Also works in Arc, Brave and Edge.")) {
                     if chromeConnected {
                         Label("On", systemImage: "checkmark")
                             .font(.system(size: 13, weight: .semibold))
@@ -556,7 +557,7 @@ struct ExtensionStep: View {
                             .buttonStyle(.capsule(.primary, height: 30))
                     }
                 }
-                browserRow("Safari", "FocusGuard reads Safari's tabs without it for now.") {
+                browserRow("Safari", String(localized: "FocusGuard reads Safari's tabs without it for now.")) {
                     Text("Coming later").font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                 }
             }

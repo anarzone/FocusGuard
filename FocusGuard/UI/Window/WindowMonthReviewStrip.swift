@@ -66,13 +66,15 @@ struct WindowMonthReviewStrip: View {
     private func summary(_ review: MonthReview?) -> Text {
         let lead = Text(isLatest ? "\(name) is ready." : "\(name).").fontWeight(.semibold).foregroundColor(Theme.primaryText)
         guard let review else {
-            return reviewer.isLoading(month) ? lead + Text(" Looking at the month…").foregroundColor(Theme.bodyText) : lead
+            return reviewer.isLoading(month)
+                ? lead + Text(verbatim: " ") + Text("Looking at the month…").foregroundColor(Theme.bodyText)
+                : lead
         }
         guard review.hasData else {
             return Text("Too little was tracked in \(name) for a review.").foregroundColor(Theme.bodyText)
         }
         let teaser = review.changes.first?.sentence ?? review.headline
-        return lead + Text(" \(teaser)").foregroundColor(Theme.bodyText)
+        return lead + Text(verbatim: " \(teaser)").foregroundColor(Theme.bodyText)
     }
 
     private var locked: some View {

@@ -10,7 +10,7 @@ extension NotificationPresenter {
             "morningPlan",
             title: plan.title,
             body: plan.body(),
-            category: category(.morningPlan, [(.planThem, "Plan them"), (.notToday, "Not today")]),
+            category: category(.morningPlan, [(.planThem, String(localized: "Plan them")), (.notToday, String(localized: "Not today"))]),
             info: [NotificationInfo.slots: plan.slots.map(\.timeIntervalSinceReferenceDate),
                    NotificationInfo.minutes: plan.sessionMinutes]
         )
@@ -21,10 +21,10 @@ extension NotificationPresenter {
     func presentPlannedSession(at slot: Date, minutes: Int) {
         let request = Self.request(
             "plannedSession",
-            title: "Time for your \(HabitFormat.time(slot)) session",
-            body: "\(Self.plural(minutes, "minute")), as you planned this morning.",
-            category: category(.plannedSession, [(.startSession, "Start \(Self.plural(minutes, "minute"))"),
-                                                 (.skip, "Skip this one")]),
+            title: String(localized: "Time for your \(HabitFormat.time(slot)) session"),
+            body: String(localized: "\(minutes) minutes, as you planned this morning.", comment: "Plural on minutes: 1 minute, as you planned this morning"),
+            category: category(.plannedSession, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: Start 1 minute")),
+                                                 (.skip, String(localized: "Skip this one"))]),
             info: [NotificationInfo.minutes: minutes, NotificationInfo.slot: slot.timeIntervalSinceReferenceDate]
         )
         deliver(request, as: .general)
@@ -37,8 +37,8 @@ extension NotificationPresenter {
             "autoStart",
             title: offer.title(now: now),
             body: offer.body(),
-            category: category(.autoStart, [(.startSession, "Start \(Self.plural(minutes, "minute"))"),
-                                            (.notNow, "Not now")]),
+            category: category(.autoStart, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: Start 1 minute")),
+                                            (.notNow, String(localized: "Not now"))]),
             info: [NotificationInfo.since: offer.since.timeIntervalSinceReferenceDate,
                    NotificationInfo.minutes: minutes]
         )
@@ -48,7 +48,7 @@ extension NotificationPresenter {
     /// "Today: 3h 40m focused" with "See today"; with a tip for tomorrow,
     /// "Day done: goal met" with the tip's "Plan it for 15:00".
     func presentEveningWrapUp(_ wrapUp: EveningWrapUp) {
-        let buttons: [(NotificationAction, String)] = wrapUp.tip.map { [(.planThem, $0.button)] } ?? [(.seeToday, "See today")]
+        let buttons: [(NotificationAction, String)] = wrapUp.tip.map { [(.planThem, $0.button)] } ?? [(.seeToday, String(localized: "See today"))]
         let request = Self.request(
             "dailySummary",
             title: wrapUp.title,

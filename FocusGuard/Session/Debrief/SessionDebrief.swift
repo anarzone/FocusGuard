@@ -8,18 +8,18 @@ enum GoalVerdict: String, Codable, CaseIterable {
     /// "Looks done": the debrief's own call reads as a guess.
     var debriefText: String {
         switch self {
-        case .done:   return "Looks done"
-        case .partly: return "Partly done"
-        case .notYet: return "Not yet"
+        case .done:   return String(localized: "Looks done", comment: "The debrief's guess at whether a session's goal was reached")
+        case .partly: return String(localized: "Partly done", comment: "The debrief's guess at whether a session's goal was reached")
+        case .notYet: return String(localized: "Not yet", comment: "Whether a session's goal was reached")
         }
     }
 
     /// The work log's chip.
     var chipText: String {
         switch self {
-        case .done:   return "Done"
-        case .partly: return "Partly"
-        case .notYet: return "Not yet"
+        case .done:   return String(localized: "goalVerdict.done", defaultValue: "Done", comment: "Whether a session's goal was reached: it was. Not the button that closes a sheet")
+        case .partly: return String(localized: "Partly", comment: "Whether a session's goal was reached")
+        case .notYet: return String(localized: "Not yet", comment: "Whether a session's goal was reached")
         }
     }
 }
@@ -112,7 +112,7 @@ struct SessionDebrief: Equatable {
             goal: facts.goal, verdict: nil, evidence: nil, evidenceShort: nil,
             workedOn: Array(items),
             drift: top.map(Self.driftText),
-            driftDetail: facts.drifts.first(where: { $0.name == top?.name }).map { "At \(Self.clock($0.start))." },
+            driftDetail: facts.drifts.first(where: { $0.name == top?.name }).map { String(localized: "At \(Self.clock($0.start)).", comment: "When a drift happened") },
             tip: nil, tipDetail: nil, standup: nil, project: nil,
             focused: facts.focused, focusRate: facts.focusRate, isWritten: false
         )
@@ -146,7 +146,8 @@ struct SessionDebrief: Equatable {
 
     /// "x.com · 3 min"
     static func driftText(_ drift: (name: String, seconds: TimeInterval)) -> String {
-        "\(drift.name) · \(max(1, Int((drift.seconds / 60).rounded()))) min"
+        let minutes = max(1, Int((drift.seconds / 60).rounded()))
+        return "\(drift.name) · " + String(localized: "\(minutes) min", comment: "Compact minutes")
     }
 
     private static func clock(_ date: Date) -> String {

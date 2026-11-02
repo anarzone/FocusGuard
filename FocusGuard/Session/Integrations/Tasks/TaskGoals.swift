@@ -6,7 +6,7 @@ enum TaskSource: String, Codable, CaseIterable, Sendable {
 
     var name: String {
         switch self {
-        case .reminders: return "Reminders"
+        case .reminders: return String(localized: "Reminders", comment: "Apple's Reminders app, by its name in this language")
         case .things:    return "Things"
         case .todoist:   return "Todoist"
         case .linear:    return "Linear"
@@ -106,8 +106,8 @@ enum TaskGoals {
     /// "today", "overdue", or nothing.
     static func dueNote(_ item: TaskItem, now: Date, calendar: Calendar = .current) -> String? {
         guard let due = item.due else { return nil }
-        if calendar.isDate(due, inSameDayAs: now) { return "today" }
-        return due < calendar.startOfDay(for: now) ? "overdue" : nil
+        if calendar.isDate(due, inSameDayAs: now) { return String(localized: "today", comment: "When a task offered as a goal is due") }
+        return due < calendar.startOfDay(for: now) ? String(localized: "overdue", comment: "When a task offered as a goal is due") : nil
     }
 
     /// The first open task that isn't the one just done.

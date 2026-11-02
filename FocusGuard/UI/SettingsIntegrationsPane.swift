@@ -41,16 +41,16 @@ struct SettingsIntegrationsPane: View {
         } right: {
             SettingsStatusSection()
             macSection
-            SettingsSection("Browser and music") {
+            SettingsSection(String(localized: "Browser and music")) {
                 browserRow
                 SettingsDivider()
-                SettingsRow(title: "Focus music", detail: musicDetail) {
+                SettingsRow(title: String(localized: "Focus music"), detail: musicDetail) {
                     Text("In the menu").font(.system(size: 12)).foregroundStyle(Theme.bodyText)
                 }
             }
-            SettingsNote(text: "The browser extension is free: sharper tracking, and tabs pause straight away. Pro adds blocking before pages load. Adding it never starts a trial.")
+            SettingsNote(text: String(localized: "The browser extension is free: sharper tracking, and tabs pause straight away. Pro adds blocking before pages load. Adding it never starts a trial."))
             SettingsNote(systemImage: "lock",
-                         text: "FocusGuard reads the calendars you choose and writes only its own sessions. It never changes or deletes your events.")
+                         text: String(localized: "FocusGuard reads the calendars you choose and writes only its own sessions. It never changes or deletes your events."))
         }
         .task { await reload() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -77,9 +77,9 @@ struct SettingsIntegrationsPane: View {
     // MARK: - Calendar
 
     private var calendarSection: some View {
-        SettingsSection("Calendar") {
-            SettingsToggle(title: "Start sessions from events",
-                           detail: "When the title has “\(keywordShown)”, for as long as it runs",
+        SettingsSection(String(localized: "Calendar")) {
+            SettingsToggle(title: String(localized: "Start sessions from events"),
+                           detail: String(localized: "When the title has “\(keywordShown)”, for as long as it runs"),
                            isOn: Binding(get: { calendarEnabled }, set: { on in
                                calendarEnabled = on
                                appState.calendarAutostart.enabled = on
@@ -87,27 +87,28 @@ struct SettingsIntegrationsPane: View {
                            }))
             if calendarEnabled {
                 SettingsDivider()
-                SettingsRow(title: "When the title contains", detail: nextMatchDetail) {
-                    TextField("focus", text: $calendarKeyword)
+                SettingsRow(title: String(localized: "When the title contains"), detail: nextMatchDetail) {
+                    // The keyword itself: it's matched as written, so it isn't translated.
+                    TextField("focus" as String, text: $calendarKeyword)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 100)
                 }
             }
             SettingsDivider()
-            SettingsToggle(title: "Put sessions on your calendar",
-                           detail: "As busy time in \(writeCalendarName), so nobody books over them",
+            SettingsToggle(title: String(localized: "Put sessions on your calendar"),
+                           detail: writeCalendarDetail,
                            isOn: calendarSwitch($sessionsOnCalendar))
             if sessionsOnCalendar && calendarAccess == .granted {
                 SettingsDivider()
-                SettingsRow(title: "Add them to") { writeCalendarPicker }
+                SettingsRow(title: String(localized: "Add them to", comment: "Them: sessions. The calendar they go on")) { writeCalendarPicker }
             }
             SettingsDivider()
-            SettingsToggle(title: "Next meeting in the menu",
-                           detail: "“Standup in 25 min”, from 30 minutes before",
+            SettingsToggle(title: String(localized: "Next meeting in the menu"),
+                           detail: String(localized: "“Standup in 25 min”, from 30 minutes before"),
                            isOn: calendarSwitch($nextMeeting))
             SettingsDivider()
             if calendarAccess == .granted {
-                SettingsRow(title: "Calendars") { readCalendarsMenu }
+                SettingsRow(title: String(localized: "Calendars")) { readCalendarsMenu }
             } else {
                 calendarAccessRow
             }
@@ -123,9 +124,9 @@ struct SettingsIntegrationsPane: View {
         let calendar = appState.calendarAutostart
         guard calendarAccess == .granted else { return nil }
         guard let title = calendar.nextMatchTitle, let start = calendar.nextMatchStart else {
-            return "No matching events in the next 12 hours"
+            return String(localized: "No matching events in the next 12 hours")
         }
-        return "Next: \(title) · \(start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))"
+        return String(localized: "Next: \(title) · \(start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))")
     }
 
     /// A switch that needs the calendar: turning it on asks macOS once.
@@ -148,13 +149,13 @@ struct SettingsIntegrationsPane: View {
     @ViewBuilder
     private var calendarAccessRow: some View {
         if calendarAccess == .denied {
-            SettingsRow(title: "Calendar access is off",
-                        detail: "Turn it on in System Settings › Privacy & Security › Calendars") {
+            SettingsRow(title: String(localized: "Calendar access is off"),
+                        detail: String(localized: "Turn it on in System Settings › Privacy & Security › Calendars")) {
                 Button("Open Settings") { Self.openPrivacy("Calendars") }
                     .buttonStyle(.capsule(.secondary, height: 26))
             }
         } else {
-            SettingsRow(title: "Calendar access not granted yet", detail: "macOS asks once") {
+            SettingsRow(title: String(localized: "Calendar access not granted yet"), detail: String(localized: "macOS asks once")) {
                 Button("Grant access") { requestCalendarAccess(openSettingsIfUnasked: true) }
                     .buttonStyle(.capsule(.secondary, height: 26))
             }
@@ -169,8 +170,11 @@ struct SettingsIntegrationsPane: View {
         return chosen.isEmpty ? (defaultCalendarID ?? "") : chosen
     }
 
-    private var writeCalendarName: String {
-        calendars.first { $0.id == writeCalendarID }?.title ?? "your calendar"
+    private var writeCalendarDetail: String {
+        guard let name = calendars.first(where: { $0.id == writeCalendarID })?.title else {
+            return String(localized: "As busy time in your calendar, so nobody books over them")
+        }
+        return String(localized: "As busy time in \(name), so nobody books over them")
     }
 
     private var writeCalendarPicker: some View {
@@ -196,7 +200,7 @@ struct SettingsIntegrationsPane: View {
                     set: { on in setRead(calendar.id, on) }))
             }
         } label: {
-            Text(Self.summary(chosen: readCalendars, of: calendars, all: "All"))
+            Text(Self.summary(chosen: readCalendars, of: calendars, all: String(localized: "All", comment: "Every calendar is picked")))
         }
         .fixedSize()
     }
@@ -224,7 +228,7 @@ struct SettingsIntegrationsPane: View {
     private var tasksUnlocked: Bool { entitlements.isUnlocked(.taskGoals) }
 
     private var tasksSection: some View {
-        SettingsSection(title: "Tasks as session goals", trailing: { ProBadge() }) {
+        SettingsSection(title: String(localized: "Tasks as session goals"), trailing: { ProBadge() }) {
             TaskSourceRow(source: .reminders, detail: remindersDetail) {
                 if tasksUnlocked || entitlements.canStartTrial {
                     Toggle("Reminders", isOn: Binding(get: { remindersOn && tasksUnlocked }, set: setReminders))
@@ -240,15 +244,15 @@ struct SettingsIntegrationsPane: View {
                 SettingsDivider()
                 switch remindersAccess {
                 case .granted:
-                    SettingsRow(title: "Lists") { listsMenu }
+                    SettingsRow(title: String(localized: "Lists", comment: "Reminders lists")) { listsMenu }
                 case .notDetermined:
-                    SettingsRow(title: "Reminders access not granted yet", detail: "macOS asks once") {
+                    SettingsRow(title: String(localized: "Reminders access not granted yet"), detail: String(localized: "macOS asks once")) {
                         Button("Grant access") { requestRemindersAccess(openSettingsIfUnasked: true) }
                             .buttonStyle(.capsule(.secondary, height: 26))
                     }
                 case .denied:
-                    SettingsRow(title: "Reminders access is off",
-                                detail: "Turn it on in System Settings › Privacy & Security › Reminders") {
+                    SettingsRow(title: String(localized: "Reminders access is off"),
+                                detail: String(localized: "Turn it on in System Settings › Privacy & Security › Reminders")) {
                         Button("Open Settings") { Self.openPrivacy("Reminders") }
                             .buttonStyle(.capsule(.secondary, height: 26))
                     }
@@ -260,10 +264,10 @@ struct SettingsIntegrationsPane: View {
 
     private var remindersDetail: String {
         if !tasksUnlocked && entitlements.canStartTrial {
-            return "Ticked off when a session's done. Turning it on starts your \(Plan.trialDays)-day Pro trial"
+            return String(localized: "Ticked off when a session's done. Turning it on starts your \(Plan.trialDays)-day Pro trial")
         }
-        if !tasksUnlocked { return "Ticked off when a session's done. Part of Pro" }
-        return "Ticked off when a session's done"
+        if !tasksUnlocked { return String(localized: "Ticked off when a session's done. Part of Pro") }
+        return String(localized: "Ticked off when a session's done")
     }
 
     private func setReminders(_ on: Bool) {
@@ -296,7 +300,7 @@ struct SettingsIntegrationsPane: View {
                     set: { on in setList(list.id, on) }))
             }
         } label: {
-            Text(Self.summary(chosen: chosenLists, of: lists, all: "All lists"))
+            Text(Self.summary(chosen: chosenLists, of: lists, all: String(localized: "All lists")))
         }
         .fixedSize()
     }
@@ -321,13 +325,13 @@ struct SettingsIntegrationsPane: View {
     // MARK: - Code
 
     private var codeSection: some View {
-        SettingsSection("Code") {
-            SettingsToggle(title: "Suggest your Git branch as a goal",
-                           detail: "The branch open in your editor",
+        SettingsSection(String(localized: "Code", comment: "Settings section: source code")) {
+            SettingsToggle(title: String(localized: "Suggest your Git branch as a goal"),
+                           detail: String(localized: "The branch open in your editor"),
                            isOn: $gitBranch)
             if gitBranch {
                 SettingsDivider()
-                SettingsRow(title: "Look in", detail: IntegrationSettings.shortPath(IntegrationSettings.gitFolder())) {
+                SettingsRow(title: String(localized: "Look in", comment: "The folder to look for Git repos in"), detail: IntegrationSettings.shortPath(IntegrationSettings.gitFolder())) {
                     Button("Choose…", action: chooseGitFolder)
                         .buttonStyle(.capsule(.secondary, height: 26))
                 }
@@ -341,8 +345,8 @@ struct SettingsIntegrationsPane: View {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.directoryURL = IntegrationSettings.gitFolder()
-        panel.prompt = "Choose"
-        panel.message = "The folder your Git repos are in"
+        panel.prompt = String(localized: "Choose", comment: "Button in the panel that picks a folder")
+        panel.message = String(localized: "The folder your Git repos are in")
         let pick = { (response: NSApplication.ModalResponse) in
             if response == .OK, let url = panel.url { gitFolder = url.path }
         }
@@ -357,8 +361,8 @@ struct SettingsIntegrationsPane: View {
 
     private var macSection: some View {
         SettingsSection("macOS") {
-            SettingsRow(title: "Start a session with a Focus",
-                        detail: "Add FocusGuard's filter to a Focus in System Settings") {
+            SettingsRow(title: String(localized: "Start a session with a Focus"),
+                        detail: String(localized: "Add FocusGuard's filter to a Focus in System Settings")) {
                 Button("Open Focus…") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.Focus-Settings.extension") {
                         NSWorkspace.shared.open(url)
@@ -367,9 +371,9 @@ struct SettingsIntegrationsPane: View {
                 .buttonStyle(.capsule(.secondary, height: 26))
             }
             SettingsDivider()
-            SettingsRow(title: "Shortcuts to run", detail: shortcutDetail) { shortcutsMenu }
+            SettingsRow(title: String(localized: "Shortcuts to run"), detail: shortcutDetail) { shortcutsMenu }
             SettingsDivider()
-            SettingsRow("Control Center and widgets", detail: "Add them with Edit Controls or Edit Widgets")
+            SettingsRow(String(localized: "Control Center and widgets"), detail: String(localized: "Add them with Edit Controls or Edit Widgets"))
         }
     }
 
@@ -378,10 +382,10 @@ struct SettingsIntegrationsPane: View {
 
     private var shortcutsMenu: some View {
         Menu {
-            shortcutPicker("When a session starts", selection: Binding(
+            shortcutPicker(String(localized: "When a session starts"), selection: Binding(
                 get: { shortcut(startShortcut) },
                 set: { setShortcuts(start: $0, end: shortcut(endShortcut)) }))
-            shortcutPicker("When it ends", selection: Binding(
+            shortcutPicker(String(localized: "When it ends", comment: "It: a session"), selection: Binding(
                 get: { shortcut(endShortcut) },
                 set: { setShortcuts(start: shortcut(startShortcut), end: $0) }))
             Divider()
@@ -411,14 +415,14 @@ struct SettingsIntegrationsPane: View {
 
     private var shortcutSummary: String {
         let names = [shortcut(startShortcut), shortcut(endShortcut)].filter { !$0.isEmpty }
-        return names.isEmpty ? "None" : names.joined(separator: ", ")
+        return names.isEmpty ? String(localized: "None", comment: "No shortcut is chosen") : names.joined(separator: ", ")
     }
 
     private var shortcutDetail: String {
         let missing = [shortcut(startShortcut), shortcut(endShortcut)].first {
             !$0.isEmpty && !shortcuts.isEmpty && !shortcuts.contains($0)
         }
-        return missing.map { "“\($0)” isn't in the Shortcuts app" } ?? "When a session starts and ends"
+        return missing.map { String(localized: "“\($0)” isn't in the Shortcuts app") } ?? String(localized: "When a session starts and ends")
     }
 
     // MARK: - Browser and music
@@ -431,10 +435,11 @@ struct SettingsIntegrationsPane: View {
         let on = installed.filter { connected.contains($0.bundleId) }.map(\.name)
         let notYet = installed.filter { !connected.contains($0.bundleId) }.map(\.name)
         let detail = installed.isEmpty
-            ? "For Chrome, Arc, Brave and Edge"
-            : [on.isEmpty ? nil : "\(HabitFormat.list(on)) on", notYet.isEmpty ? nil : "\(HabitFormat.list(notYet)) not yet"]
+            ? String(localized: "For Chrome, Arc, Brave and Edge")
+            : [on.isEmpty ? nil : String(localized: "\(HabitFormat.list(on)) on", comment: "Browsers the extension is connected in: Chrome and Arc on"),
+               notYet.isEmpty ? nil : String(localized: "\(HabitFormat.list(notYet)) not yet", comment: "Browsers still without the extension: Brave and Edge not yet")]
                 .compactMap { $0 }.joined(separator: " · ")
-        return SettingsRow(title: "Browser extension", detail: detail) {
+        return SettingsRow(title: String(localized: "Browser extension"), detail: detail) {
             if !installed.isEmpty && notYet.isEmpty {
                 Label("Connected", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 12))
@@ -448,8 +453,8 @@ struct SettingsIntegrationsPane: View {
 
     private var musicDetail: String {
         let music = appState.music
-        guard let playlist = music.selected else { return "Pick a playlist from the menu; it plays with each session" }
-        return "\(playlist.service.name) · \(playlist.title) plays with each session"
+        guard let playlist = music.selected else { return String(localized: "Pick a playlist from the menu; it plays with each session") }
+        return String(localized: "\(playlist.service.name) · \(playlist.title) plays with each session")
     }
 
     // MARK: - Helpers

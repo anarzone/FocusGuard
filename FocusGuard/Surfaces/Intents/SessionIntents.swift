@@ -104,19 +104,27 @@ struct CurrentFocusSessionIntent: AppIntent {
         let now = Date()
         if let state = actions.breaks.current {
             let until = state.startedAt.addingTimeInterval(state.plannedDuration)
-            return .result(value: "Break", dialog: IntentDialog(stringLiteral: "On a break until \(IntentWords.clock(until))."))
+            // The value is for a shortcut to read, so it stays the same in every language.
+            return .result(value: "Break", dialog: IntentDialog(stringLiteral: String(localized: "On a break until \(IntentWords.clock(until)).")))
         }
         guard let session = actions.sessions.currentSession else {
-            return .result(value: "", dialog: "No focus session is running.")
+            return .result(value: "", dialog: IntentDialog(stringLiteral: String(localized: "No focus session is running.")))
         }
         let elapsed = actions.sessions.runningSeconds(for: session, now: now)
         let left = session.plannedDurationMinutes.map { max(0, TimeInterval($0 * 60) - elapsed) }
-        var line = "“\(session.displayName)”"
-        if session.pausedAt != nil { line += " is paused" }
+        let name = session.displayName
+        let paused = session.pausedAt != nil
+        let line: String
         if let left {
-            line += session.pausedAt != nil ? ", with \(IntentWords.minutes(left)) left." : ": \(IntentWords.minutes(left)) left."
+            let time = IntentWords.minutes(left)
+            line = paused
+                ? String(localized: "“\(name)” is paused, with \(time) left.", comment: "Time: a count of minutes, as in 18 minutes")
+                : String(localized: "“\(name)”: \(time) left.", comment: "Time: a count of minutes, as in 18 minutes")
         } else {
-            line += session.pausedAt != nil ? " after \(IntentWords.minutes(elapsed))." : ": \(IntentWords.minutes(elapsed)) so far."
+            let time = IntentWords.minutes(elapsed)
+            line = paused
+                ? String(localized: "“\(name)” is paused after \(time).", comment: "Time: a count of minutes, as in 18 minutes")
+                : String(localized: "“\(name)”: \(time) so far.", comment: "Time: a count of minutes, as in 18 minutes")
         }
         return .result(value: session.displayName, dialog: IntentDialog(stringLiteral: line))
     }
@@ -127,53 +135,58 @@ enum IntentWords {
     static func start(_ result: FocusActions.StartResult) -> String {
         switch result {
         case .started(let name, let minutes, let endsAt):
-            guard let minutes, let endsAt else { return "Started “\(name)”." }
-            return "Started a \(minutes)-minute focus session. It ends at \(clock(endsAt))."
+            guard let minutes, let endsAt else { return String(localized: "Started “\(name)”.") }
+            return String(localized: "Started a \(minutes)-minute focus session. It ends at \(clock(endsAt)).")
         case .alreadyRunning(let name):
-            return "“\(name)” is already running."
+            return String(localized: "“\(name)” is already running.")
         case .onStrictBreak(let until):
-            return "You're on a break until \(clock(until)). Strict breaks can't end early."
+            return String(localized: "You're on a break until \(clock(until)). Strict breaks can't end early.")
         }
     }
 
     static func end(_ result: FocusActions.EndResult) -> String {
         switch result {
         case .ended(let name, let minutes):
-            return "Ended “\(name)” after \(minutes == 1 ? "1 minute" : "\(minutes) minutes")."
+            return String(localized: "Ended “\(name)” after \(minutes) minutes.",
+                          comment: "Plural on minutes: after 1 minute / after 2 minutes")
         case .nothingRunning:
-            return "No focus session is running."
+            return String(localized: "No focus session is running.")
         }
     }
 
     static func pause(_ result: FocusActions.PauseResult) -> String {
         switch result {
         case .paused(let name, let left):
-            return left.map { "Paused “\(name)”, with \(minutes($0)) left." } ?? "Paused “\(name)”."
+            return left.map { String(localized: "Paused “\(name)”, with \(minutes($0)) left.", comment: "A count of minutes, as in 18 minutes") }
+                ?? String(localized: "Paused “\(name)”.")
         case .resumed(let name, let endsAt):
-            return endsAt.map { "Resumed “\(name)”. It ends at \(clock($0))." } ?? "Resumed “\(name)”."
+            return endsAt.map { String(localized: "Resumed “\(name)”. It ends at \(clock($0)).") }
+                ?? String(localized: "Resumed “\(name)”.")
         case .alreadyPaused(let name):
-            return "“\(name)” is already paused."
+            return String(localized: "“\(name)” is already paused.")
         case .alreadyRunning(let name):
-            return "“\(name)” is already running."
+            return String(localized: "“\(name)” is already running.")
         case .nothingRunning:
-            return "No focus session is running."
+            return String(localized: "No focus session is running.")
         }
     }
 
     static func takeBreak(_ result: FocusActions.BreakResult) -> String {
         switch result {
         case .started(let length, let until, let endedSession):
-            let start = "Started a \(length)-minute break. Back at \(clock(until))."
-            return endedSession.map { "Ended “\($0)”. " + start } ?? start
+            if let endedSession {
+                return String(localized: "Ended “\(endedSession)”. Started a \(length)-minute break. Back at \(clock(until)).")
+            }
+            return String(localized: "Started a \(length)-minute break. Back at \(clock(until)).")
         case .alreadyOnBreak(let until):
-            return "You're already on a break until \(clock(until))."
+            return String(localized: "You're already on a break until \(clock(until)).")
         }
     }
 
     /// "18 minutes", rounded up so time that's left never reads 0.
     static func minutes(_ seconds: TimeInterval) -> String {
         let value = AppState.minutesRoundedUp(seconds)
-        return value == 1 ? "1 minute" : "\(value) minutes"
+        return String(localized: "\(value) minutes", comment: "Plural on value: 1 minute / 2 minutes")
     }
 
     /// "15:40" (or "3:40 PM"), in the user's own time format.

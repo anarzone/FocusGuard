@@ -80,7 +80,7 @@ struct ReportsPage: View {
     }
 
     private var header: some View {
-        PageHeader(title: "Reports", subtitle: subtitle) {
+        PageHeader(title: String(localized: "Reports"), subtitle: subtitle) {
             // Share week comes and goes with the period, so it sits first:
             // the switch, the stepper and Export stay put under the pointer.
             if period == .week {
@@ -92,9 +92,10 @@ struct ReportsPage: View {
                 .buttonStyle(.header)
                 .help("Make a picture of this week to share")
             }
-            WindowSwitch(options: [(ReportPeriod.week, "Week"), (.month, "Month")], selection: $period, label: "Period")
+            WindowSwitch(options: [(ReportPeriod.week, String(localized: "Week")), (.month, String(localized: "Month"))],
+                         selection: $period, label: String(localized: "Period", comment: "The Week | Month switch in Reports"))
                 .onChange(of: period) { offset = 0 }
-            PeriodStepper(offset: $offset, unit: period.rawValue.lowercased(), maxOffset: maxOffset)
+            PeriodStepper(offset: $offset, unit: period == .month ? .month : .week, maxOffset: maxOffset)
             Menu {
                 Button("Export as CSV…") { export(.csv) }
                 Button("Export as JSON…") { export(.json) }
@@ -150,13 +151,14 @@ struct ReportsPage: View {
             WindowSplitRow(weights: [1.55, 1]) {
                 WindowCard(padding: EdgeInsets(top: 14, leading: 20, bottom: 10, trailing: 20)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        chartTitle("Focus and drift per day", other: true)
+                        chartTitle(String(localized: "Focus and drift per day"), other: true)
                         DayBarsChart(buckets: model.data.buckets, goal: FocusGoal.dailySeconds)
                     }
                 }
                 WindowCard(padding: EdgeInsets(top: 12, leading: 20, bottom: 10, trailing: 20)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        WindowCardTitle("Best hours", note: model.heatWeeks > 1 ? "last \(model.heatWeeks) weeks" : "this week")
+                        WindowCardTitle(String(localized: "Best hours"),
+                                        note: model.heatWeeks > 1 ? String(localized: "last \(model.heatWeeks) weeks") : String(localized: "this week"))
                         HeatGrid(heat: model.heat)
                         HeatLegend()
                         Spacer(minLength: 0)
@@ -168,7 +170,7 @@ struct ReportsPage: View {
             WindowSplitRow(weights: [1, 1, 1]) {
                 WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 12, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 8) {
-                        WindowCardTitle("Trend", note: "focused per week")
+                        WindowCardTitle(String(localized: "Trend"), note: String(localized: "focused per week"))
                         if model.trend.count >= 2 {
                             TrendBars(weeks: model.trend).frame(minHeight: 90, maxHeight: 120)
                             if let line = TrendBars.caption(model.trend) { caption(line) }
@@ -176,12 +178,12 @@ struct ReportsPage: View {
                                 Text("Older weeks are part of Pro.").font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
                             }
                         } else {
-                            empty("A trend shows once there are two weeks to compare.")
+                            empty(String(localized: "A trend shows once there are two weeks to compare."))
                         }
                         Spacer(minLength: 0)
                     }
                 }
-                distractionsCard(against: "vs last week", timeWidth: 34)
+                distractionsCard(against: String(localized: "vs last week"), timeWidth: 34)
                 highlightsCard
             }
             .frame(minHeight: 200, maxHeight: .infinity)
@@ -203,14 +205,14 @@ struct ReportsPage: View {
             WindowSplitRow(weights: [1, 1.42]) {
                 WindowCard(padding: EdgeInsets(top: 12, leading: 18, bottom: 10, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        WindowCardTitle("Daily goal", note: ringNote)
+                        WindowCardTitle(String(localized: "Daily goal"), note: ringNote)
                         MonthCalendarGrid(weeks: model.calendar, goal: FocusGoal.dailySeconds)
                         Spacer(minLength: 0)
                     }
                 }
                 WindowCard(padding: EdgeInsets(top: 12, leading: 18, bottom: 10, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        chartTitle("Focus and drift over time", other: false)
+                        chartTitle(String(localized: "Focus and drift over time"), other: false)
                         DayBarsChart(buckets: model.data.buckets, goal: FocusGoal.dailySeconds,
                                      showOther: false, weekLabels: false)
                     }
@@ -221,22 +223,23 @@ struct ReportsPage: View {
             WindowSplitRow(weights: [1, 1, 1]) {
                 WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 12, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 8) {
-                        WindowCardTitle("Best hours", note: "average focus per hour")
+                        WindowCardTitle(String(localized: "Best hours"), note: String(localized: "average focus per hour"))
                         if let line = HourBars.caption(model.hourAverages) {
                             HourBars(averages: model.hourAverages).frame(minHeight: 90, maxHeight: 128)
                             caption(line)
                         } else {
-                            empty("Your strongest hours show once there's some focus this month.")
+                            empty(String(localized: "Your strongest hours show once there's some focus this month."))
                         }
                         Spacer(minLength: 0)
                     }
                 }
                 WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 12, trailing: 18)) {
                     VStack(alignment: .leading, spacing: 6) {
-                        WindowCardTitle("How sessions went", note: WindowFormat.count(model.totalSessions, "session"))
+                        WindowCardTitle(String(localized: "How sessions went"),
+                                        note: String(localized: "\(model.totalSessions) sessions", comment: "Plural on totalSessions: 1 session / 2 sessions"))
                             .padding(.bottom, 2)
                         if model.patterns.isEmpty {
-                            empty("Each session is named from how it went. Their names add up here.")
+                            empty(String(localized: "Each session is named from how it went. Their names add up here."))
                         } else {
                             PatternBars(patterns: model.patterns)
                             if let note = model.patternNote {
@@ -246,7 +249,7 @@ struct ReportsPage: View {
                         Spacer(minLength: 0)
                     }
                 }
-                distractionsCard(against: "vs \(previousMonthName)", timeWidth: 46)
+                distractionsCard(against: String(localized: "vs \(previousMonthName)", comment: "Compared with a month: vs September"), timeWidth: 46)
             }
             .frame(minHeight: 200, maxHeight: .infinity)
         }
@@ -254,8 +257,13 @@ struct ReportsPage: View {
 
     /// "a full ring is 4h", and any weekday's own goal: ", 2h on Fridays".
     private var ringNote: String {
-        let own = FocusGoal.weekdayGoals().map { ", \(FocusGoal.format(minutes: $0.minutes)) on \(FocusGoal.pluralWeekday($0.weekday))" }
-        return "a full ring is \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))" + own.joined()
+        let full = String(localized: "a full ring is \(FocusGoal.format(minutes: FocusGoal.dailyMinutes))",
+                          comment: "A day's goal ring in the month calendar: a full ring is 4h")
+        let own = FocusGoal.weekdayGoals().map {
+            String(localized: "\(FocusGoal.format(minutes: $0.minutes)) on \(FocusGoal.pluralWeekday($0.weekday))",
+                   comment: "A weekday's own goal, after 'a full ring is 4h': 2h on Fridays")
+        }
+        return ([full] + own).joined(separator: ", ")
     }
 
     private var previousMonthName: String {
@@ -267,34 +275,40 @@ struct ReportsPage: View {
 
     private func kpis(sessionsSlot: Bool) -> some View {
         let data = model.data
-        let against = model.period == .week ? "last week" : previousMonthName
+        let against = model.period == .week
+            ? String(localized: "last week", comment: "What drift is compared with: 26 min less than last week")
+            : previousMonthName
         let focusedChange = WindowFormat.percentChange(data.breakdown.focus, data.previous.focus)
-            .map { model.period == .week ? "\($0) vs last week" : "\($0) vs the same days in \(previousMonthName)" }
-            ?? "nothing to compare yet"
+            .map { model.period == .week
+                ? String(localized: "\($0) vs last week", comment: "Change in focused time: +12% vs last week")
+                : String(localized: "\($0) vs the same days in \(previousMonthName)", comment: "Change in focused time: +12% vs the same days in September") }
+            ?? String(localized: "nothing to compare yet")
         let prevRateCounts = data.previous.focus + data.previous.distraction >= 60
         let rateDetail = prevRateCounts
-            ? "\(WindowFormat.pointsChange(data.breakdown.focusRate, data.previous.focusRate)) · other apps don't count"
-            : "other apps don't count"
+            ? String(localized: "\(WindowFormat.pointsChange(data.breakdown.focusRate, data.previous.focusRate)) · other apps don't count")
+            : String(localized: "other apps don't count")
         let rate = data.breakdown.focus + data.breakdown.distraction >= 60
-            ? "\(Int((data.breakdown.focusRate * 100).rounded()))%" : "–"
+            ? String(localized: "\(Int((data.breakdown.focusRate * 100).rounded()))%", comment: "Percentage") : "–"
 
         return WindowSplitRow(weights: [1, 1, 1, 1]) {
-            WindowKPICard(label: "Focused", value: WindowFormat.hm(data.breakdown.focus), detail: focusedChange)
-            WindowKPICard(label: "Focus rate", value: rate, detail: rateDetail)
+            WindowKPICard(label: String(localized: "Focused"), value: WindowFormat.hm(data.breakdown.focus), detail: focusedChange)
+            WindowKPICard(label: String(localized: "Focus rate"), value: rate, detail: rateDetail)
             if sessionsSlot {
-                WindowKPICard(label: "Sessions", value: "\(data.sessionCount)",
-                        detail: data.longestZone >= 60 ? "longest in the zone \(WindowFormat.minutes(data.longestZone))" : "none long enough to count")
+                WindowKPICard(label: String(localized: "Sessions"), value: "\(data.sessionCount)",
+                        detail: data.longestZone >= 60
+                            ? String(localized: "longest in the zone \(WindowFormat.minutes(data.longestZone))")
+                            : String(localized: "none long enough to count"))
             } else {
-                WindowKPICard(label: "Longest in the zone", value: WindowFormat.minutes(data.longestZone), detail: zoneDetail)
+                WindowKPICard(label: String(localized: "Longest in the zone"), value: WindowFormat.minutes(data.longestZone), detail: zoneDetail)
             }
-            WindowKPICard(label: "Drifted", value: WindowFormat.hm(data.breakdown.distraction),
+            WindowKPICard(label: String(localized: "Drifted"), value: WindowFormat.hm(data.breakdown.distraction),
                     detail: ReportWords.driftChange(data.breakdown.distraction, data.previous.distraction, against: against))
         }
         .fixedSize(horizontal: false, vertical: true)
     }
 
     private var zoneDetail: String {
-        let sessions = "across \(WindowFormat.count(model.data.sessionCount, "session"))"
+        let sessions = String(localized: "across \(model.data.sessionCount) sessions", comment: "Plural on sessionCount: across 1 session / across 2 sessions")
         guard let day = model.longestZoneDay, model.data.longestZone >= 60 else { return sessions }
         return "\(day.formatted(.dateTime.weekday(.wide))) · \(sessions)"
     }
@@ -303,19 +317,21 @@ struct ReportsPage: View {
         HStack(spacing: 12) {
             Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.primaryText)
             Spacer(minLength: 8)
-            WindowLegend(color: Theme.focus, title: "Focused")
-            WindowLegend(color: Theme.distraction, title: "Drifted")
-            if other { WindowLegend(color: Theme.other, title: "Other") }
+            WindowLegend(color: Theme.focus, title: String(localized: "Focused"))
+            WindowLegend(color: Theme.distraction, title: String(localized: "Drifted"))
+            if other { WindowLegend(color: Theme.other, title: String(localized: "Other", comment: "Chart legend: time in apps that count as neither focus nor drift")) }
         }
     }
 
     private func distractionsCard(against: String, timeWidth: CGFloat) -> some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 12, trailing: 18)) {
             VStack(alignment: .leading, spacing: 2) {
-                WindowCardTitle("Top distractions", note: (model.distractions.first?.comparable ?? true) ? against : "")
+                WindowCardTitle(String(localized: "Top distractions"), note: (model.distractions.first?.comparable ?? true) ? against : "")
                     .padding(.bottom, 6)
                 if model.distractions.isEmpty {
-                    empty("Nothing distracting in this \(model.period == .week ? "week" : "month"). Nice.")
+                    empty(model.period == .week
+                          ? String(localized: "Nothing distracting in this week. Nice.")
+                          : String(localized: "Nothing distracting in this month. Nice."))
                 } else {
                     let peak = max(1, model.distractions.map(\.seconds).max() ?? 1)
                     ForEach(model.distractions) { item in
@@ -330,9 +346,9 @@ struct ReportsPage: View {
     private var highlightsCard: some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 12, trailing: 18)) {
             VStack(alignment: .leading, spacing: 10) {
-                WindowCardTitle("Highlights")
+                WindowCardTitle(String(localized: "Highlights"))
                 if model.highlights.isEmpty {
-                    empty("Highlights show up once there's a little more to go on.")
+                    empty(String(localized: "Highlights show up once there's a little more to go on."))
                 } else {
                     ForEach(model.highlights, id: \.text) { item in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {

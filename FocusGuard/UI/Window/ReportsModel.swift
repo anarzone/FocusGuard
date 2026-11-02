@@ -287,8 +287,8 @@ enum ReportsModelBuilder {
             beaten += 1
         }
         guard beaten >= 3 else { return nil }
-        if beaten == earlier.count && beaten >= 7 { return "your best week in two months" }
-        return "your best week in \(beaten + 1) weeks"
+        if beaten == earlier.count && beaten >= 7 { return String(localized: "your best week in two months") }
+        return String(localized: "your best week in \(beaten + 1) weeks")
     }
 
     static func goalDays(_ days: [ReportBucket], now: Date, calendar: Calendar, weekendsCount: Bool,
@@ -343,10 +343,19 @@ enum ReportsModelBuilder {
                             calendar: Calendar) -> String? {
         if fadingStarts.count >= 2 {
             let late = fadingStarts.filter { calendar.component(.hour, from: $0) >= 16 }.count
-            if late * 2 > fadingStarts.count { return "Fading sessions mostly start after 16:00." }
+            if late * 2 > fadingStarts.count { return String(localized: "Fading sessions mostly start after 16:00.") }
         }
         guard let top = patterns.first, top.count >= 2 else { return nil }
-        return "Most sessions went \(top.pattern.rawValue.lowercased())."
+        switch top.pattern {
+        case .lockedIn:  return String(localized: "Most sessions went locked-in.")
+        case .slowStart: return String(localized: "Most sessions went slow-start.")
+        case .comeback:  return String(localized: "Most sessions went comeback.")
+        case .fading:    return String(localized: "Most sessions went fading.")
+        case .steady:    return String(localized: "Most sessions went steady.")
+        case .bumpy:     return String(localized: "Most sessions went bumpy.")
+        case .wandering: return String(localized: "Most sessions went wandering.")
+        case .quiet:     return String(localized: "Most sessions went quiet.")
+        }
     }
 
     // MARK: - Highlights
@@ -358,18 +367,19 @@ enum ReportsModelBuilder {
 
         if let stretch = bestStretch(data.heat, length: 3) {
             let share = Int((stretch.share * 100).rounded())
-            let part = stretch.start < 12 ? "Mornings" : (stretch.start < 17 ? "Afternoons" : "Evenings")
-            out.append(ReportHighlight(kind: .focus, text: "\(part) carried the \(model.period == .week ? "week" : "month"): \(clock(stretch.start)) to \(clock(stretch.start + 3)) holds \(share)% of your focus."))
+            out.append(ReportHighlight(kind: .focus, text: carried(startHour: stretch.start, isWeek: model.period == .week, share: share)))
         }
 
         if let top = model.distractions.first {
             let text: String
             if let before = top.before, top.seconds - before >= 300 {
-                text = "\(top.name) is up \(WindowFormat.hm(top.seconds - before)) on the \(model.period == .week ? "week" : "month") before."
+                text = model.period == .week
+                    ? String(localized: "\(top.name) is up \(WindowFormat.hm(top.seconds - before)) on the week before.")
+                    : String(localized: "\(top.name) is up \(WindowFormat.hm(top.seconds - before)) on the month before.")
             } else if let before = top.before, before - top.seconds >= 300 {
-                text = "\(top.name) is down \(WindowFormat.hm(before - top.seconds)), and still your top distraction."
+                text = String(localized: "\(top.name) is down \(WindowFormat.hm(before - top.seconds)), and still your top distraction.")
             } else {
-                text = "\(top.name) took the most drift time: \(WindowFormat.hm(top.seconds))."
+                text = String(localized: "\(top.name) took the most drift time: \(WindowFormat.hm(top.seconds)).")
             }
             out.append(ReportHighlight(kind: .drift, text: text))
         }
@@ -377,10 +387,31 @@ enum ReportsModelBuilder {
         let past = data.buckets.filter { !$0.isFuture && !$0.isLocked }
         if let worst = past.max(by: { $0.drift < $1.drift }), worst.drift >= 300 {
             let day = worst.interval.start.formatted(.dateTime.weekday(.wide))
-            let goalPart = worst.focus >= goal(worst.interval.start) ? "and still met the goal" : "and missed the goal"
-            out.append(ReportHighlight(kind: .other, text: "\(day) drifted most, \(WindowFormat.minutes(worst.drift)), \(goalPart)."))
+            let drift = WindowFormat.minutes(worst.drift)
+            let text = worst.focus >= goal(worst.interval.start)
+                ? String(localized: "\(day) drifted most, \(drift), and still met the goal.")
+                : String(localized: "\(day) drifted most, \(drift), and missed the goal.")
+            out.append(ReportHighlight(kind: .other, text: text))
         }
         return out
+    }
+
+    /// "Mornings carried the week: 09:00 to 12:00 holds 41% of your focus."
+    private static func carried(startHour: Int, isWeek: Bool, share: Int) -> String {
+        let from = clock(startHour), to = clock(startHour + 3)
+        if startHour < 12 {
+            return isWeek
+                ? String(localized: "Mornings carried the week: \(from) to \(to) holds \(share)% of your focus.")
+                : String(localized: "Mornings carried the month: \(from) to \(to) holds \(share)% of your focus.")
+        }
+        if startHour < 17 {
+            return isWeek
+                ? String(localized: "Afternoons carried the week: \(from) to \(to) holds \(share)% of your focus.")
+                : String(localized: "Afternoons carried the month: \(from) to \(to) holds \(share)% of your focus.")
+        }
+        return isWeek
+            ? String(localized: "Evenings carried the week: \(from) to \(to) holds \(share)% of your focus.")
+            : String(localized: "Evenings carried the month: \(from) to \(to) holds \(share)% of your focus.")
     }
 
     /// The `length`-hour stretch with the most focus, and its share of all focus.
@@ -414,38 +445,54 @@ enum ReportWords {
     /// "Goal met on 13 of 16 weekdays so far." and what the misses share.
     static func goalHeadline(_ goal: GoalDays, period: ReportPeriod, weekendsCount: Bool, isCurrent: Bool,
                              calendar: Calendar = .current) -> (lead: String, rest: String) {
-        let noun = weekendsCount ? "days" : "weekdays"
-        guard goal.counted > 0 else { return ("No goal days yet this \(period.rawValue.lowercased()).", "") }
-        let lead = "Goal met on \(goal.met) of \(goal.counted) \(noun)\(isCurrent ? " so far" : "")."
-        guard !goal.misses.isEmpty else { return (lead, goal.met > 0 ? "Not one missed." : "") }
+        guard goal.counted > 0 else {
+            return (period == .month ? String(localized: "No goal days yet this month.") : String(localized: "No goal days yet this week."), "")
+        }
+        let lead: String
+        switch (weekendsCount, isCurrent) {
+        case (true, true):   lead = String(localized: "Goal met on \(goal.met) of \(goal.counted) days so far.")
+        case (true, false):  lead = String(localized: "Goal met on \(goal.met) of \(goal.counted) days.")
+        case (false, true):  lead = String(localized: "Goal met on \(goal.met) of \(goal.counted) weekdays so far.")
+        case (false, false): lead = String(localized: "Goal met on \(goal.met) of \(goal.counted) weekdays.")
+        }
+        guard !goal.misses.isEmpty else { return (lead, goal.met > 0 ? String(localized: "Not one missed.") : "") }
         let weekdays = goal.misses.map { calendar.component(.weekday, from: $0) }
         let counts = Dictionary(grouping: weekdays, by: { $0 }).mapValues(\.count)
         guard let common = counts.max(by: { $0.value < $1.value }) else { return (lead, "") }
-        let name = calendar.weekdaySymbols[(common.key - 1 + 7) % 7]
         if goal.misses.count == 1 {
-            return (lead, "The one miss was a \(name).")
+            let name = calendar.weekdaySymbols[(common.key - 1 + 7) % 7]
+            return (lead, String(localized: "The one miss was a \(name)."))
         }
+        let locale = calendar.locale ?? .current
+        let days = FocusGoal.pluralWeekday(common.key, locale: locale, calendar: calendar)
         if common.value == goal.misses.count {
-            let number = goal.misses.count == 2 ? "Both" : "All \(spelled(goal.misses.count))"
-            return (lead, "\(number) misses were \(name)s.")
+            if goal.misses.count == 2 { return (lead, String(localized: "Both misses were \(days).")) }
+            let number = spelled(goal.misses.count, locale: locale)
+            return (lead, String(localized: "All \(number) misses were \(days).", comment: "All three misses were Fridays."))
         }
         if common.value * 2 > goal.misses.count {
-            return (lead, "Most misses were \(name)s.")
+            return (lead, String(localized: "Most misses were \(days)."))
         }
         return (lead, "")
     }
 
-    static func spelled(_ n: Int) -> String {
-        let words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
-        return n < words.count ? words[n] : "\(n)"
+    /// "three", in the locale's language; above ten, digits.
+    static func spelled(_ n: Int, locale: Locale = .current) -> String {
+        guard n <= 10 else { return "\(n)" }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .spellOut
+        formatter.locale = locale
+        return formatter.string(from: NSNumber(value: n)) ?? "\(n)"
     }
 
     /// "26 min less than last week", "1h 05m more than September".
     static func driftChange(_ now: TimeInterval, _ before: TimeInterval, against: String) -> String {
-        guard before >= 60 else { return now >= 60 ? "nothing to compare yet" : "no drift" }
+        guard before >= 60 else { return now >= 60 ? String(localized: "nothing to compare yet") : String(localized: "no drift") }
         let delta = now - before
-        if abs(delta) < 60 { return "about the same as \(against)" }
+        if abs(delta) < 60 { return String(localized: "about the same as \(against)", comment: "Drift compared with a period: 'last week' or a month's name") }
         let amount = abs(delta) >= 3600 ? WindowFormat.hm(abs(delta)) : WindowFormat.minutes(abs(delta))
-        return "\(amount) \(delta < 0 ? "less" : "more") than \(against)"
+        return delta < 0
+            ? String(localized: "\(amount) less than \(against)", comment: "Drift compared with a period: 26 min less than last week, or than September")
+            : String(localized: "\(amount) more than \(against)", comment: "Drift compared with a period: 26 min more than last week, or than September")
     }
 }

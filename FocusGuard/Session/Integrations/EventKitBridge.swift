@@ -122,7 +122,7 @@ actor EventKitBridge: CalendarStore, ReminderStore {
               calendar.allowsContentModifications else { return nil }
         let event = EKEvent(eventStore: store)
         event.calendar = calendar
-        event.notes = OwnEvents.note
+        event.notes = OwnEvents.shownNote
         apply(draft, to: event)
         do {
             try store.save(event, span: .thisEvent, commit: true)

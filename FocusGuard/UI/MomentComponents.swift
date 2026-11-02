@@ -51,11 +51,6 @@ final class MomentWindow: NSWindow {
 
 /// Words and numbers the moments share.
 enum MomentText {
-    /// "1 minute", "3 minutes".
-    static func counted(_ count: Int, _ noun: String) -> String {
-        "\(count) \(count == 1 ? noun : noun + "s")"
-    }
-
     /// "18:24", or "1:05:09" past an hour.
     static func clock(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds).rounded(.up))
@@ -160,7 +155,7 @@ struct MomentWaitingButton: View {
         }
         .buttonStyle(MomentButtonStyle(kind: secondsLeft > 0 ? waiting : open))
         .disabled(secondsLeft > 0)
-        .accessibilityLabel(secondsLeft == 0 ? title : "\(title), available in \(MomentText.counted(secondsLeft, "second"))")
+        .accessibilityLabel(secondsLeft == 0 ? title : String(localized: "\(title), available in \(secondsLeft) seconds", comment: "Plural on secondsLeft: 1 second / 2 seconds"))
     }
 }
 
@@ -337,9 +332,9 @@ struct MomentLegend: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            entry(Theme.focus, "Focused \(focused) min")
-            if drifted > 0 { entry(Theme.distraction, "Drifted \(drifted) min") }
-            if other > 0 { entry(Theme.other, "Other \(other) min") }
+            entry(Theme.focus, String(localized: "Focused \(focused) min", comment: "Compact minutes"))
+            if drifted > 0 { entry(Theme.distraction, String(localized: "Drifted \(drifted) min", comment: "Compact minutes")) }
+            if other > 0 { entry(Theme.other, String(localized: "Other \(other) min", comment: "Compact minutes: time that was neither focus nor drift")) }
         }
         .font(.system(size: 13))
         .foregroundStyle(Theme.primaryText)

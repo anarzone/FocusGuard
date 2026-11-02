@@ -70,8 +70,8 @@ struct MorningPlan: Equatable {
 
     /// "3 sessions today?"
     var title: String {
-        if warmUp != nil && slots.count == 1 { return "A session before your first call?" }
-        return slots.count == 1 ? "A session today?" : "\(slots.count) sessions today?"
+        if warmUp != nil && slots.count == 1 { return String(localized: "A session before your first call?") }
+        return slots.count == 1 ? String(localized: "A session today?") : String(localized: "\(slots.count) sessions today?", comment: "The count is 2 or more")
     }
 
     /// "Free slots at 10:00, 14:00 and 17:30 would cover your 4h goal."
@@ -82,24 +82,60 @@ struct MorningPlan: Equatable {
         let goal = FocusGoal.format(minutes: goalMinutes)
         let remaining = goalMinutes - focusedMinutes
         let planned = others.count * sessionMinutes + (warmUp?.minutes ?? 0)
-        let what = focusedMinutes > 0 ? "the rest of your \(goal) goal" : "your \(goal) goal"
-        let ending = planned >= remaining ? "would cover \(what)."
-            : "would add \(HabitFormat.amount(minutes: planned)) toward your \(goal) goal."
+        let ending: Ending = planned < remaining ? .adds(HabitFormat.amount(minutes: planned))
+            : (focusedMinutes > 0 ? .coversRest : .covers)
 
         if let warmUp {
-            let first = "A \(warmUp.minutes)-minute session at \(time(warmUp.start)), before your \(time(warmUp.call)) call."
+            let first = String(localized: "A \(warmUp.minutes)-minute session at \(time(warmUp.start)), before your \(time(warmUp.call)) call.")
             guard !others.isEmpty else { return first }
-            let slotWords = fromCalendar ? (others.count == 1 ? "a free slot" : "free slots")
-                : (others.count == 1 ? "a session" : "sessions")
-            return "\(first) Then \(slotWords) at \(times) \(ending)"
+            let rest = Self.thenSentence(fromCalendar: fromCalendar, single: others.count == 1, times: times, goal: goal, ending: ending)
+            return "\(first) \(rest)"
         }
-        let opening: String
-        switch (fromCalendar, others.count == 1) {
-        case (true, true):   opening = "A free slot at \(times)"
-        case (true, false):  opening = "Free slots at \(times)"
-        case (false, true):  opening = "A session at \(times)"
-        case (false, false): opening = "Sessions at \(times)"
+        return Self.sentence(fromCalendar: fromCalendar, single: others.count == 1, times: times, goal: goal, ending: ending)
+    }
+
+    /// What the slots would do for the goal.
+    private enum Ending {
+        case coversRest, covers
+        case adds(String)
+    }
+
+    // Every case is a whole sentence: the verb agrees with what the slots are
+    // called, and in German "Then" moves it.
+
+    /// "Free slots at 10:00 and 14:00 would cover your 4h goal."
+    private static func sentence(fromCalendar: Bool, single: Bool, times: String, goal: String, ending: Ending) -> String {
+        switch (fromCalendar, single, ending) {
+        case (true, true, .coversRest): return String(localized: "A free slot at \(times) would cover the rest of your \(goal) goal.")
+        case (true, true, .covers): return String(localized: "A free slot at \(times) would cover your \(goal) goal.")
+        case (true, true, .adds(let amount)): return String(localized: "A free slot at \(times) would add \(amount) toward your \(goal) goal.")
+        case (true, false, .coversRest): return String(localized: "Free slots at \(times) would cover the rest of your \(goal) goal.")
+        case (true, false, .covers): return String(localized: "Free slots at \(times) would cover your \(goal) goal.")
+        case (true, false, .adds(let amount)): return String(localized: "Free slots at \(times) would add \(amount) toward your \(goal) goal.")
+        case (false, true, .coversRest): return String(localized: "A session at \(times) would cover the rest of your \(goal) goal.")
+        case (false, true, .covers): return String(localized: "A session at \(times) would cover your \(goal) goal.")
+        case (false, true, .adds(let amount)): return String(localized: "A session at \(times) would add \(amount) toward your \(goal) goal.")
+        case (false, false, .coversRest): return String(localized: "Sessions at \(times) would cover the rest of your \(goal) goal.")
+        case (false, false, .covers): return String(localized: "Sessions at \(times) would cover your \(goal) goal.")
+        case (false, false, .adds(let amount)): return String(localized: "Sessions at \(times) would add \(amount) toward your \(goal) goal.")
         }
-        return "\(opening) \(ending)"
+    }
+
+    /// "Then free slots at 11:30 and 14:00 would cover your 4h goal."
+    private static func thenSentence(fromCalendar: Bool, single: Bool, times: String, goal: String, ending: Ending) -> String {
+        switch (fromCalendar, single, ending) {
+        case (true, true, .coversRest): return String(localized: "Then a free slot at \(times) would cover the rest of your \(goal) goal.")
+        case (true, true, .covers): return String(localized: "Then a free slot at \(times) would cover your \(goal) goal.")
+        case (true, true, .adds(let amount)): return String(localized: "Then a free slot at \(times) would add \(amount) toward your \(goal) goal.")
+        case (true, false, .coversRest): return String(localized: "Then free slots at \(times) would cover the rest of your \(goal) goal.")
+        case (true, false, .covers): return String(localized: "Then free slots at \(times) would cover your \(goal) goal.")
+        case (true, false, .adds(let amount)): return String(localized: "Then free slots at \(times) would add \(amount) toward your \(goal) goal.")
+        case (false, true, .coversRest): return String(localized: "Then a session at \(times) would cover the rest of your \(goal) goal.")
+        case (false, true, .covers): return String(localized: "Then a session at \(times) would cover your \(goal) goal.")
+        case (false, true, .adds(let amount)): return String(localized: "Then a session at \(times) would add \(amount) toward your \(goal) goal.")
+        case (false, false, .coversRest): return String(localized: "Then sessions at \(times) would cover the rest of your \(goal) goal.")
+        case (false, false, .covers): return String(localized: "Then sessions at \(times) would cover your \(goal) goal.")
+        case (false, false, .adds(let amount)): return String(localized: "Then sessions at \(times) would add \(amount) toward your \(goal) goal.")
+        }
     }
 }

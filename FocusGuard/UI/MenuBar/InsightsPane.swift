@@ -15,6 +15,13 @@ struct InsightsPane: View {
     enum Range: String, CaseIterable, Identifiable {
         case today = "Today", week = "Week"
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .today: return String(localized: "Today", comment: "Tab: today's insights")
+            case .week:  return String(localized: "Week", comment: "Tab: a week's insights")
+            }
+        }
     }
 
     @State private var range: Range = .today
@@ -40,8 +47,8 @@ struct InsightsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PaneTitle(title: "Insights", close: close) {
-                PaneTabs(selection: $range, options: Range.allCases.map { ($0, $0.rawValue) })
+            PaneTitle(title: String(localized: "Insights"), close: close) {
+                PaneTabs(selection: $range, options: Range.allCases.map { ($0, $0.title) })
             }
 
             switch range {
@@ -113,12 +120,12 @@ struct InsightsPane: View {
 
             if FeatureFlags.coach, weekOffset >= -1 {
                 if entitlements.isUnlocked(.coach) {
-                    ProRow(title: "Weekly coach", detail: CoachWords.rowDetail(coach), systemImage: "sparkles") {
+                    ProRow(title: String(localized: "Weekly coach"), detail: CoachWords.rowDetail(coach), systemImage: "sparkles") {
                         openPane(.coach)
                     }
                     .task { await coach.refresh() }
                 } else if appState.sessionManager.currentSession == nil {
-                    LockedProRow(feature: .coach, title: "Weekly coach", detail: CoachWords.pitch,
+                    LockedProRow(feature: .coach, title: String(localized: "Weekly coach"), detail: CoachWords.pitch,
                                  systemImage: "sparkles", onTrialStarted: { openPane(.coach) })
                 }
             }
@@ -180,9 +187,9 @@ struct InsightsTodayView: View {
 
             if !today.sessions.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    paneHeading("Sessions", note: "named by how they went")
+                    paneHeading(String(localized: "Sessions"), note: String(localized: "named by how they went"))
                     ForEach(today.sessions.prefix(4).reversed()) { summary in
-                        SessionRow(summary: summary, now: now, runningDetail: "named when it ends",
+                        SessionRow(summary: summary, now: now, runningDetail: String(localized: "named when it ends"),
                                    onRename: { onRename(summary, $0) }, onDelete: { onDelete(summary) })
                     }
                 }
@@ -190,7 +197,7 @@ struct InsightsTodayView: View {
 
             if !today.topApps.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    paneHeading("Top apps & sites today")
+                    paneHeading(String(localized: "Top apps & sites today"))
                     ForEach(today.topApps) { row in
                         HStack(spacing: 8) {
                             AppGlyph(kind: row.isSite ? .generic : AppGlyph.kind(forBundleId: row.bundleId, name: row.name),
@@ -223,7 +230,7 @@ struct InsightsTodayView: View {
                 Text("Focus rate")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.secondaryText)
-                Text(all.focus + all.distraction > 0 ? "\(Int((all.focusRate * 100).rounded()))%" : "–")
+                Text(all.focus + all.distraction > 0 ? "\(Int((all.focusRate * 100).rounded()))%" : "–", comment: "Percentage, or a dash when there's nothing to rate")
                     .font(.system(size: 20, weight: .semibold).monospacedDigit())
                     .kerning(-0.4)
                 Spacer(minLength: 4)
@@ -233,8 +240,8 @@ struct InsightsTodayView: View {
                     .lineLimit(1)
             }
             HStack(alignment: .top, spacing: 12) {
-                SplitColumn(title: "In sessions", snapshot: today.inSessions)
-                SplitColumn(title: "Between", snapshot: today.betweenSessions)
+                SplitColumn(title: String(localized: "In sessions"), snapshot: today.inSessions)
+                SplitColumn(title: String(localized: "Between", comment: "Time between sessions"), snapshot: today.betweenSessions)
             }
             Text("Other time — chat, mail, calls — is left out of the rate.")
                 .font(.system(size: 11))
@@ -264,12 +271,17 @@ struct InsightsWeekView: View {
             }
 
             HStack(spacing: 6) {
-                StatTile(label: "Focused", value: formatDuration(week.focused), detail: weekDelta)
-                StatTile(label: "Focus rate", value: "\(Int((week.focusRate * 100).rounded()))%", detail: bestDayText)
+                StatTile(label: String(localized: "Focused"), value: formatDuration(week.focused), detail: weekDelta)
+                StatTile(label: String(localized: "Focus rate"),
+                         value: String(localized: "\(Int((week.focusRate * 100).rounded()))%", comment: "Percentage"), detail: bestDayText)
                 if weekOffset == 0 {
-                    StatTile(label: "Streak", value: counted(week.streak, "day"), detail: "goal met")
+                    StatTile(label: String(localized: "Streak"),
+                             value: String(localized: "\(week.streak) days", comment: "Plural on the count: 1 day / 2 days"),
+                             detail: String(localized: "goal met"))
                 } else {
-                    StatTile(label: "Goal met", value: counted(goalDays, "day"), detail: "of 7")
+                    StatTile(label: String(localized: "Goal met"),
+                             value: String(localized: "\(goalDays) days", comment: "Plural on the count: 1 day / 2 days"),
+                             detail: String(localized: "of 7"))
                 }
             }
 
@@ -295,7 +307,7 @@ struct InsightsWeekView: View {
 
             if !week.topDistractions.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {
-                    paneHeading("Top distractions")
+                    paneHeading(String(localized: "Top distractions"))
                     let maxSeconds = week.topDistractions.map(\.seconds).max() ?? 1
                     ForEach(week.topDistractions) { row in
                         HStack(spacing: 10) {
@@ -320,12 +332,12 @@ struct InsightsWeekView: View {
 
     private var weekNavigator: some View {
         HStack(spacing: 6) {
-            RoundIconButton(systemImage: "chevron.left", label: "Previous week") { weekOffset -= 1 }
+            RoundIconButton(systemImage: "chevron.left", label: String(localized: "Previous week")) { weekOffset -= 1 }
                 .disabled(!canGoBack)
             Text(weekTitle)
                 .font(.system(size: 12, weight: .semibold))
                 .frame(maxWidth: .infinity)
-            RoundIconButton(systemImage: "chevron.right", label: "Next week") { weekOffset += 1 }
+            RoundIconButton(systemImage: "chevron.right", label: String(localized: "Next week")) { weekOffset += 1 }
                 .disabled(weekOffset >= 0)
         }
     }
@@ -336,22 +348,25 @@ struct InsightsWeekView: View {
         let end = Calendar.current.date(byAdding: .day, value: 6, to: start) ?? start
         let range = (start..<end.addingTimeInterval(1)).formatted(.interval.day().month(.abbreviated))
         switch weekOffset {
-        case 0:  return "This week · \(range)"
-        case -1: return "Last week · \(range)"
+        case 0:  return String(localized: "This week · \(range)")
+        case -1: return String(localized: "Last week · \(range)")
         default: return range
         }
     }
 
     private var weekDelta: String {
-        guard week.focusedLastWeek > 60 else { return "no data the week before" }
+        guard week.focusedLastWeek > 60 else { return String(localized: "no data the week before") }
         let delta = week.focused - week.focusedLastWeek
-        return "\(delta >= 0 ? "+" : "−")\(formatDuration(abs(delta))) vs last"
+        return String(localized: "\(CoachWords.timeChange(delta)) vs last", comment: "Focused time against the week before: +1h 44m vs last")
     }
 
     private var bestDayText: String {
-        guard let day = week.bestDay else { return weekOffset == 0 ? "this week" : "that week" }
-        let rate = week.bestDayRate.map { " · \(Int(($0 * 100).rounded()))%" } ?? ""
-        return "best \(day.formatted(.dateTime.weekday(.abbreviated)))\(rate)"
+        guard let day = week.bestDay else { return weekOffset == 0 ? String(localized: "this week") : String(localized: "that week") }
+        let weekday = day.formatted(.dateTime.weekday(.abbreviated))
+        if let rate = week.bestDayRate {
+            return String(localized: "best \(weekday) · \(Int((rate * 100).rounded()))%")
+        }
+        return String(localized: "best \(weekday)")
     }
 
     private var goalDays: Int {
@@ -417,8 +432,7 @@ private struct SplitColumn: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title): \(formatDuration(snapshot.focus)) focused, "
-                            + "\(formatDuration(snapshot.distraction)) drifted, \(formatDuration(snapshot.neutral)) other")
+        .accessibilityLabel("\(title): \(formatDuration(snapshot.focus)) focused, \(formatDuration(snapshot.distraction)) drifted, \(formatDuration(snapshot.neutral)) other")
     }
 }
 
@@ -510,9 +524,14 @@ struct WeekBars: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel("Focus per day: " + days.prefix(insights.todayIndex + 1).map {
+        .accessibilityLabel("Focus per day: \(perDaySummary)")
+    }
+
+    /// "Monday 2h, Tuesday 3h 10m", up to today.
+    private var perDaySummary: String {
+        insights.days.prefix(insights.todayIndex + 1).map {
             "\($0.date.formatted(.dateTime.weekday(.wide))) \(formatDuration($0.focus))"
-        }.joined(separator: ", "))
+        }.joined(separator: ", ")
     }
 }
 

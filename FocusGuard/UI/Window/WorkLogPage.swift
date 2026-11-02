@@ -83,8 +83,8 @@ struct WorkLogContent: View {
 
     var body: some View {
         WindowScroll {
-            PageHeader(title: "Work log", subtitle: subtitle) {
-                PeriodStepper(offset: $offset, unit: "week")
+            PageHeader(title: String(localized: "Work log"), subtitle: subtitle) {
+                PeriodStepper(offset: $offset, unit: .week)
                 exportMenu
             }
         } content: {
@@ -110,7 +110,7 @@ struct WorkLogContent: View {
     }
 
     private var subtitle: String {
-        "Week of \(model.interval.start.formatted(.dateTime.day().month(.wide))) · from your session goals and debriefs"
+        String(localized: "Week of \(model.interval.start.formatted(.dateTime.day().month(.wide))) · from your session goals and debriefs")
     }
 
     private var exportMenu: some View {
@@ -140,7 +140,7 @@ struct WorkLogContent: View {
     private var appleIntelligenceNote: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles").foregroundStyle(Theme.focus).accessibilityHidden(true)
-            Text("\(OnDeviceAI.unavailableNote) to write debriefs. Goals, times and apps still show here.")
+            Text("Needs Apple Intelligence (macOS 26) to write debriefs. Goals, times and apps still show here.")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.bodyText)
                 .lineLimit(1)
@@ -175,7 +175,7 @@ struct WorkLogContent: View {
                                 .foregroundStyle(Theme.primaryText)
                                 .accessibilityAddTraits(.isHeader)
                             Spacer(minLength: 8)
-                            Text("\(WindowFormat.count(day.entries.count, "session")) · \(WindowFormat.hm(day.focused)) focused")
+                            Text("\(day.entries.count) sessions · \(WindowFormat.hm(day.focused)) focused", comment: "Plural on entries.count: 1 session / 2 sessions")
                                 .font(.system(size: 11))
                                 .foregroundStyle(Theme.secondaryText)
                         }
@@ -193,12 +193,14 @@ struct WorkLogContent: View {
             Rectangle().fill(Theme.hairline).frame(height: 0.5)
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.end.map { WindowFormat.span(entry.start, $0) } ?? "\(WindowFormat.clock(entry.start))–now")
+                    Text(entry.end.map { WindowFormat.span(entry.start, $0) }
+                         ?? String(localized: "\(WindowFormat.clock(entry.start))–now", comment: "A session still running: 14:05–now"))
                         .font(.system(size: 12, weight: .semibold).monospacedDigit())
                         .foregroundStyle(Theme.primaryText)
                     Text(entry.name)
                     if entry.hasRate {
-                        Text("\(Int((entry.focusRate * 100).rounded()))% \(entry.isLive ? "so far" : "focus rate")")
+                        let rate = Int((entry.focusRate * 100).rounded())
+                        Text(entry.isLive ? "\(rate)% so far" : "\(rate)% focus rate")
                     }
                 }
                 .font(.system(size: 11))
@@ -235,12 +237,20 @@ struct WorkLogContent: View {
         .contextMenu {
             if entry.hasGoal && !entry.isLive {
                 ForEach(GoalVerdict.allCases, id: \.self) { verdict in
-                    Button("Mark as \(verdict.chipText.lowercased())") { onCorrect(entry, verdict) }
+                    Button(markTitle(verdict)) { onCorrect(entry, verdict) }
                         .disabled(entry.state == .verdict(verdict))
                 }
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private func markTitle(_ verdict: GoalVerdict) -> String {
+        switch verdict {
+        case .done:   return String(localized: "Mark as done")
+        case .partly: return String(localized: "Mark as partly")
+        case .notYet: return String(localized: "Mark as not yet")
+        }
     }
 
     private func projectChip(_ name: String) -> some View {
@@ -310,7 +320,7 @@ struct WorkLogContent: View {
     private var projects: some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
             VStack(alignment: .leading, spacing: 10) {
-                WindowCardTitle("Projects")
+                WindowCardTitle(String(localized: "Projects"))
                 if model.projects.isEmpty {
                     Text("No focused time yet.")
                         .font(.system(size: 12))
@@ -361,7 +371,8 @@ struct WorkLogContent: View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
             VStack(alignment: .leading, spacing: 8) {
                 if let draft = model.standup {
-                    WindowCardTitle("Standup draft", note: "for \(draft.day.formatted(.dateTime.weekday(.wide)))")
+                    WindowCardTitle(String(localized: "Standup draft"),
+                                    note: String(localized: "for \(draft.day.formatted(.dateTime.weekday(.wide)))", comment: "The day a standup draft is for: for Monday"))
                     Group {
                         if editingStandup {
                             TextEditor(text: $standupText)
@@ -389,7 +400,7 @@ struct WorkLogContent: View {
                         Text("Worked out on this Mac").font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
                     }
                 } else {
-                    WindowCardTitle("Standup draft")
+                    WindowCardTitle(String(localized: "Standup draft"))
                     Text("After a session with a goal, a draft of done, next and blocked shows here.")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.secondaryText)
@@ -429,7 +440,7 @@ struct WorkLogContent: View {
     private var timesheet: some View {
         WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
             VStack(alignment: .leading, spacing: 8) {
-                WindowCardTitle("Timesheet", note: "focused hours")
+                WindowCardTitle(String(localized: "Timesheet"), note: String(localized: "focused hours"))
                 let sheet = model.timesheet
                 if sheet.rows.isEmpty {
                     Text("Focused hours per project and day show here.")
@@ -485,7 +496,7 @@ struct WorkLogContent: View {
     private func exportTimesheet() {
         let csv = model.timesheet.csv(calendar: calendar)
         let panel = NSSavePanel()
-        panel.title = "Export timesheet"
+        panel.title = String(localized: "Export timesheet")
         panel.nameFieldStringValue = "focusguard-timesheet-\(model.interval.start.formatted(.iso8601.year().month().day())).csv"
         panel.allowedContentTypes = [.commaSeparatedText]
         panel.canCreateDirectories = true
@@ -495,7 +506,7 @@ struct WorkLogContent: View {
                 try Data(csv.utf8).write(to: url, options: .atomic)
             } catch {
                 let alert = NSAlert()
-                alert.messageText = "Export failed"
+                alert.messageText = String(localized: "Export failed")
                 alert.informativeText = error.localizedDescription
                 alert.alertStyle = .warning
                 alert.runModal()
@@ -516,9 +527,10 @@ enum WorkLogText {
         for day in model.days {
             lines.append(day.day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
             for entry in day.entries.reversed() {
-                let time = entry.end.map { WindowFormat.span(entry.start, $0) } ?? "\(WindowFormat.clock(entry.start))–now"
+                let time = entry.end.map { WindowFormat.span(entry.start, $0) }
+                    ?? String(localized: "\(WindowFormat.clock(entry.start))–now", comment: "A session still running: 14:05–now")
                 var line = "- \(time) \(entry.title)"
-                if case .verdict(let verdict) = entry.state { line += " (\(verdict.chipText.lowercased()))" }
+                if case .verdict(let verdict) = entry.state { line += " (\(word(for: verdict)))" }
                 if let project = entry.project { line += " [\(project)]" }
                 lines.append(line)
                 if let note = entry.note, !entry.isLive { lines.append("  \(note)") }
@@ -526,6 +538,15 @@ enum WorkLogText {
             lines.append("")
         }
         return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
+    }
+
+    /// A goal's outcome, in brackets after the session's line.
+    private static func word(for verdict: GoalVerdict) -> String {
+        switch verdict {
+        case .done:   return String(localized: "done", comment: "A session goal's outcome, in a copied work log line")
+        case .partly: return String(localized: "partly", comment: "A session goal's outcome, in a copied work log line")
+        case .notYet: return String(localized: "not yet", comment: "A session goal's outcome, in a copied work log line")
+        }
     }
 }
 
@@ -540,7 +561,7 @@ private struct WorkLogLocked: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PageHeader(title: "Work log", subtitle: "Part of FocusGuard Pro") { EmptyView() }
+            PageHeader(title: String(localized: "Work log"), subtitle: String(localized: "Part of FocusGuard Pro")) { EmptyView() }
             ZStack(alignment: .top) {
                 WorkLogSkeleton()
                     .opacity(0.45)
@@ -588,9 +609,9 @@ private struct WorkLogLocked: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: 10) {
-                point("Goals and debriefs", "Done, partly or not, in one click when a session ends.")
-                point("Standup draft", "Done, next and blocked, ready to paste into Slack.")
-                point("Timesheet", "Focused hours per project and day, exported as CSV.")
+                point(String(localized: "Goals and debriefs"), String(localized: "Done, partly or not, in one click when a session ends."))
+                point(String(localized: "Standup draft"), String(localized: "Done, next and blocked, ready to paste into Slack."))
+                point(String(localized: "Timesheet"), String(localized: "Focused hours per project and day, exported as CSV."))
             }
             VStack(spacing: 8) {
                 if FeatureFlags.debrief && entitlements.canStartTrial {
@@ -632,17 +653,20 @@ private struct WorkLogLocked: View {
     }
 
     private var footnote: String {
-        let price = "\(ProPricing.yearly) a year or \(ProPricing.monthly) a month"
-        let lead = entitlements.canStartTrial ? "Then \(price)." : "\(price.prefix(1).uppercased())\(price.dropFirst())."
+        let lead = entitlements.canStartTrial
+            ? String(localized: "Then \(ProPricing.yearly) a year or \(ProPricing.monthly) a month.")
+            : String(localized: "\(ProPricing.yearly) a year or \(ProPricing.monthly) a month.")
         guard sessionsThisWeek > 0 else { return lead }
-        let count = sessionsThisWeek == 1 ? "This week's session shows" : "This week's \(sessionsThisWeek) sessions show"
-        return "\(lead) \(count) up here as soon as Pro is on."
+        let shows = sessionsThisWeek == 1
+            ? String(localized: "This week's session shows up here as soon as Pro is on.")
+            : String(localized: "This week's \(sessionsThisWeek) sessions show up here as soon as Pro is on.")
+        return "\(lead) \(shows)"
     }
 
     private var comingNote: String {
         entitlements.isUnlocked(.workLog)
-            ? "The work log arrives in a coming update. It's included in your Pro."
-            : "The work log arrives in a coming update, as part of Pro."
+            ? String(localized: "The work log arrives in a coming update. It's included in your Pro.")
+            : String(localized: "The work log arrives in a coming update, as part of Pro.")
     }
 
     private func point(_ title: String, _ detail: String) -> some View {
@@ -680,9 +704,9 @@ private struct WorkLogSkeleton: View {
         WindowSplitRow(weights: [1.5, 1]) {
             WindowCard(padding: EdgeInsets(top: 18, leading: 20, bottom: 18, trailing: 20)) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Thursday").font(.system(size: 13, weight: .bold))
+                    Text(Calendar.current.weekdaySymbols[4]).font(.system(size: 13, weight: .bold))
                     ForEach(0..<3, id: \.self) { i in entry(width: [220, 180, 240][i], strong: i != 1) }
-                    Text("Wednesday").font(.system(size: 13, weight: .bold)).padding(.top, 8)
+                    Text(Calendar.current.weekdaySymbols[3]).font(.system(size: 13, weight: .bold)).padding(.top, 8)
                     entry(width: 200, strong: true)
                 }
             }

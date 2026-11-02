@@ -15,46 +15,46 @@ struct SettingsNotificationsPane: View {
 
     var body: some View {
         SettingsColumns {
-            SettingsSection("FocusGuard notifications") {
-                SettingsToggle(title: "Allow notifications",
-                               detail: "Off silences every one of them; the pause screen still works",
+            SettingsSection(String(localized: "FocusGuard notifications")) {
+                SettingsToggle(title: String(localized: "Allow notifications"),
+                               detail: String(localized: "Off silences every one of them; the pause screen still works"),
                                isOn: $allowed)
             }
-            SettingsSection("During a session") {
-                SettingsToggle(title: "Nudge when you drift", detail: nudgeDetail, isOn: $nudges)
+            SettingsSection(String(localized: "During a session")) {
+                SettingsToggle(title: String(localized: "Nudge when you drift"), detail: nudgeDetail, isOn: $nudges)
                 SettingsDivider()
-                SettingsToggle(title: "Stay quiet during calls",
-                               detail: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls",
+                SettingsToggle(title: String(localized: "Stay quiet during calls"),
+                               detail: String(localized: "Zoom, FaceTime, Meet and Teams count as neutral, and nudges wait during calls"),
                                isOn: $quietInCalls)
             }
             .disabled(!allowed)
-            SettingsSection("Your day") {
-                SettingsToggle(title: "Morning plan",
-                               detail: "A \(Self.hour(HabitSchedule.morningHours.lowerBound)) notification with free slots for today's sessions",
+            SettingsSection(String(localized: "Your day")) {
+                SettingsToggle(title: String(localized: "Morning plan"),
+                               detail: String(localized: "A \(Self.hour(HabitSchedule.morningHours.lowerBound)) notification with free slots for today's sessions"),
                                isOn: $morningPlan)
                 SettingsDivider()
-                SettingsToggle(title: "Evening wrap-up",
-                               detail: "After \(Self.hour(HabitSchedule.wrapUpHour)): focused time against your goal, and when to start tomorrow",
+                SettingsToggle(title: String(localized: "Evening wrap-up"),
+                               detail: String(localized: "After \(Self.hour(HabitSchedule.wrapUpHour)): focused time against your goal, and when to start tomorrow"),
                                isOn: $eveningWrapUp)
                 SettingsDivider()
-                SettingsToggle(title: "Offer to start a session",
-                               detail: "After 5 focused minutes outside a session. It counts from when you began",
+                SettingsToggle(title: String(localized: "Offer to start a session"),
+                               detail: String(localized: "After 5 focused minutes outside a session. It counts from when you began"),
                                isOn: $autoStartOffer)
             }
             .disabled(!allowed)
         } right: {
-            SettingsSection("What they look like") {
+            SettingsSection(String(localized: "What they look like")) {
                 VStack(spacing: 8) {
-                    sample(time: "09:00", title: "Plan your day",
-                           body: "Yesterday: \(WindowFormat.hm(4 * 3600 + 20 * 60)) focused. Start with \(defaultLength) minutes?")
-                    sample(time: "18:30", title: "\(WindowFormat.hm(3 * 3600 + 23 * 60)) focused today",
-                           body: "37 minutes short of your goal. One short session tonight keeps your streak.")
-                    sample(time: "now", title: "Back to your session?",
-                           body: "You've been on a distracting site for 30 seconds. The pause screen comes in a minute.")
+                    sample(time: "09:00", title: String(localized: "Plan your day"),
+                           body: String(localized: "Yesterday: \(WindowFormat.hm(4 * 3600 + 20 * 60)) focused. Start with \(defaultLength) minutes?"))
+                    sample(time: "18:30", title: String(localized: "\(WindowFormat.hm(3 * 3600 + 23 * 60)) focused today"),
+                           body: String(localized: "37 minutes short of your goal. One short session tonight keeps your streak."))
+                    sample(time: String(localized: "now", comment: "Time on a sample notification"), title: String(localized: "Back to your session?"),
+                           body: String(localized: "You've been on a distracting site for 30 seconds. The pause screen comes in a minute."))
                 }
                 .padding(12)
             }
-            SettingsNote(text: "These are examples. macOS decides how notifications appear; change banners or alerts in System Settings › Notifications.")
+            SettingsNote(text: String(localized: "These are examples. macOS decides how notifications appear; change banners or alerts in System Settings › Notifications."))
             Button("Open Notification Settings…") {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
                     NSWorkspace.shared.open(url)
@@ -74,8 +74,8 @@ struct SettingsNotificationsPane: View {
 
     private var nudgeDetail: String {
         let engine = appState.escalationEngine
-        if engine.strictMode { return "Strict pauses the screen straight away instead" }
-        return "After \(DriftTimingsSheet.seconds(Int(engine.notifyThreshold))) on a distracting site · \(engine.preset.title)"
+        if engine.strictMode { return String(localized: "Strict pauses the screen straight away instead") }
+        return String(localized: "After \(DriftTimingsSheet.seconds(Int(engine.notifyThreshold))) on a distracting site · \(engine.preset.title)")
     }
 
     private func sample(time: String, title: String, body: String) -> some View {

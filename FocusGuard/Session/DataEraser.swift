@@ -60,17 +60,17 @@ enum DriftResponse: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .gentle:   return "Gentle"
-        case .standard: return "Standard"
-        case .strict:   return "Strict"
+        case .gentle:   return String(localized: "Gentle", comment: "Preset: how hard FocusGuard pushes back when you drift")
+        case .standard: return String(localized: "Standard", comment: "Preset: how hard FocusGuard pushes back when you drift")
+        case .strict:   return String(localized: "Strict", comment: "Preset: how hard FocusGuard pushes back when you drift")
         }
     }
 
     var summary: String {
         switch self {
-        case .gentle:   return "Nudge after 1 min · block after 3 min"
-        case .standard: return "Nudge after 30 s · block after 90 s"
-        case .strict:   return "Block the screen as soon as you drift"
+        case .gentle:   return String(localized: "Nudge after 1 min · block after 3 min")
+        case .standard: return String(localized: "Nudge after 30 s · block after 90 s")
+        case .strict:   return String(localized: "Block the screen as soon as you drift")
         }
     }
 

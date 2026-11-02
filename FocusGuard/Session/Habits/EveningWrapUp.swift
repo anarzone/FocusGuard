@@ -32,18 +32,22 @@ struct EveningWrapUp: Equatable {
     var title: String {
         let focused = FocusGoal.format(minutes: focusedMinutes)
         if tip != nil {
-            return goalHit ? "Day done: goal met" : "Day done: \(focused) of \(FocusGoal.format(minutes: goalMinutes))"
+            return goalHit
+                ? String(localized: "Day done: goal met")
+                : String(localized: "Day done: \(focused) of \(FocusGoal.format(minutes: goalMinutes))")
         }
-        return goalHit ? "Goal hit: \(focused) focused" : "Today: \(focused) focused"
+        return goalHit ? String(localized: "Goal hit: \(focused) focused") : String(localized: "Today: \(focused) focused")
     }
 
     func body(locale: Locale = .current, calendar: Calendar = .current) -> String {
         func time(_ date: Date) -> String { HabitFormat.time(date, locale: locale, calendar: calendar) }
-        let bestStretch = best.map { "Best stretch: \($0.name), \(time($0.start))–\(time($0.end))." }
+        let bestStretch = best.map { String(localized: "Best stretch: \($0.name), \(time($0.start))–\(time($0.end)).") }
         if let tip {
             if goalHit {
-                var sentences = ["\(FocusGoal.format(minutes: focusedMinutes)) focused\(focusPercent.map { " at \($0)%" } ?? "")."]
-                if streak >= 2 { sentences.append("That's \(streak) days in a row.") }
+                let focused = FocusGoal.format(minutes: focusedMinutes)
+                var sentences = [focusPercent.map { String(localized: "\(focused) focused at \($0)%.") }
+                    ?? String(localized: "\(focused) focused.")]
+                if streak >= 2 { sentences.append(String(localized: "That's \(streak) days in a row.", comment: "streak is 2 or more")) }
                 return (sentences + [tip.text]).joined(separator: " ")
             }
             // The title has the numbers; a plain "best time" tip gets the best stretch beside it.
@@ -54,18 +58,20 @@ struct EveningWrapUp: Equatable {
         var sentences: [String] = []
         let difference = abs(focusedMinutes - goalMinutes)
         if difference == 0 {
-            sentences.append("Right on your \(goal) goal.")
+            sentences.append(String(localized: "Right on your \(goal) goal."))
         } else {
-            let side = goalHit ? "over" : "short of"
-            sentences.append("\(HabitFormat.amount(minutes: difference)) \(side) your \(goal) goal.")
+            let amount = HabitFormat.amount(minutes: difference)
+            sentences.append(goalHit
+                ? String(localized: "\(amount) over your \(goal) goal.")
+                : String(localized: "\(amount) short of your \(goal) goal."))
         }
         if goalHit, streak >= 2 {
-            sentences.append("That's \(streak) days in a row.")
+            sentences.append(String(localized: "That's \(streak) days in a row.", comment: "streak is 2 or more"))
         } else if let bestStretch {
             sentences.append(bestStretch)
         }
         if let tomorrowStart {
-            sentences.append("Best time to start tomorrow: \(time(tomorrowStart)).")
+            sentences.append(String(localized: "Best time to start tomorrow: \(time(tomorrowStart))."))
         }
         return sentences.joined(separator: " ")
     }
@@ -137,8 +143,8 @@ struct EveningTip: Equatable {
         }
         guard let tomorrowStart else { return nil }
         let clock = HabitFormat.time(tomorrowStart, locale: locale, calendar: calendar)
-        return EveningTip(kind: .bestStart, text: "Best time to start tomorrow: \(clock).",
-                          slot: tomorrowStart, button: "Plan it for \(clock)")
+        return EveningTip(kind: .bestStart, text: String(localized: "Best time to start tomorrow: \(clock)."),
+                          slot: tomorrowStart, button: String(localized: "Plan it for \(clock)"))
     }
 
     /// The hour (07:00 to 19:00) today's drift peaked in, when one
@@ -159,11 +165,12 @@ struct EveningTip: Equatable {
               let slot = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: tomorrow) else { return nil }
         let clock = HabitFormat.time(slot, locale: locale, calendar: calendar)
         let lead = top.value * 2 >= TimeInterval(gapMinutes * 60)
-            ? "Most of the gap was \(name) after \(clock)."
-            : "\(name) took \(HabitFormat.amount(minutes: Int(top.value / 60))) after \(clock)."
+            ? String(localized: "Most of the gap was \(name) after \(clock).")
+            : String(localized: "\(name) took \(HabitFormat.amount(minutes: Int(top.value / 60))) after \(clock).")
+        let plan = String(localized: "Tomorrow, a \(sessionMinutes)-minute session at \(clock) holds that hour.")
         return EveningTip(kind: .driftHour,
-                          text: "\(lead) Tomorrow, a \(sessionMinutes)-minute session at \(clock) holds that hour.",
-                          slot: slot, button: "Plan it for \(clock)")
+                          text: "\(lead) \(plan)",
+                          slot: slot, button: String(localized: "Plan it for \(clock)"))
     }
 
     /// The coach's late starts over `recent`. On a missed day only when
@@ -186,8 +193,10 @@ struct EveningTip: Equatable {
         let slot = tomorrowStart.flatMap { minutes($0) < cutoff && minutes($0) >= 7 * 60 ? $0 : nil } ?? morning
         let before = CoachDraft.clock(minutes: cutoff, locale: locale, calendar: calendar)
         return EveningTip(kind: .startEarlier,
-                          text: "Tomorrow, start before \(before): your early days focused \(CoachDraft.duration(f.earlyFocus - f.lateFocus)) more.",
+                          text: String(localized: "Tomorrow, start before \(before): your early days focused \(CoachDraft.duration(f.earlyFocus - f.lateFocus)) more."),
                           slot: slot,
-                          button: goalMet ? "Plan tomorrow" : "Plan it for \(HabitFormat.time(slot, locale: locale, calendar: calendar))")
+                          button: goalMet
+                            ? String(localized: "Plan tomorrow")
+                            : String(localized: "Plan it for \(HabitFormat.time(slot, locale: locale, calendar: calendar))"))
     }
 }

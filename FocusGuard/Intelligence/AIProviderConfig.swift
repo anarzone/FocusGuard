@@ -12,7 +12,7 @@ enum ProviderKind: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .anthropic:        return "Anthropic (Claude)"
         case .openAI:           return "OpenAI"
-        case .openAICompatible: return "OpenAI-compatible"
+        case .openAICompatible: return String(localized: "OpenAI-compatible", comment: "Kind of AI provider: any server with OpenAI's API")
         }
     }
 

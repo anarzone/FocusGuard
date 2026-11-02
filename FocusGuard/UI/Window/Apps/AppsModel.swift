@@ -24,12 +24,30 @@ enum AppsRange: String, CaseIterable, Identifiable {
         }
     }
 
-    /// "in the last 7 days", "today".
-    var phrase: String {
+    /// The range's name in the menu. The rawValue stays as the id.
+    var title: String {
         switch self {
-        case .today: return "today"
-        case .week:  return "in the last 7 days"
-        case .month: return "in the last 30 days"
+        case .today: return String(localized: "Today")
+        case .week:  return String(localized: "Last 7 days")
+        case .month: return String(localized: "Last 30 days")
+        }
+    }
+
+    /// "3h 20m in the last 7 days", "3h 20m today".
+    func spent(_ time: String) -> String {
+        switch self {
+        case .today: return String(localized: "\(time) today", comment: "Time used, like: 3h 20m today")
+        case .week:  return String(localized: "\(time) in the last 7 days", comment: "Time used, like: 3h 20m in the last 7 days")
+        case .month: return String(localized: "\(time) in the last 30 days", comment: "Time used, like: 3h 20m in the last 30 days")
+        }
+    }
+
+    /// "Nothing tracked in the last 7 days yet."
+    var nothingTracked: String {
+        switch self {
+        case .today: return String(localized: "Nothing tracked today yet.")
+        case .week:  return String(localized: "Nothing tracked in the last 7 days yet.")
+        case .month: return String(localized: "Nothing tracked in the last 30 days yet.")
         }
     }
 }
@@ -57,9 +75,59 @@ enum RuleSource: Equatable {
     /// "Made by" in the rules list.
     var maker: String {
         switch self {
-        case .none, .builtIn: return "Built-in"
-        case .smart:          return "Smart"
-        case .user:           return "You"
+        case .none, .builtIn: return String(localized: "Built-in", comment: "Who made a rule, in the Made by column")
+        case .smart:          return String(localized: "Smart", comment: "Who made a rule, in the Made by column: smart categories")
+        case .user:           return String(localized: "You", comment: "Who made a rule, in the Made by column")
+        }
+    }
+}
+
+/// A guess about a category, each as its own sentence: a category's name
+/// can't be spliced in, since German nouns keep their capitals and
+/// Azerbaijani adds suffixes.
+enum AppsCategoryWords {
+    /// "Looks like focus."
+    static func looksLike(_ c: Classification) -> String {
+        switch c {
+        case .focus:       return String(localized: "Looks like focus.")
+        case .neutral:     return String(localized: "Looks like neutral.")
+        case .distraction: return String(localized: "Looks like distracting.")
+        }
+    }
+
+    /// "Looks like focus · the reason", for the why line.
+    static func looksLike(_ c: Classification, reason: String) -> String {
+        switch c {
+        case .focus:       return String(localized: "Looks like focus · \(reason)", comment: "After the dot: smart categories' reason for the guess")
+        case .neutral:     return String(localized: "Looks like neutral · \(reason)", comment: "After the dot: smart categories' reason for the guess")
+        case .distraction: return String(localized: "Looks like distracting · \(reason)", comment: "After the dot: smart categories' reason for the guess")
+        }
+    }
+
+    /// "Sorted as focus for you."
+    static func sortedForYou(_ c: Classification) -> String {
+        switch c {
+        case .focus:       return String(localized: "Sorted as focus for you.")
+        case .neutral:     return String(localized: "Sorted as neutral for you.")
+        case .distraction: return String(localized: "Sorted as distracting for you.")
+        }
+    }
+
+    /// "FocusGuard guessed focus."
+    static func guessed(_ c: Classification) -> String {
+        switch c {
+        case .focus:       return String(localized: "FocusGuard guessed focus.")
+        case .neutral:     return String(localized: "FocusGuard guessed neutral.")
+        case .distraction: return String(localized: "FocusGuard guessed distracting.")
+        }
+    }
+
+    /// "Make it Focus", the button that takes a guess.
+    static func makeIt(_ c: Classification) -> String {
+        switch c {
+        case .focus:       return String(localized: "Make it Focus")
+        case .neutral:     return String(localized: "Make it Neutral")
+        case .distraction: return String(localized: "Make it Distracting")
         }
     }
 }
@@ -82,18 +150,26 @@ struct AppsItem: Identifiable, Equatable {
     /// What a daily limit or rule targets: the host, or the bundle id.
     var target: String { row.host ?? row.bundleId }
 
+    /// "Site" or "App".
+    var kindName: String {
+        isSite ? String(localized: "Site", comment: "A website, as opposed to an app")
+            : String(localized: "App", comment: "An application, as opposed to a website")
+    }
+
     /// "Site · built-in rule", "App · you sorted it", or smart categories'
     /// reason.
     var why: String {
-        let kind = isSite ? "Site" : "App"
-        if perVideo { return "\(kind) · smart categories decide each video" }
+        let kind = kindName
+        if perVideo { return String(localized: "\(kind) · smart categories decide each video", comment: "The first part is App or Site") }
         switch source {
         case .none:
-            if let suggestion { return "Looks like \(categoryName(suggestion.suggested).lowercased()) · \(suggestion.reason)" }
-            return "\(kind) · no rule yet"
-        case .builtIn: return "\(kind) · built-in rule"
-        case .smart:   return suggestion?.reason ?? "\(kind) · sorted by smart categories"
-        case .user:    return ruleKind == .titleRegex ? "\(kind) · your window-title rule" : "\(kind) · you sorted it"
+            if let suggestion { return AppsCategoryWords.looksLike(suggestion.suggested, reason: suggestion.reason) }
+            return String(localized: "\(kind) · no rule yet", comment: "The first part is App or Site")
+        case .builtIn: return String(localized: "\(kind) · built-in rule", comment: "The first part is App or Site")
+        case .smart:   return suggestion?.reason ?? String(localized: "\(kind) · sorted by smart categories", comment: "The first part is App or Site")
+        case .user:    return ruleKind == .titleRegex
+            ? String(localized: "\(kind) · your window-title rule", comment: "The first part is App or Site")
+            : String(localized: "\(kind) · you sorted it", comment: "The first part is App or Site")
         }
     }
 
@@ -154,7 +230,7 @@ struct RuleItem: Identifiable, Equatable {
     let limitMinutes: Int?
 
     /// "App", "Site", "Part of a site", "Window title".
-    var matchLabel: String { kind == .titleRegex ? "Window title" : kind.label }
+    var matchLabel: String { kind == .titleRegex ? String(localized: "Window title") : kind.label }
 }
 
 @MainActor
@@ -182,18 +258,18 @@ enum RuleItemBuilder {
         case .bundleId:   return appName(rule.pattern) ?? fallbackName(rule.pattern)
         case .host:       return rule.pattern
         case .urlPrefix:  return rule.pattern
-        case .titleRegex: return "contains “\(TitleRule.readable(rule.pattern))”"
+        case .titleRegex: return String(localized: "contains “\(TitleRule.readable(rule.pattern))”", comment: "A window-title rule: the text it looks for")
         }
     }
 
     static func note(_ rule: AppRule, hosts: Set<String>) -> String {
         switch rule.matchKind {
         case .bundleId:   return rule.pattern
-        case .host:       return "and its subdomains"
+        case .host:       return String(localized: "and its subdomains", comment: "Note under a site rule, like: reddit.com and its subdomains")
         case .urlPrefix:
             let host = rule.pattern.split(separator: "/").first.map(String.init) ?? ""
-            return hosts.contains(host) ? "Wins over \(host)" : "Only this part of the site"
-        case .titleRegex: return "Window titles, in any app"
+            return hosts.contains(host) ? String(localized: "Wins over \(host)") : String(localized: "Only this part of the site")
+        case .titleRegex: return String(localized: "Window titles, in any app")
         }
     }
 

@@ -119,7 +119,7 @@ final class SessionManager {
     /// session on its automatic name.
     func rename(_ session: Session, to label: String) {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let automatic = session.autoName ?? SessionNamer.liveName(startedAt: session.startedAt)
+        let automatic = session.autoName.map(SessionNamer.localizedName(stored:)) ?? SessionNamer.liveName(startedAt: session.startedAt)
         session.label = (trimmed.isEmpty || trimmed == automatic) ? nil : trimmed
         Persistence.save(context)
     }

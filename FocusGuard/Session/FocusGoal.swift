@@ -87,19 +87,24 @@ enum FocusGoal {
 
     /// "Fridays".
     static func pluralWeekday(_ weekday: Int, locale: Locale = .current, calendar: Calendar = .current) -> String {
-        var named = calendar
-        named.locale = locale
-        let symbols = named.weekdaySymbols
-        guard (1...symbols.count).contains(weekday) else { return "" }
-        return symbols[weekday - 1] + "s"
+        switch weekday {
+        case 1: return String(localized: "Sundays", locale: locale, comment: "Every Sunday: \"Goal on Sundays\", \"2h on Sundays\"")
+        case 2: return String(localized: "Mondays", locale: locale, comment: "Every Monday: \"Goal on Mondays\", \"2h on Mondays\"")
+        case 3: return String(localized: "Tuesdays", locale: locale, comment: "Every Tuesday: \"Goal on Tuesdays\", \"2h on Tuesdays\"")
+        case 4: return String(localized: "Wednesdays", locale: locale, comment: "Every Wednesday: \"Goal on Wednesdays\", \"2h on Wednesdays\"")
+        case 5: return String(localized: "Thursdays", locale: locale, comment: "Every Thursday: \"Goal on Thursdays\", \"2h on Thursdays\"")
+        case 6: return String(localized: "Fridays", locale: locale, comment: "Every Friday: \"Goal on Fridays\", \"2h on Fridays\"")
+        case 7: return String(localized: "Saturdays", locale: locale, comment: "Every Saturday: \"Goal on Saturdays\", \"2h on Saturdays\"")
+        default: return ""
+        }
     }
 
     /// Friendly format: "4h" or "3h 30m" — used by the goal stepper label.
     static func format(minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
-        if h == 0 { return "\(m)m" }
-        if m == 0 { return "\(h)h" }
-        return "\(h)h \(m)m"
+        if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+        if m == 0 { return String(localized: "\(h)h", comment: "Compact duration") }
+        return String(localized: "\(h)h \(m)m", comment: "Compact duration")
     }
 }

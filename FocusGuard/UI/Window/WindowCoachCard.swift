@@ -56,11 +56,12 @@ struct WindowCoachCard: View {
     /// "Sunday drifted most. Try this week: a 50-minute daily limit on youtube.com."
     private var summary: Text {
         guard let note = coach.note else {
-            return Text(coach.isMakingNote ? "Looking at last week…" : CoachWords.waiting).foregroundColor(Theme.bodyText)
+            return Text(coach.isMakingNote ? String(localized: "Looking at last week…") : CoachWords.waiting)
+                .foregroundColor(Theme.bodyText)
         }
         let lead = Text(note.headline).fontWeight(.semibold).foregroundColor(Theme.primaryText)
         guard let experiment = note.experiment else { return lead }
-        return lead + Text(" Try this week: \(experiment.title()).").foregroundColor(Theme.bodyText)
+        return lead + Text(verbatim: " ") + Text("Try this week: \(experiment.title()).").foregroundColor(Theme.bodyText)
     }
 
     /// The whole note, on hover.
