@@ -1,7 +1,7 @@
 {
   "localeCode": {
     "message": "en",
-    "description": "This catalog's language. Not shown: it picks the plural rules and <html lang>. Must match the folder name."
+    "description": "This catalog's language. Not shown: it picks the plural rules and <html lang>. Must match the language of the catalog."
   },
   "extDescription": {
     "message": "Works with FocusGuard for Mac: counts your time site by site and pauses distracting tabs while you focus. Stays on your Mac.",

@@ -5,6 +5,8 @@ import { Conn, GET_APP_URL } from '../src/lib/protocol.js';
 import { t } from '../src/lib/i18n.js';
 import { appIcon, ask, h, icons, localizePage, mount, reportAppearance, shieldIcon, subscribe, tell } from '../src/lib/dom.js';
 
+await localizePage();
+
 const app = document.getElementById('app');
 const SITE_ACCESS = { permissions: ['scripting'], origins: ['<all_urls>'] };
 
@@ -17,7 +19,6 @@ let siteAccess = false;
 let started = null;
 let renderedKey = '';
 
-localizePage();
 reportAppearance();
 subscribe('welcome', (next) => {
   snap = next;

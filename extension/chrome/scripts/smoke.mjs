@@ -14,9 +14,8 @@
 //          --lang CODE   (run in that language: de, or az, see below)
 //
 // On a Mac, Chrome takes its language from -AppleLanguages and ignores --lang.
-// It has no Azerbaijani UI at all, so chrome.i18n never picks az: --lang az
-// loads a copy of the extension with az's catalog in de's place, in a German
-// Chrome.
+// It has no Azerbaijani UI at all, so --lang az sets it the way a person does:
+// Azerbaijani on top of the languages in Chrome's settings.
 //
 // Branded Chrome ignores --load-extension since 137, so the extension goes
 // in through puppeteer's pipe (Extensions.loadUnpacked).
@@ -43,7 +42,7 @@ const CHROME = arg('--chrome', '/Applications/Google Chrome.app/Contents/MacOS/G
 const OUT = path.resolve(arg('--out', 'smoke-shots'));
 const HEADFUL = args.includes('--headful');
 const LANG = arg('--lang');
-const UI_LANGUAGE = LANG === 'az' ? 'de' : LANG;
+const UI_LANGUAGE = LANG === 'az' ? null : LANG;
 
 if (!HELPER || !fs.existsSync(HELPER)) {
   console.error('Pass --helper with the path to FocusGuardBrowserHelper (inside a built FocusGuard.app).');
@@ -59,22 +58,20 @@ async function loadPuppeteer() {
   }
 }
 
-function extensionToLoad() {
-  if (LANG !== 'az') return EXTENSION;
-  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'fg-smoke-az-'));
-  fs.cpSync(EXTENSION, copy, { recursive: true });
-  fs.copyFileSync(path.join(EXTENSION, '_locales/az/messages.json'), path.join(copy, '_locales/de/messages.json'));
-  return copy;
-}
-
 // Waits for a message, in whatever language the page is in, to show.
 function shows(page, key, ...values) {
-  return page.waitForFunction((k, v) => document.body.textContent.includes(chrome.i18n.getMessage(k, v)), { timeout: 10000 }, key, values);
+  return page.waitForFunction(async (k, v) => {
+    const { t } = await import('/src/lib/i18n.js');
+    return document.body.textContent.includes(t(k, ...v));
+  }, { timeout: 10000 }, key, values);
 }
 
 // Clicks the element with this message as its text.
 function clickMessage(page, selector, key) {
-  return page.evaluate((s, k) => [...document.querySelectorAll(s)].find((el) => el.textContent.includes(chrome.i18n.getMessage(k)))?.click(), selector, key);
+  return page.evaluate(async (s, k) => {
+    const { t } = await import('/src/lib/i18n.js');
+    [...document.querySelectorAll(s)].find((el) => el.textContent.includes(t(k)))?.click();
+  }, selector, key);
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +206,12 @@ async function main() {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'fg-smoke-profile-'));
   const hosts = path.join(profile, 'NativeMessagingHosts');
   fs.mkdirSync(hosts, { recursive: true });
+  if (LANG === 'az') {
+    fs.mkdirSync(path.join(profile, 'Default'));
+    fs.writeFileSync(path.join(profile, 'Default', 'Preferences'), JSON.stringify({
+      intl: { selected_languages: 'az,en-US,en', accept_languages: 'az,en-US,en' },
+    }));
+  }
   fs.writeFileSync(path.join(hosts, 'com.anar.focusguard.json'), JSON.stringify({
     name: 'com.anar.focusguard', description: 'FocusGuard', path: path.resolve(HELPER), type: 'stdio',
     allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
@@ -223,12 +226,11 @@ async function main() {
   await new Promise((r) => web.listen(0, '127.0.0.1', r));
   const site = `http://127.0.0.1:${web.address().port}`;
 
-  const extension = extensionToLoad();
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: !HEADFUL,
     pipe: true,
-    enableExtensions: [extension],
+    enableExtensions: [EXTENSION],
     userDataDir: profile,
     env: { ...process.env, FOCUSGUARD_BROWSER_SOCKET: SOCKET },
     args: ['--no-first-run', '--no-default-browser-check', '--window-size=1280,800',
@@ -261,6 +263,9 @@ async function main() {
     await step('first run opens and walks through', async () => {
       const target = await browser.waitForTarget((t) => t.url().endsWith('pages/welcome.html'), { timeout: 10000 });
       const page = await target.asPage();
+      if (LANG) {
+        await page.waitForFunction((lang) => document.documentElement.lang.startsWith(lang), { timeout: 10000 }, LANG);
+      }
       await shot(page, 'first-1-welcome');
       await page.click('button.big-btn');
       await page.waitForSelector('.steps');
@@ -400,7 +405,6 @@ async function main() {
     web.close();
     try { await stopApp(); } catch { /* already stopped */ }
     fs.rmSync(profile, { recursive: true, force: true });
-    if (extension !== EXTENSION) fs.rmSync(extension, { recursive: true, force: true });
   }
 
   const failed = results.filter((r) => r[0] === 'FAIL');

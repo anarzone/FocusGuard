@@ -14,6 +14,8 @@ import { ordinal, plural, t } from '../src/lib/i18n.js';
 import { presetName, presetRules, ringArcs, sessionClock } from '../src/lib/view.js';
 import { h, icons, localizePage, mount, reportAppearance, siteTile, subscribe, tell, waitDial } from '../src/lib/dom.js';
 
+await localizePage();
+
 const params = new URLSearchParams(location.search);
 const kind = params.get('kind') || 'paused';
 const target = params.get('target') || '';
@@ -38,7 +40,6 @@ window.addEventListener('hashchange', () => {
   renderedKey = '';
   render();
 });
-localizePage();
 reportAppearance();
 subscribe('block', (next) => { snap = next; render(); });
 setInterval(() => live.forEach((update) => update(Date.now())), 250);

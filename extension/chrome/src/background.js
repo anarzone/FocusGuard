@@ -15,6 +15,7 @@ import {
   connFromDisconnect, requestId,
 } from './lib/protocol.js';
 import { displayHost, hostname, isWebURL, parseFragment, safeWebURL } from './lib/format.js';
+import { loadLanguage, t } from './lib/i18n.js';
 import { blockReason, buildRules, hostMatches, rulesKey } from './lib/blocking.js';
 import { passFor, toolbar } from './lib/view.js';
 import { glyphImages } from './lib/icon.js';
@@ -48,6 +49,7 @@ const pagePorts = new Set();   // popup, options, block and welcome pages
 // Startup
 
 const ready = (async () => {
+  await loadLanguage();
   const stored = await chrome.storage.local.get(['settings', 'lastConnectedAt']);
   settings = { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
   lastConnectedAt = stored.lastConnectedAt || null;
@@ -464,11 +466,16 @@ async function enforceOnOpenTabs() {
 async function showPassPill(tabId, until) {
   if (!(await chrome.permissions.contains(SITE_ACCESS))) return;
   const backTo = state?.session?.backTo || null;
+  // The function runs in the page, away from i18n.js, so its words go with it.
+  const words = {
+    note: t('passPillNote'),
+    button: backTo ? t('backTo', backTo) : t('closeTab'),
+    closes: t('passPillCloses', '{host}', '{time}'),
+  };
   chrome.scripting.executeScript({
     target: { tabId },
-    args: [until, backTo],
-    func: (untilMs, backToName) => {
-      // Runs in the page, so it can't import i18n.js; content scripts do get chrome.i18n.
+    args: [until, words],
+    func: (untilMs, text) => {
       document.getElementById('focusguard-pass')?.remove();
       const pill = document.createElement('div');
       pill.id = 'focusguard-pass';
@@ -492,13 +499,13 @@ async function showPassPill(tabId, until) {
         <span class="sub"></span></span><button type="button"></button></div>`;
       const main = shadow.querySelector('.main');
       const button = shadow.querySelector('button');
-      shadow.querySelector('.sub').textContent = chrome.i18n.getMessage('passPillNote');
-      button.textContent = backToName ? chrome.i18n.getMessage('backTo', [backToName]) : chrome.i18n.getMessage('closeTab');
+      shadow.querySelector('.sub').textContent = text.note;
+      button.textContent = text.button;
       button.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'backToWork' }));
       const host = location.hostname.replace(/^www\./, '');
       const tickPill = () => {
         const left = Math.max(0, Math.ceil((untilMs - Date.now()) / 1000));
-        main.textContent = chrome.i18n.getMessage('passPillCloses', [host, `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`]);
+        main.textContent = text.closes.replace('{host}', host).replace('{time}', `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
         if (left <= 0) { clearInterval(timer); pill.remove(); }
       };
       const timer = setInterval(tickPill, 1000);
@@ -599,8 +606,10 @@ chrome.runtime.onConnect.addListener(async (p) => {
   pagePorts.add(p);
   p.onDisconnect.addListener(() => pagePorts.delete(p));
   p.postMessage(snapshot());
-  // Opening the popup is a good moment to retry a missing app.
+  // Opening the popup is a good moment to retry a missing app, and to catch up
+  // with a language changed in the browser's settings.
   if (conn !== Conn.connected) reconnectNow();
+  loadLanguage().then(updateToolbar);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

@@ -71,7 +71,8 @@ FocusGuard.app/Contents/Helpers/FocusGuardBrowserHelper ──Unix socket──�
 | Path | What |
 | --- | --- |
 | `manifest.json` | MV3 manifest, with the development `key` |
-| `_locales/` | every word shown, one `messages.json` per language: English (the source), German, Azerbaijani |
+| `_locales/` | the words for English (the source) and German, as `messages.json` |
+| `i18n/az.json` | the words for Azerbaijani, in the same format (see Languages) |
 | `src/background.js` | native connection, tab reports, pausing tabs, Pro blocking rules, toolbar button |
 | `src/lib/` | pure helpers (addresses, times, blocking rules, view state, the toolbar glyph, a tiny DOM builder, `i18n.js` for strings) |
 | `pages/popup.*` | toolbar popup: not installed, not running, ready, focusing, break, free with the Pro card |
@@ -84,16 +85,21 @@ FocusGuard.app/Contents/Helpers/FocusGuardBrowserHelper ──Unix socket──�
 
 ## Languages
 
-To add a string, put it in all three `_locales/*/messages.json` and read it with
-`t('key')` from `src/lib/i18n.js` (`plural` and `ordinal` for counts,
-`data-i18n="key"` in HTML). `npm test` fails on a missing key, a mismatched
-placeholder or an unused message.
+To add a string, put it in `_locales/en/messages.json`, `_locales/de/messages.json`
+and `i18n/az.json`, and read it with `t('key')` from `src/lib/i18n.js` (`plural` and
+`ordinal` for counts, `data-i18n="key"` in HTML). `npm test` fails on a missing key,
+a mismatched placeholder or an unused message.
 
-The language follows the browser's UI language, through `chrome.i18n`. To try
-German on a Mac, start the browser with `-AppleLanguages '(de)'` (Chrome ignores
-`--lang` there). Google Chrome has no Azerbaijani UI and doesn't list `az` as a
-supported locale, so `az` can't show in it: `scripts/smoke.mjs --lang az` renders
-it by loading a copy of the extension with `az`'s catalog in `de`'s place.
+English and German follow the browser's UI language, through `chrome.i18n`. To try
+German on a Mac, quit the browser and start it with `-AppleLanguages '(de)'` (Chrome
+ignores `--lang` there).
+
+Chrome has no Azerbaijani UI and doesn't support `az` in `_locales`, so `i18n/az.json`
+is loaded by the extension itself, when Azerbaijani is the top language in the
+browser's settings. To try it, go to `chrome://settings/languages`, add Azerbaijani
+and move it to the top, then reopen the popup or page. The rest of Chrome stays in
+its own language, and so does the extension's description on `chrome://extensions`,
+which only `_locales` can translate.
 
 ## Permissions
 

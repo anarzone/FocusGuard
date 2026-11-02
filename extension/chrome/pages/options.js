@@ -6,6 +6,8 @@ import { Conn, GET_APP_URL } from '../src/lib/protocol.js';
 import { t } from '../src/lib/i18n.js';
 import { appIcon, h, icons, localizePage, reportAppearance, shieldIcon, subscribe, tell } from '../src/lib/dom.js';
 
+await localizePage();
+
 const app = document.getElementById('app');
 const SITE_ACCESS = { permissions: ['scripting'], origins: ['<all_urls>'] };
 
@@ -14,7 +16,6 @@ let siteAccess = false;
 let incognito = false;
 let renderedKey = '';
 
-localizePage();
 reportAppearance();
 subscribe('options', (next) => { snap = next; render(); });
 refreshPermissions();

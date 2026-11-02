@@ -7,6 +7,8 @@ import { plural, t } from '../src/lib/i18n.js';
 import { barSegments, breakClock, presetName, presetRules, sessionClock } from '../src/lib/view.js';
 import { appIcon, ask, h, icons, localizePage, mount, reportAppearance, shieldIcon, siteTile, subscribe, tell } from '../src/lib/dom.js';
 
+await localizePage();
+
 const app = document.getElementById('app');
 const SITE_ACCESS = { permissions: ['scripting'], origins: ['<all_urls>'] };
 const LENGTHS = [25, 50, 90, null];
@@ -31,7 +33,6 @@ try {
   if (saved !== null) length = saved === 'none' ? null : Number(saved) || 50;
 } catch { /* storage can be off; keep the default */ }
 
-localizePage();
 reportAppearance();
 subscribe('popup', (next) => {
   const wasConnected = snap?.conn === Conn.connected;
