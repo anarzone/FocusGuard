@@ -129,12 +129,7 @@ enum MenuInsightsBuilder {
             DaySpan(start: $0.start, end: min($0.end, dayEnd), kind: $0.kind)
         }
 
-        var sessionDescriptor = FetchDescriptor<Session>(
-            predicate: #Predicate { $0.startedAt >= dayStart && $0.startedAt < dayEnd },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
-        )
-        sessionDescriptor.fetchLimit = 50
-        let sessions = Persistence.fetch(context, sessionDescriptor).map { summary(for: $0, now: now) }
+        let sessions = sessions(from: dayStart, to: dayEnd, context: context).map { summary(for: $0, now: now) }
 
         // 8 AM–6 PM, stretched to cover whatever actually happened.
         let firstHour = activity.first.map { calendar.component(.hour, from: $0.start) } ?? 8
@@ -156,13 +151,30 @@ enum MenuInsightsBuilder {
             sessions: sessions,
             window: DateInterval(start: windowStart, end: max(windowEnd, windowStart.addingTimeInterval(3600))),
             activity: activity,
-            sessionSpans: sessions.map { DateInterval(start: $0.start, end: max($0.start, $0.end ?? until)) },
+            sessionSpans: sessions.map {
+                let start = max($0.start, dayStart)
+                return DateInterval(start: start, end: max(start, $0.end ?? until))
+            },
             topApps: usageRows(context: context, from: dayStart, to: until, limit: 5),
             inSessions: split.inSessions,
             betweenSessions: split.between,
             takeaway: todayTakeaway(focused: breakdown.focus, goalProgress: goalProgress,
                                     inSessions: split.inSessions, between: split.between)
         )
+    }
+
+    /// A day's sessions, newest first: the ones started in it, and any that
+    /// ran into it from before, still going or not.
+    static func sessions(from dayStart: Date, to dayEnd: Date, context: ModelContext, limit: Int = 50) -> [Session] {
+        let earlier = dayStart.addingTimeInterval(-86_400)
+        var descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.startedAt < dayEnd && ($0.startedAt >= earlier || $0.endedAt == nil) },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit + 10
+        return Array(Persistence.fetch(context, descriptor)
+            .filter { ($0.endedAt ?? .distantFuture) >= dayStart }
+            .prefix(limit))
     }
 
     /// Time inside sessions and between them, clipped to the range.

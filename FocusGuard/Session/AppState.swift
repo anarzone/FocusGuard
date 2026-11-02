@@ -142,7 +142,7 @@ final class AppState {
         // Wire per-tick hooks: planned-duration auto-stop and escalation feed.
         // Escalation must NOT fire while paused — `currentSession` is non-nil
         // during a pause but the user has explicitly opted out of being nagged.
-        tracker.onTick = { [weak manager, weak engine, weak tracker, weak self] in
+        tracker.onTick = { [weak manager, weak engine, weak tracker, weak blockOverlay, weak self] in
             manager?.checkPlannedDuration()
             // Drive break expiration off the same tick.
             self?.breakManager.checkExpiration()
@@ -159,8 +159,12 @@ final class AppState {
                 // Time in FocusGuard's own windows never counts as drift:
                 // the engine sees a neutral moment, which resets any streak.
                 let observed = tracker?.isFrontmostSelf == true ? snap.asNeutral(at: .now) : snap.observed(at: .now)
+                // The drift block puts FocusGuard in front itself; the drift
+                // goes on behind it, and the screen counts it ("Drifted 1:42").
+                var behindDriftBlock = false
+                if tracker?.isFrontmostSelf == true, case .drift = blockOverlay?.current?.reason { behindDriftBlock = true }
                 if !onBreak {
-                    engine?.observe(snapshot: observed, isInSession: inActiveSession)
+                    if !behindDriftBlock { engine?.observe(snapshot: observed, isInSession: inActiveSession) }
                     self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession)
                 }
             }
@@ -183,9 +187,12 @@ final class AppState {
         }
         manager.onSessionPauseChanged = { [weak self] paused in
             if paused { self?.music.sessionPaused() } else { self?.music.sessionResumed() }
+            // Resumed, by anyone: a pause after this one is the user's own.
+            if !paused { self?.autoPausedAt = nil }
         }
         manager.onSessionEnded = { [weak engine, weak self] session in
             engine?.resetForSessionEnd()
+            self?.autoPausedAt = nil
             self?.tabPause.sessionEnded()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
@@ -212,7 +219,10 @@ final class AppState {
         }
         self.breakManager.onBreakEnded = { [weak self] in
             self?.breakOverlay.dismiss()
+            // A calendar event that came up during the break starts now.
+            self?.calendarAutostart.reevaluate()
         }
+        self.calendarAutostart.isOnBreak = { [weak breaks] in breaks?.isOnBreak ?? false }
 
         // The block screen reads the live session and acts on it.
         blockOverlay.contextProvider = { [weak self] in self?.blockContext() }
@@ -483,8 +493,11 @@ final class AppState {
     // MARK: - Auto-pause
 
     /// Set when WE auto-paused — distinguishes from a user-initiated pause so
-    /// we know when it's safe to auto-resume. Cleared on stop / user resume.
+    /// we know when it's safe to auto-resume. Cleared on stop and on any resume.
     private var autoPausedAt: Date?
+    /// When the screens went off or locked, until they're back. The tracker's
+    /// looks can't tell by then: input a minute old still looks like someone there.
+    private var screensOffAt: Date?
     private var workspaceObservers: [NSObjectProtocol] = []
     private let autoPauseIdleSeconds: TimeInterval = 300  // 5 min
 
@@ -495,28 +508,28 @@ final class AppState {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.autoPauseIfActive(reason: "screens slept") }
+            Task { @MainActor in self?.screensWentOff(reason: "screens slept") }
         }
         let unlock = center.addObserver(
             forName: NSWorkspace.screensDidWakeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.autoResumeIfWePaused() }
+            Task { @MainActor in self?.screensCameBack() }
         }
         let sessionLock = DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("com.apple.screenIsLocked"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.autoPauseIfActive(reason: "screen locked") }
+            Task { @MainActor in self?.screensWentOff(reason: "screen locked") }
         }
         let sessionUnlock = DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("com.apple.screenIsUnlocked"),
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.autoResumeIfWePaused() }
+            Task { @MainActor in self?.screensCameBack() }
         }
         workspaceObservers = [lock, unlock, sessionLock, sessionUnlock]
     }
@@ -525,6 +538,12 @@ final class AppState {
     /// `autoPauseIdleSeconds`, auto-resume when activity resumes.
     func maybeAutoPauseOrResume() {
         guard let session = sessionManager.currentSession else { return }
+        // Screens off or locked: nothing to go by until they're back, or until
+        // input since then says a wake-up notification went missing.
+        if let off = screensOffAt {
+            guard tracker.secondsSinceInput() < Date().timeIntervalSince(off) else { return }
+            screensOffAt = nil
+        }
         // Don't touch a user-initiated pause.
         if session.pausedAt != nil && autoPausedAt == nil { return }
 
@@ -537,6 +556,16 @@ final class AppState {
         } else if let _ = session.pausedAt, autoPausedAt != nil, idle < 30 {
             autoResumeIfWePaused()
         }
+    }
+
+    private func screensWentOff(reason: String) {
+        screensOffAt = .now
+        autoPauseIfActive(reason: reason)
+    }
+
+    private func screensCameBack() {
+        screensOffAt = nil
+        autoResumeIfWePaused()
     }
 
     private func autoPauseIfActive(reason: String, since: Date = .now) {

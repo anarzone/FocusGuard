@@ -34,9 +34,8 @@ final class FlowTimeTests: XCTestCase {
         XCTAssertEqual(report.breakdown.focus, 20 * 60, accuracy: 0.1)
     }
 
-    /// After midnight Today's focus still counts "in sessions", and the
-    /// session is what's running, but the list shows only sessions that
-    /// started today: its row is gone until it ends.
+    /// After midnight the session that's running stays on Today's list, in
+    /// the window and the menu, and on the day it started.
     func testASessionStillRunningAfterMidnightStaysInTodaysList() throws {
         let calendar = Calendar.fixed("UTC")
         let container = try Rig.makeContainer()
@@ -50,9 +49,21 @@ final class FlowTimeTests: XCTestCase {
         let after = TodayModelBuilder.build(day: start.addingTimeInterval(20 * 60), context: context,
                                             now: start.addingTimeInterval(20 * 60), calendar: calendar)
         XCTAssertEqual(after.focusedInSessions, 10 * 60, accuracy: 0.1)
-        XCTExpectFailure("Bug: TodayModelBuilder.build (TodayModel.swift:109) and MenuInsightsBuilder.day (MenuInsights.swift:132) fetch sessions by startedAt within the day, so a session running across midnight drops off Today's list and the day strip") {
-            XCTAssertEqual(after.sessions.map(\.id), [session.id])
-        }
+        XCTAssertEqual(after.sessions.map(\.id), [session.id])
+        let menu = MenuInsightsBuilder.day(start.addingTimeInterval(20 * 60), context: context,
+                                           now: start.addingTimeInterval(20 * 60), calendar: calendar, prior: [])
+        XCTAssertEqual(menu.sessions.map(\.id), [session.id])
+        XCTAssertEqual(menu.sessionSpans.first?.start, calendar.at(2026, 11, 3), "its stretch starts at midnight here")
+        let before = TodayModelBuilder.build(day: start, context: context, now: start.addingTimeInterval(20 * 60), calendar: calendar)
+        XCTAssertEqual(before.sessions.map(\.id), [session.id])
+
+        // A later day has nothing to do with it once it's over.
+        session.endedAt = start.addingTimeInterval(20 * 60)
+        try context.save()
+        let next = calendar.at(2026, 11, 4, 12)
+        XCTAssertTrue(TodayModelBuilder.build(day: next, context: context, now: next, calendar: calendar).sessions.isEmpty)
+        let afterEnd = TodayModelBuilder.build(day: start.addingTimeInterval(20 * 60), context: context, now: next, calendar: calendar)
+        XCTAssertEqual(afterEnd.sessions.map(\.id), [session.id], "it ran into that day")
     }
 
     // MARK: - Limits at 00:00
@@ -238,8 +249,7 @@ final class FlowTimeTests: XCTestCase {
     }
 
     /// Screens off without a lock, in a session, with recent input (say the
-    /// display-sleep shortcut). The tracker notes the suspension, but in a
-    /// session its next look starts recording again.
+    /// display-sleep shortcut): nothing's recorded until they're back.
     func testScreensOffInASessionRecordNothingUntilTheyreBack() throws {
         let rig = try Rig()
         startInSession(rig)
@@ -253,9 +263,7 @@ final class FlowTimeTests: XCTestCase {
         rig.stay(on: Rig.editor, from: start.addingTimeInterval(11), for: 240)
         let events = rig.events().filter { $0.bundleIdentifier == Rig.editor.bundleId }
         XCTAssertEqual(events.first?.endedAt, start.addingTimeInterval(10))
-        XCTExpectFailure("Bug: ActivityTracker.record (ActivityTracker.swift:299) skips its suspended check while secondTicks is on, so with the screens off in a session up to five minutes more are recorded as work, against #81's 'screens off end it at that moment'") {
-            XCTAssertEqual(events.count, 1, "\(events.map(\.duration))")
-        }
+        XCTAssertEqual(events.count, 1, "\(events.map(\.duration))")
     }
 
     // MARK: - A Mac asleep through the session's end
@@ -272,9 +280,8 @@ final class FlowTimeTests: XCTestCase {
         XCTAssertTrue(rig.sessions.checkPlannedDuration())
         let end = try XCTUnwrap(session.endedAt)
         XCTAssertEqual(session.status, .completed)
-        XCTExpectFailure("Bug: SessionManager.checkPlannedDuration (SessionManager.swift:155) closes at .now, so a 25-minute session the Mac slept through without a pause is 8 hours long in every list. leftoverOutcome already ends the same case at the planned end") {
-            XCTAssertEqual(end.timeIntervalSince(start), 25 * 60, accuracy: 5)
-        }
+        XCTAssertEqual(rig.sessions.runningSeconds(for: session, now: end), 25 * 60, accuracy: 5)
+        XCTAssertEqual(end.timeIntervalSince(start), 25 * 60, accuracy: 5)
     }
 
     // MARK: - Relaunch

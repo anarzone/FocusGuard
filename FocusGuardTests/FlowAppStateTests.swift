@@ -101,9 +101,8 @@ final class FlowAppStateTests: XCTestCase {
         XCTAssertNotNil(sessions.currentSession?.pausedAt, "the tick leaves the user's pause alone")
     }
 
-    /// The menu's Resume clears nothing: `autoPausedAt` is only reset by the
-    /// auto-resume. So after one idle pause resumed by hand, or a session
-    /// ended while auto-paused, the next pause by hand is undone by the next tick.
+    /// An idle pause resumed by hand, or a session ended while auto-paused:
+    /// the next pause by hand is the user's own, and the next tick leaves it.
     func testAPauseByHandHoldsAfterAnAutoPauseWasResumedByHand() throws {
         sessions.startSession(plannedDurationMinutes: 50)
         tick()
@@ -115,9 +114,7 @@ final class FlowAppStateTests: XCTestCase {
 
         sessions.pauseSession()
         tick()
-        XCTExpectFailure("Bug: AppState.autoPausedAt (AppState.swift:486) is never cleared by a manual resume, whatever its comment says. maybeAutoPauseOrResume then takes the user's next pause for its own and resumes it a second later") {
-            XCTAssertNotNil(session.pausedAt, "the user's pause should hold")
-        }
+        XCTAssertNotNil(session.pausedAt, "the user's pause should hold")
     }
 
     func testAPauseByHandHoldsInTheSessionAfterOneEndedAutoPaused() throws {
@@ -132,14 +129,11 @@ final class FlowAppStateTests: XCTestCase {
         tick()
         sessions.pauseSession()
         tick()
-        XCTExpectFailure("Bug: AppState.autoPausedAt (AppState.swift:486) survives the session ending, so in every session after one that ended auto-paused, Pause undoes itself within a second") {
-            XCTAssertNotNil(next.pausedAt, "the user's pause should hold")
-        }
+        XCTAssertNotNil(next.pausedAt, "the user's pause should hold")
     }
 
-    /// Screens off, no lock: the session pauses on the notification. The next
-    /// second's tick still has recent input (under five minutes) and so counts
-    /// as "at the Mac", which resumes it with the screens still dark.
+    /// Screens off, no lock: the session pauses on the notification, and
+    /// recent input from before they went off doesn't resume it.
     func testScreensOffKeepTheSessionPausedUntilTheyWake() async throws {
         sessions.startSession(plannedDurationMinutes: 50)
         let session = try XCTUnwrap(sessions.currentSession)
@@ -150,9 +144,7 @@ final class FlowAppStateTests: XCTestCase {
 
         idle = 30
         tick()
-        XCTExpectFailure("Bug: AppState.maybeAutoPauseOrResume (AppState.swift:536) resumes when lastActiveAt is under 30 s old, and the tracker stamps that on every look that isn't away: the screens-off pause lasts one tick") {
-            XCTAssertNotNil(session.pausedAt, "the screens are still off")
-        }
+        XCTAssertNotNil(session.pausedAt, "the screens are still off")
     }
 
     func testTheLockScreenHoldsThePauseUntilUnlocked() async throws {
@@ -192,9 +184,8 @@ final class FlowAppStateTests: XCTestCase {
 
     // MARK: - The block screen
 
-    /// While the block screen is up FocusGuard is in front, and its own
-    /// windows count as neutral, which ends the streak. The screen reads the
-    /// streak for "Drifted 1:42", so that never gets past "just now".
+    /// While the block screen is up FocusGuard is in front. The streak goes
+    /// on behind it, for the screen's "Drifted 1:42", and stops once it's down.
     func testTheBlockScreenKeepsCountingTheDrift() throws {
         let engine = state.escalationEngine
         engine.strictMode = true
@@ -207,9 +198,7 @@ final class FlowAppStateTests: XCTestCase {
 
         // The screen came up and activated the app.
         tick(Rig.focusGuard)
-        XCTExpectFailure("Bug: AppState's onTick (AppState.swift:161) feeds the engine a neutral snapshot while FocusGuard is in front, and the block screen itself puts it there. That clears currentStreakStartedAt, so BlockContext.awaySince is nil and the screen says 'Drifted just now' however long it's been") {
-            XCTAssertNotNil(state.blockContext()?.awaySince, "the drift goes on behind the block screen")
-        }
+        XCTAssertNotNil(state.blockContext()?.awaySince, "the drift goes on behind the block screen")
         engine.resetForSessionEnd()
     }
 

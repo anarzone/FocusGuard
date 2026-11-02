@@ -88,9 +88,8 @@ final class FlowHabitsTests: XCTestCase {
     }
 
     /// "Start 50 min, counting these 12": the session starts where the work
-    /// began, and that work is in it. The stretch starts at the first tick
-    /// the habits see, a moment after the tracker began the event for it, so
-    /// the event that's the whole of that work begins just before the session.
+    /// began, and that work is in it, though the event holding it began a
+    /// moment before the stretch the offer counts from.
     func testAcceptingTheOfferPutsTheWorkInTheSession() throws {
         let rig = try Rig()
         let habits = habits(rig)
@@ -108,10 +107,23 @@ final class FlowHabitsTests: XCTestCase {
         rig.tracker.record(Rig.editor, now: Date())
         let counted = session.events.reduce(0) { $0 + $1.duration }
 
-        XCTExpectFailure("Bug: SessionManager.claimEvents (SessionManager.swift:46) takes events with startedAt >= the session's start, but the offer's `since` is habits' own reading of the clock, just after the tracker started that event. The event holding the work stays outside the session: the offer's minutes count as 'between sessions', and the session starts empty") {
-            XCTAssertEqual(counted, 300, accuracy: 15, "the five minutes the offer counted")
-            XCTAssertEqual(rig.events().filter { $0.session == nil }.count, 0)
-        }
+        XCTAssertEqual(counted, 300, accuracy: 15, "the five minutes the offer counted")
+        XCTAssertEqual(rig.events().filter { $0.session == nil }.count, 0)
+    }
+
+    /// Time from before the offer's start isn't the session's, when the
+    /// event holding it began well before: only its part from then on joins.
+    func testAStartInTheMiddleOfAnEventTakesOnlyThatPart() throws {
+        let rig = try Rig()
+        let now = Date()
+        let event = ActivityEvent.add(to: rig.context, .focus, from: now.addingTimeInterval(-600), seconds: 600)
+        rig.sessions.startSession(plannedDurationMinutes: 50, startedAt: now.addingTimeInterval(-300))
+        let session = try XCTUnwrap(rig.sessions.currentSession)
+        XCTAssertNil(event.session)
+        XCTAssertEqual(event.duration, 300, accuracy: 1)
+        XCTAssertEqual(session.events.reduce(0) { $0 + $1.duration }, 300, accuracy: 1)
+        XCTAssertEqual(rig.events().reduce(0) { $0 + $1.duration }, 600, accuracy: 1, "no time lost or added")
+        XCTAssertEqual(session.events.first?.classification, .focus)
     }
 
     func testBreaksAndSessionsMakeNoOffer() throws {

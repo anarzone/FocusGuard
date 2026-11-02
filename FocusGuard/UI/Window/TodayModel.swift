@@ -106,12 +106,7 @@ enum TodayModelBuilder {
             }
         }
 
-        var sessionDescriptor = FetchDescriptor<Session>(
-            predicate: #Predicate { $0.startedAt >= dayStart && $0.startedAt < dayEnd },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
-        )
-        sessionDescriptor.fetchLimit = 50
-        let sessionModels = Persistence.fetch(context, sessionDescriptor)
+        let sessionModels = MenuInsightsBuilder.sessions(from: dayStart, to: dayEnd, context: context)
 
         let sessions = sessionModels.map { item(for: $0, now: now) }
         let best = sessions.max { $0.bestRun < $1.bestRun }

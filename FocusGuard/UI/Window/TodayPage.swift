@@ -93,11 +93,15 @@ struct TodayPage: View {
     /// copy, if any, until then.
     private func reload() async {
         let now = Date.now
-        let day = Calendar.current.date(byAdding: .day, value: -dayOffset, to: now) ?? now
+        let offset = dayOffset
+        let day = Calendar.current.date(byAdding: .day, value: -offset, to: now) ?? now
         let key = Calendar.current.startOfDay(for: day)
         if model.day != key, let cached = appState.windowPages.today[key] { show(cached) }
         let fresh = await appState.stats.todayPage(day: day, now: now)
-        guard !Task.isCancelled, key == Calendar.current.startOfDay(for: self.day) else { return }
+        // Dropped only if another day was stepped to meanwhile. Comparing dates
+        // here froze the page on yesterday when midnight passed with no session
+        // running: the clock this page shows only moves on after this line.
+        guard !Task.isCancelled, offset == dayOffset else { return }
         tickedAt = now
         show(fresh)
         appState.windowPages.today[key] = fresh

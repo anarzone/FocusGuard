@@ -25,16 +25,23 @@ extension AppState {
     /// "Session complete: Locked-in Deep Dive. 50 min · 92% focused · 41 min in the zone."
     func presentSessionComplete(for session: Session) {
         let end = session.endedAt ?? .now
-        let breakdown = ReportBuilder(context: container.mainContext).breakdown(from: session.startedAt, to: end)
         let running = max(0, end.timeIntervalSince(session.startedAt) - session.pausedSeconds)
         let zone = FocusRuns.compute(FocusRuns.spans(from: session.events), now: end).longest
         notificationPresenter.presentSessionComplete(
             name: session.displayName,
             minutes: Int((running / 60).rounded()),
-            focusPercent: Int((breakdown.focusRate * 100).rounded()),
+            focusPercent: Self.completionPercent(of: session),
             zoneMinutes: Int(zone / 60),
             breakMinutes: Self.suggestedBreakMinutes(forSessionMinutes: session.plannedDurationMinutes ?? Int(running / 60))
         )
+    }
+
+    /// The rate in the session-complete notification: its own events, so
+    /// whatever went on during a pause doesn't count.
+    static func completionPercent(of session: Session) -> Int {
+        var tally = ClassificationTally()
+        for event in session.events { tally.add(event.duration, event.classification ?? .neutral) }
+        return FocusRate.percent(focused: tally.focus, drifted: tally.distraction)
     }
 
     /// The menu's "Start 50 min, counting these 12": the session counts

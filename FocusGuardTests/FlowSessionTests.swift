@@ -276,6 +276,31 @@ final class FlowSessionTests: XCTestCase {
 
     // MARK: - After the session
 
+    /// The notification's rate is the session's own: what happened during a
+    /// pause in the same stretch of the clock doesn't count.
+    func testTheCompletionRateLeavesOutWhatHappenedInAPause() throws {
+        let rig = try Rig()
+        let start = Date().addingTimeInterval(-3600)
+        let session = Session(startedAt: start, status: .completed)
+        session.endedAt = start.addingTimeInterval(3600)
+        rig.context.insert(session)
+        ActivityEvent.add(to: rig.context, .focus, from: start, seconds: 1800, session: session)
+        // Paused for the rest of it, and on a distraction, in no session.
+        ActivityEvent.add(to: rig.context, .distraction, from: start.addingTimeInterval(1800), seconds: 1800, app: Rig.feed)
+        try rig.save()
+        XCTAssertEqual(AppState.completionPercent(of: session), 100)
+    }
+
+    // MARK: - A calendar event during a break
+
+    func testACalendarEventWaitsForTheBreak() {
+        XCTAssertTrue(CalendarAutostartCoordinator.shouldStart(hasSession: false, onBreak: false, startedEventID: nil, eventID: "a"))
+        XCTAssertFalse(CalendarAutostartCoordinator.shouldStart(hasSession: false, onBreak: true, startedEventID: nil, eventID: "a"))
+        XCTAssertFalse(CalendarAutostartCoordinator.shouldStart(hasSession: true, onBreak: false, startedEventID: nil, eventID: "a"))
+        XCTAssertFalse(CalendarAutostartCoordinator.shouldStart(hasSession: false, onBreak: false, startedEventID: "a", eventID: "a"),
+                       "the user ended that event's session themselves")
+    }
+
     /// The menu's recap suggests a break from the session's length, like the
     /// notification does. An open session has no planned length, so the
     /// recap falls back to 25 minutes however long it ran.
