@@ -14,13 +14,10 @@ enum UITestMode {
     static var isOn = ProcessInfo.processInfo.arguments.contains(argument)
 
     /// The window's size in this copy: as wide as the screen allows, so all
-    /// of it can be clicked on the CI runners' 1024-point screens, and with
-    /// `-FocusGuardUITestFitHeight YES` clear of the Dock too. Elsewhere, `usual`.
+    /// of it can be clicked on the CI runners' 1024-point screens. Elsewhere, `usual`.
     static func windowSize(usual: NSSize) -> NSSize {
         guard isOn, let visible = NSScreen.main?.visibleFrame else { return usual }
-        let fitHeight = UserDefaults.standard.bool(forKey: "FocusGuardUITestFitHeight")
-        return NSSize(width: min(usual.width, visible.width),
-                      height: fitHeight ? min(usual.height, visible.height) : usual.height)
+        return NSSize(width: min(usual.width, visible.width), height: usual.height)
     }
 
     /// A week of mornings and today's last few hours, with a session each

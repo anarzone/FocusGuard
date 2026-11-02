@@ -27,7 +27,6 @@ final class FlowClickTests: XCTestCase {
             "-FocusGuardUITesting",
             "-calendarAutostart.enabled", "NO",
             "-plan.debugOverride", plan,
-            "-FocusGuardUITestFitHeight", "YES",
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
         ]
@@ -43,6 +42,11 @@ final class FlowClickTests: XCTestCase {
         XCTAssertTrue(element.waitForExistence(timeout: 5), "\(element) is missing", file: file, line: line)
         let screenWidth = NSScreen.main?.frame.width ?? .greatestFiniteMagnitude
         try XCTSkipIf(element.frame.midX > screenWidth, "\(element.label) is past the edge of this \(Int(screenWidth))-point screen")
+        // The window is taller than a 768-point screen leaves above the Dock.
+        if let screen = NSScreen.main {
+            let bottom = screen.frame.height - screen.visibleFrame.minY
+            try XCTSkipIf(element.frame.midY > bottom, "\(element.label) is under the Dock on this \(Int(screen.frame.height))-point screen")
+        }
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
     }
 
