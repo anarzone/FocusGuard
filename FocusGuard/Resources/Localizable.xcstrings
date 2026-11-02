@@ -19137,7 +19137,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%3$@ %2$@ yayınmanın %1$@ hissəsini bu tutdu. Sonra %5$@ ilə %4$@ gəlir."
+            "value" : "Bu, %3$@ %2$@ yayınmanın %1$@ hissəsini tutdu. Sonra %5$@ ilə %4$@ gəlir."
           }
         },
         "de" : {
@@ -19160,7 +19160,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%2$@ bütün %1$@ yayınma buna düşür."
+            "value" : "Bu, %2$@ bütün %1$@ yayınmadır."
           }
         },
         "de" : {
