@@ -2252,7 +2252,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ sizi ən çox yayındırıb.| %3$@ ayında %2$@, %5$@ ayında isə %4$@."
+            "value" : "%1$@ sizi ən çox yayındırıb.| %2$@ %3$@ ayında, %4$@ isə %5$@ ayında."
           }
         },
         "de" : {
@@ -2269,7 +2269,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ sizi ən çox yayındırıb.| %3$@ ayında %2$@."
+            "value" : "%1$@ sizi ən çox yayındırıb.| %2$@ %3$@ ayında."
           }
         },
         "de" : {
