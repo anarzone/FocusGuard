@@ -1414,7 +1414,8 @@ final class AIEvalTests: XCTestCase {
         for item in monthCases {
             var calendar = item.scenario.calendar
             calendar.locale = az
-            let context = try item.scenario.container().mainContext
+            let container = try item.scenario.container()
+            let context = container.mainContext
             if let facts = MonthFacts.make(CoachDataReader.read(context, interval: item.month), before: CoachDataReader.read(context, interval: item.before), locale: az, calendar: calendar) {
                 log.write(["group": "month", "scenario": item.name, "headline": facts.headline, "changes": facts.changes.map(\.sentence)])
             }
