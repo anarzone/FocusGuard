@@ -20,6 +20,9 @@ final class WindowClickTests: XCTestCase {
             "-FocusGuardUITesting",
             // Never start a session from the Mac's real calendar.
             "-calendarAutostart.enabled", "NO",
+            // `testPagesThatFitDontScroll` needs the usual height; it's the one
+            // thing here a Dock on a small screen could otherwise get in the way of.
+            "-FocusGuardUITestUsualHeight", "YES",
             // These look for controls by their English labels.
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",

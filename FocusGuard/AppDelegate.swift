@@ -177,7 +177,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            let size = UITestMode.windowSize(usual: NSSize(width: 1200, height: 720))
+            // The window sets the size and the pages fill it (they scroll or
+            // truncate). Letting the content set a minimum as well crashed on
+            // short windows: AppKit keeps a window on its screen, which can
+            // put it below that minimum, and auto layout never settles.
+            hosting.sizingOptions = []
+            let size = MainWindowSize.fitting(visible: NSScreen.main?.visibleFrame)
             hosting.preferredContentSize = size
 
             let window = NSWindow(
@@ -199,7 +204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.titlebarSeparatorStyle = .none
             window.isMovableByWindowBackground = true
             window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 980, height: 640)
+            window.minSize = MainWindowSize.minimum
             window.center()
             // The click tests' Macs can have screens narrower than the window
             // (1024 points): their copy sits at the left edge, sidebar in view.
