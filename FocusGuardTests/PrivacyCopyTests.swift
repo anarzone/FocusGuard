@@ -47,6 +47,12 @@ final class PrivacyCopyTests: XCTestCase {
         XCTAssertTrue(text.contains("updates"))
         XCTAssertTrue(text.contains("site icons"))
         XCTAssertTrue(text.contains("Spotify"))
+        for service in ["Todoist", "Linear", "GitHub", "Jira"] {
+            XCTAssertTrue(text.contains(service), service)
+            XCTAssertTrue(PrivacyStatement.short.contains(service), service)
+            XCTAssertTrue(PrivacyStatement.networkStatement(slack: false).contains(service), service)
+            XCTAssertTrue(PrivacyStatement.networkStatement(slack: true).contains(service), service)
+        }
         XCTAssertFalse(text.contains("Nothing is sent"))
         XCTAssertEqual(text.contains("AI tips"), AISettings.isAvailable)
         XCTAssertEqual(PrivacyStatement.short.contains("AI tips"), AISettings.isAvailable)

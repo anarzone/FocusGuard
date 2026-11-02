@@ -2,7 +2,7 @@ import Foundation
 
 /// Where a task offered as a goal comes from (Pro).
 enum TaskSource: String, Codable, CaseIterable, Sendable {
-    case reminders, things, todoist, linear
+    case reminders, things, todoist, linear, github, jira
 
     var name: String {
         switch self {
@@ -10,6 +10,8 @@ enum TaskSource: String, Codable, CaseIterable, Sendable {
         case .things:    return "Things"
         case .todoist:   return "Todoist"
         case .linear:    return "Linear"
+        case .github:    return "GitHub"
+        case .jira:      return "Jira"
         }
     }
 
@@ -23,6 +25,8 @@ enum TaskSource: String, Codable, CaseIterable, Sendable {
         case .things:    return IntegrationSettings.things
         case .todoist:   return IntegrationSettings.todoist
         case .linear:    return IntegrationSettings.linear
+        case .github:    return IntegrationSettings.github
+        case .jira:      return IntegrationSettings.jira
         }
     }
 }
@@ -34,24 +38,29 @@ extension IntegrationSettings {
     static let todoist = "integrations.todoist.enabled"
     /// Linear issues assigned to the user (Pro); the key is in the Keychain.
     static let linear = "integrations.linear.enabled"
+    /// Open GitHub issues assigned to the user (Pro); the token is in the Keychain.
+    static let github = "integrations.github.enabled"
+    /// Jira Cloud issues assigned to the user (Pro); the token is in the Keychain.
+    static let jira = "integrations.jira.enabled"
 }
 
 /// An open task, offered as a goal: a reminder, a Things to-do, a Todoist
-/// task or a Linear issue.
+/// task, or a Linear, GitHub or Jira issue.
 struct TaskItem: Equatable, Identifiable, Codable, Sendable {
     var source: TaskSource = .reminders
     /// The source's own identifier.
     let id: String
     let title: String
     /// Where it's filed: the Reminders list, the Things project or area,
-    /// the Todoist project, the Linear team.
+    /// the Todoist project, the Linear team, the GitHub repository, the Jira
+    /// project.
     let list: String
     let due: Date?
     let created: Date?
-    /// Being worked on (a started Linear issue): offered before ones that
-    /// aren't due yet.
+    /// Being worked on (a started Linear issue, a Jira one in progress):
+    /// offered before ones that aren't due yet.
     var started = false
-    /// The Linear state it was in, to move it back on Undo.
+    /// The Linear state or Jira status it was in, to move it back on Undo.
     var state: String?
 
     func isSame(as other: TaskItem) -> Bool { source == other.source && id == other.id }
@@ -133,18 +142,42 @@ protocol TaskStore: AnyObject {
     func openTasks() async throws -> [TaskItem]
     /// Ticks a task off, or opens it again. True when it's saved.
     func setCompleted(_ task: TaskItem, _ completed: Bool) async -> Bool
+    /// The same, saying why when the service won't have it.
+    func change(_ task: TaskItem, completed: Bool) async -> TaskChange
 }
 
-/// A source signed in with a personal token: Todoist and Linear.
-protocol TokenTaskStore: TaskStore {
+extension TaskStore {
+    func change(_ task: TaskItem, completed: Bool) async -> TaskChange {
+        await setCompleted(task, completed) ? .saved : .failed
+    }
+}
+
+/// How ticking a task off, or opening it again, went.
+enum TaskChange: Equatable {
+    case saved
+    /// Not now: nothing to tell the user beyond the task still being as it was.
+    case failed
+    /// The service won't make this change; the line says why, and the task
+    /// is left as it was.
+    case refused(String)
+}
+
+/// A source signed in with a personal token.
+protocol ConnectedTaskStore: TaskStore {
     var hasToken: Bool { get }
+    func disconnect()
+}
+
+/// One that needs only the token: Todoist, Linear and GitHub.
+protocol TokenTaskStore: ConnectedTaskStore {
     /// Checks the token with the service, and keeps it if it's taken.
     func connect(token: String) async -> TokenCheck
-    func disconnect()
 }
 
 enum TokenCheck: Equatable {
     case accepted, rejected, unreachable
+    /// The address isn't one credentials may go to (Jira).
+    case badSite
 }
 
 /// A session whose goal came from a task, and whether it was ticked off.

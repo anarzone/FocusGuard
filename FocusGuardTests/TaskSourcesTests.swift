@@ -2,15 +2,18 @@ import SwiftData
 import XCTest
 @testable import FocusGuard
 
-// Things, Todoist and Linear as session goals (Pro). Nothing here talks to
-// Things or the real services: scripts are checked as text, requests as
-// built, and answers come from fixtures through a stub URL protocol.
+// Things, Todoist, Linear, GitHub and Jira as session goals (Pro). Nothing
+// here talks to Things or the real services: scripts are checked as text,
+// requests as built, and answers come from fixtures through a stub URL
+// protocol. Tokens are in a fake store, never the Keychain.
 
 // MARK: - Fakes
 
 /// Answers every request from `handler`, and keeps what was asked.
 private final class StubProtocol: URLProtocol {
     static var handler: ((URLRequest) -> (Int, String))?
+    /// Response headers, for paging and rate limits.
+    static var headers: ((URLRequest) -> [String: String])?
     /// Todoist asks for tasks and projects at once, so this is locked.
     static var requests: [URLRequest] {
         get { lock.lock(); defer { lock.unlock() }; return seen }
@@ -36,7 +39,13 @@ private final class StubProtocol: URLProtocol {
         Self.lock.unlock()
         let (status, body) = Self.handler?(asked) ?? (500, "")
         let url = request.url ?? URL(fileURLWithPath: "/")
-        if let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil) {
+        let headers = Self.headers?(asked)
+        if let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers) {
+            // A redirect goes through the session's delegate, as a real one
+            // would; one it turns down is answered with the redirect itself.
+            if (300..<400).contains(status), let location = headers?["Location"], let target = URL(string: location) {
+                client?.urlProtocol(self, wasRedirectedTo: URLRequest(url: target), redirectResponse: response)
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         }
         client?.urlProtocol(self, didLoad: Data(body.utf8))
@@ -73,6 +82,8 @@ private final class FakeTaskStore: TaskStore {
     var items: [TaskItem]
     var problem: TaskSourceProblem?
     var completions: [(String, Bool)] = []
+    /// The service won't make the change, and says so.
+    var refusal: String?
     private var done: Set<String> = []
 
     init(_ source: TaskSource, _ items: [TaskItem] = []) {
@@ -89,6 +100,14 @@ private final class FakeTaskStore: TaskStore {
         completions.append((task.id, completed))
         if completed { done.insert(task.id) } else { done.remove(task.id) }
         return true
+    }
+
+    func change(_ task: TaskItem, completed: Bool) async -> TaskChange {
+        if let refusal {
+            completions.append((task.id, completed))
+            return .refused(refusal)
+        }
+        return await setCompleted(task, completed) ? .saved : .failed
     }
 }
 
@@ -150,6 +169,56 @@ final class TaskItemTests: XCTestCase {
         XCTAssertEqual(again.task, issue)
     }
 
+    func testTasksSavedByReleasedBuildsStillRead() throws {
+        // Picked tasks and links as 0.3.x builds wrote them, before GitHub and Jira.
+        let todoist = #"{"source":"todoist","id":"7Abc","title":"Pay rent","list":"Home","due":815000000,"created":814000000,"started":false}"#
+        let picked = try JSONDecoder().decode(TaskItem.self, from: Data(todoist.utf8))
+        XCTAssertEqual(picked.source, .todoist)
+        XCTAssertEqual(picked.due, Date(timeIntervalSinceReferenceDate: 815_000_000))
+
+        let linear = #"{"task":{"source":"linear","id":"uuid-1","title":"ENG-142 Fix login","list":"Engineering","started":true,"state":"state-started"},"linkedAt":815000000,"ticked":true,"undone":true}"#
+        let link = try JSONDecoder().decode(TaskLink.self, from: Data(linear.utf8))
+        XCTAssertEqual(link.task.source, .linear)
+        XCTAssertEqual(link.task.state, "state-started")
+        XCTAssertTrue(link.task.started)
+        XCTAssertTrue(link.ticked)
+        XCTAssertTrue(link.undone)
+
+        let things = #"{"source":"things","id":"8xcpS6r4","title":"Walk","list":""}"#
+        XCTAssertEqual(try JSONDecoder().decode(TaskItem.self, from: Data(things.utf8)).source, .things)
+    }
+
+    func testGitHubAndJiraTasksSurviveSaving() throws {
+        let issues = [
+            TaskItem(source: .github, id: "acme/app#142", title: "app#142 Fix login", list: "app", due: nil, created: at(9, day: 1)),
+            TaskItem(source: .jira, id: "10042", title: "ENG-142 Fix login", list: "Engineering", due: at(0), created: nil, started: true, state: "3"),
+        ]
+        for issue in issues {
+            let link = TaskLink(task: issue, linkedAt: at(10))
+            XCTAssertEqual(try JSONDecoder().decode(TaskLink.self, from: JSONEncoder().encode(link)).task, issue)
+        }
+        XCTAssertEqual(TaskSource.allCases.map(\.rawValue), ["reminders", "things", "todoist", "linear", "github", "jira"])
+        XCTAssertEqual(Set(TaskSource.allCases.map(\.settingKey)).count, TaskSource.allCases.count)
+    }
+
+    func testUndatedIssuesRankLikeLinears() {
+        let items = [
+            TaskItem(source: .reminders, id: "someday", title: "Someday", list: "", due: nil, created: at(9, day: 5)),
+            TaskItem(source: .github, id: "acme/app#1", title: "app#1 Old", list: "app", due: nil, created: at(9, day: 1)),
+            TaskItem(source: .jira, id: "new", title: "ENG-2 To do", list: "ENG", due: nil, created: at(9, day: 3), started: false, state: "1"),
+            TaskItem(source: .jira, id: "going", title: "ENG-3 Going", list: "ENG", due: nil, created: at(9, day: 9), started: true, state: "3"),
+            TaskItem(source: .jira, id: "dated", title: "ENG-4 Soon", list: "ENG", due: at(0, day: 30), created: nil, state: "1"),
+            TaskItem(source: .jira, id: "today", title: "ENG-5 Today", list: "ENG", due: at(0), created: nil, state: "1"),
+        ]
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), calendar: berlin).map(\.id),
+                       ["today", "going", "dated", "acme/app#1", "new", "someday"])
+        let offered = GoalSuggestion.make(lastGoal: nil, lastVerdict: nil, calendarTitle: nil,
+                                          tasks: TaskGoals.ordered(items, now: at(10), calendar: berlin),
+                                          now: at(10), calendar: berlin)
+        XCTAssertEqual(offered.map(\.text), ["ENG-5 Today", "ENG-3 Going"])
+        XCTAssertEqual(GoalSuggestion(text: "app#1 Old", source: .task(.github, id: "acme/app#1", list: "app")).group, "GitHub · app")
+    }
+
     func testStartedIssuesComeAfterWhatsDueButBeforeTheRest() {
         let items = [
             TaskItem(source: .reminders, id: "someday", title: "Someday", list: "", due: nil, created: at(9, day: 1)),
@@ -187,6 +256,13 @@ final class TaskItemTests: XCTestCase {
         XCTAssertNil(TaskDates.parse(nil))
         XCTAssertNil(TaskDates.parse("tomorrow"))
         XCTAssertNil(TaskDates.parse("2026-10-26TZ"))
+    }
+
+    func testDatesAsJiraSendsThem() {
+        XCTAssertEqual(TaskDates.parse("2026-10-26T15:00:00.000+0100", calendar: berlin), at(15))
+        XCTAssertEqual(TaskDates.parse("2026-10-26T09:30:00.000-0430", calendar: berlin), at(15))
+        XCTAssertEqual(TaskDates.parse("2026-10-26T15:00:00+01:00", calendar: berlin), at(15))
+        XCTAssertNil(TaskDates.parse("2026-10-26T15:00:00+1"))
     }
 }
 
@@ -441,6 +517,675 @@ final class LinearTasksTests: XCTestCase {
     }
 }
 
+// MARK: - GitHub
+
+final class GitHubTasksTests: XCTestCase {
+    private static let page = """
+    [
+      {"id":1,"number":142,"title":"Fix login","state":"open","created_at":"2026-10-01T09:00:00Z",
+       "repository_url":"https://api.github.com/repos/acme/app",
+       "repository":{"name":"app","full_name":"acme/app","archived":false}},
+      {"id":2,"number":143,"title":"A pull request","state":"open","created_at":"2026-10-02T09:00:00Z",
+       "repository_url":"https://api.github.com/repos/acme/app",
+       "repository":{"name":"app","full_name":"acme/app"},
+       "pull_request":{"url":"https://api.github.com/repos/acme/app/pulls/143","merged_at":null}},
+      {"id":3,"number":7,"title":"No repository object","state":"open","created_at":"2026-10-03T09:00:00Z",
+       "repository_url":"https://api.github.com/repos/acme/site"},
+      {"id":4,"number":8,"title":"In an archived repository","state":"open",
+       "repository_url":"https://api.github.com/repos/acme/old",
+       "repository":{"name":"old","full_name":"acme/old","archived":true}},
+      {"id":5,"number":9,"title":"  ","state":"open","repository_url":"https://api.github.com/repos/acme/app"}
+    ]
+    """
+
+    private let issue = TaskItem(source: .github, id: "acme/app#142", title: "app#142 Fix login", list: "app", due: nil, created: nil)
+
+    override func tearDown() {
+        StubProtocol.handler = nil
+        StubProtocol.headers = nil
+        StubProtocol.requests = []
+        super.tearDown()
+    }
+
+    private func store(_ token: String? = "ghp_tok") -> GitHubTasks {
+        GitHubTasks(tokens: FakeTokens(token), session: StubProtocol.session())
+    }
+
+    func testAsksForOpenIssuesAssignedToTheUserOldestFirst() {
+        let request = GitHubTasks.issuesRequest(token: "tok")
+        XCTAssertEqual(request.url?.absoluteString,
+                       "https://api.github.com/issues?filter=assigned&state=open&sort=created&direction=asc&per_page=100")
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer tok")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/vnd.github+json")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-GitHub-Api-Version"), "2022-11-28")
+        XCTAssertNotNil(request.value(forHTTPHeaderField: "User-Agent"))
+    }
+
+    func testReadsIssuesLeavingOutPullRequestsAndArchivedRepositories() async throws {
+        StubProtocol.handler = { _ in (200, Self.page) }
+        let items = try await store().openTasks()
+        XCTAssertEqual(items.map(\.title), ["app#142 Fix login", "site#7 No repository object"])
+        XCTAssertEqual(items.map(\.id), ["acme/app#142", "acme/site#7"])
+        XCTAssertEqual(items.map(\.list), ["app", "site"])
+        XCTAssertEqual(items.map(\.source), [.github, .github])
+        XCTAssertEqual(items[0].created, TaskDates.parse("2026-10-01T09:00:00Z"))
+        XCTAssertNil(items[0].due)
+        XCTAssertFalse(items[0].started)
+    }
+
+    func testFollowsTheLinkHeader() async throws {
+        let next = "https://api.github.com/issues?filter=assigned&state=open&per_page=100&page=2"
+        StubProtocol.handler = { request in
+            let second = request.url?.query?.contains("page=2") == true
+            return (200, second
+                    ? #"[{"number":2,"title":"Second","repository_url":"https://api.github.com/repos/a/b"}]"#
+                    : #"[{"number":1,"title":"First","repository_url":"https://api.github.com/repos/a/b"}]"#)
+        }
+        StubProtocol.headers = { request in
+            request.url?.query?.contains("page=2") == true
+                ? ["Link": #"<https://api.github.com/issues?page=1>; rel="prev", <https://api.github.com/issues?page=1>; rel="first""#]
+                : ["Link": "<\(next)>; rel=\"next\", <https://api.github.com/issues?page=2>; rel=\"last\""]
+        }
+        let items = try await store().openTasks()
+        XCTAssertEqual(items.map(\.title), ["b#1 First", "b#2 Second"])
+        XCTAssertEqual(StubProtocol.requests.last?.url?.absoluteString, next)
+        XCTAssertEqual(StubProtocol.requests.last?.value(forHTTPHeaderField: "Authorization"), "Bearer ghp_tok")
+    }
+
+    func testStopsAfterTheLastPageAllowed() async throws {
+        StubProtocol.handler = { _ in (200, "[]") }
+        StubProtocol.headers = { _ in ["Link": #"<https://api.github.com/issues?page=9>; rel="next""#] }
+        _ = try await store().openTasks()
+        XCTAssertEqual(StubProtocol.requests.count, GitHubTasks.maxPages)
+    }
+
+    func testTheTokenOnlyFollowsLinksToGitHub() {
+        XCTAssertNil(GitHubTasks.nextPage(#"<https://evil.example/issues?page=2>; rel="next""#))
+        XCTAssertNil(GitHubTasks.nextPage(#"<http://api.github.com/issues?page=2>; rel="next""#))
+        XCTAssertNil(GitHubTasks.nextPage(#"<https://api.github.com.evil.example/issues>; rel="next""#))
+        XCTAssertNil(GitHubTasks.nextPage(nil))
+        XCTAssertEqual(GitHubTasks.nextPage(#"<https://api.github.com/issues?page=2>; rel="next""#)?.host, "api.github.com")
+    }
+
+    func testARedirectElsewhereIsntFollowed() async {
+        StubProtocol.handler = { request in
+            request.url?.host == "api.github.com" ? (302, "") : (200, "[]")
+        }
+        StubProtocol.headers = { _ in ["Location": "https://evil.example/issues"] }
+        do {
+            _ = try await store().openTasks()
+            XCTFail("a redirect elsewhere can't be read")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .unreachable)
+        }
+        XCTAssertEqual(StubProtocol.requests.compactMap { $0.url?.host }, ["api.github.com"])
+    }
+
+    func testDoneClosesAsCompletedAndUndoReopens() async throws {
+        StubProtocol.handler = { request in
+            let body = (request.httpBody.flatMap { try? JSONDecoder().decode([String: String].self, from: $0) }) ?? [:]
+            return (200, "{\"number\":142,\"state\":\"\(body["state"] ?? "")\"}")
+        }
+        let tasks = store()
+        let closed = await tasks.setCompleted(issue, true)
+        let reopened = await tasks.setCompleted(issue, false)
+        XCTAssertTrue(closed)
+        XCTAssertTrue(reopened)
+        XCTAssertEqual(StubProtocol.requests.map(\.httpMethod), ["PATCH", "PATCH"])
+        XCTAssertEqual(StubProtocol.requests.map { $0.url?.absoluteString },
+                       Array(repeating: "https://api.github.com/repos/acme/app/issues/142", count: 2))
+        let bodies = StubProtocol.requests.compactMap { $0.httpBody.flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } }
+        XCTAssertEqual(bodies, [["state": "closed", "state_reason": "completed"], ["state": "open", "state_reason": "reopened"]])
+    }
+
+    func testAnAnswerWithTheOldStateIsntSaved() async {
+        StubProtocol.handler = { _ in (200, #"{"number":142,"state":"open"}"#) }
+        let change = await store().change(issue, completed: true)
+        XCTAssertEqual(change, .failed)
+    }
+
+    func testAReadOnlyTokenIsRefusedWithALine() async {
+        for status in [403, 404] {
+            StubProtocol.handler = { _ in (status, #"{"message":"Resource not accessible by personal access token"}"#) }
+            guard case .refused(let why) = await store().change(issue, completed: true) else {
+                return XCTFail("\(status) should be refused")
+            }
+            XCTAssertFalse(why.isEmpty)
+        }
+    }
+
+    func testARateLimitIsntARefusalOrARejection() async {
+        StubProtocol.handler = { _ in (403, #"{"message":"API rate limit exceeded for user"}"#) }
+        let change = await store().change(issue, completed: true)
+        XCTAssertEqual(change, .failed)
+        do {
+            _ = try await store().openTasks()
+            XCTFail("a rate limit can't be read")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .unreachable)
+        }
+        StubProtocol.handler = { _ in (403, "{}") }
+        StubProtocol.headers = { _ in ["x-ratelimit-remaining": "0"] }
+        let check = await store().connect(token: "fine")
+        XCTAssertEqual(check, .unreachable)
+    }
+
+    func testABadTokenIsRejected() async {
+        StubProtocol.handler = { _ in (401, #"{"message":"Bad credentials"}"#) }
+        do {
+            _ = try await store("old").openTasks()
+            XCTFail("a 401 should be rejected")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .rejected)
+        }
+    }
+
+    func testAnIDThatIsntAnIssueAsksNothing() async {
+        for id in ["acme/app", "acme#142", "acme/app#x", "../x#1", "a/b/c#1", "acme/..#1", "a b/c#1"] {
+            XCTAssertNil(GitHubTasks.issuePath(id), id)
+        }
+        let task = TaskItem(source: .github, id: "../../user#1", title: "", list: "", due: nil, created: nil)
+        let change = await store().change(task, completed: true)
+        XCTAssertEqual(change, .failed)
+        XCTAssertTrue(StubProtocol.requests.isEmpty)
+    }
+
+    func testConnectChecksTheTokenBeforeKeepingIt() async {
+        let tokens = FakeTokens()
+        let store = GitHubTasks(tokens: tokens, session: StubProtocol.session())
+        StubProtocol.handler = { _ in (401, "") }
+        let rejected = await store.connect(token: "wrong")
+        XCTAssertEqual(rejected, .rejected)
+        XCTAssertNil(tokens.token)
+        XCTAssertFalse(store.hasToken)
+
+        StubProtocol.handler = { _ in (500, "") }
+        let down = await store.connect(token: "fine")
+        XCTAssertEqual(down, .unreachable)
+        XCTAssertNil(tokens.token)
+
+        StubProtocol.handler = { _ in (200, #"{"login":"octocat"}"#) }
+        let accepted = await store.connect(token: "  right \n")
+        XCTAssertEqual(accepted, .accepted)
+        XCTAssertEqual(tokens.token, "right")
+        XCTAssertEqual(StubProtocol.requests.last?.url?.absoluteString, "https://api.github.com/user")
+        XCTAssertEqual(StubProtocol.requests.last?.value(forHTTPHeaderField: "Authorization"), "Bearer right")
+
+        store.disconnect()
+        XCTAssertNil(tokens.token)
+    }
+
+    func testWithoutATokenNothingIsAsked() async throws {
+        let items = try await store(nil).openTasks()
+        XCTAssertTrue(items.isEmpty)
+        XCTAssertTrue(StubProtocol.requests.isEmpty)
+    }
+}
+
+// MARK: - Jira
+
+final class JiraSiteTests: XCTestCase {
+    func testTakesTheSiteHoweverItsTyped() {
+        for typed in ["acme", " acme \n", "ACME", "acme.atlassian.net", "Acme.Atlassian.NET", "https://acme.atlassian.net",
+                      "https://acme.atlassian.net/", "https://acme.atlassian.net/jira/software/projects/ENG/boards/1?x=1#y",
+                      "acme.atlassian.net/jira/your-work"] {
+            XCTAssertEqual(JiraSite.url(from: typed)?.absoluteString, "https://acme.atlassian.net", typed)
+        }
+        XCTAssertEqual(JiraSite.url(from: "my-team-2")?.absoluteString, "https://my-team-2.atlassian.net")
+    }
+
+    func testRefusesEverythingElse() {
+        for typed in ["", "   ", "http://acme.atlassian.net", "ftp://acme.atlassian.net", "evil.com", "https://evil.com",
+                      "atlassian.net", ".atlassian.net", "https://atlassian.net", "acme.atlassian.net.evil.com",
+                      "https://acme.atlassian.net.evil.com/", "evilatlassian.net", "https://evilatlassian.net",
+                      "acme.atlassian.com", "api.atlassian.com", "acme.jira.com",
+                      "https://acme.atlassian.net@evil.com", "acme.atlassian.net@evil.com", "user:pass@acme.atlassian.net",
+                      "https://user:pass@acme.atlassian.net", "https://acme.atlassian.net:8443", "acme.atlassian.net:443",
+                      "https://evil.com/acme.atlassian.net", "https://evil.com?x=.atlassian.net", "https://evil.com#.atlassian.net",
+                      "https://evil.com%2f.atlassian.net", "evil.com\\.atlassian.net", "acme.atlassian.net.", "-acme.atlassian.net",
+                      "ac me", "ac me.atlassian.net", "localhost:8080", "acme/evil", "аcme.atlassian.net", "javascript:alert(1)"] {
+            XCTAssertNil(JiraSite.url(from: typed), typed)
+        }
+    }
+
+    func testARedirectIsHeldToTheSameRule() throws {
+        let allowed = ["https://acme.atlassian.net/rest/api/3/myself", "https://renamed.atlassian.net/x"]
+        for text in allowed { XCTAssertTrue(JiraSite.isAllowed(try XCTUnwrap(URL(string: text))), text) }
+        let refused = ["http://acme.atlassian.net/", "https://evil.com/", "https://acme.atlassian.net.evil.com/",
+                       "https://acme.atlassian.net:8443/", "https://u@acme.atlassian.net/"]
+        for text in refused { XCTAssertFalse(JiraSite.isAllowed(try XCTUnwrap(URL(string: text))), text) }
+    }
+}
+
+final class JiraTasksTests: XCTestCase {
+    private static let page = """
+    {"isLast":true,"issues":[
+      {"id":"10042","key":"ENG-142","self":"https://acme.atlassian.net/rest/api/3/issue/10042","fields":{
+        "summary":"Fix login","duedate":null,"created":"2026-10-01T09:00:00.000+0200",
+        "project":{"key":"ENG","name":"Engineering"},
+        "status":{"id":"3","name":"In Progress","statusCategory":{"id":4,"key":"indeterminate","name":"In Progress"}}}},
+      {"id":"10043","key":"ENG-150","fields":{
+        "summary":"Write release notes","duedate":"2026-10-26","created":"2026-10-02T09:00:00.000+0200",
+        "project":{"key":"ENG","name":"Engineering"},
+        "status":{"id":"1","name":"To Do","statusCategory":{"id":2,"key":"new","name":"To Do"}}}},
+      {"id":"10044","key":"ENG-151","fields":{"summary":"  ","status":{"id":"1"}}},
+      {"id":"10045","key":"ENG-152","fields":{"summary":"Lagging behind","status":{"id":"9","statusCategory":{"key":"done"}}}}
+    ]}
+    """
+    private static let me = #"{"accountId":"5b10a2844c20165700ede21g","emailAddress":"me@acme.test"}"#
+    /// To Do from In Progress, "Won't Do" and "Done", and "Close" needing a field.
+    private static let transitions = """
+    {"transitions":[
+      {"id":"11","name":"Stop","hasScreen":false,"isAvailable":true,"to":{"id":"1","name":"To Do","statusCategory":{"key":"new"}}},
+      {"id":"21","name":"Won't do","isAvailable":true,"to":{"id":"6","name":"Won't Do","statusCategory":{"key":"done"}}},
+      {"id":"31","name":"Finish","isAvailable":true,"to":{"id":"7","name":"Done","statusCategory":{"key":"done"}}}
+    ]}
+    """
+
+    private var defaults: UserDefaults!
+    private var suiteName: String!
+    private let issue = TaskItem(source: .jira, id: "10042", title: "ENG-142 Fix login", list: "Engineering",
+                                 due: nil, created: nil, started: true, state: "3")
+    private let credentials = JiraTasks.Credentials(site: URL(string: "https://acme.atlassian.net")!, email: "me@acme.test", token: "tok")
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "JiraTasksTests-\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        StubProtocol.handler = nil
+        StubProtocol.headers = nil
+        StubProtocol.requests = []
+        super.tearDown()
+    }
+
+    /// A store already connected to acme.
+    private func connected(tokens: FakeTokens = FakeTokens("tok")) -> JiraTasks {
+        defaults.set("acme.atlassian.net", forKey: "integrations.jira.site")
+        defaults.set("me@acme.test", forKey: "integrations.jira.email")
+        return JiraTasks(tokens: tokens, defaults: defaults, session: StubProtocol.session())
+    }
+
+    private func searchBody(_ request: URLRequest?) -> JiraTasks.SearchBody? {
+        request?.httpBody.flatMap { try? JSONDecoder().decode(JiraTasks.SearchBody.self, from: $0) }
+    }
+
+    private func moves() -> [String] {
+        StubProtocol.requests.filter { $0.httpMethod == "POST" && $0.url?.path.hasSuffix("/transitions") == true }.compactMap {
+            $0.httpBody.flatMap { try? JSONDecoder().decode(JiraTasks.MoveBody.self, from: $0) }?.transition.id
+        }
+    }
+
+    /// Answers by endpoint, with a move that goes through.
+    private func answer(transitions: String = JiraTasksTests.transitions, move: Int = 204, status: String = "{}") {
+        StubProtocol.handler = { request in
+            let path = request.url?.path ?? ""
+            if path.hasSuffix("/transitions") { return request.httpMethod == "POST" ? (move, "") : (200, transitions) }
+            if path.hasSuffix("/myself") { return (200, Self.me) }
+            return (200, status)
+        }
+    }
+
+    // MARK: Requests
+
+    func testSearchUsesTheCurrentEndpointWithBasicAuth() {
+        let request = JiraTasks.searchRequest(credentials, nextPageToken: nil)
+        XCTAssertEqual(request.url?.absoluteString, "https://acme.atlassian.net/rest/api/3/search/jql")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Basic " + Data("me@acme.test:tok".utf8).base64EncodedString())
+        XCTAssertFalse(request.httpShouldHandleCookies)
+        let body = searchBody(request)
+        XCTAssertEqual(body?.jql, "assignee = currentUser() AND statusCategory != Done ORDER BY duedate ASC, created ASC")
+        XCTAssertEqual(body?.fields, ["summary", "status", "duedate", "created", "project"])
+        XCTAssertEqual(body?.maxResults, 100)
+        XCTAssertNil(body?.nextPageToken)
+        XCTAssertNil(body?.reconcileIssues)
+    }
+
+    func testOtherRequests() {
+        XCTAssertEqual(JiraTasks.myselfRequest(credentials).url?.absoluteString, "https://acme.atlassian.net/rest/api/3/myself")
+        XCTAssertEqual(JiraTasks.transitionsRequest(credentials, id: "10042").url?.absoluteString,
+                       "https://acme.atlassian.net/rest/api/3/issue/10042/transitions?expand=transitions.fields")
+        XCTAssertEqual(JiraTasks.statusRequest(credentials, id: "10042").url?.absoluteString,
+                       "https://acme.atlassian.net/rest/api/3/issue/10042?fields=status")
+        let move = JiraTasks.moveRequest(credentials, id: "10042", transition: "31")
+        XCTAssertEqual(move.httpMethod, "POST")
+        XCTAssertEqual(move.url?.path, "/rest/api/3/issue/10042/transitions")
+        XCTAssertEqual(move.httpBody.flatMap { try? JSONDecoder().decode(JiraTasks.MoveBody.self, from: $0) },
+                       JiraTasks.MoveBody(transition: .init(id: "31")))
+    }
+
+    // MARK: Reading
+
+    func testReadsIssuesWithTheirKeyAndStatus() async throws {
+        StubProtocol.handler = { _ in (200, Self.page) }
+        let items = try await connected().openTasks()
+        XCTAssertEqual(items.map(\.title), ["ENG-142 Fix login", "ENG-150 Write release notes"])
+        XCTAssertEqual(items.map(\.id), ["10042", "10043"])
+        XCTAssertEqual(items.map(\.list), ["Engineering", "Engineering"])
+        XCTAssertEqual(items.map(\.source), [.jira, .jira])
+        XCTAssertEqual(items.map(\.started), [true, false])
+        XCTAssertEqual(items.map(\.state), ["3", "1"])
+        XCTAssertNil(items[0].due)
+        XCTAssertEqual(items[1].due, TaskDates.parse("2026-10-26"))
+        XCTAssertEqual(items[0].created, TaskDates.parse("2026-10-01T07:00:00Z"))
+    }
+
+    func testFollowsNextPageToken() async throws {
+        func raw(_ id: String) -> String { #"{"id":"\#(id)","key":"K-\#(id)","fields":{"summary":"S","status":{"id":"1"}}}"# }
+        StubProtocol.handler = { [self] request in
+            searchBody(request)?.nextPageToken == "next+1=="
+                ? (200, #"{"isLast":true,"issues":[\#(raw("2"))]}"#)
+                : (200, #"{"isLast":false,"nextPageToken":"next+1==","issues":[\#(raw("1"))]}"#)
+        }
+        let items = try await connected().openTasks()
+        XCTAssertEqual(items.map(\.id), ["1", "2"])
+        XCTAssertEqual(StubProtocol.requests.count, 2)
+    }
+
+    func testStopsAfterTheLastPageAllowedAndWithoutAToken() async throws {
+        func answer(_ extra: String) -> String { #"{\#(extra)"issues":[{"id":"1","fields":{"summary":"S"}}]}"# }
+        StubProtocol.handler = { _ in (200, answer(#""nextPageToken":"more","#)) }
+        _ = try await connected().openTasks()
+        XCTAssertEqual(StubProtocol.requests.count, JiraTasks.maxPages)
+
+        StubProtocol.requests = []
+        StubProtocol.handler = { _ in (200, answer("")) }
+        _ = try await connected().openTasks()
+        XCTAssertEqual(StubProtocol.requests.count, 1)
+    }
+
+    func testAnEmptySearchChecksWhosAsking() async throws {
+        // Jira can answer a bad token as if nobody were signed in.
+        StubProtocol.handler = { request in
+            request.url?.path.hasSuffix("/myself") == true ? (401, "") : (200, #"{"isLast":true,"issues":[]}"#)
+        }
+        let store = connected()
+        do {
+            _ = try await store.openTasks()
+            XCTFail("nobody signed in should be rejected")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .rejected)
+        }
+
+        StubProtocol.handler = { request in
+            request.url?.path.hasSuffix("/myself") == true ? (200, Self.me) : (200, #"{"isLast":true,"issues":[]}"#)
+        }
+        let items = try await connected().openTasks()
+        XCTAssertTrue(items.isEmpty)
+    }
+
+    func testABadQueryFromABadTokenIsRejectedToo() async {
+        StubProtocol.handler = { request in
+            request.url?.path.hasSuffix("/myself") == true ? (401, "") : (400, #"{"errorMessages":["Invalid"]}"#)
+        }
+        do {
+            _ = try await connected().openTasks()
+            XCTFail("should be rejected")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .rejected)
+        }
+    }
+
+    func testARejectedTokenIsntTriedAgainForAWhile() async {
+        StubProtocol.handler = { _ in (401, "") }
+        let store = connected()
+        for _ in 0..<3 {
+            do {
+                _ = try await store.openTasks()
+                XCTFail("should be rejected")
+            } catch {
+                XCTAssertEqual(error as? TaskSourceProblem, .rejected)
+            }
+        }
+        XCTAssertEqual(StubProtocol.requests.count, 1)
+        let change = await store.change(issue, completed: true)
+        XCTAssertEqual(change, .failed)
+        XCTAssertEqual(StubProtocol.requests.count, 1)
+
+        // A new token is tried straight away, and lifts the pause.
+        StubProtocol.handler = { request in
+            request.url?.path.hasSuffix("/myself") == true ? (200, Self.me) : (200, Self.page)
+        }
+        let check = await store.connect(site: "acme", email: "me@acme.test", token: "new")
+        XCTAssertEqual(check, .accepted)
+        let items = try? await store.openTasks()
+        XCTAssertEqual(items?.count, 2)
+    }
+
+    func testASiteThatCantBeReachedIsUnreachable() async {
+        StubProtocol.handler = { _ in (503, "") }
+        do {
+            _ = try await connected().openTasks()
+            XCTFail("should be unreachable")
+        } catch {
+            XCTAssertEqual(error as? TaskSourceProblem, .unreachable)
+        }
+    }
+
+    // MARK: Only ever to the site
+
+    func testASavedAddressElsewhereSendsNothing() async throws {
+        defaults.set("evil.com", forKey: "integrations.jira.site")
+        defaults.set("me@acme.test", forKey: "integrations.jira.email")
+        let store = JiraTasks(tokens: FakeTokens("tok"), defaults: defaults, session: StubProtocol.session())
+        XCTAssertFalse(store.hasToken)
+        let items = try await store.openTasks()
+        XCTAssertTrue(items.isEmpty)
+        let change = await store.change(issue, completed: true)
+        XCTAssertEqual(change, .failed)
+        XCTAssertTrue(StubProtocol.requests.isEmpty)
+    }
+
+    func testConnectRefusesAnotherHostWithoutAsking() async {
+        let tokens = FakeTokens()
+        let store = JiraTasks(tokens: tokens, defaults: defaults, session: StubProtocol.session())
+        for site in ["evil.com", "http://acme.atlassian.net", "acme.atlassian.net.evil.com", "https://acme.atlassian.net@evil.com"] {
+            let check = await store.connect(site: site, email: "me@acme.test", token: "tok")
+            XCTAssertEqual(check, .badSite, site)
+        }
+        XCTAssertTrue(StubProtocol.requests.isEmpty)
+        XCTAssertNil(tokens.token)
+    }
+
+    func testARedirectOffTheSiteIsntFollowed() async {
+        StubProtocol.handler = { request in
+            request.url?.host == "acme.atlassian.net" ? (302, "") : (200, Self.me)
+        }
+        StubProtocol.headers = { _ in ["Location": "https://evil.example/rest/api/3/myself"] }
+        let tokens = FakeTokens()
+        let store = JiraTasks(tokens: tokens, defaults: defaults, session: StubProtocol.session())
+        let check = await store.connect(site: "acme", email: "me@acme.test", token: "tok")
+        XCTAssertEqual(check, .unreachable)
+        XCTAssertEqual(StubProtocol.requests.compactMap { $0.url?.host }, ["acme.atlassian.net"])
+        XCTAssertNil(tokens.token)
+    }
+
+    // MARK: Connecting
+
+    func testConnectKeepsOnlyWhatJiraTakes() async {
+        let tokens = FakeTokens()
+        let store = JiraTasks(tokens: tokens, defaults: defaults, session: StubProtocol.session())
+
+        StubProtocol.handler = { _ in (401, "") }
+        let rejected = await store.connect(site: "acme", email: "me@acme.test", token: "wrong")
+        XCTAssertEqual(rejected, .rejected)
+        XCTAssertNil(tokens.token)
+        XCTAssertFalse(store.hasToken)
+        XCTAssertNil(store.account)
+
+        StubProtocol.handler = { _ in (500, "") }
+        let down = await store.connect(site: "acme", email: "me@acme.test", token: "fine")
+        XCTAssertEqual(down, .unreachable)
+        XCTAssertNil(tokens.token)
+
+        let empty = await store.connect(site: "acme", email: "  ", token: "fine")
+        XCTAssertEqual(empty, .rejected)
+
+        StubProtocol.handler = { _ in (200, Self.me) }
+        let accepted = await store.connect(site: "https://ACME.atlassian.net/jira", email: " me@acme.test ", token: " right\n")
+        XCTAssertEqual(accepted, .accepted)
+        XCTAssertEqual(tokens.token, "right")
+        XCTAssertTrue(store.hasToken)
+        XCTAssertEqual(store.account?.site, "acme.atlassian.net")
+        XCTAssertEqual(store.account?.email, "me@acme.test")
+        XCTAssertEqual(defaults.string(forKey: "integrations.jira.site"), "acme.atlassian.net")
+        XCTAssertEqual(StubProtocol.requests.last?.url?.absoluteString, "https://acme.atlassian.net/rest/api/3/myself")
+        XCTAssertEqual(StubProtocol.requests.last?.value(forHTTPHeaderField: "Authorization"),
+                       "Basic " + Data("me@acme.test:right".utf8).base64EncodedString())
+
+        store.disconnect()
+        XCTAssertNil(tokens.token)
+        XCTAssertFalse(store.hasToken)
+        XCTAssertNil(defaults.string(forKey: "integrations.jira.email"))
+    }
+
+    func testTheTokenIsntInTheDefaults() async {
+        StubProtocol.handler = { _ in (200, Self.me) }
+        let store = JiraTasks(tokens: FakeTokens(), defaults: defaults, session: StubProtocol.session())
+        _ = await store.connect(site: "acme", email: "me@acme.test", token: "s3cret")
+        let saved = defaults.persistentDomain(forName: suiteName) ?? [:]
+        XCTAssertFalse(saved.values.contains { "\($0)".contains("s3cret") })
+    }
+
+    // MARK: Choosing a transition
+
+    private func decoded(_ json: String) throws -> [JiraTasks.RawTransition] {
+        try JiraTasks.decode(JiraTasks.Transitions.self, from: Data(json.utf8)).transitions
+    }
+
+    func testDonePrefersAStatusCalledDoneOverOnesThatDropTheWork() throws {
+        XCTAssertEqual(JiraTasks.doneTransition(in: try decoded(Self.transitions))?.id, "31")
+    }
+
+    func testDoneTakesTheFirstOtherDoneCategoryStatus() throws {
+        let json = """
+        {"transitions":[
+          {"id":"1","name":"Start","to":{"id":"3","name":"In Progress","statusCategory":{"key":"indeterminate"}}},
+          {"id":"2","name":"Resolve","to":{"id":"8","name":"Resolved","statusCategory":{"key":"done"}}},
+          {"id":"3","name":"Close","to":{"id":"9","name":"Closed","statusCategory":{"key":"done"}}}
+        ]}
+        """
+        XCTAssertEqual(JiraTasks.doneTransition(in: try decoded(json))?.id, "2")
+    }
+
+    func testDoneWontUseACancelledStatusUnavailableOnesOrRequiredFields() throws {
+        let json = """
+        {"transitions":[
+          {"id":"1","name":"Cancel","to":{"id":"6","name":"Cancelled","statusCategory":{"key":"done"}}},
+          {"id":"2","name":"Finish","isAvailable":false,"to":{"id":"7","name":"Done","statusCategory":{"key":"done"}}},
+          {"id":"3","name":"Finish","fields":{"customfield_1":{"required":true,"hasDefaultValue":false,"name":"Root cause"}},
+           "to":{"id":"7","name":"Done","statusCategory":{"key":"done"}}}
+        ]}
+        """
+        XCTAssertNil(JiraTasks.doneTransition(in: try decoded(json)))
+    }
+
+    func testAFieldWithADefaultOrOptionalDoesntStopATransition() throws {
+        let json = """
+        {"transitions":[
+          {"id":"3","name":"Finish","hasScreen":true,"fields":{
+            "resolution":{"required":true,"hasDefaultValue":true},
+            "comment":{"required":false,"hasDefaultValue":false}},
+           "to":{"id":"7","name":"Done","statusCategory":{"key":"done"}}}
+        ]}
+        """
+        XCTAssertEqual(JiraTasks.doneTransition(in: try decoded(json))?.id, "3")
+    }
+
+    // MARK: Moving
+
+    func testDoneMovesThroughTheDoneTransition() async {
+        answer()
+        let saved = await connected().setCompleted(issue, true)
+        XCTAssertTrue(saved)
+        XCTAssertEqual(moves(), ["31"])
+        XCTAssertEqual(StubProtocol.requests.first?.url?.query, "expand=transitions.fields")
+    }
+
+    func testUndoMovesBackToTheStatusItWasIn() async {
+        let back = """
+        {"transitions":[
+          {"id":"41","name":"Reopen","to":{"id":"1","name":"To Do","statusCategory":{"key":"new"}}},
+          {"id":"42","name":"Back to work","to":{"id":"3","name":"In Progress","statusCategory":{"key":"indeterminate"}}}
+        ]}
+        """
+        answer(transitions: back)
+        let saved = await connected().setCompleted(issue, false)
+        XCTAssertTrue(saved)
+        XCTAssertEqual(moves(), ["42"])
+    }
+
+    func testWithNoTransitionThatFitsTheIssueIsLeftAlone() async {
+        let none = #"{"transitions":[{"id":"11","name":"Stop","to":{"id":"1","name":"To Do","statusCategory":{"key":"new"}}}]}"#
+        answer(transitions: none, status: #"{"id":"10042","fields":{"status":{"id":"3","statusCategory":{"key":"indeterminate"}}}}"#)
+        let store = connected()
+
+        guard case .refused(let done) = await store.change(issue, completed: true) else { return XCTFail("should be refused") }
+        XCTAssertFalse(done.isEmpty)
+        XCTAssertTrue(moves().isEmpty)
+
+        let inDone = TaskItem(source: .jira, id: "10042", title: "ENG-142 Fix login", list: "", due: nil, created: nil, state: "99")
+        guard case .refused(let back) = await store.change(inDone, completed: false) else { return XCTFail("should be refused") }
+        XCTAssertNotEqual(done, back)
+        XCTAssertTrue(moves().isEmpty)
+    }
+
+    func testAnIssueWithNoTransitionsOrNoLongerThereIsRefused() async {
+        StubProtocol.handler = { _ in (404, #"{"errorMessages":["Issue does not exist"]}"#) }
+        guard case .refused = await connected().change(issue, completed: true) else { return XCTFail("should be refused") }
+    }
+
+    func testAnIssueAlreadyThereCountsAsSaved() async {
+        answer(transitions: #"{"transitions":[]}"#, status: #"{"id":"10042","fields":{"status":{"id":"7","statusCategory":{"key":"done"}}}}"#)
+        let done = await connected().change(issue, completed: true)
+        XCTAssertEqual(done, .saved)
+        XCTAssertTrue(moves().isEmpty)
+
+        answer(transitions: #"{"transitions":[]}"#, status: #"{"id":"10042","fields":{"status":{"id":"3","statusCategory":{"key":"indeterminate"}}}}"#)
+        let back = await connected().change(issue, completed: false)
+        XCTAssertEqual(back, .saved)
+    }
+
+    func testATransitionThatFailsIsRefusedCleanly() async {
+        // A required field the screen data didn't show, a conflict, no permission.
+        for status in [400, 403, 404, 409, 422] {
+            answer(move: status)
+            guard case .refused = await connected().change(issue, completed: true) else {
+                return XCTFail("\(status) should be refused")
+            }
+        }
+        answer(move: 500)
+        let down = await connected().change(issue, completed: true)
+        XCTAssertEqual(down, .failed)
+    }
+
+    func testASearchAfterAMoveReadsThatIssueFresh() async throws {
+        answer(status: Self.page)
+        let store = connected()
+        let saved = await store.setCompleted(issue, true)
+        XCTAssertTrue(saved)
+        StubProtocol.requests = []
+        StubProtocol.handler = { _ in (200, Self.page) }
+        _ = try await store.openTasks()
+        XCTAssertEqual(searchBody(StubProtocol.requests.first)?.reconcileIssues, [10042])
+    }
+
+    func testWithoutCredentialsNothingIsAsked() async throws {
+        let store = JiraTasks(tokens: FakeTokens(), defaults: defaults, session: StubProtocol.session())
+        let items = try await store.openTasks()
+        XCTAssertTrue(items.isEmpty)
+        XCTAssertFalse(store.hasToken)
+        XCTAssertTrue(StubProtocol.requests.isEmpty)
+    }
+}
+
 // MARK: - The coordinator, with every source
 
 @MainActor
@@ -548,6 +1293,77 @@ final class TaskSourcesCoordinatorTests: XCTestCase {
         XCTAssertEqual(todoist.completions.last?.1, false)
         XCTAssertNil(coordinator.nextTasks[session.id])
         XCTAssertTrue(coordinator.taskGoals.contains { $0.id == "rent" })
+    }
+
+    func testAServiceThatRefusesLeavesTheTaskUntickedWithALine() async {
+        let coordinator = make()
+        await coordinator.refreshTasks()
+        coordinator.goalPicked(GoalSuggestion(text: "Pay rent", source: .task(.todoist, id: "rent", list: "Home")))
+        let session = session(goal: "Pay rent")
+        await coordinator.sessionStarted(session, startedByEvent: false)
+
+        todoist.refusal = "No transition"
+        session.goalVerdict = .done
+        await coordinator.verdictChanged(session, byUser: false)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, false)
+        XCTAssertEqual(coordinator.tickNotes[session.id], "No transition")
+        XCTAssertNil(coordinator.nextTasks[session.id])
+
+        // The next try that works clears the line.
+        todoist.refusal = nil
+        await coordinator.tickOff(session: session.id)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, true)
+        XCTAssertNil(coordinator.tickNotes[session.id])
+    }
+
+    func testAnUndoThatsRefusedStaysTicked() async {
+        let coordinator = make()
+        await coordinator.refreshTasks()
+        coordinator.goalPicked(GoalSuggestion(text: "Pay rent", source: .task(.todoist, id: "rent", list: "Home")))
+        let session = session(goal: "Pay rent")
+        await coordinator.sessionStarted(session, startedByEvent: false)
+        session.goalVerdict = .done
+        await coordinator.verdictChanged(session, byUser: false)
+
+        todoist.refusal = "No way back"
+        await coordinator.undoTick(session: session.id)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, true)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.undone, false)
+        XCTAssertEqual(coordinator.tickNotes[session.id], "No way back")
+
+        todoist.refusal = nil
+        await coordinator.undoTick(session: session.id)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, false)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.undone, true)
+        XCTAssertNil(coordinator.tickNotes[session.id])
+    }
+
+    func testGitHubAndJiraComeWithTheRestAndSwitchOffAlone() async {
+        let github = FakeTaskStore(.github, [TaskItem(source: .github, id: "acme/app#1", title: "app#1 Old", list: "app", due: nil, created: nil)])
+        let jira = FakeTaskStore(.jira, [TaskItem(source: .jira, id: "10042", title: "ENG-142 Fix login", list: "Engineering",
+                                                  due: nil, created: nil, started: true, state: "3")])
+        let entitlements = Entitlements(defaults: defaults)
+        entitlements.startTrialIfNeeded(for: .taskGoals)
+        for source in TaskSource.allCases { defaults.set(source == .github || source == .jira, forKey: source.settingKey) }
+        defaults.set(false, forKey: IntegrationSettings.gitBranch)
+        let coordinator = IntegrationsCoordinator(calendar: NoCalendar(), reminders: NoReminders(), tasks: [github, jira],
+                                                  entitlements: entitlements, defaults: defaults)
+        coordinator.isShipped = true
+        await coordinator.refreshTasks()
+        XCTAssertEqual(coordinator.taskGoals.map(\.id), ["10042", "acme/app#1"])
+
+        jira.problem = .unreachable
+        await coordinator.refreshTasks()
+        XCTAssertEqual(coordinator.taskGoals.count, 2)
+
+        github.problem = .rejected
+        await coordinator.refreshTasks()
+        XCTAssertEqual(coordinator.taskGoals.map(\.id), ["10042"])
+        XCTAssertEqual(coordinator.taskProblems[.github], .rejected)
+
+        defaults.set(false, forKey: IntegrationSettings.jira)
+        await coordinator.refreshTasks()
+        XCTAssertTrue(coordinator.taskGoals.isEmpty)
     }
 
     func testATaskFromASourceSwitchedOffIsntLinked() async {

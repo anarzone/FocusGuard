@@ -15,8 +15,8 @@ struct GoalSuggestion: Equatable, Identifiable {
         case lastGoal
         /// The calendar event on now (or starting soon).
         case calendar
-        /// An open task (Pro): a reminder, a Things to-do, a Todoist task
-        /// or a Linear issue, and where it's filed.
+        /// An open task (Pro): a reminder, a Things to-do, a Todoist task,
+        /// or a Linear, GitHub or Jira issue, and where it's filed.
         case task(TaskSource, id: String, list: String)
         /// The branch checked out in a repo.
         case git(repo: String)
