@@ -2,9 +2,9 @@
 // start, the running session or break, and this page's category.
 
 import { Conn, GET_APP_URL } from '../src/lib/protocol.js';
-import { clock, displayHost, goalLabel, isWebURL, lastSeen, listSummary, minutesLabel, minutesPhrase, pagePattern, timeOfDay } from '../src/lib/format.js';
+import { clock, displayHost, goalLabel, isWebURL, lastSeen, listSummary, minutesLabel, minutesPhrase, pagePattern, timeOfDay, withoutHostDot } from '../src/lib/format.js';
 import { plural, t } from '../src/lib/i18n.js';
-import { barSegments, breakClock, presetName, presetRules, sessionClock } from '../src/lib/view.js';
+import { barSegments, breakClock, listLocked, presetName, presetRules, sessionClock } from '../src/lib/view.js';
 import { appIcon, ask, h, icons, localizePage, mount, reportAppearance, shieldIcon, siteTile, subscribe, tell } from '../src/lib/dom.js';
 
 await localizePage();
@@ -57,7 +57,7 @@ document.addEventListener('click', (event) => {
 async function loadPage() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
-  const url = tab.url || '';
+  const url = withoutHostDot(tab.url || '');
   const own = url.startsWith(chrome.runtime.getURL(''));
   page = { tab, url, own, web: isWebURL(url), host: displayHost(url), title: tab.title || '' };
   render();
@@ -71,7 +71,7 @@ async function loadPage() {
 }
 
 async function setCategory(category) {
-  if (!page?.web) return;
+  if (!page?.web || listLocked(snap?.state)) return;
   const previous = page.category;
   page = { ...page, category };
   closeMenu(true);
@@ -284,7 +284,13 @@ function pageCard(state) {
         page.own ? t('popupOwnPage') : t('popupBrowserPage')));
   }
   const category = CATEGORIES.find((c) => c.id === page.category);
-  const chip = category
+  const locked = listLocked(state);
+  const chip = category && locked
+    ? h('button', {
+      class: `chip-btn chip-${category.id}`, disabled: true,
+      title: t('blockFooterLockedSession'), 'aria-label': `${category.label}: ${t('blockFooterLockedSession')}`,
+    }, category.label, icons.lock({ width: 9, height: 9 }))
+    : category
     ? h('button', {
       class: `chip-btn chip-${category.id}`, 'aria-haspopup': 'menu', 'aria-expanded': String(menuOpen),
       'aria-label': t('popupCategoryChange', category.label), 'data-focus-key': 'chip',
@@ -301,7 +307,7 @@ function pageCard(state) {
         page.title ? h('div', { class: 'title' }, page.title) : null),
       chip),
     onBreak ? h('div', { class: 'note' }, t('popupBreakNoDrift')) : null,
-    menuOpen && category ? categoryMenu(category.id) : null);
+    menuOpen && category && !locked ? categoryMenu(category.id) : null);
 }
 
 function categoryMenu(current) {

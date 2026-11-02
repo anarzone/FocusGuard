@@ -63,10 +63,15 @@ export function presetName(preset) {
   return { gentle: t('presetGentle'), standard: t('presetStandard'), strict: t('presetStrict') }[preset] || t('presetStandard');
 }
 
-// The pass running on this host, if any.
+// The pass running on this host, if any: one on the host or on a site it's part of.
 export function passFor(state, host, now = Date.now()) {
   if (!host) return null;
-  return (state?.blocking?.passes || []).find((p) => p.until > now && (hostMatches(host, p.host) || hostMatches(p.host, host))) || null;
+  return (state?.blocking?.passes || []).find((p) => p.until > now && hostMatches(host, p.host)) || null;
+}
+
+// Strict: the blocked list is locked while a session runs, open-ended ones too.
+export function listLocked(state) {
+  return !!state?.policy?.locksDuringSession && (state.phase === 'focusing' || state.phase === 'paused');
 }
 
 // The toolbar button: which glyph, how full, the badge and the tooltip.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import './chrome-i18n.mjs';
 import { Conn, connFromDisconnect } from '../src/lib/protocol.js';
-import { barSegments, breakClock, passFor, presetRules, ringArcs, sessionClock, toolbar } from '../src/lib/view.js';
+import { barSegments, breakClock, listLocked, passFor, presetRules, ringArcs, sessionClock, toolbar } from '../src/lib/view.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/state-focusing.json', import.meta.url)));
 const asOf = fixture.session.asOf;
@@ -90,6 +90,10 @@ test('toolbar: off, ready, focusing with a pass badge, break, done', () => {
   assert.deepEqual(pass.badge, { text: '1:20', color: '#FF8D28', textColor: '#1D1D1F' });
   assert.ok(passFor(fixture, 'x.com', asOf));
   assert.equal(passFor(fixture, 'x.com', asOf + 90_000), null);
+  assert.ok(passFor(fixture, 'www.x.com', asOf), 'www. is the same site');
+  assert.ok(passFor(fixture, 'm.x.com', asOf), 'below the host it was taken on');
+  const below = { ...fixture, blocking: { ...fixture.blocking, passes: [{ host: 'm.x.com', until: asOf + 60_000 }] } };
+  assert.equal(passFor(below, 'x.com', asOf), null, 'not above it');
 
   const brk = toolbar({ conn: Conn.connected, state: { ...fixture, phase: 'break', break: { endsAt: asOf + 300_000 } }, now: asOf });
   assert.equal(brk.kind, 'break');
@@ -118,4 +122,14 @@ test('connect errors map to the popup states', () => {
   assert.equal(connFromDisconnect('Specified native messaging host not found.'), Conn.notInstalled);
   assert.equal(connFromDisconnect('Access to the specified native messaging host is forbidden.'), Conn.notInstalled);
   assert.equal(connFromDisconnect('Native host has exited.'), Conn.notRunning);
+});
+
+test('Strict locks the list only while a session runs', () => {
+  const strict = { ...fixture, policy: { ...fixture.policy, locksDuringSession: true } };
+  assert.ok(listLocked(strict));
+  assert.ok(listLocked({ ...strict, phase: 'paused' }));
+  assert.ok(!listLocked({ ...strict, phase: 'ready' }));
+  assert.ok(!listLocked({ ...strict, phase: 'break' }));
+  assert.ok(!listLocked(fixture));
+  assert.ok(!listLocked(null));
 });
