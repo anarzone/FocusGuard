@@ -14,6 +14,8 @@ struct TodaySession: Identifiable, Equatable {
     let plannedMinutes: Int?
     /// Focus rate, 0...1: focus ÷ (focus + drift).
     let rate: Double
+    /// Anything to judge the rate on: time only in other apps shows "–", not 0%.
+    var hasRate = true
     /// Focus, drift and other in time order, merged into runs, for the
     /// tooltip's bar.
     let runs: [Run]
@@ -83,7 +85,7 @@ enum TodayModelBuilder {
     static func build(day date: Date, context: ModelContext, now: Date = .now,
                       calendar: Calendar = .current) -> TodayModel {
         let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let dayEnd = calendar.startOfDay(1, from: dayStart)
         let until = min(now, dayEnd)
 
         let descriptor = FetchDescriptor<ActivityEvent>(
@@ -136,7 +138,7 @@ enum TodayModelBuilder {
         var focus: TimeInterval = 0, drift: TimeInterval = 0
         var apps: [String: TimeInterval] = [:]
         for event in session.events {
-            let seconds = max(0, event.duration) + 1
+            let seconds = max(0, event.duration)
             switch event.classification {
             case .focus: focus += seconds
             case .distraction: drift += seconds
@@ -156,6 +158,7 @@ enum TodayModelBuilder {
             minutes: Int(running / 60),
             plannedMinutes: session.plannedDurationMinutes,
             rate: FocusRate.of(focused: focus, drifted: drift),
+            hasRate: focus + drift > 0,
             runs: runs(of: segments),
             apps: apps.sorted { $0.value > $1.value }.prefix(3).map { ($0.key, $0.value) },
             shape: shape(of: SessionNamer.pattern(of: segments)),
@@ -285,13 +288,13 @@ enum StreakWords {
     static func days(count: Int, now: Date, weekendsCount: Bool, calendar: Calendar = .current) -> [Date] {
         guard count > 0 else { return [] }
         var out: [Date] = []
-        var cursor = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now)) ?? now
+        var cursor = calendar.startOfDay(-1, from: now)
         var guardDays = 0
         while out.count < count, guardDays < 400 {
             let weekday = calendar.component(.weekday, from: cursor)
             let weekend = weekday == 1 || weekday == 7
             if weekendsCount || !weekend { out.append(cursor) }
-            cursor = calendar.date(byAdding: .day, value: -1, to: cursor) ?? cursor
+            cursor = calendar.startOfDay(-1, from: cursor)
             guardDays += 1
         }
         return out

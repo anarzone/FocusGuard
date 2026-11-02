@@ -157,10 +157,15 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
     }
 
     /// "Session complete: Locked-in Deep Dive", with a break and another session.
-    func presentSessionComplete(name: String, minutes: Int, focusPercent: Int, zoneMinutes: Int, breakMinutes: Int) {
-        let body = zoneMinutes > 0
-            ? String(localized: "\(minutes) min · \(focusPercent)% focused · \(zoneMinutes) min in the zone.", comment: "Compact minutes")
-            : String(localized: "\(minutes) min · \(focusPercent)% focused.", comment: "Compact minutes")
+    func presentSessionComplete(name: String, minutes: Int, focusPercent: Int?, zoneMinutes: Int, breakMinutes: Int) {
+        let body: String
+        if let focusPercent {
+            body = zoneMinutes > 0
+                ? String(localized: "\(minutes) min · \(focusPercent)% focused · \(zoneMinutes) min in the zone.", comment: "Compact minutes")
+                : String(localized: "\(minutes) min · \(focusPercent)% focused.", comment: "Compact minutes")
+        } else {
+            body = String(localized: "\(minutes) min", comment: "Compact minutes") + "."
+        }
         let request = Self.request(
             title: String(localized: "Session complete: \(name)"),
             body: body,

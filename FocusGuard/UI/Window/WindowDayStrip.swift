@@ -180,7 +180,9 @@ struct WindowDayStrip: View {
         let from = WindowFormat.clock(window.start), to = WindowFormat.clock(window.end)
         guard !sessions.isEmpty else { return String(localized: "Timeline from \(from) to \(to). No sessions yet.") }
         let list = sessions.reversed().map { s in
-            String(localized: "\(s.name) at \(WindowFormat.clock(s.start)), \(FocusRate.percent(focused: s.rate, drifted: 1 - s.rate))% focused")
+            s.hasRate
+                ? String(localized: "\(s.name) at \(WindowFormat.clock(s.start)), \(FocusRate.percent(focused: s.rate, drifted: 1 - s.rate))% focused")
+                : String(localized: "\(s.name) at \(WindowFormat.clock(s.start))", comment: "A session on the day's timeline, with nothing to give a focus rate on")
         }.joined(separator: "; ")
         return String(localized: "Timeline from \(from) to \(to). \(sessions.count) sessions: \(list)",
                       comment: "Plural on sessions.count: 1 session / 2 sessions")
@@ -198,7 +200,7 @@ struct SessionTooltip: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(session.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
-                Text("\(Int((session.rate * 100).rounded()))%").font(.system(size: 12, weight: .semibold).monospacedDigit())
+                Text(session.hasRate ? "\(Int((session.rate * 100).rounded()))%" : "–").font(.system(size: 12, weight: .semibold).monospacedDigit())
             }
             .foregroundStyle(Theme.primaryText)
             Text(subtitle)

@@ -37,10 +37,12 @@ extension AppState {
     }
 
     /// The rate in the session-complete notification: its own events, so
-    /// whatever went on during a pause doesn't count.
-    static func completionPercent(of session: Session) -> Int {
+    /// whatever went on during a pause doesn't count. Nil with nothing to
+    /// judge it on.
+    static func completionPercent(of session: Session) -> Int? {
         var tally = ClassificationTally()
         for event in session.events { tally.add(event.duration, event.classification ?? .neutral) }
+        guard tally.focus + tally.distraction > 0 else { return nil }
         return FocusRate.percent(focused: tally.focus, drifted: tally.distraction)
     }
 

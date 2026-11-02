@@ -269,7 +269,7 @@ struct DayStripView: View, Animatable {
 
     var body: some View {
         let dayStart = calendar.startOfDay(for: now)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let dayEnd = calendar.startOfDay(1, from: dayStart)
         let previewFrom = min(previewStart ?? now, now)
         let previewEnd = previewMinutes > 0 ? min(dayEnd, previewFrom.addingTimeInterval(previewMinutes * 60)) : nil
         let firstToday = spans.first { $0.start >= dayStart.addingTimeInterval(DayStrip.dayStartsAtHour * 3600) }

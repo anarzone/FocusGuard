@@ -74,6 +74,23 @@
         }
       }
     },
+    "%@ at %@" : {
+      "comment" : "A session on the day's timeline, with nothing to give a focus rate on",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, saat %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ um %2$@"
+          }
+        }
+      }
+    },
     "%@ Keep it or pick another." : {
       "comment" : "The bold first part is: FocusGuard guessed focus.",
       "localizations" : {
@@ -20160,6 +20177,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Last one: %1$@, %2$lld%% focused."
+          }
+        }
+      }
+    },
+    "Last one: %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonuncu: %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt: %@."
           }
         }
       }
@@ -42827,6 +42860,23 @@
     },
     "© 2026 Anar Haqverdiyev" : {
       "shouldTranslate" : false
+    },
+    "· %lld min" : {
+      "comment" : "Follows the session's name; compact minutes",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· %lld dəq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· %lld Min"
+          }
+        }
+      }
     },
     "· %lld min · %lld%% focused" : {
       "comment" : "Follows the session's name; compact minutes",

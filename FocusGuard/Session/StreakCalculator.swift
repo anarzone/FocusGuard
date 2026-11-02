@@ -36,20 +36,19 @@ struct StreakCalculator {
         let lookbackStart = calendar.date(byAdding: .day, value: -lookbackDays, to: calendar.startOfDay(for: now)) ?? now
 
         var streak = 0
-        var cursor = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))
-            ?? calendar.startOfDay(for: now)
+        var cursor = calendar.startOfDay(-1, from: now)
 
         while cursor >= lookbackStart {
             let weekday = calendar.component(.weekday, from: cursor)
             let isWeekend = (weekday == 1 || weekday == 7) // Sun=1, Sat=7
             if isWeekend && !weekendsCount {
-                cursor = calendar.date(byAdding: .day, value: -1, to: cursor) ?? cursor
+                cursor = calendar.startOfDay(-1, from: cursor)
                 continue
             }
             let secs = byDay[cursor] ?? 0
             if secs >= FocusGoal.seconds(on: cursor, calendar: calendar) {
                 streak += 1
-                cursor = calendar.date(byAdding: .day, value: -1, to: cursor) ?? cursor
+                cursor = calendar.startOfDay(-1, from: cursor)
             } else {
                 break
             }

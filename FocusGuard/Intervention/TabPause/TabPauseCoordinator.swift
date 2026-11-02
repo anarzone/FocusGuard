@@ -38,8 +38,9 @@ enum PausedPage {
                 ("focus", String(summary.focusMinutes)),
                 ("drift", String(summary.driftMinutes)),
                 ("other", String(summary.otherMinutes)),
-                ("rate", String(summary.focusPercent)),
             ]
+            // Left out with nothing to judge it on; the page then doesn't say it.
+            if let rate = summary.focusPercent { fields.append(("rate", String(rate))) }
         }
         // The page has its own strings (paused.html); it reads English by default.
         if OnDeviceAI.appLanguage != "en" { fields.append(("lang", OnDeviceAI.appLanguage)) }
@@ -110,7 +111,7 @@ struct PausedSessionSummary: Equatable {
     let focusMinutes: Int
     let driftMinutes: Int
     let otherMinutes: Int
-    let focusPercent: Int
+    let focusPercent: Int?
 }
 
 /// Free "Pause the tab" (blocking level 1). When the block screen comes up

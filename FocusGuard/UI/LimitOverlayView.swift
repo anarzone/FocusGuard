@@ -71,7 +71,7 @@ struct LimitOverlayView: View {
     private func content(now: Date) -> some View {
         let status = message.limitStatus()
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let tomorrow = calendar.startOfDay(1, from: now)
         // The preset whose extra time this block carries; they're all different.
         let preset = DriftResponse.allCases.first { $0.overridePolicy.extraTime == limit.extraTime } ?? .effective
         let copy = LimitCopy(name: limit.name, preset: preset,

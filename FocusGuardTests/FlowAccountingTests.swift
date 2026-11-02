@@ -94,21 +94,21 @@ final class FlowAccountingTests: XCTestCase {
     }
 
     /// A browser with no page known (a new tab, or one it couldn't read) is
-    /// real time. The rows split a browser into its sites and drop the rest.
+    /// real time: the rows split a browser into its sites and keep the rest.
     func testAppsAndSitesKeepsABrowsersTimeWithNoPage() async throws {
         _ = try fillToday()
         let stats = StatsStore(container: container)
         let truth = raw(from: today, to: now)
         let rows = await stats.usageRows(from: today, to: now, limit: 40)
-        XCTExpectFailure("Bug: MenuInsightsBuilder.usageRows (MenuInsights.swift:~377) makes rows from app.tabs only when a browser has any, so its time on no page disappears from Today's top apps, Apps & Sites and Reports' apps, though appUsage and the totals count it") {
-            XCTAssertEqual(rows.reduce(0) { $0 + $1.seconds }, truth.total, accuracy: 0.5)
-        }
+        XCTAssertEqual(rows.reduce(0) { $0 + $1.seconds }, truth.total, accuracy: 0.5)
+        let noPage = try XCTUnwrap(rows.first { $0.id == Rig.safari.bundleId })
+        XCTAssertEqual(noPage.seconds, 5 * 60, accuracy: 0.5)
+        XCTAssertEqual(noPage.classification, .neutral, "how that time counted, not the sites'")
+        XCTAssertNil(noPage.host)
     }
 
-    /// Every event's bar runs a second past its end. The tracker used to
-    /// sample once a second; since #81 an event ends exactly where the next
-    /// begins, so the bars and the goal count that second twice, once per
-    /// event, and a real day has hundreds.
+    /// An event ends exactly where the next begins (#81), so nothing can be
+    /// added per event: the bars and the goal count what Today counts.
     func testReportsBarsMatchTodayWithManyShortEvents() async throws {
         // Just short of a 4-hour goal, in 120 stretches of 2 minutes.
         for stretch in 0..<119 {
@@ -128,10 +128,8 @@ final class FlowAccountingTests: XCTestCase {
                                                goal: { _ in goal }, summaries: days)
         let bar = try XCTUnwrap(report.data.buckets.first { $0.interval.start == today })
         XCTAssertEqual(report.data.breakdown.focus, page.model.focused, accuracy: 0.5, "the totals agree")
-        XCTExpectFailure("Bug: DaySummary.make (DaySummary.swift:60), ReportDataBuilder.build (ReportData.swift:141) and SessionTimeline.segments add a second per event, so Reports' bars and goal days disagree with Today: here Today says a minute short, Reports says goal met") {
-            XCTAssertEqual(bar.focus, page.model.focused, accuracy: 1, "the bar")
-            XCTAssertEqual(report.goal.met, 0, "not met on Today")
-        }
+        XCTAssertEqual(bar.focus, page.model.focused, accuracy: 1, "the bar")
+        XCTAssertEqual(report.goal.met, 0, "not met on Today")
     }
 
     /// The rate shown on a session's row comes from the same seconds.
@@ -159,16 +157,14 @@ final class FlowAccountingTests: XCTestCase {
         let row = TodayModelBuilder.item(for: session, now: now)
         let otherRow = TodayModelBuilder.item(for: other, now: now)
         let summary = MenuInsightsBuilder.summary(for: session, now: now)
-        XCTExpectFailure("Bug: TodayModelBuilder.item (TodayModel.swift:137), MenuInsightsBuilder.summary and SessionTimeline.segments count duration + 1 per event, so short events skew a session's rate and its name; the day's rate (TodayModel.focusRate) doesn't") {
-            XCTAssertEqual(row.rate, 0.5, accuracy: 0.005)
-            XCTAssertEqual(otherRow.rate, 0.5, accuracy: 0.005)
-            XCTAssertEqual(summary.focusShare, 0.5, accuracy: 0.005)
-        }
+        XCTAssertEqual(row.rate, 0.5, accuracy: 0.005)
+        XCTAssertEqual(otherRow.rate, 0.5, accuracy: 0.005)
+        XCTAssertEqual(summary.focusShare, 0.5, accuracy: 0.005)
     }
 
-    /// The recap, the break screen and the session-over page read the rate
-    /// off the ring's cells, each a whole minute going to whatever was most
-    /// of it. Focus 40 s, drift 20 s, every minute: 67%, but every cell's focus.
+    /// The ring's cells each go to whatever was most of a minute. Focus 40 s,
+    /// drift 20 s, every minute: every cell's focus, and still a 67% rate on
+    /// the recap, the break screen and the session-over page.
     func testTheRecapsRateIsTheSessionsRate() throws {
         let session = Session(startedAt: at(9), status: .completed, plannedDurationMinutes: 30)
         session.endedAt = at(9.5)
@@ -183,9 +179,7 @@ final class FlowAccountingTests: XCTestCase {
         let recap = SessionRecap(session: session, bestZoneToday: 0)
         let row = TodayModelBuilder.item(for: session, now: now)
         XCTAssertEqual(row.rate, 2.0 / 3, accuracy: 0.02)
-        XCTExpectFailure("Bug: SessionTimeline.focusPercent (SessionTimeline.swift:37) counts minute cells, not seconds: the recap, the break screen and the block screen say 100% for a session Today lists at 67%. Rule: focus rate = focused ÷ (focused + drifted)") {
-            XCTAssertEqual(Double(recap.timeline.focusPercent), row.rate * 100, accuracy: 3)
-        }
+        XCTAssertEqual(Double(recap.timeline.focusPercent), row.rate * 100, accuracy: 3)
     }
 
     // MARK: - Week and month boundaries
@@ -268,8 +262,7 @@ final class FlowAccountingTests: XCTestCase {
     }
 
     /// A session only in neutral apps has nothing to rate, and its name says
-    /// so ("Quiet"), yet its row and "Last one" print 0%, the figure for a
-    /// session that was all drift.
+    /// so ("Quiet"). It shows "–": 0% is for a session that was all drift.
     func testASessionWithNothingClassifiedIsntShownAsZeroPercent() throws {
         let session = Session(startedAt: at(9), status: .completed)
         session.endedAt = at(9.5)
@@ -278,8 +271,19 @@ final class FlowAccountingTests: XCTestCase {
         try context.save()
         let row = TodayModelBuilder.item(for: session, now: now)
         XCTAssertEqual(SessionNamer.pattern(of: SessionTimeline.segments(from: session.events)), .quiet)
-        // `rate` can't say "nothing to rate": see TodayPage.swift:485 and :774.
-        XCTAssertEqual(row.rate, 0)
+        XCTAssertFalse(row.hasRate)
+        XCTAssertFalse(MenuInsightsBuilder.summary(for: session, now: now).hasRate)
+        let recap = SessionRecap(session: session, bestZoneToday: 0)
+        XCTAssertFalse(recap.timeline.hasFocusRate)
+        XCTAssertNil(recap.timeline.knownFocusPercent)
+        XCTAssertNil(AppState.completionPercent(of: session))
+        XCTAssertEqual(FinishedSession(name: "Quiet Run", minutes: 30, focusPercent: nil).detail, "· 30 min")
+
+        // All drift is a figure, and it's 0%.
+        ActivityEvent.add(to: context, .distraction, from: at(9.5), seconds: 60, app: Rig.feed, session: session)
+        try context.save()
+        XCTAssertTrue(TodayModelBuilder.item(for: session, now: now).hasRate)
+        XCTAssertEqual(AppState.completionPercent(of: session), 0)
     }
 
     func testAutomaticNamesFollowTheSameRate() {
@@ -297,9 +301,7 @@ final class FlowAccountingTests: XCTestCase {
     func testAHostWithWwwInsideItKeepsItsName() {
         var hosts = HostCache()
         XCTAssertEqual(hosts.host(of: "https://www.x.com/"), "x.com")
-        XCTExpectFailure("Bug: HostCache.host (ReportBuilder.swift:319) removes \"www.\" anywhere in the host, so awww.space shows as aspace in the rows, and a rule made from that row matches nothing. PatternDetector does the same") {
-            XCTAssertEqual(hosts.host(of: "https://awww.space/"), "awww.space")
-        }
+        XCTAssertEqual(hosts.host(of: "https://awww.space/"), "awww.space")
     }
 
     // MARK: - Empty

@@ -189,8 +189,8 @@ final class FlowTimeTests: XCTestCase {
     }
 
     /// In a zone whose clocks change at midnight (Havana, Beirut, Santiago…)
-    /// that day has no 00:00. Stepping a day at a time from one start of day
-    /// lands on 01:00, and on 01:00 for every day after it.
+    /// that day has no 00:00. Stepping a day at a time from it must not land
+    /// on 01:00 for every day after it.
     func testDaysStillStartAtMidnightAfterAClockChangeAtMidnight() throws {
         let calendar = Calendar.fixed("America/Havana")
         let container = try Rig.makeContainer()
@@ -209,12 +209,22 @@ final class FlowTimeTests: XCTestCase {
         let summed = try XCTUnwrap(ReportDataBuilder.build(period: .month, offset: 0, days: days))
         let marchTenth = calendar.startOfDay(for: later)
 
-        XCTExpectFailure("Bug: ReportData.swift bucketIntervals and DaySummaries.days step a day from the last cursor, so after a clock change at midnight every later day starts at 01:00. Summaries then miss the buckets: the bars for the rest of the month are empty") {
-            XCTAssertTrue(buckets.allSatisfy { $0.interval.start == calendar.startOfDay(for: $0.interval.start) },
-                          "\(buckets.first { $0.interval.start != calendar.startOfDay(for: $0.interval.start) }?.interval.start as Any)")
-            XCTAssertEqual(summed.buckets.first { $0.interval.start == marchTenth }?.focus ?? 0, 30 * 60, accuracy: 2)
-            XCTAssertEqual(summed.breakdown.focus, 30 * 60, accuracy: 2)
+        XCTAssertTrue(buckets.allSatisfy { $0.interval.start == calendar.startOfDay(for: $0.interval.start) },
+                      "\(buckets.first { $0.interval.start != calendar.startOfDay(for: $0.interval.start) }?.interval.start as Any)")
+        XCTAssertEqual(summed.buckets.first { $0.interval.start == marchTenth }?.focus ?? 0, 30 * 60, accuracy: 2)
+        XCTAssertEqual(summed.breakdown.focus, 30 * 60, accuracy: 2)
+
+        // A limit's change for "tomorrow" means tomorrow's midnight, and a
+        // walk back from a day after the change finds each day's start.
+        var day = calendar.at(2026, 3, 12)
+        var starts: [Date] = []
+        for _ in 0..<6 {
+            day = calendar.startOfDay(-1, from: day)
+            starts.append(day)
         }
+        XCTAssertEqual(starts, [calendar.at(2026, 3, 11), calendar.at(2026, 3, 10), calendar.at(2026, 3, 9),
+                                calendar.at(2026, 3, 8, 1), calendar.at(2026, 3, 7), calendar.at(2026, 3, 6)])
+        XCTAssertEqual(calendar.startOfDay(1, from: calendar.at(2026, 3, 8, 1)), calendar.at(2026, 3, 9))
     }
 
     // MARK: - Sleep and wake

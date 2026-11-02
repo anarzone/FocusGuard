@@ -27,7 +27,7 @@ final class PatternDetector {
         // Only watch distractions, only when the user isn't already focused.
         guard !isInSession,
               snapshot.classification == .distraction,
-              let host = snapshot.url.flatMap({ URL(string: $0)?.host?.replacingOccurrences(of: "www.", with: "") })
+              let host = snapshot.url.flatMap({ URL(string: $0)?.host }).map({ $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 })
         else {
             lastObservedHost = nil
             return

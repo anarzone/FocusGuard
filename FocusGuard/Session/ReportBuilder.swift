@@ -59,7 +59,7 @@ struct ReportBuilder {
         var cursor = firstDay
         while cursor <= lastDay {
             days.append(cursor)
-            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor.addingTimeInterval(86400)
+            cursor = calendar.startOfDay(1, from: cursor)
         }
 
         var totals: [Date: TimeInterval] = [:]
@@ -75,7 +75,7 @@ struct ReportBuilder {
             var segStart = s
             while segStart < f {
                 let dayStart = calendar.startOfDay(for: segStart)
-                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+                let dayEnd = calendar.startOfDay(1, from: dayStart)
                 let segEnd = min(f, dayEnd)
                 let dur = segEnd.timeIntervalSince(segStart)
                 totals[dayStart, default: 0] += max(0, dur)
@@ -103,7 +103,7 @@ struct ReportBuilder {
         var cursor = firstDay
         while cursor <= lastDay {
             days.append(cursor)
-            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? cursor.addingTimeInterval(86400)
+            cursor = calendar.startOfDay(1, from: cursor)
         }
 
         var byDay: [Date: (focus: TimeInterval, neutral: TimeInterval, distraction: TimeInterval)] = [:]
@@ -116,7 +116,7 @@ struct ReportBuilder {
             var segStart = s
             while segStart < f {
                 let dayStart = calendar.startOfDay(for: segStart)
-                let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+                let dayEnd = calendar.startOfDay(1, from: dayStart)
                 let segEnd = min(f, dayEnd)
                 let dur = max(0, segEnd.timeIntervalSince(segStart))
                 var entry = byDay[dayStart] ?? (0, 0, 0)
@@ -220,6 +220,13 @@ struct ReportBuilder {
                 let tabs = g.hosts
                     .map { TabUsage(host: $0.key, seconds: $0.value.total, classification: $0.value.dominant) }
                     .sorted { $0.seconds > $1.seconds }
+                // What's left once the sites are out: a browser on no page.
+                var noPage = g.tally
+                for tally in g.hosts.values {
+                    noPage.focus -= tally.focus
+                    noPage.neutral -= tally.neutral
+                    noPage.distraction -= tally.distraction
+                }
                 return AppUsageEntry(
                     kind: g.kind,
                     name: g.name,
@@ -227,7 +234,8 @@ struct ReportBuilder {
                     classification: g.tally.dominant,
                     seconds: g.seconds,
                     events: g.events,
-                    tabs: tabs
+                    tabs: tabs,
+                    noPageClassification: noPage.dominant
                 )
             }
     }
@@ -316,7 +324,7 @@ struct HostCache {
 
     mutating func host(of url: String) -> String? {
         if let known = hosts[url] { return known }
-        let host = URL(string: url)?.host?.replacingOccurrences(of: "www.", with: "")
+        let host = URL(string: url)?.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
         hosts[url] = host
         return host
     }
@@ -335,6 +343,11 @@ struct AppUsageEntry: Identifiable, Hashable {
     /// For browser bundles, the per-host breakdown of time spent. Sorted
     /// descending. Empty for non-browsers.
     let tabs: [TabUsage]
+    /// For a browser with `tabs`, how its time on no known page counts.
+    var noPageClassification: Classification = .neutral
+
+    /// A browser's time on no known page (a new tab, one it couldn't read).
+    var noPageSeconds: TimeInterval { tabs.isEmpty ? 0 : max(0, seconds - tabs.reduce(0) { $0 + $1.seconds }) }
 
     var timeLabel: String {
         Self.format(seconds: seconds)

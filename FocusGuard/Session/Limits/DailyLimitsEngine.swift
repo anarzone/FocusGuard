@@ -98,12 +98,19 @@ final class DailyLimitsEngine {
 
     /// Called every tracker tick with what's on screen. `counting` is false
     /// while FocusGuard is frontmost or nobody's at the Mac.
-    func observe(snapshot: ActivitySnapshot?, counting: Bool, now: Date = .now) {
+    /// - Parameter awaySince: the last input, once the tracker says nobody's
+    ///   there. It can only tell after a few quiet minutes, which were counted
+    ///   as they went by; they come back off here, as they're not in the record.
+    func observe(snapshot: ActivitySnapshot?, counting: Bool, awaySince: Date? = nil, now: Date = .now) {
         rollOverIfNeeded(now: now)
 
         if let last = lastTickAt, !lastMatched.isEmpty {
             let delta = min(max(0, now.timeIntervalSince(last)), Self.maxTickGap)
             for id in lastMatched { used[id, default: 0] += delta }
+            if let awaySince {
+                let quiet = max(0, now.timeIntervalSince(awaySince))
+                for id in lastMatched { used[id] = max(0, (used[id] ?? 0) - quiet) }
+            }
         }
         lastTickAt = now
 
@@ -258,7 +265,7 @@ final class DailyLimitsEngine {
     // MARK: - Store
 
     private var tomorrow: Date {
-        calendar.date(byAdding: .day, value: 1, to: day) ?? day.addingTimeInterval(24 * 60 * 60)
+        calendar.startOfDay(1, from: day)
     }
 
     private func reload() {

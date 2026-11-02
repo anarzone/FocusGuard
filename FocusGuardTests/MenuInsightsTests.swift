@@ -44,7 +44,7 @@ final class MenuInsightsTests: XCTestCase {
         ]
         let spans = MenuInsightsBuilder.mergedSpans(events, from: Calendar.current.startOfDay(for: t))
         XCTAssertEqual(spans.map(\.kind), [.focus, .drift, .focus])
-        XCTAssertEqual(spans[0].end.timeIntervalSince(spans[0].start), 121, accuracy: 0.5)
+        XCTAssertEqual(spans[0].end.timeIntervalSince(spans[0].start), 120, accuracy: 0.5)
     }
 
     func testUsageRowsSplitBrowsersIntoSites() {
@@ -67,8 +67,8 @@ final class MenuInsightsTests: XCTestCase {
         let t = morning
         let session = Session(startedAt: t, label: "Deep work", plannedDurationMinutes: 25)
         context.insert(session)
-        event(t, 299, .focus, session: session)                  // 300 s
-        event(t.addingTimeInterval(300), 99, .distraction, session: session)  // 100 s
+        event(t, 300, .focus, session: session)
+        event(t.addingTimeInterval(300), 100, .distraction, session: session)
         session.endedAt = t.addingTimeInterval(400)
         Persistence.save(context)
 

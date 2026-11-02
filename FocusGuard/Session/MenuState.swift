@@ -122,7 +122,12 @@ struct SessionRecap {
     }
 
     var nextSessionMinutes: Int { plannedMinutes ?? 25 }
-    var suggestedBreakMinutes: Int { AppState.suggestedBreakMinutes(forSessionMinutes: nextSessionMinutes) }
+    /// As in the session-complete notification: from how long it was meant to
+    /// run, or how long it did.
+    var suggestedBreakMinutes: Int {
+        let running = max(0, endedAt.timeIntervalSince(startedAt) - session.pausedSeconds)
+        return AppState.suggestedBreakMinutes(forSessionMinutes: plannedMinutes ?? Int(running / 60))
+    }
 }
 
 /// The one thing the menu is about right now. Break wins over session wins

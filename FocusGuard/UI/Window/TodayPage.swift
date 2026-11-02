@@ -151,7 +151,7 @@ struct TodayPage: View {
 
     private func exportDay() {
         let start = Calendar.current.startOfDay(for: day)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? now
+        let end = Calendar.current.startOfDay(1, from: start)
         DataExporter.export(.csv, container: appState.container, from: start, to: min(end, now))
     }
 
@@ -486,7 +486,7 @@ private struct SessionsCard: View {
                 .opacity(isHovered ? 1 : 0)
                 .accessibilityHidden(!isHovered)
             }
-            Text("\(Int((session.rate * 100).rounded()))%")
+            Text(session.hasRate ? "\(Int((session.rate * 100).rounded()))%" : "–")
                 .font(.system(size: 13, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
@@ -649,7 +649,7 @@ private struct SessionNow: View {
         let minutes = Int(elapsed / 60)
         var parts = [session.plannedDurationMinutes.map { String(localized: "Session ring: \(minutes) minutes in of \($0)") }
                      ?? String(localized: "Session ring: \(minutes) minutes in")]
-        if timeline.classifiedCells > 0 { parts.append(String(localized: "\(timeline.focusPercent) percent focused so far")) }
+        if timeline.hasFocusRate { parts.append(String(localized: "\(timeline.focusPercent) percent focused so far")) }
         if let left { parts.append(String(localized: "\(AppState.minutesRoundedUp(left)) minutes left")) }
         return parts.joined(separator: ", ") + "."
     }
@@ -775,6 +775,7 @@ private struct ReadyNow: View {
         guard let last = model.sessions.first(where: { !$0.isLive }) else {
             return String(localized: "Pick a length and go. The shield in the menu bar fills as the session runs.")
         }
+        guard last.hasRate else { return String(localized: "Last one: \(last.name).") }
         let rate = Int((last.rate * 100).rounded())
         if last.bestRun >= 60 {
             return String(localized: "Last one: \(last.name), \(rate)% focused, \(Int(last.bestRun / 60)) min in the zone.")

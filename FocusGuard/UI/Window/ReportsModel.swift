@@ -253,7 +253,7 @@ enum ReportsModelBuilder {
         var hours = HourCursor(calendar: calendar)
         for event in Persistence.fetch(context, descriptor) {
             var cursor = max(event.startedAt, from)
-            let end = min(event.endedAt.addingTimeInterval(1), to)
+            let end = min(event.endedAt, to)
             while cursor < end {
                 let slot = hours.slot(at: cursor)
                 heat[slot.row][slot.hour] += min(slot.end, end).timeIntervalSince(cursor)
