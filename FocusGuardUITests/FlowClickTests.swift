@@ -516,20 +516,18 @@ final class FlowClickTests: XCTestCase {
 
     /// The runners' screen leaves about 670 points above the Dock, under what
     /// the pages' content used to insist on: opening at all crashed. Every
-    /// test here runs in that window; this one goes to its minimum as well,
-    /// by dragging its corner, and round the pages there.
+    /// test here runs in that window; this one goes to its minimum height as
+    /// well, by dragging its bottom edge, and round the pages there. (Its right
+    /// edge is at the screen's, so there's no dragging that on this screen.)
     func testTheWindowOpensToFitAndDragsToItsMinimum() throws {
         launch()
         let visible = try XCTUnwrap(NSScreen.main?.visibleFrame)
         XCTAssertLessThanOrEqual(window.frame.height, max(visible.height, 640) + 1, "It should fit above the Dock")
         XCTAssertLessThanOrEqual(window.frame.maxX, visible.maxX + 1, "It should fit the screen")
 
-        let corner = window.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 1))
-            .withOffset(CGVector(dx: -1, dy: -1))
-        corner.press(forDuration: 0.3, thenDragTo: corner.withOffset(CGVector(dx: -400, dy: -400)))
-        let frame = window.frame
-        XCTAssertEqual(frame.width, 980, accuracy: 2, "The window's minimum width")
-        XCTAssertEqual(frame.height, 640, accuracy: 2, "The window's minimum height")
+        let edge = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: 1))
+        edge.press(forDuration: 0.3, thenDragTo: edge.withOffset(CGVector(dx: 0, dy: -300)))
+        XCTAssertEqual(window.frame.height, 640, accuracy: 2, "The window's minimum height")
         for page in ["Reports", "Apps & Sites", "Settings", "Today"] {
             try open(page)
             shoot("minimum-\(page)")
