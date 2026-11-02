@@ -131,8 +131,10 @@ async function waitAt(page, url, timeout = 5000) {
 }
 
 // The text of a message, in the page's language.
+// The Azerbaijani catalog loads as the page opens, so make sure of it first.
 const message = (page, key, ...values) => page.evaluate(async (k, v) => {
-  const { t } = await import('/src/lib/i18n.js');
+  const { loadLanguage, t } = await import('/src/lib/i18n.js');
+  await loadLanguage();
   return t(k, ...v);
 }, key, values);
 
@@ -382,18 +384,37 @@ group('popup', {}, async ({ tb, app, it }) => {
     await page.close().catch(() => {});
   });
 
-  await it('Strict: the popup does not offer to change a category while the list is locked', { bug: 'B-strict-category' }, async () => {
+  await it('Strict: the popup does not offer to change a category while the list is locked', async () => {
     app.startSession({ preset: 'strict', sites });
     await web0.bringToFront();
     await tb.sw(() => chrome.action.openPopup());
     const target = await tb.browser.waitForTarget((t) => t.url().endsWith('pages/popup.html'), { timeout: 5000 });
     const page = await target.asPage();
-    await page.waitForSelector('.page-card', { timeout: 5000 });
+    await page.waitForSelector('.page-card .chip-btn', { timeout: 5000 });
     await sleep(300);
+    const before = app.messages('setCategory').length;
     const offered = await page.evaluate(() => !!document.querySelector('.page-card .chip-btn:not([disabled])'));
+    await page.evaluate(() => document.querySelector('.page-card .chip-btn').click());
+    await sleep(200);
+    const menu = await page.evaluate(() => !!document.querySelector('.menu'));
+    await shot(page, 'popup-strict-locked');
     await page.close().catch(() => {});
     app.endSession();
-    assert(!offered, 'the category menu is live in Strict, and the app takes the change (ExtensionBridge.setCategory has no lock check)');
+    assert(!offered, 'the category menu is live in Strict');
+    assert(!menu, 'the category menu opened in Strict');
+    assertEqual(app.messages('setCategory').length, before, 'category changes sent');
+  });
+  await it('Strict with no planned end is locked too, and a session ending unlocks it', async () => {
+    app.startSession({ preset: 'strict', sites, minutes: null });
+    await web0.bringToFront();
+    await tb.sw(() => chrome.action.openPopup());
+    const target = await tb.browser.waitForTarget((t) => t.url().endsWith('pages/popup.html'), { timeout: 5000 });
+    const page = await target.asPage();
+    await page.waitForSelector('.page-card .chip-btn', { timeout: 5000 });
+    assert(await page.evaluate(() => document.querySelector('.page-card .chip-btn').disabled), 'live in an open-ended session');
+    app.endSession();
+    await page.waitForFunction(() => document.querySelector('.page-card .chip-btn:not([disabled])'), { timeout: 5000 });
+    await page.close().catch(() => {});
   });
 
   await it('options shows the plan, lists and saves its switches', async () => {
@@ -473,23 +494,43 @@ group('block: addresses', {}, async ({ tb, app, it }) => {
     });
   }
   // Ways around, the kind a distracted person finds.
-  await it('blocks a trailing dot: https://x.com./home', { bug: 'B-trailing-dot' }, async () => {
+  await it('blocks a trailing dot: https://x.com./home', async () => {
     const { blocked, at } = await go('https://x.com./home');
     assert(blocked, `loaded: ${at}`);
   });
-  await it('blocks a trailing dot on a part: https://youtube.com./shorts/abc', { bug: 'B-trailing-dot' }, async () => {
+  await it('blocks a trailing dot on a part: https://youtube.com./shorts/abc', async () => {
     const { blocked, at } = await go('https://youtube.com./shorts/abc');
     assert(blocked, `loaded: ${at}`);
+  });
+  await it('a doubled slash on a part never reaches the site', async () => {
+    const since = Date.now();
+    const { blocked } = await go('https://youtube.com//shorts/never');
+    assert(blocked, 'blocked');
+    assert(!web.served('youtube.com', since), 'the server saw a request');
   });
   await it('blocks a login in the address: https://me:pw@x.com/', async () => {
     const { blocked, at } = await go('https://me:pw@x.com/');
     assert(blocked, `loaded: ${at}`);
   });
-  await it('blocks a doubled slash on a part: https://youtube.com//shorts/abc', { bug: 'B-part-path' }, async () => {
+  await it('a trailing dot reaches the app as the site it is', async () => {
+    const page = await tb.browser.newPage();
+    await page.goto('https://x.com./report', { timeout: 5000 }).catch(() => {});
+    await waitBlocked(page);
+    assert(!web.served('x.com.', Date.now() - 5000), 'the site was asked');
+    app.passes.set('x.com', Date.now() + 60000);
+    app.push(true);
+    await sleep(300);
+    await page.goto('https://x.com./report');
+    await until('the report', () => reportsOf(app, 'https://x.com/report').length > 0, 3000);
+    app.passes.clear();
+    app.push(true);
+    await sleep(300);
+  });
+  await it('blocks a doubled slash on a part: https://youtube.com//shorts/abc', async () => {
     const { blocked, at } = await go('https://youtube.com//shorts/abc');
     assert(blocked, `loaded: ${at}`);
   });
-  await it('blocks an escaped path on a part: https://youtube.com/%73horts/abc', { bug: 'B-part-path' }, async () => {
+  await it('blocks an escaped path on a part: https://youtube.com/%73horts/abc', async () => {
     const { blocked, at } = await go('https://youtube.com/%73horts/abc');
     assert(blocked, `loaded: ${at}`);
   });
@@ -711,10 +752,11 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     const title = await message(page, 'overTitle');
     await until('the session-over view', async () => (await pageText(page)).includes(title));
     const open = await buttonFor(page, 'overOpenHost', 'x.com');
-    await open.click();
+    await press(page, 'overOpenHost', 'x.com');
     await waitAt(page, 'https://x.com/ended');
     app.startSession(SITES);
   });
+  // Timing-dependent, so this one can print FIXED while the race is still there.
   await it('rapid changes of the list settle on the last one', { bug: 'B-rules-race' }, async () => {
     const lists = [['a.test'], ['a.test', 'b.test', 'c.test'], ['a.test'], ['a.test', 'b.test', 'c.test', 'd.test', 'e.test'], ['x.com'], ['a.test', 'b.test', 'c.test', 'd.test', 'e.test', 'f.test', 'x.com']];
     for (let round = 0; round < 5; round += 1) {
@@ -769,7 +811,7 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     assert((await again.evaluate((b) => b.textContent)).trim().length > 0, 'its label');
   });
 
-  await it('Standard: a state pushed after the wait keeps the button\'s words', { bug: 'B-empty-button' }, async () => {
+  await it('Standard: a state pushed after the wait keeps the button\'s words', async () => {
     app.startSession({ preset: 'standard', sites: ['x.com'] });
     const page = await tb.tab('https://x.com/std2');
     await waitBlocked(page);
@@ -805,7 +847,7 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     await page.waitForSelector('.actions button');
     const pass = await buttonFor(page, 'blockLetMeThrough');
     assert(!(await pass.evaluate((b) => b.disabled)), 'open at once');
-    await pass.click();
+    await press(page, 'blockLetMeThrough');
     await waitAt(page, 'https://x.com/gentle');
     app.startSession({ preset: 'gentle', sites: ['x.com'] });
     await waitBlocked(page);
@@ -832,7 +874,7 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     assertEqual(app.messages('allowForWork').length, 0, 'asked for during the wait');
     await until('for-work to unlock', () => work.evaluate((b) => !b.disabled), 4000);
     assert(Date.now() - opened >= 9800, `unlocked after ${Date.now() - opened} ms`);
-    await work.click();
+    await press(page, 'blockForWork');
     await waitAt(page, 'https://x.com/strict?a=1');
     assertEqual(app.messages('allowForWork').at(-1).host, 'x.com', 'host');
     await sleep(300);
@@ -842,7 +884,7 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     app.endSession();
   });
 
-  await it('Strict: for-work\'s words survive a state pushed after the wait', { bug: 'B-empty-button' }, async () => {
+  await it('Strict: for-work\'s words survive a state pushed after the wait', async () => {
     app.startSession({ preset: 'strict', sites: ['x.com'] });
     const page = await tb.tab('https://x.com/strict2');
     await waitBlocked(page);
@@ -985,7 +1027,7 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
     await until('its address on the block page', () => page.url().includes('other.test'), 3000);
   });
 
-  await it('a redirect from the site to somewhere allowed: no countdown there', { bug: 'B-pill-wrong-page' }, async () => {
+  await it('a redirect from the site to somewhere allowed: no countdown there', async () => {
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/redirect?to=https://work.test/landed');
     await takePass(page);
@@ -1007,7 +1049,7 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
     await until('the pill', () => hasPill(next), 3000);
   });
 
-  await it('a tab left for an allowed site during the load: no countdown there', { bug: 'B-pill-wrong-page' }, async () => {
+  await it('a tab left for an allowed site during the load: no countdown there', async () => {
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/slow?ms=4000');
     await takePass(page);
@@ -1059,34 +1101,31 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
     app.passMs = 120000;
   });
 
-  await it('another tab on the host shows the countdown too', { bug: 'B-pill-one-tab' }, async () => {
+  await it('another tab on the host shows the countdown too', async () => {
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/one');
     await takePass(page);
     await waitAt(page, 'https://x.com/one');
     const two = await tb.tab('https://x.com/two');
-    await sleep(500);
-    assert(await hasPill(two), 'no countdown on the second tab');
+    await until('the pill on the second tab', () => hasPill(two), 3000);
   });
 
-  await it('a reload during the pass keeps the countdown', { bug: 'B-pill-one-tab' }, async () => {
+  await it('a reload during the pass keeps the countdown', async () => {
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/reload');
     await takePass(page);
     await until('the pill', () => hasPill(page), 3000);
     await page.reload();
-    await sleep(500);
-    assert(await hasPill(page), 'gone after the reload');
+    await until('the pill after the reload', () => hasPill(page), 3000);
   });
 
-  await it('moving on the site during the pass keeps the countdown', { bug: 'B-pill-one-tab' }, async () => {
+  await it('moving on the site during the pass keeps the countdown', async () => {
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/first');
     await takePass(page);
     await until('the pill', () => hasPill(page), 3000);
     await page.goto('https://x.com/second');
-    await sleep(500);
-    assert(await hasPill(page), 'gone on the next page');
+    await until('the pill on the next page', () => hasPill(page), 3000);
   });
 
   await it('a tab that left during the pass: the site blocks when it goes back after it', async () => {
@@ -1160,15 +1199,77 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
     app.passMs = 120000;
   });
 
-  await it('a pass taken on a subdomain doesn\'t open the whole site', { bug: 'B-pass-widens' }, async () => {
+  await it('a pass taken on a subdomain doesn\'t open the whole site', async () => {
     app.startSession({ preset: 'gentle', sites: ['x.com'] });
     const page = await tb.tab('https://m.x.com/sub');
     await takePass(page);
     await waitAt(page, 'https://m.x.com/sub');
     await sleep(100);
-    const other = await tb.tab('https://x.com/main');
+    const since = Date.now();
+    for (const url of ['https://x.com/main', 'https://www.x.com/main', 'https://other.x.com/main']) {
+      const other = await tb.tab(url);
+      await sleep(300);
+      assert(isBlock(other), `${url} opened on a pass taken on m.x.com`);
+    }
+    assert(!web.served('x.com', since) && !web.served('www.x.com', since), 'the site was asked: the rule let it through first');
+    await page.reload();
     await sleep(300);
-    assert(isBlock(other), 'x.com opened on a pass taken on m.x.com');
+    assertEqual(page.url(), 'https://m.x.com/sub', 'm.x.com itself, during its pass');
+  });
+
+  await it('a pass taken on the site covers www. and its subdomains', async () => {
+    app.startSession({ preset: 'gentle', sites: ['x.com'] });
+    const page = await tb.tab('https://x.com/whole');
+    await takePass(page);
+    await waitAt(page, 'https://x.com/whole');
+    await sleep(100);
+    for (const url of ['https://www.x.com/w', 'https://m.x.com/w']) {
+      const other = await tb.tab(url);
+      await sleep(300);
+      assertEqual(other.url(), url, 'during the pass');
+    }
+  });
+
+  await it('a pass taken on www. covers the site', async () => {
+    app.startSession({ preset: 'gentle', sites: ['x.com'] });
+    const page = await tb.tab('https://www.x.com/w');
+    await takePass(page);
+    await waitAt(page, 'https://www.x.com/w');
+    await sleep(100);
+    const other = await tb.tab('https://x.com/bare');
+    await sleep(300);
+    assertEqual(other.url(), 'https://x.com/bare', 'during the pass');
+  });
+
+  await it('"for work" follows the same rule: a subdomain doesn\'t open the site, the site covers www.', async () => {
+    app.startSession({ preset: 'gentle', sites: ['x.com'] });
+    const sub = await tb.tab('https://m.x.com/work');
+    await waitBlocked(sub);
+    await press(sub, 'blockForWork');
+    await waitAt(sub, 'https://m.x.com/work');
+    await sleep(100);
+    const site = await tb.tab('https://x.com/work');
+    await waitBlocked(site);
+    await press(site, 'blockForWork');
+    await waitAt(site, 'https://x.com/work');
+    await sleep(100);
+    const www = await tb.tab('https://www.x.com/work');
+    await sleep(300);
+    assertEqual(www.url(), 'https://www.x.com/work', 'www. once the site is for work');
+    app.endSession();
+  });
+
+  await it('a pass on a subdomain doesn\'t get past a limit on the site', async () => {
+    app.set({ limits: [REDDIT_LIMIT()] });
+    app.startSession({ preset: 'gentle', sites: ['reddit.com'] });
+    app.passes.set('old.reddit.com', Date.now() + 60000);
+    app.push(true);
+    await sleep(300);
+    const page = await tb.tab('https://old.reddit.com/');
+    await waitBlocked(page);
+    assert(page.url().includes('kind=limit'), page.url());
+    app.set({ limits: [] });
+    app.endSession();
   });
 
   await it('the end of the session clears a pass', async () => {
@@ -1219,6 +1320,22 @@ group('daily limits', {}, async ({ tb, app, it }) => {
     const page = await tb.tab('https://reddit.com/free');
     assertEqual(page.url(), 'https://reddit.com/free', 'on the free plan');
     app.set({ plan: PRO });
+    await until('its rule to land', async () => (await tb.rules()).length === 1);
+  });
+
+  await it('a limit lifted right after it was reached leaves no rule behind', { bug: 'B-rules-race' }, async () => {
+    // Two rule updates at once: the second reads the rules before the first has
+    // written, so the first's rule stays, and the worker thinks it's gone.
+    for (let round = 0; round < 10; round += 1) {
+      reach({ reached: false, usedSeconds: 0 });
+      await sleep(150);
+      reach();
+      reach({ reached: false, usedSeconds: 0 });
+      await sleep(250);
+      assertEqual((await tb.rules()).length, 0, `rules left in round ${round}`);
+    }
+    reach();
+    await until('its rule to land', async () => (await tb.rules()).length === 1);
   });
 
   await it('a limit reached while on the site takes the tab straight away', async () => {
@@ -1257,7 +1374,7 @@ group('daily limits', {}, async ({ tb, app, it }) => {
     assertEqual(app.messages('requestExtraTime').length, 0, 'asked for during the wait');
     await until('it to unlock', () => extra.evaluate((b) => !b.disabled), 4000);
     assert(Date.now() - opened >= 4800, `unlocked after ${Date.now() - opened} ms`);
-    await extra.click();
+    await press(page, 'limitMoreMinutes', 5);
     await waitAt(page, 'https://reddit.com/r/a?x=1');
     assertEqual(app.limits[0].minutes, 35, 'minutes');
     assertEqual(app.limits[0].extraLeft, 0, 'grants left');
@@ -1269,7 +1386,7 @@ group('daily limits', {}, async ({ tb, app, it }) => {
     await shot(page, 'block-limit-used');
   });
 
-  await it('Standard: the +5 button keeps its words if a state arrives after the wait', { bug: 'B-empty-button' }, async () => {
+  await it('Standard: the +5 button keeps its words if a state arrives after the wait', async () => {
     app.set({ preset: 'standard' });
     reach();
     const page = await tb.tab('https://reddit.com/words');
@@ -1291,7 +1408,7 @@ group('daily limits', {}, async ({ tb, app, it }) => {
       await page.waitForSelector('.limit-card');
       const extra = await buttonFor(page, 'limitMoreMinutes', 5);
       assert(!(await extra.evaluate((b) => b.disabled)), `open at once with ${left} left`);
-      await extra.click();
+      await press(page, 'limitMoreMinutes', 5);
       await waitAt(page, 'https://reddit.com/gentle');
       assertEqual(app.limits[0].extraLeft, left - 1, 'grants left');
       const limit = app.limits[0];
@@ -1327,18 +1444,23 @@ group('daily limits', {}, async ({ tb, app, it }) => {
     assertEqual(after.url(), 'https://reddit.com/morning', 'after 00:00');
   });
 
-  await it('midnight: a limit page left open doesn\'t go on saying the limit is reached', { bug: 'B-limit-stale' }, async () => {
+  await it('midnight: a limit page left open says the site is open, and opens it', async () => {
     reach();
-    const page = await tb.tab('https://reddit.com/overnight');
+    const page = await tb.tab('https://reddit.com/overnight?a=1');
     await waitBlocked(page);
     await page.waitForSelector('.limit-card');
+    const before = app.messages('requestExtraTime').length;
     reach({ usedSeconds: 0, reached: false, extraLeft: 1, visits: 0 });
-    await sleep(500);
-    const asking = await buttonFor(page, 'limitMoreMinutes', 5);
-    assert(!isBlock(page) || !asking, 'the page still offers to spend today\'s extra time on a limit that has reset');
+    const open = await message(page, 'overLede', 'reddit.com');
+    await until('the site-is-open view', async () => (await pageText(page)).includes(open));
+    await shot(page, 'block-limit-after-midnight');
+    assertEqual(await buttonFor(page, 'limitMoreMinutes', 5), null, 'a +5 button on a limit that has reset');
+    await press(page, 'overOpenHost', 'reddit.com');
+    await waitAt(page, 'https://reddit.com/overnight?a=1');
+    assertEqual(app.messages('requestExtraTime').length, before, 'extra time taken');
   });
 
-  await it('the app quitting doesn\'t leave a limit page with no way to the site', { bug: 'B-limit-stuck' }, async () => {
+  await it('the app quitting doesn\'t leave a limit page with no way to the site', async () => {
     reach();
     const page = await tb.tab('https://reddit.com/stuck');
     await waitBlocked(page);
@@ -1350,6 +1472,8 @@ group('daily limits', {}, async ({ tb, app, it }) => {
       await sleep(600);
       await shot(page, 'block-limit-app-closed');
       assert((await pageText(page)).includes(title), `no button to reddit.com: ${(await buttonTexts(page)).map((b) => b.text).join(', ')}`);
+      await press(page, 'overOpenHost', 'reddit.com');
+      await waitAt(page, 'https://reddit.com/stuck');
     } finally {
       await app.start();
       await tb.connected();
@@ -1384,7 +1508,7 @@ group('free: pause the tab', {}, async ({ tb, app, it }) => {
     await shot(page, 'paused-free');
     assertEqual((await badWords(page)).join(' / '), '', 'raw text');
     const later = await buttonFor(page, 'pausedReopenAfter');
-    await later.click();
+    await press(page, 'pausedReopenAfter');
     await until('tabAction', () => app.messages('tabAction').find((m) => m.action === 'reopenLater' && m.pauseId === 'p1'));
     app.sendAll({ type: 'redirectTab', pauseId: 'p1', fragment: fields('p1', 'queued') });
     const queued = await message(page, 'pausedQueuedTitle', 'x.com');
@@ -1403,7 +1527,7 @@ group('free: pause the tab', {}, async ({ tb, app, it }) => {
     await until('the paused page', () => page.url().includes('kind=paused'));
     await page.waitForSelector('.actions button');
     const reopen = await buttonFor(page, 'pausedReopenHost', 'x.com');
-    await reopen.click();
+    await press(page, 'pausedReopenHost', 'x.com');
     await waitAt(page, 'https://x.com/reopen');
   });
 
@@ -1611,7 +1735,7 @@ group('service worker death', {}, async ({ tb, app, it }) => {
     await sleep(200);
   });
 
-  await it('a block page open across the death: its pass gets the tab through', { bug: 'B-pass-after-wake' }, async () => {
+  await it('a block page open across the death: its pass gets the tab through', async () => {
     await wake();
     app.startSession({ preset: 'gentle', sites });
     const page = await tb.tab('https://x.com/blocked-page');
@@ -1619,11 +1743,42 @@ group('service worker death', {}, async ({ tb, app, it }) => {
     await until('the pass button', () => buttonFor(page, 'blockLetMeThrough'));
     await tb.killWorker();
     await sleep(300);
+    const asked = app.messages('requestPass').length;
     await press(page, 'blockLetMeThrough');
     await waitAt(page, 'https://x.com/blocked-page', 6000);
+    assertEqual(app.messages('requestPass').length, asked + 1, 'passes asked for');
+    await until('the countdown', () => hasPill(page), 3000);
+  });
+  await it('a block page open across the death: "for work" gets the tab through', async () => {
+    await wake();
+    app.startSession({ preset: 'gentle', sites });
+    const page = await tb.tab('https://x.com/work-death');
+    await waitBlocked(page);
+    await until('the for-work button', () => buttonFor(page, 'blockForWork'));
+    await tb.killWorker();
+    await sleep(300);
+    await press(page, 'blockForWork');
+    await waitAt(page, 'https://x.com/work-death', 6000);
+  });
+  await it('a block page open across the death never says FocusGuard isn\'t running', async () => {
+    await wake();
+    app.startSession({ preset: 'standard', sites });
+    const page = await tb.tab('https://x.com/no-flash');
+    await waitBlocked(page);
+    await until('the pass button', () => buttonFor(page, 'blockLetMeThrough'));
+    const wrong = await message(page, 'overNotRunning');
+    await page.evaluate((text) => {
+      window.flashed = false;
+      new MutationObserver(() => { if (document.body.innerText.includes(text)) window.flashed = true; }).observe(document.body, { childList: true, subtree: true });
+    }, wrong);
+    await tb.killWorker();
+    await wake();
+    await sleep(800);
+    assert(!(await page.evaluate(() => window.flashed)), 'it said so while the worker woke');
+    assert(await buttonFor(page, 'blockLetMeThrough'), 'still the block page');
   });
 
-  await it('a block page open across the death still follows the app: the session ends, it says so', { bug: 'B-page-port-dead' }, async () => {
+  await it('a block page open across the death still follows the app: the session ends, it says so', async () => {
     await wake();
     app.startSession({ preset: 'standard', sites });
     const page = await tb.tab('https://x.com/following');
@@ -1643,8 +1798,7 @@ group('service worker death', {}, async ({ tb, app, it }) => {
     const page = await tb.tab('https://x.com/pass-death');
     await waitBlocked(page);
     await page.waitForSelector('.actions button');
-    const pass = await buttonFor(page, 'blockLetMeThrough');
-    await pass.click();
+    await press(page, 'blockLetMeThrough');
     await waitAt(page, 'https://x.com/pass-death');
     await until('the pill', () => hasPill(page), 3000);
     await tb.killWorker();
@@ -1701,7 +1855,7 @@ group('the app closing and the browser restarting', {}, async ({ tb, app, it }) 
     await until('the not-running view', async () => (await pageText(page)).includes(title));
     await shot(page, 'block-app-quit');
     const open = await buttonFor(page, 'overOpenHost', 'x.com');
-    await open.click();
+    await press(page, 'overOpenHost', 'x.com');
     await waitAt(page, 'https://x.com/quit');
     const other = await tb.tab('https://x.com/other');
     assertEqual(other.url(), 'https://x.com/other', 'a new tab');
@@ -1741,7 +1895,7 @@ group('browser restart', { browser: { loadByFlag: true }, skip: BRANDED }, async
     } finally {
       await next.close();
       tb.closed = true;
-      fs.rmSync(profile, { recursive: true, force: true });
+      fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     }
   });
 });
@@ -1830,7 +1984,7 @@ group('private windows, allowed', { browser: { loadByFlag: true }, skip: BRANDED
     });
   } finally {
     await next.close();
-    fs.rmSync(tb.profile, { recursive: true, force: true });
+    fs.rmSync(tb.profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     tb.closed = true;
   }
 });
@@ -2017,7 +2171,7 @@ async function main() {
     for (const g of groups.filter((one) => !GROUP || GROUP.test(one.name))) await runGroup(g);
   } finally {
     web.stop();
-    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
   if (LIST) process.exit(0);
   const count = (kind) => results.filter((r) => r[0] === kind).length;

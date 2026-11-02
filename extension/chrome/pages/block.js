@@ -31,6 +31,8 @@ let snap = null;
 let renderedKey = '';
 let live = [];
 let busy = false;
+const ASK_MS = 3000;
+setTimeout(() => render(), ASK_MS + 50);
 
 // No site name in the title: title rules must never match this page.
 document.title = kind === 'paused' ? t('blockDocTitlePaused') : t('blockDocTitleBlocked');
@@ -168,6 +170,10 @@ function onKey(event) {
 function render() {
   if (!snap) return;
   const state = snap.state;
+  // The worker has only just woken and hasn't heard from the app: that isn't
+  // "FocusGuard isn't running". Keep what's showing, or wait a moment for it.
+  const stillAsking = !state && (snap.conn === Conn.connecting || snap.conn === Conn.connected);
+  if (stillAsking && kind !== 'paused' && (renderedKey || Date.now() - openedAt < ASK_MS)) return;
   const key = JSON.stringify({
     conn: snap.conn, phase: state?.phase, plan: state?.plan, preset: state?.preset, policy: state?.policy,
     session: state?.session && { name: state.session.name, paused: state.session.paused, backTo: state.session.backTo, visits: state.session.stoppedVisits, segments: state.session.segments },
@@ -185,7 +191,7 @@ function view(state) {
   const connected = snap.conn === Conn.connected && state;
   const running = connected && (state.phase === 'focusing' || state.phase === 'paused');
   if (kind === 'paused') return pausedView(state);
-  if (kind === 'limit') return limitView(state, connected);
+  if (kind === 'limit') return limitApplies(state, connected) ? limitView(state, connected) : overView(state);
   if (!running) return overView(state);
   return blockedView(state);
 }
@@ -247,18 +253,21 @@ function waitButton(label, wait, onclick, { quiet = false } = {}) {
     if (!quiet) button.append(icons.arrow());
     return button;
   }
+  // Pages rebuild when a state arrives, so the button can be new and already past its wait.
+  let painted = false;
   const paint = (now) => {
     const left = wait - (now - openedAt) / 1000;
     if (left > 0) {
       button.disabled = true;
       button.setAttribute('aria-label', t('blockAvailableIn', label, Math.ceil(left)));
       button.replaceChildren(waitDial(left, wait), label);
-    } else if (button.disabled) {
+    } else if (button.disabled || !painted) {
       button.disabled = false;
       button.removeAttribute('aria-label');
       button.replaceChildren(label);
       if (!quiet) button.append(icons.arrow());
     }
+    painted = true;
   };
   live.push(paint);
   return button;
@@ -349,6 +358,13 @@ function blockedView(state) {
 }
 
 // --- Pro: daily limit -------------------------------------------------------
+
+// Whether this page still means anything: the app is closed, or the limit has
+// reset (00:00) or gone, and the site is open again.
+function limitApplies(state, connected) {
+  if (!connected || !state.plan?.features?.blockInBrowser) return false;
+  return !!(state.blocking.limits || []).find((l) => l.site === (target || host))?.reached;
+}
 
 function limitView(state, connected) {
   const site = target || host;
@@ -497,10 +513,12 @@ function overView(state) {
   const connected = snap.conn === Conn.connected && state;
   keyActions.esc = closeTab;
   keyActions.enter = () => (originalURL ? () => tell({ type: 'goTo', url: originalURL }) : null);
+  // Connected, a limit page has no session that ended: just say the site's open.
+  const limitOver = connected && kind === 'limit';
   return [
     sitePill(null),
-    h('h1', null, connected ? t('overTitle') : t('overNotRunning')),
-    h('p', { class: 'lede' }, connected ? t('overLede', host) : t('overLedeNotRunning')),
+    h('h1', null, limitOver ? t('overLede', host) : connected ? t('overTitle') : t('overNotRunning')),
+    limitOver ? null : h('p', { class: 'lede' }, connected ? t('overLede', host) : t('overLedeNotRunning')),
     h('div', { class: 'actions' },
       originalURL ? h('button', { class: 'btn btn-primary', onclick: () => tell({ type: 'goTo', url: originalURL }) }, t('overOpenHost', host)) : null,
       h('button', { class: 'btn btn-quiet', onclick: closeTab }, t('closeTab'))),

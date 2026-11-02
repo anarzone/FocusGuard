@@ -268,6 +268,8 @@ export class FakeApp {
         socket.write(frame(this.makeState()));
         break;
       case 'classify': case 'setCategory': {
+        // AppState.isStrictLocked, as ExtensionBridge.setCategory asks it.
+        if (m.type === 'setCategory' && this.session && POLICY[this.preset].locksDuringSession) { reply({ error: 'locked' }); break; }
         const host = new URL(m.url).hostname.replace(/^www\./, '');
         reply({ result: { host, category: m.category || 'neutral', ruleScope: m.scope } });
         break;
@@ -638,7 +640,8 @@ export class TestBrowser {
     if (this.closed) return;
     this.closed = true;
     await this.browser.close().catch(() => {});
-    if (!this.userDataDir) fs.rmSync(this.profile, { recursive: true, force: true });
+    // The browser can still be writing as it exits.
+    if (!this.userDataDir) fs.rmSync(this.profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
 }
 
