@@ -250,6 +250,14 @@ final class BrowserExtensionTests: XCTestCase {
         return (bridge, id)
     }
 
+    func test_categoryChangesAreRefusedWhileTheListIsLocked() {
+        let (bridge, _) = connectedBridge()
+        XCTAssertNil(bridge.setCategory(url: "https://x.com/", scope: .site, category: .focus))
+        bridge.listLocked = { true }
+        XCTAssertEqual(bridge.setCategory(url: "https://x.com/", scope: .site, category: .focus), "locked")
+        XCTAssertEqual(bridge.setCategory(url: "https://x.com/a", scope: .page, category: .distracting), "locked", "tightening it too")
+    }
+
     func test_pauseWaitsForTheExtensionsAnswer() throws {
         let (bridge, id) = connectedBridge()
         bridge.handle(.tab(BrowserTabReport(url: "https://www.x.com/home", title: "Home / X", tabId: 12)), from: id)
