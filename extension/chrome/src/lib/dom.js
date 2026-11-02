@@ -142,12 +142,18 @@ export function reportAppearance() {
 }
 
 // Live state from the background: calls `onSnapshot` now and on every change.
+// The port dies with the worker, so it reconnects, which wakes the worker again.
 export function subscribe(name, onSnapshot) {
-  const port = chrome.runtime.connect({ name });
+  let port;
+  try {
+    port = chrome.runtime.connect({ name });
+  } catch {
+    return; // The extension was removed or reloaded: this page is finished.
+  }
   port.onMessage.addListener((message) => {
     if (message?.type === 'snapshot') onSnapshot(message);
   });
-  return port;
+  port.onDisconnect.addListener(() => setTimeout(() => subscribe(name, onSnapshot), 500));
 }
 
 export function ask(payload) {

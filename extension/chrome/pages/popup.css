@@ -101,6 +101,7 @@ body { width: 340px; --slash-gap: var(--popup); }
   cursor: pointer;
   flex: none;
 }
+.chip-btn:disabled { cursor: default; }
 .chip-btn svg { stroke: currentColor; }
 .page-card .note { font-size: 11px; color: var(--ink-3); }
 
