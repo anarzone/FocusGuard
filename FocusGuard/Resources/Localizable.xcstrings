@@ -10956,22 +10956,6 @@
         }
       }
     },
-    "Blocked: nothing." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bloklanıb: heç nə."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blockiert: nichts."
-          }
-        }
-      }
-    },
     "Blocking" : {
       "comment" : "Section title: how a site gets blocked\nSettings pane title",
       "localizations" : {
@@ -11461,6 +11445,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro kannst du bald kaufen. Bis dahin behält FocusGuard alles, was du hast."
+          }
+        }
+      }
+    },
+    "Changed your mind?" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fikrinizi dəyişdiniz?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doch anders?"
           }
         }
       }
@@ -12676,22 +12676,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arbeitsprotokoll kopieren"
-          }
-        }
-      }
-    },
-    "Correct the goal check" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hədəf yoxlamasını düzəlt"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zielprüfung korrigieren"
           }
         }
       }
@@ -18221,6 +18205,22 @@
         }
       }
     },
+    "Goal done" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəf tamamlanıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel erreicht"
+          }
+        }
+      }
+    },
     "Goal hit: %@ focused" : {
       "localizations" : {
         "az" : {
@@ -18233,22 +18233,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ziel erreicht: %@ fokussiert"
-          }
-        }
-      }
-    },
-    "Goal looks done" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hədəf tamamlanmış görünür"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ziel scheint erreicht"
           }
         }
       }
@@ -19460,6 +19444,23 @@
         }
       }
     },
+    "It took %lld min of this one." : {
+      "comment" : "Of this session",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sessiyada %lld dəq aparıb."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das waren %lld Min. dieser Session."
+          }
+        }
+      }
+    },
     "It was all %@ of the drift %@." : {
       "comment" : "When: between 12:00 and 17:00, or in the last 4 weeks",
       "localizations" : {
@@ -19873,6 +19874,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gerade sortiert"
+          }
+        }
+      }
+    },
+    "Keep %@ closed next session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti sessiyada %@ bağlı qalsın"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass %@ in der nächsten Session zu"
           }
         }
       }
@@ -20976,23 +20993,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Monat wird ausgewertet…"
-          }
-        }
-      }
-    },
-    "Looks done" : {
-      "comment" : "The debrief's guess at whether a session's goal was reached",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bitmiş görünür"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sieht erledigt aus"
           }
         }
       }
@@ -23735,22 +23735,6 @@
         }
       }
     },
-    "Not quite?" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tam deyil?"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht ganz?"
-          }
-        }
-      }
-    },
     "Not recorded: keystrokes, screen contents, page text. Hide titles for any app in Settings." : {
       "localizations" : {
         "az" : {
@@ -25858,23 +25842,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Teilweise"
-          }
-        }
-      }
-    },
-    "Partly done" : {
-      "comment" : "The debrief's guess at whether a session's goal was reached",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Qismən bitib"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Teilweise erledigt"
           }
         }
       }
@@ -37988,6 +37955,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arbeitsprotokoll"
+          }
+        }
+      }
+    },
+    "Worked on: %@" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Üzərində işlənib: %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daran gearbeitet: %@"
           }
         }
       }

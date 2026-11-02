@@ -83,9 +83,12 @@ export function escapeRegex(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// The scheme, any login (me:pw@x.com is still x.com) and any subdomains.
+const ADDRESS_START = '^https?://([^/?#]*@)?([^/?#@]*\\.)?';
+
 // RE2 for declarativeNetRequest, anchored on the whole address.
 export function siteRegex(site) {
-  return `^https?://([^/?#@]*\\.)?${escapeRegex(site.toLowerCase())}\\.?(:[0-9]+)?([/?#].*)?$`;
+  return `${ADDRESS_START}${escapeRegex(site.toLowerCase())}\\.?(:[0-9]+)?([/?#].*)?$`;
 }
 
 export function partRegex(pattern) {
@@ -93,7 +96,7 @@ export function partRegex(pattern) {
   // Doubled slashes too. An escaped path is left to the matchers, which catch
   // it as the page opens: a rule for every way to escape every letter is too big.
   const pathPart = path === '/' ? '' : escapeRegex(path).replace(/\//g, '/+');
-  return `^https?://([^/?#@]*\\.)?${escapeRegex(host)}\\.?(:[0-9]+)?${pathPart}([/?#].*)?$`;
+  return `${ADDRESS_START}${escapeRegex(host)}\\.?(:[0-9]+)?${pathPart}([/?#].*)?$`;
 }
 
 // The block page, with what was blocked; the original address follows the

@@ -508,9 +508,11 @@ group('block: addresses', {}, async ({ tb, app, it }) => {
     assert(blocked, 'blocked');
     assert(!web.served('youtube.com', since), 'the server saw a request');
   });
-  await it('blocks a login in the address: https://me:pw@x.com/', async () => {
+  await it('blocks a login in the address before it loads: https://me:pw@x.com/', async () => {
+    const since = Date.now();
     const { blocked, at } = await go('https://me:pw@x.com/');
     assert(blocked, `loaded: ${at}`);
+    assert(!web.served('x.com', since), 'the site was asked');
   });
   await it('a trailing dot reaches the app as the site it is', async () => {
     const page = await tb.browser.newPage();
@@ -664,15 +666,13 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     const hash = await page.evaluate(() => location.hash);
     assert(hash.includes('/shorts/abc'), `the address: ${hash}`);
   });
-  await it('back from a part blocked inside the page gets out of it', { bug: 'B-back-trap' }, async () => {
+  await it('back from a part blocked inside the page gets out of it', async () => {
     const page = await tb.tab('https://youtube.com/');
     await page.evaluate(() => history.pushState({}, '', '/shorts/abc'));
     await waitBlocked(page);
     await sleep(300);
-    // tabs.update leaves /shorts/abc behind in the tab's history, and it blocks again.
     await page.goBack().catch(() => {});
-    await sleep(1000);
-    assert(!isBlock(page), `Back lands on the block page again: ${page.url().slice(-40)}`);
+    await waitAt(page, 'https://youtube.com/');
   });
   await it('history.replaceState into a blocked part', async () => {
     const page = await tb.tab('https://youtube.com/');
@@ -756,8 +756,7 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     await waitAt(page, 'https://x.com/ended');
     app.startSession(SITES);
   });
-  // Timing-dependent, so this one can print FIXED while the race is still there.
-  await it('rapid changes of the list settle on the last one', { bug: 'B-rules-race' }, async () => {
+  await it('rapid changes of the list settle on the last one', async () => {
     const lists = [['a.test'], ['a.test', 'b.test', 'c.test'], ['a.test'], ['a.test', 'b.test', 'c.test', 'd.test', 'e.test'], ['x.com'], ['a.test', 'b.test', 'c.test', 'd.test', 'e.test', 'f.test', 'x.com']];
     for (let round = 0; round < 5; round += 1) {
       for (const sites of lists) app.set({ sites });
@@ -894,6 +893,8 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     await sleep(400);
     const buttons = await buttonTexts(page);
     assertEqual(buttons.filter((b) => !b.text).length, 0, `empty buttons in ${JSON.stringify(buttons)}`);
+    const close = await message(page, 'closeTab');
+    assertEqual(buttons.filter((b) => b.text === close).length, 1, `"Close tab" buttons with no app to go back to in ${JSON.stringify(buttons)}`);
     app.endSession();
   });
 
@@ -1323,9 +1324,8 @@ group('daily limits', {}, async ({ tb, app, it }) => {
     await until('its rule to land', async () => (await tb.rules()).length === 1);
   });
 
-  await it('a limit lifted right after it was reached leaves no rule behind', { bug: 'B-rules-race' }, async () => {
-    // Two rule updates at once: the second reads the rules before the first has
-    // written, so the first's rule stays, and the worker thinks it's gone.
+  await it('a limit lifted right after it was reached leaves no rule behind', async () => {
+    // Two rule updates at once used to leave the first's rule behind.
     for (let round = 0; round < 10; round += 1) {
       reach({ reached: false, usedSeconds: 0 });
       await sleep(150);

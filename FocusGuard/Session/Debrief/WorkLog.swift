@@ -101,19 +101,26 @@ struct Timesheet: Equatable {
     }
 }
 
-/// Done, next and blocked, for the next working day's standup.
+/// Done, worked on and next, for the next working day's standup. Only what the
+/// log can show: it doesn't know what's blocked, so it doesn't say.
 struct StandupDraft: Equatable {
     /// The day it's for: the working day after the last one with sessions.
     let day: Date
     let done: [String]
+    /// Goals nobody has said the outcome of.
+    var workedOn: [String] = []
     let next: [String]
 
     var text: String {
-        [
-            done.isEmpty ? String(localized: "Done: nothing marked done yet.") : String(localized: "Done: \(Self.list(done))"),
-            next.isEmpty ? String(localized: "Next: pick up from the work log.") : String(localized: "Next: \(Self.list(next))"),
-            String(localized: "Blocked: nothing."),
-        ].joined(separator: "\n")
+        var lines: [String] = []
+        if !done.isEmpty {
+            lines.append(String(localized: "Done: \(Self.list(done))"))
+        } else if workedOn.isEmpty {
+            lines.append(String(localized: "Done: nothing marked done yet."))
+        }
+        if !workedOn.isEmpty { lines.append(String(localized: "Worked on: \(Self.list(workedOn))")) }
+        lines.append(next.isEmpty ? String(localized: "Next: pick up from the work log.") : String(localized: "Next: \(Self.list(next))"))
+        return lines.joined(separator: "\n")
     }
 
     private static func list(_ items: [String]) -> String {
@@ -251,12 +258,14 @@ enum WorkLogBuilder {
         }
         let mostly = facts.apps.first { $0.classification == .focus } ?? facts.apps.first
         let fallback = mostly.map { String(localized: "Mostly \($0.name)") } ?? String(localized: "Nothing tracked")
-        let title = input.goal ?? input.stored?.workedOn.first.map { "\($0.app) · \($0.what)" } ?? fallback
+        let stored = input.stored.map { DebriefCheck(facts: facts).clean($0) }
+        let firstWork = stored?.workedOn.first { !$0.what.isEmpty }
+        let title = input.goal ?? firstWork.map { "\($0.app) · \($0.what)" } ?? fallback
         let note: String?
         if input.end == nil {
             note = String(localized: "Running. Its debrief is written when it ends.")
-        } else if let stored = input.stored {
-            note = stored.evidence ?? (input.goal == nil ? nil : stored.workedOn.first.map { "\($0.app): \($0.what)" })
+        } else if let stored {
+            note = stored.evidence ?? (input.goal == nil ? nil : firstWork.map { "\($0.app): \($0.what)" })
         } else {
             note = nil
         }
@@ -319,20 +328,22 @@ enum WorkLogBuilder {
     private static func standup(_ days: [WorkLogDay], calendar: Calendar) -> StandupDraft? {
         guard let last = days.first else { return nil }
         var done: [String] = []
+        var workedOn: [String] = []
         var next: [String] = []
         for entry in last.entries.reversed() where entry.hasGoal {
             switch entry.state {
             case .verdict(.done): done.append(entry.title)
             case .verdict(.partly), .verdict(.notYet), .live: next.append(entry.title)
-            case .open: break
+            case .open: workedOn.append(entry.title)
             }
         }
-        if done.isEmpty && next.isEmpty {
+        if done.isEmpty && workedOn.isEmpty && next.isEmpty {
             let focused = WindowFormat.hm(last.focused)
             let count = last.entries.count
             done = [String(localized: "\(count) sessions, \(focused) focused", comment: "Plural on count: 1 session, 3h focused")]
         }
-        return StandupDraft(day: nextWorkingDay(after: last.day, calendar: calendar), done: dedupe(done), next: dedupe(next))
+        return StandupDraft(day: nextWorkingDay(after: last.day, calendar: calendar), done: dedupe(done),
+                            workedOn: dedupe(workedOn), next: dedupe(next))
     }
 
     static func nextWorkingDay(after day: Date, calendar: Calendar) -> Date {

@@ -448,7 +448,17 @@ async function blockingAllowed() {
   return !!state?.plan?.features?.blockInBrowser && conn === Conn.connected && (await chrome.permissions.contains(ALL_SITES));
 }
 
-async function applyRules() {
+// One update at a time: each reads the rules it replaces, so two at once can
+// leave a rule behind that the worker thinks is gone. Each works from the state
+// at its turn, so the last one in line settles it.
+let rulesQueue = Promise.resolve();
+
+function applyRules() {
+  rulesQueue = rulesQueue.then(updateRules, updateRules);
+  return rulesQueue;
+}
+
+async function updateRules() {
   const rules = (await blockingAllowed()) ? buildRules(state, BLOCK_PAGE) : [];
   const key = rulesKey(rules);
   if (key === lastRulesKey) return;
@@ -475,7 +485,19 @@ async function enforceOnTab(tab) {
   if (!tab?.url || !isWebURL(tab.url) || !(await blockingAllowed())) return;
   const reason = blockReason(tab.url, state);
   if (!reason) return;
-  await chrome.tabs.update(tab.id, { url: blockPageURL(tab.url, reason) }).catch(() => {});
+  const url = blockPageURL(tab.url, reason);
+  // From the page itself, to replace its history entry: tabs.update would leave
+  // the blocked address behind, and Back would only block it again.
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      injectImmediately: true,
+      args: [url],
+      func: (to) => location.replace(to),
+    });
+  } catch {
+    await chrome.tabs.update(tab.id, { url }).catch(() => {});
+  }
 }
 
 // After a state change (a session started, a pass ran out, a limit was

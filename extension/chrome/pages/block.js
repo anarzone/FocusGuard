@@ -328,7 +328,8 @@ function blockedView(state) {
   if (rules.pass) {
     passButton = waitButton(t('blockLetMeThrough'), rules.passWait, letMeThrough);
     buttons.push(passButton);
-  } else if (kind !== 'part') {
+  } else if (kind !== 'part' && state.session.backTo) {
+    // With no app to go back to, the main button already closes the tab.
     buttons.push(h('button', { class: 'btn btn-quiet', onclick: closeTab }, t('closeTab')));
   }
 
