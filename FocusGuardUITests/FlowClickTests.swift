@@ -297,16 +297,11 @@ final class FlowClickTests: XCTestCase {
         waitForText("Month in review", "Month in review isn't offered")
         XCTAssertFalse(button("Share week").exists, "Share week belongs to a week")
 
-        // Trying it starts the (pretend) trial and opens the review.
+        // Trying it starts the (pretend) trial, and the locked line goes.
+        waitForText("what changed, how your experiments went", "Month in review should start locked")
         try click(button("Try Pro free"))
-        let openReview = window.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open ' AND label ENDSWITH 'in review'")).firstMatch
-        waitFor(openReview, "The review didn't open up")
-        try click(openReview)
-        let close = window.sheets.buttons["Close"].firstMatch
-        waitFor(close, "The review sheet didn't open")
-        shoot("month-review")
-        close.click()
-        waitGone(close, "The review sheet didn't close")
+        waitGoneText("what changed, how your experiments went", "The trial didn't open it up")
+        shoot("month-review-strip")
     }
 
     func testReportsStepBackAndForward() throws {
