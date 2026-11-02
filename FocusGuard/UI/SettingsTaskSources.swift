@@ -2,8 +2,9 @@ import AppKit
 import SwiftUI
 
 // Settings › Integrations › Tasks as session goals, after Reminders:
-// Things (when it's installed), Todoist and Linear, each its own switch.
-// Todoist and Linear take a personal token, kept in the Keychain.
+// Things (when it's installed), Todoist, Linear, GitHub and Jira, each its
+// own switch. All but Things take a personal token, kept in the Keychain;
+// Jira takes its site and email too.
 
 /// A task source's row: its letter, its name and a line on what it
 /// offers, and its switch.
@@ -39,7 +40,7 @@ struct TaskSourceRow<Trailing: View>: View {
     }
 }
 
-/// Things, Todoist and Linear, under Reminders.
+/// Things, Todoist, Linear, GitHub and Jira, under Reminders.
 struct TaskSourceRows: View {
     let integrations: IntegrationsCoordinator
     var entitlements: Entitlements = .shared
@@ -48,12 +49,17 @@ struct TaskSourceRows: View {
     @AppStorage(IntegrationSettings.things) private var thingsOn = false
     @AppStorage(IntegrationSettings.todoist) private var todoistOn = false
     @AppStorage(IntegrationSettings.linear) private var linearOn = false
+    @AppStorage(IntegrationSettings.github) private var githubOn = false
+    @AppStorage(IntegrationSettings.jira) private var jiraOn = false
 
     @State private var thingsInstalled = ThingsTasks.isInstalled
     /// Sources with a token saved.
     @State private var connected: Set<TaskSource>
     /// What's typed in each token field.
     @State private var typed: [TaskSource: String] = [:]
+    /// Jira's site and email, typed above its token.
+    @State private var jiraSite = ""
+    @State private var jiraEmail = ""
     @State private var connecting: TaskSource?
     /// How the last Connect went, until the field changes.
     @State private var checks: [TaskSource: TokenCheck] = [:]
@@ -92,6 +98,16 @@ struct TaskSourceRows: View {
                 sourceSwitch(.linear, isOn: $linearOn)
             }
             if linearOn && unlocked { tokenRow(.linear) }
+            SettingsDivider()
+            TaskSourceRow(source: .github, detail: String(localized: "Open issues assigned to you, closed when you finish")) {
+                sourceSwitch(.github, isOn: $githubOn)
+            }
+            if githubOn && unlocked { tokenRow(.github) }
+            SettingsDivider()
+            TaskSourceRow(source: .jira, detail: String(localized: "Issues assigned to you, moved to done when you finish")) {
+                sourceSwitch(.jira, isOn: $jiraOn)
+            }
+            if jiraOn && unlocked { tokenRow(.jira) }
         }
         .task { reload() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in reload() }
@@ -103,7 +119,7 @@ struct TaskSourceRows: View {
     }
 
     private static func savedTokens(in integrations: IntegrationsCoordinator) -> Set<TaskSource> {
-        Set([TaskSource.todoist, .linear].filter { integrations.isConnected($0) })
+        Set([TaskSource.todoist, .linear, .github, .jira].filter { integrations.isConnected($0) })
     }
 
     // MARK: - Switches
@@ -147,7 +163,7 @@ struct TaskSourceRows: View {
             let rejected = integrations.taskProblems[source] == .rejected
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(rejected ? "\(source.name) no longer takes this token" : "Connected")
+                    Text(rejected ? "\(source.name) no longer takes this token" : connectedTitle(source))
                         .font(.system(size: 13))
                         .foregroundStyle(rejected ? Theme.distraction : Theme.primaryText)
                     Text(rejected ? "Disconnect, then paste a new one" : "The token is in your Keychain")
@@ -163,6 +179,14 @@ struct TaskSourceRows: View {
             .frame(minHeight: 44)
         } else {
             VStack(alignment: .leading, spacing: 6) {
+                if source == .jira {
+                    TextField(String(localized: "Site, like acme.atlassian.net"), text: jiraBinding($jiraSite))
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                    TextField(String(localized: "Your Atlassian email"), text: jiraBinding($jiraEmail))
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                }
                 HStack(spacing: 8) {
                     SecureField(Self.placeholder(source), text: tokenBinding(source))
                         .textFieldStyle(.roundedBorder)
@@ -172,7 +196,7 @@ struct TaskSourceRows: View {
                     }
                     Button("Connect") { connect(source) }
                         .buttonStyle(.capsule(.secondary, height: 26))
-                        .disabled(connecting != nil || (typed[source] ?? "").trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(connecting != nil || !isReady(source))
                 }
                 if let failed = Self.failure(checks[source], source: source) {
                     Text(failed)
@@ -198,12 +222,33 @@ struct TaskSourceRows: View {
         })
     }
 
+    private func jiraBinding(_ field: Binding<String>) -> Binding<String> {
+        Binding(get: { field.wrappedValue }, set: { text in
+            field.wrappedValue = text
+            checks[.jira] = nil
+        })
+    }
+
+    private func connectedTitle(_ source: TaskSource) -> String {
+        guard source == .jira, let site = integrations.jiraAccount?.site else { return String(localized: "Connected") }
+        return String(localized: "Connected to \(site)")
+    }
+
+    /// Everything Connect needs is filled in.
+    private func isReady(_ source: TaskSource) -> Bool {
+        var fields = [typed[source] ?? ""]
+        if source == .jira { fields += [jiraSite, jiraEmail] }
+        return fields.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
     private func connect(_ source: TaskSource) {
         let token = (typed[source] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, connecting == nil else { return }
+        guard isReady(source), connecting == nil else { return }
         connecting = source
         Task {
-            let check = await integrations.connect(source, token: token)
+            let check = source == .jira
+                ? await integrations.connectJira(site: jiraSite, email: jiraEmail, token: token)
+                : await integrations.connect(source, token: token)
             connecting = nil
             checks[source] = check
             if check == .accepted {
@@ -214,6 +259,11 @@ struct TaskSourceRows: View {
     }
 
     private func disconnect(_ source: TaskSource) {
+        // Left in the fields, so a new token is all it takes.
+        if source == .jira, let account = integrations.jiraAccount {
+            jiraSite = account.site
+            jiraEmail = account.email
+        }
         integrations.disconnect(source)
         checks[source] = nil
         reload()
@@ -222,7 +272,11 @@ struct TaskSourceRows: View {
     // MARK: - Copy
 
     static func placeholder(_ source: TaskSource) -> String {
-        source == .linear ? String(localized: "Paste your API key") : String(localized: "Paste your API token")
+        switch source {
+        case .linear: return String(localized: "Paste your API key")
+        case .github: return String(localized: "Paste your access token")
+        default:      return String(localized: "Paste your API token")
+        }
     }
 
     /// Where to get the token.
@@ -230,6 +284,8 @@ struct TaskSourceRows: View {
         switch source {
         case .todoist: return String(localized: "From Todoist › Settings › Integrations › Developer. Kept in your Keychain.")
         case .linear:  return String(localized: "From Linear › Settings › Security & access › Personal API keys. Kept in your Keychain.")
+        case .github:  return String(localized: "From github.com/settings/tokens. A fine-grained token covers one owner's repositories and needs Issues: Read and write; a classic token needs repo. Kept in your Keychain.")
+        case .jira:    return String(localized: "From id.atlassian.com › Security › API tokens. Choose Create API token, not the one with scopes. Kept in your Keychain.")
         default:       return ""
         }
     }
@@ -242,6 +298,7 @@ struct TaskSourceRows: View {
                 ? String(localized: "\(source.name) didn't take that key. Check it and try again.")
                 : String(localized: "\(source.name) didn't take that token. Check it and try again.")
         case .unreachable: return String(localized: "Couldn't reach \(source.name). Check your connection and try again.")
+        case .badSite:     return String(localized: "That's not a Jira Cloud site. Use an address like acme.atlassian.net.")
         default:           return nil
         }
     }

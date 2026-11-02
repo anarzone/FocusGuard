@@ -514,6 +514,7 @@ struct MenuBarView: View {
                let link = appState.integrations.taskLinks[recap.session.id] {
                 let id = recap.session.id
                 TaskGoalCard(goal: goal, verdict: recap.session.goalVerdict, link: link,
+                             note: appState.integrations.tickNotes[id],
                              onVerdict: { appState.debriefs.correct(recap.session, to: $0) },
                              onUndo: { Task { await appState.integrations.undoTick(session: id) } },
                              onTick: { Task { await appState.integrations.tickOff(session: id) } })

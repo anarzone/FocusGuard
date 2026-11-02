@@ -45,6 +45,8 @@ struct TaskGoalCard: View {
     let goal: String
     let verdict: GoalVerdict?
     let link: TaskLink
+    /// Why the task was left as it was, when the service said no.
+    var note: String?
     let onVerdict: (GoalVerdict) -> Void
     let onUndo: () -> Void
     let onTick: () -> Void
@@ -62,6 +64,12 @@ struct TaskGoalCard: View {
             .accessibilityElement(children: .combine)
             VerdictPicker(selection: verdict, onPick: onVerdict)
             status
+            if let note {
+                Text(note)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .menuModule(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
     }

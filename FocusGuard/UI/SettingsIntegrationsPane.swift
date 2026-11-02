@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Integrations: the calendar, tasks as session goals, code, status in
 /// Slack and Discord, macOS and the browser. Calendar, Reminders and Things
-/// ask macOS once; Todoist and Linear take a personal token
+/// ask macOS once; Todoist, Linear, GitHub and Jira take a personal token
 /// (`TaskSourceRows`); only Slack signs in.
 struct SettingsIntegrationsPane: View {
     @Bindable var appState: AppState

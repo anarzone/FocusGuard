@@ -56,7 +56,7 @@ struct SettingsPrivacyPane: View {
                 SettingsDivider()
                 SettingsRow("Spotify", detail: String(localized: "Only if you sign in to search playlists"))
                 SettingsDivider()
-                SettingsRow(String(localized: "Todoist and Linear"), detail: String(localized: "Only if you connect them: reads your tasks, and ticks off the one you finish"))
+                SettingsRow(String(localized: "Todoist, Linear, GitHub and Jira"), detail: String(localized: "Only if you connect them: reads your tasks, and ticks off the one you finish"))
             }
             SettingsNote(systemImage: "lock",
                          text: PrivacyNote.onThisMac)
@@ -371,9 +371,10 @@ private struct DiagnosticsSheet: View {
 
 /// What leaves this Mac, said the same way everywhere. Keep it in step with
 /// the code: update checks (Sparkle), site icons (`FaviconLoader`, from the
-/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Todoist and
-/// Linear (`TodoistTasks`, `LinearTasks`), Slack once it's built in
-/// (`SlackAccount`) and, while the app offers them, AI tips.
+/// sites themselves), Spotify (`FocusMusic`, `SpotifyAccount`), Todoist,
+/// Linear, GitHub and Jira (`TodoistTasks`, `LinearTasks`, `GitHubTasks`,
+/// `JiraTasks`), Slack once it's built in (`SlackAccount`) and, while the
+/// app offers them, AI tips.
 enum PrivacyStatement {
     /// For the Privacy and About panes.
     static var network: String { networkStatement(slack: StatusSync.slackAvailable) }
@@ -382,21 +383,21 @@ enum PrivacyStatement {
     static func networkStatement(slack: Bool) -> String {
         switch (slack, AISettings.isAvailable) {
         case (true, true):
-            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear and Slack when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear, GitHub, Jira and Slack when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
         case (false, true):
-            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist and Linear when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear, GitHub and Jira when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
         case (true, false):
-            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear and Slack when you use them.")
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear, GitHub, Jira and Slack when you use them.")
         case (false, false):
-            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist and Linear when you use them.")
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear, GitHub and Jira when you use them.")
         }
     }
 
     /// For onboarding's welcome step.
     static var short: String {
         AISettings.isAvailable
-            ? String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them. AI tips, if you turn them on, send a short summary.")
-            : String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them.")
+            ? String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist, Linear, GitHub or Jira if you use them. AI tips, if you turn them on, send a short summary.")
+            : String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist, Linear, GitHub or Jira if you use them.")
     }
 }
 

@@ -12388,6 +12388,22 @@
         }
       }
     },
+    "Connected to %@" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ilə qoşulub"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbunden mit %@"
+          }
+        }
+      }
+    },
     "Connected to %@. Use “Get AI tips” on Reports." : {
       "localizations" : {
         "az" : {
@@ -17665,6 +17681,22 @@
         }
       }
     },
+    "From github.com/settings/tokens. A fine-grained token covers one owner's repositories and needs Issues: Read and write; a classic token needs repo. Kept in your Keychain." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "github.com/settings/tokens səhifəsindən. Fine-grained token bir sahibin repozitoriyalarını əhatə edir və Issues: Read and write icazəsi tələb edir; classic token üçün repo lazımdır. Açar dəstinizdə saxlanılır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von github.com/settings/tokens. Ein Fine-grained-Token deckt die Repositorys eines Inhabers ab und braucht Issues: Read and write; ein klassisches Token braucht repo. Wird in deinem Schlüsselbund aufbewahrt."
+          }
+        }
+      }
+    },
     "From how the focus went and how long it ran" : {
       "localizations" : {
         "az" : {
@@ -17677,6 +17709,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Danach, wie der Fokus lief und wie lange er dauerte"
+          }
+        }
+      }
+    },
+    "From id.atlassian.com › Security › API tokens. Choose Create API token, not the one with scopes. Kept in your Keychain." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "id.atlassian.com › Security › API tokens bölməsindən. Scope-lu variantı yox, “Create API token” seçin. Açar dəstinizdə saxlanılır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von id.atlassian.com › Security › API tokens. Wähle „Create API token“, nicht die Variante mit Scopes. Wird in deinem Schlüsselbund aufbewahrt."
           }
         }
       }
@@ -17925,6 +17973,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Getting set up · %1$lld of %2$lld done"
+          }
+        }
+      }
+    },
+    "GitHub refused the change. The token needs write access to this repository's issues." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub dəyişikliyi qəbul etmədi. Tokenə bu repozitoriyanın tapşırıqlarına yazma icazəsi lazımdır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub hat die Änderung abgelehnt. Das Token braucht Schreibzugriff auf die Issues dieses Repositorys."
           }
         }
       }
@@ -19335,34 +19399,34 @@
         }
       }
     },
-    "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them." : {
+    "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist, Linear, GitHub or Jira if you use them." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yalnız burada qeydə alınır. FocusGuard internetə yalnız yeniləmələr, sayt ikonları, bir də istifadə etsəniz Spotify, Todoist və ya Linear üçün qoşulur."
+            "value" : "Yalnız burada qeydə alınır. FocusGuard internetə yalnız yeniləmələr, sayt ikonları, bir də istifadə etsəniz Spotify, Todoist, Linear, GitHub və ya Jira üçün qoşulur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie wird nur hier aufgezeichnet. FocusGuard geht nur für Updates, Website-Symbole und Spotify, Todoist oder Linear online, wenn du sie nutzt."
+            "value" : "Sie wird nur hier aufgezeichnet. FocusGuard geht nur für Updates, Website-Symbole und Spotify, Todoist, Linear, GitHub oder Jira online, wenn du sie nutzt."
           }
         }
       }
     },
-    "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them. AI tips, if you turn them on, send a short summary." : {
+    "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist, Linear, GitHub or Jira if you use them. AI tips, if you turn them on, send a short summary." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yalnız burada qeydə alınır. FocusGuard internetə yalnız yeniləmələr, sayt ikonları, bir də istifadə etsəniz Spotify, Todoist və ya Linear üçün qoşulur. Süni intellekt məsləhətlərini açsanız, onlar qısa xülasə göndərir."
+            "value" : "Yalnız burada qeydə alınır. FocusGuard internetə yalnız yeniləmələr, sayt ikonları, bir də istifadə etsəniz Spotify, Todoist, Linear, GitHub və ya Jira üçün qoşulur. Süni intellekt məsləhətlərini açsanız, onlar qısa xülasə göndərir."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie wird nur hier aufgezeichnet. FocusGuard geht nur für Updates, Website-Symbole und Spotify, Todoist oder Linear online, wenn du sie nutzt. KI-Tipps senden, wenn du sie aktivierst, eine kurze Zusammenfassung."
+            "value" : "Sie wird nur hier aufgezeichnet. FocusGuard geht nur für Updates, Website-Symbole und Spotify, Todoist, Linear, GitHub oder Jira online, wenn du sie nutzt. KI-Tipps senden, wenn du sie aktivierst, eine kurze Zusammenfassung."
           }
         }
       }
@@ -19552,6 +19616,38 @@
     },
     "JSON" : {
       "shouldTranslate" : false
+    },
+    "Jira has no transition back that FocusGuard can use. The issue stays done." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jira-da FocusGuard-un istifadə edə biləcəyi geri keçid yoxdur. Tapşırıq “Done” olaraq qalır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jira hat keinen Übergang zurück, den FocusGuard nutzen kann. Das Issue bleibt auf „Done“."
+          }
+        }
+      }
+    },
+    "Jira has no transition to done that FocusGuard can use. The issue is unchanged." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jira-da FocusGuard-un istifadə edə biləcəyi “Done” keçidi yoxdur. Tapşırıq dəyişmədi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jira hat keinen Übergang zu „Done“, den FocusGuard nutzen kann. Das Issue bleibt unverändert."
+          }
+        }
+      }
     },
     "Just sorted" : {
       "localizations" : {
@@ -24856,6 +24952,22 @@
         }
       }
     },
+    "Open issues assigned to you, closed when you finish" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizə təyin olunmuş açıq tapşırıqlar, bitirəndə bağlanır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dir zugewiesene offene Issues, beim Abschließen geschlossen"
+          }
+        }
+      }
+    },
     "Open the extension's page in %@" : {
       "localizations" : {
         "az" : {
@@ -25567,6 +25679,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "API-Token einfügen"
+          }
+        }
+      }
+    },
+    "Paste your access token" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giriş tokeninizi yapışdırın"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zugriffstoken einfügen"
           }
         }
       }
@@ -29992,6 +30120,22 @@
         }
       }
     },
+    "Site, like acme.atlassian.net" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sayt, məsələn acme.atlassian.net"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website, z. B. acme.atlassian.net"
+          }
+        }
+      }
+    },
     "Size" : {
       "comment" : "The share image's shape",
       "localizations" : {
@@ -33118,6 +33262,22 @@
         }
       }
     },
+    "That's not a Jira Cloud site. Use an address like acme.atlassian.net." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, Jira Cloud saytı deyil. acme.atlassian.net kimi ünvan yazın."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist keine Jira-Cloud-Website. Nimm eine Adresse wie acme.atlassian.net."
+          }
+        }
+      }
+    },
     "That's not something FocusGuard can see." : {
       "localizations" : {
         "az" : {
@@ -34951,18 +35111,18 @@
         }
       }
     },
-    "Todoist and Linear" : {
+    "Todoist, Linear, GitHub and Jira" : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todoist və Linear"
+            "value" : "Todoist, Linear, GitHub və Jira"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todoist und Linear"
+            "value" : "Todoist, Linear, GitHub und Jira"
           }
         }
       }
@@ -38538,6 +38698,22 @@
         }
       }
     },
+    "Your Atlassian email" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atlassian e-poçtunuz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Atlassian-E-Mail"
+          }
+        }
+      }
+    },
     "Your Pro trial ends in %lld days" : {
       "comment" : "Plural on the days: ends in 1 day",
       "localizations" : {
@@ -38664,66 +38840,66 @@
         }
       }
     },
-    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist and Linear when you use them." : {
+    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear, GitHub and Jira when you use them." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, bir də istifadə etdiyiniz zaman Spotify, Todoist və Linear üçün qoşulur."
+            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, bir də istifadə etdiyiniz zaman Spotify, Todoist, Linear, GitHub və Jira üçün qoşulur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, und für Spotify, Todoist und Linear, wenn du sie nutzt."
+            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, und für Spotify, Todoist, Linear, GitHub und Jira, wenn du sie nutzt."
           }
         }
       }
     },
-    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear and Slack when you use them." : {
+    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear, GitHub, Jira and Slack when you use them." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, bir də istifadə etdiyiniz zaman Spotify, Todoist, Linear və Slack üçün qoşulur."
+            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, bir də istifadə etdiyiniz zaman Spotify, Todoist, Linear, GitHub, Jira və Slack üçün qoşulur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, und für Spotify, Todoist, Linear und Slack, wenn du sie nutzt."
+            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, und für Spotify, Todoist, Linear, GitHub, Jira und Slack, wenn du sie nutzt."
           }
         }
       }
     },
-    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist and Linear when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask." : {
+    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear, GitHub and Jira when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, istifadə etdiyiniz zaman Spotify, Todoist və Linear üçün, həmçinin siz istədikdə qısa xülasə (heç vaxt pəncərə başlıqları və ya tam URL-lər deyil) göndərən süni intellekt məsləhətləri üçün qoşulur."
+            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, istifadə etdiyiniz zaman Spotify, Todoist, Linear, GitHub və Jira üçün, həmçinin siz istədikdə qısa xülasə (heç vaxt pəncərə başlıqları və ya tam URL-lər deyil) göndərən süni intellekt məsləhətləri üçün qoşulur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, für Spotify, Todoist und Linear, wenn du sie nutzt, und für KI-Tipps, die eine kurze Zusammenfassung senden (nie Fenstertitel oder vollständige URLs), wenn du darum bittest."
+            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, für Spotify, Todoist, Linear, GitHub und Jira, wenn du sie nutzt, und für KI-Tipps, die eine kurze Zusammenfassung senden (nie Fenstertitel oder vollständige URLs), wenn du darum bittest."
           }
         }
       }
     },
-    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear and Slack when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask." : {
+    "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear, GitHub, Jira and Slack when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, istifadə etdiyiniz zaman Spotify, Todoist, Linear və Slack üçün, həmçinin siz istədikdə qısa xülasə (heç vaxt pəncərə başlıqları və ya tam URL-lər deyil) göndərən süni intellekt məsləhətləri üçün qoşulur."
+            "value" : "Fəaliyyətiniz bu Mac-də saxlanılır. FocusGuard internetə yalnız yeniləmələri yoxlamaq, sayt ikonlarını saytların özündən almaq, istifadə etdiyiniz zaman Spotify, Todoist, Linear, GitHub, Jira və Slack üçün, həmçinin siz istədikdə qısa xülasə (heç vaxt pəncərə başlıqları və ya tam URL-lər deyil) göndərən süni intellekt məsləhətləri üçün qoşulur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, für Spotify, Todoist, Linear und Slack, wenn du sie nutzt, und für KI-Tipps, die eine kurze Zusammenfassung senden (nie Fenstertitel oder vollständige URLs), wenn du darum bittest."
+            "value" : "Deine Aktivität wird auf diesem Mac gespeichert. FocusGuard geht nur online, um nach Updates zu suchen, um Website-Symbole direkt von den Websites zu laden, für Spotify, Todoist, Linear, GitHub, Jira und Slack, wenn du sie nutzt, und für KI-Tipps, die eine kurze Zusammenfassung senden (nie Fenstertitel oder vollständige URLs), wenn du darum bittest."
           }
         }
       }

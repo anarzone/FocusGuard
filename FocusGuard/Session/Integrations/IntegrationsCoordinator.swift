@@ -2,9 +2,9 @@ import AppKit
 import Foundation
 
 /// The integrations (Settings › Integrations): sessions on the calendar,
-/// the next meeting in the menu, open tasks from Reminders, Things, Todoist
-/// and Linear as goals and ticking them off (Pro), and the Git branch as a
-/// goal.
+/// the next meeting in the menu, open tasks from Reminders, Things, Todoist,
+/// Linear, GitHub and Jira as goals and ticking them off (Pro), and the Git
+/// branch as a goal.
 ///
 /// EventKit is read and written off the main thread (`EventKitBridge`),
 /// and so are the task sources (`TaskStore`); what the menu shows is kept
@@ -27,6 +27,8 @@ final class IntegrationsCoordinator {
     private(set) var taskLinks: [UUID: TaskLink] = [:]
     /// What's next on the list after a session's task was ticked off.
     private(set) var nextTasks: [UUID: TaskItem] = [:]
+    /// Why a session's task was left as it was, until the next try.
+    private(set) var tickNotes: [UUID: String] = [:]
 
     @ObservationIgnored let calendarWriter: SessionCalendarWriter
     @ObservationIgnored private let calendar: CalendarStore
@@ -56,12 +58,13 @@ final class IntegrationsCoordinator {
     static let meetingInterval: TimeInterval = 60
 
     /// - Parameter tasks: where tasks come from; Reminders (from
-    ///   `reminders`), Things, Todoist and Linear when nil.
+    ///   `reminders`), Things, Todoist, Linear, GitHub and Jira when nil.
     init(calendar: CalendarStore, reminders: ReminderStore, tasks: [TaskStore]? = nil,
          entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
         self.calendar = calendar
         self.reminders = reminders
-        let stores = tasks ?? [ReminderTasks(store: reminders, defaults: defaults), ThingsTasks(), TodoistTasks(), LinearTasks()]
+        let stores = tasks ?? [ReminderTasks(store: reminders, defaults: defaults), ThingsTasks(), TodoistTasks(), LinearTasks(),
+                                GitHubTasks(), JiraTasks(defaults: defaults)]
         self.taskStores = Dictionary(stores.map { ($0.source, $0) }, uniquingKeysWith: { first, _ in first })
         self.defaults = defaults
         self.entitlements = entitlements ?? .shared
@@ -285,6 +288,7 @@ final class IntegrationsCoordinator {
     func undoTick(session id: UUID) async {
         guard taskLinks[id]?.ticked == true else { return }
         await setTicked(false, session: id)
+        guard taskLinks[id]?.ticked == false else { return }
         taskLinks[id]?.undone = true
         saveLinks()
     }
@@ -297,8 +301,10 @@ final class IntegrationsCoordinator {
     /// Ticks the session's task off in its own app, or opens it again; the
     /// goals offered follow, and after a tick so does what's next.
     private func setTicked(_ ticked: Bool, session id: UUID, now: Date = .now) async {
-        guard let link = taskLinks[id], link.ticked != ticked, let store = taskStores[link.task.source],
-              await store.setCompleted(link.task, ticked) else { return }
+        guard let link = taskLinks[id], link.ticked != ticked, let store = taskStores[link.task.source] else { return }
+        let change = await store.change(link.task, completed: ticked)
+        if case .refused(let why) = change { tickNotes[id] = why } else { tickNotes[id] = nil }
+        guard change == .saved else { return }
         taskLinks[id]?.ticked = ticked
         if ticked { taskLinks[id]?.undone = false }
         saveLinks()
@@ -337,9 +343,9 @@ final class IntegrationsCoordinator {
         await refreshTasks()
     }
 
-    /// Whether Todoist or Linear has its token saved.
+    /// Whether a source that signs in has its token saved.
     func isConnected(_ source: TaskSource) -> Bool {
-        (taskStores[source] as? TokenTaskStore)?.hasToken ?? false
+        (taskStores[source] as? ConnectedTaskStore)?.hasToken ?? false
     }
 
     /// Checks a pasted token with the service and keeps it if it's taken;
@@ -354,9 +360,25 @@ final class IntegrationsCoordinator {
         return check
     }
 
+    /// The same for Jira, which needs its site and email too.
+    func connectJira(site: String, email: String, token: String) async -> TokenCheck {
+        guard let store = taskStores[.jira] as? JiraTasks else { return .rejected }
+        let check = await store.connect(site: site, email: email, token: token)
+        if check == .accepted {
+            setProblem(nil, for: .jira)
+            await refreshTasks()
+        }
+        return check
+    }
+
+    /// The Jira site and email saved, for Settings.
+    var jiraAccount: (site: String, email: String)? {
+        (taskStores[.jira] as? JiraTasks)?.account
+    }
+
     /// Forgets the token; the source's tasks go too.
     func disconnect(_ source: TaskSource) {
-        (taskStores[source] as? TokenTaskStore)?.disconnect()
+        (taskStores[source] as? ConnectedTaskStore)?.disconnect()
         tasksBySource[source] = nil
         setProblem(nil, for: source)
         publishTasks(now: .now)
