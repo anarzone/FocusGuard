@@ -530,7 +530,7 @@ async function passThrough(tabId, url) {
     }
     await applyRules();
   }
-  await chrome.tabs.update(tabId, { url });
+  // Listen first: a fast page can finish loading before update() returns.
   if (until) {
     const onLoad = (id, change) => {
       if (id === tabId && change.status === 'complete') {
@@ -540,6 +540,7 @@ async function passThrough(tabId, url) {
     };
     chrome.tabs.onUpdated.addListener(onLoad);
   }
+  await chrome.tabs.update(tabId, { url });
   return reply;
 }
 
