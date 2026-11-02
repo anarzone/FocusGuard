@@ -1162,7 +1162,7 @@ final class AIEvalTests: XCTestCase {
                       now: scenario.now, calendar: scenario.calendar, locale: scenario.locale)
         }
         let plain = await engine(nil).answer("When do I focus best?")
-        log.write(["case": "no model", "lead": normal(plain.lead), "detail": normal(plain.detail), "onDevice": plain.onDevice])
+        log.write(["case": "no model", "lead": normal(plain.lead), "detail": normal(plain.detail)])
 
         let models: [(String, any OnDeviceModel)] = [
             ("throws", Fails(error: SomeError())),
@@ -1176,7 +1176,7 @@ final class AIEvalTests: XCTestCase {
         ]
         for (name, model) in models {
             let answer = await engine(model).answer("When do I focus best?")
-            log.write(["case": name, "feature": "ask", "lead": normal(answer.lead), "detail": normal(answer.detail), "onDevice": answer.onDevice])
+            log.write(["case": name, "feature": "ask", "lead": normal(answer.lead), "detail": normal(answer.detail)])
             let draft = CoachDraft.make(.lateStarts(.init(cutoff: 600, lateDays: 3, earlyDays: 2, lateFocus: 7200, earlyFocus: 18000)),
                                         experiment: .earlierMorningPlan(hour: 8), locale: scenario.locale, calendar: scenario.calendar)
             let wording = await CoachWriter(model: model).write(draft)
