@@ -93,7 +93,7 @@ targets:
         SPOTIFY_CLIENT_ID: 9c64a61db436412583b7a2285acf92e1
         # Public Client ID of FocusGuard's Slack app (redirect
         # focusguard://slack-auth); empty hides Slack in Settings.
-        SLACK_CLIENT_ID: ""
+        SLACK_CLIENT_ID: "12167211366341.12482406261761"
         # Application ID of FocusGuard's Discord application; empty hides Discord.
         DISCORD_APPLICATION_ID: ""
         GENERATE_INFOPLIST_FILE: NO
