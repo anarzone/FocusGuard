@@ -82,11 +82,6 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
     /// The length "Start 50 minutes" starts: the one the menu would.
     var usualMinutes: Int { FocusActions.usualMinutes(defaults) }
 
-    /// "1 minute", "5 minutes".
-    nonisolated static func plural(_ n: Int, _ word: String) -> String {
-        "\(n) \(word)\(n == 1 ? "" : "s")"
-    }
-
     // MARK: - Buttons
 
     /// The category for these buttons. Titles change with the moment ("Back

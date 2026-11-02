@@ -54,7 +54,7 @@ struct FocusWeek: Equatable {
             longestZone: FocusRuns.compute(FocusRuns.spans(from: events.filter { $0.session != nil }), now: now).longest,
             sessions: sessions.count,
             goalMinutes: FocusGoal.dailyMinutes,
-            names: names(sessions.compactMap(\.autoName)),
+            names: names(sessions.compactMap(\.autoName).map(SessionNamer.localizedName(stored:))),
             places: places(events, in: interval)
         )
     }

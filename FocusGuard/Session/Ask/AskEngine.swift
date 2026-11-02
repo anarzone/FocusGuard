@@ -111,7 +111,7 @@ final class AskConversation {
     private(set) var actionNote: (turn: UUID, text: String)?
 
     /// Apple's model, or nil without Apple Intelligence.
-    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.model
+    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.writer
     @ObservationIgnored private var generation = 0
 
     var isWorking: Bool { turns.last.map { $0.answer == nil } ?? false }
@@ -150,7 +150,7 @@ final class AskConversation {
         switch action.kind {
         case let .limit(host, minutes):
             guard appState.limits.addLimit(target: host, isSite: true, minutes: minutes) != nil else {
-                actionNote = (turnID, "That limit couldn't be set. Try it in Settings › Blocking.")
+                actionNote = (turnID, String(localized: "That limit couldn't be set. Try it in Settings › Blocking."))
                 return
             }
         case let .startSession(minutes):
@@ -159,10 +159,10 @@ final class AskConversation {
             switch actions.start(minutes: minutes) {
             case .started: break
             case .alreadyRunning:
-                actionNote = (turnID, "A session is already running.")
+                actionNote = (turnID, String(localized: "A session is already running."))
                 return
             case .onStrictBreak:
-                actionNote = (turnID, "The break has to finish first.")
+                actionNote = (turnID, String(localized: "The break has to finish first."))
                 return
             }
         case let .planSession(at):

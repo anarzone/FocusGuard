@@ -44,6 +44,7 @@ struct AskHours: Equatable, Sendable {
         if t.contains("lunch") { return AskHours(from: 13, to: 15) }
         if let hour = clockHour(in: t) {
             let after = t.contains("after \(hour.word)") || t.contains("from \(hour.word)")
+                || t.contains("nach \(hour.word)") || t.contains("ab \(hour.word)") || AskOtherLanguages.saysAfter(t)
             let start = after ? hour.value : max(0, hour.value - 1)
             return AskHours(from: start, to: min(24, start + 2))
         }
@@ -52,7 +53,7 @@ struct AskHours: Equatable, Sendable {
         if words.contains("afternoon") || words.contains("afternoons") { return AskHours(from: 12, to: 17) }
         if words.contains("evening") || words.contains("evenings") || words.contains("tonight") { return AskHours(from: 17, to: 22) }
         if words.contains("night") || words.contains("nights") || t.contains("late at night") { return AskHours(from: 21, to: 24) }
-        return nil
+        return AskOtherLanguages.hours(t)
     }
 
     /// "3pm", "3 pm", "15:00", "at 15" → the hour, 0...23, and how it was written.
@@ -67,7 +68,7 @@ struct AskHours: Equatable, Sendable {
         if let match = text.firstMatch(of: /(\d{1,2}):(\d{2})/), let hour = Int(match.1), (0...23).contains(hour) {
             return (hour, String(match.0))
         }
-        if let match = text.firstMatch(of: /(?:at|after|around|from) (\d{1,2})\b/), let hour = Int(match.1), (0...23).contains(hour) {
+        if let match = text.firstMatch(of: /(?:at|after|around|from|um|nach|gegen|ab|saat) (\d{1,2})\b/), let hour = Int(match.1), (0...23).contains(hour) {
             // "after 2" in the working day means 14:00.
             let value = hour < 7 ? hour + 12 : hour
             return (value, String(match.1))
@@ -89,7 +90,7 @@ enum AskPeriod: Equatable, Sendable {
         if AskText.words(t).contains("today") { return .today }
         if t.contains("last week") || t.contains("previous week") { return .lastWeek }
         if t.contains("this week") { return .thisWeek }
-        return .recent
+        return AskOtherLanguages.period(t) ?? .recent
     }
 }
 
@@ -139,6 +140,12 @@ enum AskIntentMatcher {
     ]
 
     static func match(_ text: String) -> AskIntent {
+        if let suggested = AskSuggestions.intent(of: text) { return suggested }
+        let english = matchEnglish(text)
+        return english == .unknown && OnDeviceAI.appLanguage != "en" ? AskOtherLanguages.intent(text) : english
+    }
+
+    private static func matchEnglish(_ text: String) -> AskIntent {
         let t = AskText.normalized(text)
         let words = AskText.words(t)
         func has(_ options: String...) -> Bool { options.contains(where: words.contains) }
@@ -166,6 +173,67 @@ enum AskIntentMatcher {
         }
         if has("focus", "focused", "focusing", "productive", "productivity", "concentrate", "peak", "zone")
             || (has("best") && has("hours", "time", "times")) {
+            return .bestHours
+        }
+        return .unknown
+    }
+}
+
+/// German and Azerbaijani words for matching questions by hand: what the
+/// page has to go on in Azerbaijani, which Apple's model doesn't support,
+/// and in German without Apple Intelligence. Word stems, so suffixes don't
+/// matter. Whatever these miss gets the suggested questions, like any
+/// question Ask can't place.
+enum AskOtherLanguages {
+    private static func says(_ text: String, _ stems: String...) -> Bool {
+        stems.contains(where: text.contains)
+    }
+
+    /// Azerbaijani puts "after" behind the time: "15:00-dan sonra".
+    static func saysAfter(_ text: String) -> Bool {
+        text.contains("sonra")
+    }
+
+    static func hours(_ t: String) -> AskHours? {
+        if says(t, "mittagspause", "mittagessen", "nahar") { return AskHours(from: 13, to: 15) }
+        if says(t, "nachmittag", "günorta", "gündüz") { return AskHours(from: 12, to: 17) }
+        if says(t, "vormittag", "morgens", "morgen", "früh", "səhər") { return AskHours(from: 6, to: 12) }
+        if says(t, "abend", "axşam") { return AskHours(from: 17, to: 22) }
+        if says(t, "nacht", "nachts", "gecə") { return AskHours(from: 21, to: 24) }
+        return nil
+    }
+
+    static func period(_ t: String) -> AskPeriod? {
+        if says(t, "heute", "bu gün", "bugün") { return .today }
+        if says(t, "letzte woche", "letzten woche", "letzter woche", "vergangene woche", "vergangenen woche", "vorige woche",
+                "vorigen woche", "vorwoche", "keçən həftə", "ötən həftə") { return .lastWeek }
+        if says(t, "diese woche", "dieser woche", "bu həftə") { return .thisWeek }
+        return nil
+    }
+
+    static func intent(_ text: String) -> AskIntent {
+        let t = AskText.normalized(text)
+        let drift = says(t, "ablenk", "abgelenkt", "abdrift", "verschwend", "schlechtest", "yayın", "diqqətim dağıl")
+        let session = says(t, "session", "sitzung", "seans", "sessiya")
+        let days = says(t, "wochentag", "welcher tag", "welchem tag", "welche tage", "an welchen tagen",
+                        "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag",
+                        "hansı gün", "bazar", "çərşənbə", "cümə", "şənbə")
+        let week = says(t, "woche", "həftə")
+
+        if says(t, "experiment", "coach", "eksperiment", "təcrübə", "məşqçi") { return .coachExperiment }
+        if session && says(t, "lang", "länge", "kurz", "dauer", "minuten", "beste", "besser", "uzun", "qısa", "müddət", "dəqiqə", "yaxşı") {
+            return .sessionLength
+        }
+        if days && drift { return .driftDay }
+        if says(t, "wie viel zeit", "wieviel zeit", "wie lange", "wie oft", "zeit auf", "zeit in",
+                "nə qədər vaxt", "nə qədər", "neçə saat", "neçə dəfə") {
+            return .appTime
+        }
+        if week && says(t, "vergleich", "letzte", "vorige", "vergangene", "besser", "schlechter", "lief", "keçən", "ötən", "müqayisə", "yaxşı", "pis") {
+            return .weekCompare
+        }
+        if drift || says(t, "zieht", "prokrastin", "unterbrech", "aufschieb", "mane", "uzaqlaşdır", "fikrimi") { return .pullsAway }
+        if says(t, "fokus", "konzentr", "produktiv", "beste zeit", "besten stunden", "diqqət", "konsentr", "məhsuldar", "ən yaxşı") {
             return .bestHours
         }
         return .unknown

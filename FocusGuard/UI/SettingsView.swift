@@ -133,6 +133,12 @@ struct SettingsView: View {
 // MARK: - General
 
 struct SettingsGeneralPane: View {
+    /// The language the app runs in, in that language: "Deutsch".
+    private static var languageName: String {
+        let code = OnDeviceAI.appLanguage
+        return Locale(identifier: code).localizedString(forLanguageCode: code)?.localizedCapitalized ?? code
+    }
+
     @Bindable var appState: AppState
     @ObservedObject private var updater: UpdaterController
     @State private var launchAtLogin = LoginItemController.isEnabled
@@ -169,8 +175,10 @@ struct SettingsGeneralPane: View {
                                      }))
                 }
                 SettingsDivider()
-                SettingsRow(title: String(localized: "Language"), detail: String(localized: "Deutsch and Azərbaycan dili are on the way")) {
-                    Text("English").font(.system(size: 12)).foregroundStyle(Theme.bodyText)
+                // macOS keeps each app's language, so there's no picker here.
+                SettingsRow(title: String(localized: "Language"),
+                            detail: String(localized: "Change it in System Settings › General › Language & Region › Applications")) {
+                    Text(verbatim: Self.languageName).font(.system(size: 12)).foregroundStyle(Theme.bodyText)
                 }
                 if reduceMotion {
                     // The old in-app switch, kept only so it can be turned off.

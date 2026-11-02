@@ -109,7 +109,7 @@ struct AskFactsBuilder {
 
     /// Answers look back this many days.
     static let lookbackDays = 28
-    static let period = "From the last 4 weeks"
+    static let period = String(localized: "From the last 4 weeks")
     /// An hour counts toward "best hours" with this much focus and drift
     /// over the four weeks.
     static let activeHour: TimeInterval = 30 * 60
@@ -146,36 +146,45 @@ struct AskFactsBuilder {
         let share = sum(focus, best) / max(1, focus.reduce(0, +))
         let overall = FocusRate.of(focused: focus.reduce(0, +), drifted: drift.reduce(0, +))
 
-        var detail = "Your focus rate then is \(percent(rate(best)))"
+        let bestRate = percent(rate(best)), bestSpan = span(best), held = percent(share)
+        let detail: String
         if let weakest, rate(weakest) < rate(best) {
-            detail += ", against \(percent(rate(weakest))) from \(span(weakest))"
+            let weakRate = percent(rate(weakest)), weakSpan = span(weakest)
+            detail = String(localized: "Your focus rate then is \(bestRate), against \(weakRate) from \(weakSpan). Those hours hold \(held) of all the time you focused.",
+                            comment: "From 09:00 to 12:00")
+        } else {
+            detail = String(localized: "Your focus rate then is \(bestRate). Those hours hold \(held) of all the time you focused.")
         }
-        detail += ". Those hours hold \(percent(share)) of all the time you focused."
 
+        let overallRate = percent(overall)
         var facts = [
-            "Best hours: \(span(best)), with a focus rate of \(percent(rate(best))).",
-            "Share of all focused time in those hours: \(percent(share)).",
-            "Focus rate across all hours: \(percent(overall)).",
+            String(localized: "Best hours: \(bestSpan), with a focus rate of \(bestRate)."),
+            String(localized: "Share of all focused time in those hours: \(held)."),
+            String(localized: "Focus rate across all hours: \(overallRate)."),
         ]
-        if let weakest { facts.append("Weakest hours: \(span(weakest)), with a focus rate of \(percent(rate(weakest))).") }
+        if let weakest {
+            let weakRate = percent(rate(weakest)), weakSpan = span(weakest)
+            facts.append(String(localized: "Weakest hours: \(weakSpan), with a focus rate of \(weakRate)."))
+        }
         if let day = bestWeekday(days, overall: overall) {
-            facts.append("Best day of the week: \(weekdayName(day.weekday)), with a focus rate of \(percent(day.rate)).")
+            let name = weekdayName(day.weekday), dayRate = percent(day.rate)
+            facts.append(String(localized: "Best day of the week: \(name), with a focus rate of \(dayRate)."))
         }
         facts.append(Self.rateMeaning)
 
         let shown = (active.min() ?? 0)...(active.max() ?? 23)
+        let shownFrom = clock(shown.lowerBound), shownTo = clock(shown.upperBound + 1), part = partOfDay(best.lowerBound)
         let bars = shown.map { hour in
             AskBar(label: hour % 2 == 0 ? String(format: "%02d", hour) : nil,
                    value: focus[hour] + drift[hour] > 0 ? rate(hour..<(hour + 1)) : 0,
                    highlighted: best.contains(hour))
         }
         return AskFacts(
-            lead: "\(partOfDay(best.lowerBound)): \(span(best)).",
+            lead: String(localized: "\(part): \(bestSpan).", comment: "Mornings: 09:00 to 12:00."),
             detail: detail,
             facts: facts + [basis],
             visual: .bars(bars, tone: .focus,
-                          summary: "Focus rate by hour, \(clock(shown.lowerBound)) to \(clock(shown.upperBound + 1)): "
-                              + "highest from \(span(best)), at \(percent(rate(best)))."),
+                          summary: String(localized: "Focus rate by hour, \(shownFrom) to \(shownTo): highest from \(bestSpan), at \(bestRate).")),
             basis: basis,
             action: bestHoursAction(best)
         )
@@ -191,14 +200,15 @@ struct AskFactsBuilder {
         }
         let tomorrow = start.addingTimeInterval(-HabitSchedule.slotLead) <= now
         guard let at = tomorrow ? calendar.date(byAdding: .day, value: 1, to: start) : start else { return nil }
+        let time = clock(best.lowerBound)
         let title: String
         switch (tomorrow, best.lowerBound < 12) {
-        case (true, true):  title = "Plan tomorrow's first session at \(clock(best.lowerBound))"
-        case (true, false): title = "Plan a session at \(clock(best.lowerBound)) tomorrow"
-        default:            title = "Plan a session at \(clock(best.lowerBound)) today"
+        case (true, true):  title = String(localized: "Plan tomorrow's first session at \(time)")
+        case (true, false): title = String(localized: "Plan a session at \(time) tomorrow")
+        default:            title = String(localized: "Plan a session at \(time) today")
         }
         return AskAction(kind: .planSession(at: at), title: title,
-                         doneTitle: "Planned. A reminder comes at \(clock(best.lowerBound))")
+                         doneTitle: String(localized: "Planned. A reminder comes at \(time)"))
     }
 
     private func bestWeekday(_ days: [DaySummary], overall: Double) -> (weekday: Int, rate: Double)? {
@@ -220,8 +230,10 @@ struct AskFactsBuilder {
     // MARK: What pulls you away
 
     func pullsAway(_ days: [DaySummary], hours: AskHours?, sessionCount: Int) -> AskFacts {
-        let basis = hours.map { "\(Self.period) · \(clock($0.from)) to \(clock($0.to))" }
-            ?? basisLine(days, sessions: sessionCount)
+        let basis = hours.map { hours -> String in
+            let period = Self.period, from = clock(hours.from), to = clock(hours.to)
+            return String(localized: "\(period) · \(from) to \(to)", comment: "From the last 4 weeks · 09:00 to 12:00")
+        } ?? basisLine(days, sessions: sessionCount)
         guard activeDays(days) >= 3 else { return tooLittle(basis) }
 
         var seconds: [String: TimeInterval] = [:]
@@ -248,11 +260,16 @@ struct AskFactsBuilder {
         }
 
         let total = seconds.values.reduce(0, +)
-        let when = hours.map { "between \(clock($0.from)) and \(clock($0.to))" } ?? "in the last 4 weeks"
+        let when = hours.map { hours -> String in
+            let from = clock(hours.from), to = clock(hours.to)
+            return String(localized: "between \(from) and \(to)", comment: "Times in a sentence: Your sessions between 12:00 and 17:00 ...")
+        } ?? String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ...")
+        let totalText = WindowFormat.hm(total)
         guard total >= 5 * 60 else {
-            return AskFacts(lead: "Hardly anything.",
-                            detail: "You drifted \(WindowFormat.hm(total)) \(when), on \(count(counted, "day")) tracked.",
-                            facts: ["Drift \(when): \(WindowFormat.hm(total)).", basis], basis: basis)
+            return AskFacts(lead: String(localized: "Hardly anything."),
+                            detail: String(localized: "You drifted \(totalText) \(when), on \(counted) days tracked.",
+                                           comment: "Plural on the number of days: 1 day / 2 days. When: between 12:00 and 17:00, or in the last 4 weeks"),
+                            facts: [String(localized: "Drift \(when): \(totalText)."), basis], basis: basis)
         }
 
         let top = seconds.sorted { $0.value > $1.value }.prefix(3)
@@ -261,23 +278,28 @@ struct AskFactsBuilder {
         let firstDays = daysWith[first.key] ?? 0
         let lead: String
         switch firstDays {
-        case 0:       lead = "\(first.name), most of all."
-        case counted: lead = "\(first.name), on all \(count(counted, "day"))."
-        default:      lead = "\(first.name), on \(firstDays) of the \(count(counted, "day"))."
+        case 0:       lead = String(localized: "\(first.name), most of all.")
+        case counted: lead = String(localized: "\(first.name), on all \(counted) days.", comment: "Plural on days: 1 day / 2 days")
+        default:      lead = String(localized: "\(first.name), on \(firstDays) of the \(counted) days.", comment: "Plural on the last number: 1 day / 2 days")
         }
+        let firstText = WindowFormat.hm(first.seconds)
         let detail: String
         if top.count > 1 {
-            detail = "It took \(WindowFormat.hm(first.seconds)) of the \(WindowFormat.hm(total)) you drifted \(when). "
-                + "\(top[1].name) comes next, at \(WindowFormat.hm(top[1].seconds))."
+            let nextName = top[1].name, nextText = WindowFormat.hm(top[1].seconds)
+            detail = String(localized: "It took \(firstText) of the \(totalText) you drifted \(when). \(nextName) comes next, at \(nextText).",
+                            comment: "When: between 12:00 and 17:00, or in the last 4 weeks")
         } else {
-            detail = "It was all \(WindowFormat.hm(total)) of the drift \(when)."
+            detail = String(localized: "It was all \(totalText) of the drift \(when).", comment: "When: between 12:00 and 17:00, or in the last 4 weeks")
         }
 
-        var facts = ["Drift \(when): \(WindowFormat.hm(total)) in all, over \(count(counted, "day")) tracked."]
+        var facts = [String(localized: "Drift \(when): \(totalText) in all, over \(counted) days tracked.", comment: "Plural on the number of days: 1 day / 2 days")]
         for (index, item) in top.enumerated() {
-            let rank = ["Biggest", "Second", "Third"][index]
-            facts.append("\(rank) distraction \(when): \(item.name), \(WindowFormat.hm(item.seconds)), "
-                         + "on \(daysWith[item.key] ?? 0) of those days.")
+            let time = WindowFormat.hm(item.seconds), onDays = daysWith[item.key] ?? 0
+            switch index {
+            case 0:  facts.append(String(localized: "Biggest distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
+            case 1:  facts.append(String(localized: "Second distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
+            default: facts.append(String(localized: "Third distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
+            }
         }
 
         let widest = max(1, first.seconds)
@@ -287,7 +309,7 @@ struct AskFactsBuilder {
             facts: facts + [basis],
             visual: .rows(top.map { AskRow(name: $0.name, value: $0.seconds / widest, text: WindowFormat.hm($0.seconds)) },
                           tone: .drift,
-                          summary: "Drift \(when): " + top.map { "\($0.name) \(WindowFormat.hm($0.seconds))" }.joined(separator: ", ")),
+                          summary: String(localized: "Drift \(when): \(Self.nameList(top.map { ($0.name, WindowFormat.hm($0.seconds)) }))")),
             basis: basis,
             action: limitAction(key: first.key, host: groups[first.key]?.host, days: days)
         )
@@ -301,55 +323,68 @@ struct AskFactsBuilder {
     ///   - lastWeek: all of last week.
     func weekCompare(thisWeek: BreakdownSnapshot, sameDaysLast: BreakdownSnapshot, lastWeek: BreakdownSnapshot,
                      sessionsThisWeek: Int, sessionsLastWeek: Int) -> AskFacts {
-        let basis = "From this week so far and last week · \(count(sessionsThisWeek + sessionsLastWeek, "session"))"
+        let allSessions = sessionsThisWeek + sessionsLastWeek
+        let basis = String(localized: "From this week so far and last week · \(allSessions) sessions", comment: "Plural on sessions: 1 session / 2 sessions")
         let thisTracked = thisWeek.focus + thisWeek.neutral + thisWeek.distraction
         let lastTracked = lastWeek.focus + lastWeek.neutral + lastWeek.distraction
         guard thisTracked >= 60 || lastTracked >= 60 else { return tooLittle(basis) }
+        let thisFocus = WindowFormat.hm(thisWeek.focus), thenFocus = WindowFormat.hm(sameDaysLast.focus)
         guard lastTracked >= 60 else {
-            return AskFacts(lead: "Nothing to compare with yet.",
-                            detail: "Last week had nothing tracked. This week you've focused \(WindowFormat.hm(thisWeek.focus)) so far.",
-                            facts: ["Focused this week so far: \(WindowFormat.hm(thisWeek.focus)).", "Last week: nothing tracked."],
+            return AskFacts(lead: String(localized: "Nothing to compare with yet."),
+                            detail: String(localized: "Last week had nothing tracked. This week you've focused \(thisFocus) so far."),
+                            facts: [String(localized: "Focused this week so far: \(thisFocus)."), String(localized: "Last week: nothing tracked.")],
                             basis: basis)
         }
 
         let change = thisWeek.focus - sameDaysLast.focus
         let threshold = max(10 * 60, sameDaysLast.focus * 0.05)
         let lead: String
+        let changeText = WindowFormat.hm(abs(change))
         if abs(change) < threshold {
-            lead = "About the same as last week."
+            lead = String(localized: "About the same as last week.")
         } else if change > 0 {
-            lead = "Up \(WindowFormat.hm(change)) on the same days last week."
+            lead = String(localized: "Up \(changeText) on the same days last week.")
         } else {
-            lead = "Down \(WindowFormat.hm(-change)) on the same days last week."
+            lead = String(localized: "Down \(changeText) on the same days last week.")
         }
 
         let rateNow = FocusRate.of(focused: thisWeek.focus, drifted: thisWeek.distraction)
         let rateThen = FocusRate.of(focused: sameDaysLast.focus, drifted: sameDaysLast.distraction)
-        var detail = "You've focused \(WindowFormat.hm(thisWeek.focus)) so far, "
-            + "against \(WindowFormat.hm(sameDaysLast.focus)) by this point last week."
+        let nowRate = percent(rateNow), thenRate = percent(rateThen)
+        let detail: String
         if thisWeek.focus + thisWeek.distraction >= 60, sameDaysLast.focus + sameDaysLast.distraction >= 60 {
             let points = Int((rateNow * 100).rounded()) - Int((rateThen * 100).rounded())
-            let versus = points == 0 ? "the same as then" : "\(points > 0 ? "up" : "down") from \(percent(rateThen))"
-            detail += " Your focus rate is \(percent(rateNow)), \(versus)."
+            if points == 0 {
+                detail = String(localized: "You've focused \(thisFocus) so far, against \(thenFocus) by this point last week. Your focus rate is \(nowRate), the same as then.")
+            } else if points > 0 {
+                detail = String(localized: "You've focused \(thisFocus) so far, against \(thenFocus) by this point last week. Your focus rate is \(nowRate), up from \(thenRate).")
+            } else {
+                detail = String(localized: "You've focused \(thisFocus) so far, against \(thenFocus) by this point last week. Your focus rate is \(nowRate), down from \(thenRate).")
+            }
+        } else {
+            detail = String(localized: "You've focused \(thisFocus) so far, against \(thenFocus) by this point last week.")
         }
 
+        let lastFocus = WindowFormat.hm(lastWeek.focus)
+        let driftNow = WindowFormat.hm(thisWeek.distraction), driftThen = WindowFormat.hm(sameDaysLast.distraction)
         let facts = [
-            "Focused this week so far: \(WindowFormat.hm(thisWeek.focus)), focus rate \(percent(rateNow)), "
-                + "\(count(sessionsThisWeek, "session")).",
-            "Focused by this point last week: \(WindowFormat.hm(sameDaysLast.focus)), focus rate \(percent(rateThen)).",
-            "Focused in all of last week: \(WindowFormat.hm(lastWeek.focus)), \(count(sessionsLastWeek, "session")).",
-            "Drift this week so far: \(WindowFormat.hm(thisWeek.distraction)); "
-                + "by this point last week: \(WindowFormat.hm(sameDaysLast.distraction)).",
+            String(localized: "Focused this week so far: \(thisFocus), focus rate \(nowRate), \(sessionsThisWeek) sessions.",
+                   comment: "Plural on sessions: 1 session / 2 sessions"),
+            String(localized: "Focused by this point last week: \(thenFocus), focus rate \(thenRate)."),
+            String(localized: "Focused in all of last week: \(lastFocus), \(sessionsLastWeek) sessions.",
+                   comment: "Plural on sessions: 1 session / 2 sessions"),
+            String(localized: "Drift this week so far: \(driftNow); by this point last week: \(driftThen)."),
             Self.rateMeaning,
         ]
-        let rows = [("This week", thisWeek.focus), ("Last week, same days", sameDaysLast.focus), ("All of last week", lastWeek.focus)]
+        let rows = [(String(localized: "This week"), thisWeek.focus), (String(localized: "Last week, same days"), sameDaysLast.focus),
+                    (String(localized: "All of last week"), lastWeek.focus)]
         let widest = max(1, rows.map(\.1).max() ?? 1)
         return AskFacts(
             lead: lead,
             detail: detail,
             facts: facts,
             visual: .rows(rows.map { AskRow(name: $0.0, value: $0.1 / widest, text: WindowFormat.hm($0.1)) }, tone: .focus,
-                          summary: "Focused time: " + rows.map { "\($0.0) \(WindowFormat.hm($0.1))" }.joined(separator: ", ")),
+                          summary: String(localized: "Focused time: \(Self.nameList(rows.map { ($0.0, WindowFormat.hm($0.1)) }))")),
             basis: basis,
             action: change <= -threshold && !context.busy ? startAction(context.sessionMinutes) : nil
         )
@@ -386,29 +421,31 @@ struct AskFactsBuilder {
         }
         let top = groups.max { $0.value.seconds < $1.value.seconds }
         let topPerDay = (top?.value.seconds ?? 0) / Double(max(1, seen[worst.key] ?? 1))
-        let name = weekdayName(worst.key, plural: true)
+        let name = weekdayName(worst.key, plural: true), capitalName = CoachDraft.capitalized(name)
+        let worstText = WindowFormat.hm(worst.value), othersText = WindowFormat.hm(others), topText = WindowFormat.hm(topPerDay)
 
         let lead: String
-        var detail: String
+        let detail: String
         if standsOut {
-            lead = "\(name), with \(WindowFormat.hm(worst.value)) of drift on an average one."
-            detail = "That's against \(WindowFormat.hm(others)) on other days."
+            lead = String(localized: "\(capitalName), with \(worstText) of drift on an average one.", comment: "Mondays")
             if let top, topPerDay >= 60, top.value.seconds >= (drift[worst.key] ?? 0) * 0.25 {
-                detail += " \(top.value.name) takes \(WindowFormat.hm(topPerDay)) of it."
+                detail = String(localized: "That's against \(othersText) on other days. \(top.value.name) takes \(topText) of it.")
+            } else {
+                detail = String(localized: "That's against \(othersText) on other days.")
             }
         } else {
-            let all = drift.values.reduce(0, +) / Double(max(1, seen.values.reduce(0, +)))
-            lead = "No day stands out."
-            detail = "Drift runs about \(WindowFormat.hm(all)) a day, whatever the day. "
-                + "\(name) are a little higher, at \(WindowFormat.hm(worst.value))."
+            let all = WindowFormat.hm(drift.values.reduce(0, +) / Double(max(1, seen.values.reduce(0, +))))
+            lead = String(localized: "No day stands out.")
+            detail = String(localized: "Drift runs about \(all) a day, whatever the day. \(capitalName) are a little higher, at \(worstText).", comment: "Mondays")
         }
 
+        let worstDays = seen[worst.key] ?? 0
         var facts = [
-            "Most drift: \(name), \(WindowFormat.hm(worst.value)) on an average one, over \(count(seen[worst.key] ?? 0, "day")).",
-            "Other days average \(WindowFormat.hm(others)) of drift.",
+            String(localized: "Most drift: \(name), \(worstText) on an average one, over \(worstDays) days.", comment: "Mondays. Plural on days: 1 day / 2 days"),
+            String(localized: "Other days average \(othersText) of drift."),
         ]
         if let top, topPerDay >= 60 {
-            facts.append("Biggest distraction on \(name): \(top.value.name), \(WindowFormat.hm(topPerDay)) on an average one.")
+            facts.append(String(localized: "Biggest distraction on \(name): \(top.value.name), \(topText) on an average one.", comment: "Mondays"))
         }
 
         let order = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }
@@ -424,7 +461,7 @@ struct AskFactsBuilder {
             detail: detail,
             facts: facts + [basis],
             visual: .bars(bars, tone: .drift,
-                          summary: "Average drift by day of the week: most on \(name), \(WindowFormat.hm(worst.value))."),
+                          summary: String(localized: "Average drift by day of the week: most on \(name), \(worstText).", comment: "Mondays")),
             basis: basis,
             action: standsOut ? top.flatMap { limitAction(key: $0.key, host: $0.value.host, days: days) } : nil
         )
@@ -434,18 +471,18 @@ struct AskFactsBuilder {
 
     /// Lengths sessions are grouped by, in minutes.
     static let lengths: [(name: String, phrase: String, minutes: Range<Int>)] = [
-        ("Under 25 min", "under 25 minutes", 5..<25),
-        ("25 to 44 min", "of 25 to 44 minutes", 25..<45),
-        ("45 to 74 min", "of 45 to 74 minutes", 45..<75),
-        ("75 min or more", "of 75 minutes or more", 75..<Int.max),
+        (String(localized: "Under 25 min"), String(localized: "under 25 minutes", comment: "Goes inside a sentence: Sessions under 25 minutes"), 5..<25),
+        (String(localized: "25 to 44 min"), String(localized: "of 25 to 44 minutes", comment: "Goes inside a sentence: Sessions of 25 to 44 minutes"), 25..<45),
+        (String(localized: "45 to 74 min"), String(localized: "of 45 to 74 minutes", comment: "Goes inside a sentence: Sessions of 45 to 74 minutes"), 45..<75),
+        (String(localized: "75 min or more"), String(localized: "of 75 minutes or more", comment: "Goes inside a sentence: Sessions of 75 minutes or more"), 75..<Int.max),
     ]
 
     func sessionLength(_ sessions: [AskSession]) -> AskFacts {
         let counted = sessions.filter { $0.minutes >= 5 }
-        let basis = "\(Self.period) · \(count(counted.count, "session"))"
+        let basis = basisLine(sessions: counted.count)
         guard counted.count >= 3 else {
-            return AskFacts(lead: "Too few sessions to tell yet.",
-                            detail: "After a few more sessions, this compares how different lengths went.",
+            return AskFacts(lead: String(localized: "Too few sessions to tell yet."),
+                            detail: String(localized: "After a few more sessions, this compares how different lengths went."),
                             facts: [], basis: basis)
         }
 
@@ -458,28 +495,33 @@ struct AskFactsBuilder {
         }
         let rated = groups.filter { $0.sessions.count >= 2 && $0.counted >= 10 * 60 }
         guard let best = rated.max(by: { ($0.rate, $0.sessions.count) < ($1.rate, $1.sessions.count) }) else {
-            return AskFacts(lead: "Too few sessions to tell yet.",
-                            detail: "After a few more sessions, this compares how different lengths went.",
+            return AskFacts(lead: String(localized: "Too few sessions to tell yet."),
+                            detail: String(localized: "After a few more sessions, this compares how different lengths went."),
                             facts: [], basis: basis)
         }
 
-        let bestPhrase = Self.lengths[best.index].phrase
+        let bestPhrase = Self.lengths[best.index].phrase, bestRate = percent(best.rate), bestCount = best.sessions.count
+        func fact(_ phrase: String, _ rate: String, _ sessions: Int) -> String {
+            String(localized: "Sessions \(phrase): focus rate \(rate), \(sessions) sessions.", comment: "Plural on the last number: 1 session / 2 sessions. The phrase: of 25 to 44 minutes")
+        }
         let lead: String, detail: String
-        var facts = ["Sessions \(bestPhrase): focus rate \(percent(best.rate)), \(count(best.sessions.count, "session"))."]
+        var facts = [fact(bestPhrase, bestRate, bestCount)]
         if rated.count == 1 {
-            lead = "Only one length to go on so far."
-            detail = "Your sessions \(bestPhrase) run at \(percent(best.rate)) focus rate across \(count(best.sessions.count, "session")). "
-                + "Try a few shorter or longer ones to compare."
+            lead = String(localized: "Only one length to go on so far.")
+            detail = String(localized: "Your sessions \(bestPhrase) run at \(bestRate) focus rate across \(bestCount) sessions. Try a few shorter or longer ones to compare.",
+                            comment: "Plural on the last number: 1 session / 2 sessions. The phrase: of 25 to 44 minutes")
         } else {
-            lead = "Sessions \(bestPhrase)."
-            var text = "Your focus rate in those is \(percent(best.rate)) across \(count(best.sessions.count, "session"))"
+            lead = String(localized: "Sessions \(bestPhrase).", comment: "The phrase: of 25 to 44 minutes")
             if let worst = rated.min(by: { $0.rate < $1.rate }), worst.index != best.index {
-                text += ", against \(percent(worst.rate)) in sessions \(Self.lengths[worst.index].phrase)"
+                let worstRate = percent(worst.rate), worstPhrase = Self.lengths[worst.index].phrase
+                detail = String(localized: "Your focus rate in those is \(bestRate) across \(bestCount) sessions, against \(worstRate) in sessions \(worstPhrase).",
+                                comment: "Plural on the first number: 1 session / 2 sessions. The phrase: of 25 to 44 minutes")
+            } else {
+                detail = String(localized: "Your focus rate in those is \(bestRate) across \(bestCount) sessions.",
+                                comment: "Plural on sessions: 1 session / 2 sessions")
             }
-            detail = text + "."
             for group in rated where group.index != best.index {
-                facts.append("Sessions \(Self.lengths[group.index].phrase): focus rate \(percent(group.rate)), "
-                             + "\(count(group.sessions.count, "session")).")
+                facts.append(fact(Self.lengths[group.index].phrase, percent(group.rate), group.sessions.count))
             }
         }
         facts.append(Self.rateMeaning)
@@ -493,8 +535,7 @@ struct AskFactsBuilder {
             facts: facts + [basis],
             visual: .rows(groups.map { AskRow(name: Self.lengths[$0.index].name, value: $0.rate, text: percent($0.rate)) },
                           tone: .focus,
-                          summary: "Focus rate by session length: "
-                              + groups.map { "\(Self.lengths[$0.index].name) \(percent($0.rate))" }.joined(separator: ", ")),
+                          summary: String(localized: "Focus rate by session length: \(Self.nameList(groups.map { (Self.lengths[$0.index].name, percent($0.rate)) }))")),
             basis: basis,
             action: context.busy ? nil : startAction(suggested)
         )
@@ -507,14 +548,15 @@ struct AskFactsBuilder {
         let today = calendar.startOfDay(for: now)
         let monthStart = calendar.date(byAdding: .day, value: -(Self.lookbackDays - 1), to: today) ?? today
         let month = days.filter { $0.day >= monthStart }
-        let basis = "\(Self.period) · \(count(activeDays(month), "day")) tracked"
+        let basis = basisLine(daysTracked: activeDays(month))
         let seen = Self.targets(in: month)
         guard let target = Self.match(question, in: seen) else {
             let names = seen.sorted { $0.seconds > $1.seconds }.prefix(3).map(\.name)
-            var detail = "FocusGuard sees which app or site you used, when, and for how long."
-            if !names.isEmpty { detail += " Your most used lately are \(HabitFormat.list(names))." }
-            return AskFacts(lead: "Nothing by that name was tracked.", detail: detail, basis: basis,
-                            suggestion: names.first.map { "How much time on \($0) this week?" })
+            let list = HabitFormat.list(names)
+            let detail = names.isEmpty ? String(localized: "FocusGuard sees which app or site you used, when, and for how long.")
+                : String(localized: "FocusGuard sees which app or site you used, when, and for how long. Your most used lately are \(list).")
+            return AskFacts(lead: String(localized: "Nothing by that name was tracked."), detail: detail, basis: basis,
+                            suggestion: names.first.map { AskSuggestions.timeOn($0) })
         }
 
         func usage(_ day: DaySummary) -> ClassificationTally {
@@ -543,31 +585,37 @@ struct AskFactsBuilder {
 
         let asked: (seconds: TimeInterval, phrase: String)
         switch period {
-        case .today:    asked = (month.filter { $0.day == today }.reduce(0) { $0 + usage($1).total }, "today")
-        case .thisWeek: asked = (week(0), "this week")
-        case .lastWeek: asked = (week(1), "last week")
-        case .recent:   asked = (monthTally.total, "in the last 4 weeks")
+        case .today:    asked = (month.filter { $0.day == today }.reduce(0) { $0 + usage($1).total }, String(localized: "today", comment: "Goes inside a sentence: Slack: 2h today."))
+        case .thisWeek: asked = (week(0), String(localized: "this week", comment: "Goes inside a sentence: Slack: 2h this week."))
+        case .lastWeek: asked = (week(1), String(localized: "last week", comment: "Goes inside a sentence: Slack: 2h last week."))
+        case .recent:   asked = (monthTally.total, String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ..."))
         }
         let perDay = monthTally.total / Double(max(1, daysUsed))
         let kind: String
         switch monthTally.dominant {
-        case .focus:       kind = "focus"
-        case .distraction: kind = "drift"
-        case .neutral:     kind = "neutral time"
+        case .focus:       kind = String(localized: "focus", comment: "Goes inside a sentence: mostly counted as focus")
+        case .distraction: kind = String(localized: "drift", comment: "Goes inside a sentence: mostly counted as drift")
+        case .neutral:     kind = String(localized: "neutral time", comment: "Goes inside a sentence: mostly counted as neutral time")
         }
 
-        let lead = asked.seconds >= 60 ? "\(target.name): \(WindowFormat.hm(asked.seconds)) \(asked.phrase)."
-            : "\(target.name): none \(asked.phrase)."
+        let askedText = WindowFormat.hm(asked.seconds), perDayText = WindowFormat.hm(perDay), askedPhrase = asked.phrase
+        let lead = asked.seconds >= 60 ? String(localized: "\(target.name): \(askedText) \(askedPhrase).", comment: "An app or site, a compact duration, then when: today")
+            : String(localized: "\(target.name): none \(askedPhrase).", comment: "An app or site, then when: today")
         let detail = daysUsed > 0
-            ? "About \(WindowFormat.hm(perDay)) a day on the \(count(daysUsed, "day")) you used it lately, mostly counted as \(kind)."
-            : "You haven't used it in the last 4 weeks."
-        let weeks = [("This week", week(0)), ("Last week", week(1)), ("2 weeks ago", week(2)), ("3 weeks ago", week(3))]
+            ? String(localized: "About \(perDayText) a day on the \(daysUsed) days you used it lately, mostly counted as \(kind).",
+                     comment: "Plural on days: 1 day / 2 days. The last part is focus, drift or neutral time")
+            : String(localized: "You haven't used it in the last 4 weeks.")
+        let weeks = [(String(localized: "This week"), week(0)), (String(localized: "Last week"), week(1)),
+                     (String(localized: "2 weeks ago"), week(2)), (String(localized: "3 weeks ago"), week(3))]
         let widest = max(1, weeks.map(\.1).max() ?? 1)
         let facts = [
-            "Time on \(target.name) \(asked.phrase): \(WindowFormat.hm(asked.seconds)).",
-            "Days used in the last 4 weeks: \(daysUsed), about \(WindowFormat.hm(perDay)) on each.",
-            "Mostly counted as \(kind).",
-        ] + weeks.map { "\($0.0): \(WindowFormat.hm($0.1))." }
+            String(localized: "Time on \(target.name) \(askedPhrase): \(askedText).", comment: "An app or site, when (today), a compact duration"),
+            String(localized: "Days used in the last 4 weeks: \(daysUsed), about \(perDayText) on each."),
+            String(localized: "Mostly counted as \(kind).", comment: "Focus, drift or neutral time"),
+        ] + weeks.map { week -> String in
+            let time = WindowFormat.hm(week.1)
+            return String(localized: "\(week.0): \(time).", comment: "A fact: This week: 2h.")
+        }
         let action = target.isSite && monthTally.dominant == .distraction
             ? limitAction(dailySeconds: monthTally.total / Double(max(1, activeDays(month))), host: target.key) : nil
         return AskFacts(
@@ -576,8 +624,7 @@ struct AskFactsBuilder {
             facts: facts + [basis],
             visual: .rows(weeks.map { AskRow(name: $0.0, value: $0.1 / widest, text: WindowFormat.hm($0.1)) },
                           tone: monthTally.dominant == .distraction ? .drift : .focus,
-                          summary: "Time on \(target.name) by week: "
-                              + weeks.map { "\($0.0) \(WindowFormat.hm($0.1))" }.joined(separator: ", ")),
+                          summary: String(localized: "Time on \(target.name) by week: \(Self.nameList(weeks.map { ($0.0, WindowFormat.hm($0.1)) }))")),
             basis: basis,
             action: action
         )
@@ -624,7 +671,8 @@ struct AskFactsBuilder {
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".-")) }
             .joined(separator: " ") + " "
         let found = targets.compactMap { target -> (Target, Int)? in
-            let longest = target.names.filter { text.contains(" \($0) ") }.map(\.count).max()
+            // A trailing hyphen is for suffixes: Azerbaijani writes "YouTube-da".
+            let longest = target.names.filter { text.contains(" \($0) ") || text.contains(" \($0)-") }.map(\.count).max()
             return longest.map { (target, $0) }
         }
         return found.max { ($0.1, $0.0.isSite ? 1 : 0, $0.0.seconds) < ($1.1, $1.0.isSite ? 1 : 0, $1.0.seconds) }?.0
@@ -636,60 +684,67 @@ struct AskFactsBuilder {
         guard shipped else { return cantAnswer(suggestion: AskSuggestions.all[0]) }
         guard let trial = input.finished else {
             if let running = input.running {
-                return AskFacts(lead: "It's still running.",
-                                detail: "This week's experiment is \(running.experiment.shortName(locale: locale, calendar: calendar)). "
-                                    + "Ask again next week to see how it went.",
-                                basis: "From the weekly coach")
+                let name = running.experiment.shortName(locale: locale, calendar: calendar)
+                return AskFacts(lead: String(localized: "It's still running."),
+                                detail: String(localized: "This week's experiment is \(name). Ask again next week to see how it went."),
+                                basis: String(localized: "From the weekly coach"))
             }
-            return AskFacts(lead: "No experiment ran last week.",
-                            detail: "Try one from the weekly coach in Reports, then ask here the week after.",
-                            basis: "From the weekly coach", suggestion: "How did this week compare with last?")
+            return AskFacts(lead: String(localized: "No experiment ran last week."),
+                            detail: String(localized: "Try one from the weekly coach in Reports, then ask here the week after."),
+                            basis: String(localized: "From the weekly coach"), suggestion: AskSuggestions.all[2])
         }
 
         let name = trial.experiment.shortName(locale: locale, calendar: calendar)
-        let basis = "From the week of \(trial.week.start.formatted(dayMonth))"
+        let weekOf = trial.week.start.formatted(dayMonth)
+        let basis = String(localized: "From the week of \(weekOf)", comment: "A date: 3 November")
         guard let before = trial.before, let after = trial.after, let change = trial.change else {
-            return AskFacts(lead: "Too little to tell.",
-                            detail: "There wasn't enough tracked that week to measure \(name).", basis: basis)
+            return AskFacts(lead: String(localized: "Too little to tell."),
+                            detail: String(localized: "There wasn't enough tracked that week to measure \(name)."), basis: basis)
         }
         let lead: String
         if trial.improved {
-            lead = "Yes: \(change)."
-        } else if change == "no change" || change.hasPrefix("about the same") {
-            lead = "It made no difference."
+            lead = String(localized: "Yes: \(change).", comment: "A change: +9 pts")
+        } else if trial.madeNoDifference {
+            lead = String(localized: "It made no difference.")
         } else {
-            lead = "Not this time: \(change)."
+            lead = String(localized: "Not this time: \(change).", comment: "A change: -3 pts")
         }
-        let detail = "The experiment was \(name). "
-            + (trial.kept ? "You kept it on." : "It ended with the week, so it's off now.")
+        let detail = trial.kept ? String(localized: "The experiment was \(name). You kept it on.")
+            : String(localized: "The experiment was \(name). It ended with the week, so it's off now.")
 
         let metric = trial.experiment.metric
-        var facts = ["The experiment: \(name), in the week of \(trial.week.start.formatted(dayMonth)).",
-                     "Before: \(metricText(metric, before)). During it: \(metricText(metric, after)).",
-                     "Change: \(change).",
-                     trial.kept ? "It was kept on." : "It ended with its week."]
+        let beforeText = metricText(metric, before), afterText = metricText(metric, after)
+        var facts = [String(localized: "The experiment: \(name), in the week of \(weekOf)."),
+                     String(localized: "Before: \(beforeText). During it: \(afterText)."),
+                     String(localized: "Change: \(change)."),
+                     trial.kept ? String(localized: "It was kept on.") : String(localized: "It ended with its week.")]
         if let running = input.running {
-            facts.append("This week's experiment: \(running.experiment.shortName(locale: locale, calendar: calendar)).")
+            let current = running.experiment.shortName(locale: locale, calendar: calendar)
+            facts.append(String(localized: "This week's experiment: \(current)."))
         }
 
         var visual: AskVisual?
+        let beforeName = String(localized: "Before"), duringName = String(localized: "During it")
         switch metric {
         case .sessionRate:
-            visual = .rows([AskRow(name: "Before", value: before, text: metricText(metric, before)),
-                            AskRow(name: "During it", value: after, text: metricText(metric, after))],
-                           tone: .focus, summary: "Focus rate before \(percent(before)), during it \(percent(after)).")
+            let then = percent(before), now = percent(after)
+            visual = .rows([AskRow(name: beforeName, value: before, text: beforeText),
+                            AskRow(name: duringName, value: after, text: afterText)],
+                           tone: .focus, summary: String(localized: "Focus rate before \(then), during it \(now)."))
         case .siteMinutes:
             let widest = max(1, before, after)
-            visual = .rows([AskRow(name: "Before", value: before / widest, text: metricText(metric, before)),
-                            AskRow(name: "During it", value: after / widest, text: metricText(metric, after))],
-                           tone: .drift, summary: "Minutes a day before \(Int(before.rounded())), during it \(Int(after.rounded())).")
+            let then = Int(before.rounded()), now = Int(after.rounded())
+            visual = .rows([AskRow(name: beforeName, value: before / widest, text: beforeText),
+                            AskRow(name: duringName, value: after / widest, text: afterText)],
+                           tone: .drift, summary: String(localized: "Minutes a day before \(then), during it \(now)."))
         case .firstSession:
             visual = nil
         case .callDayFocus, .weekdayFocus:
             let widest = max(1, before, after)
-            visual = .rows([AskRow(name: "Before", value: before / widest, text: metricText(metric, before)),
-                            AskRow(name: "During it", value: after / widest, text: metricText(metric, after))],
-                           tone: .focus, summary: "Focused \(WindowFormat.hm(before)) a day before, \(WindowFormat.hm(after)) during it.")
+            let then = WindowFormat.hm(before), now = WindowFormat.hm(after)
+            visual = .rows([AskRow(name: beforeName, value: before / widest, text: beforeText),
+                            AskRow(name: duringName, value: after / widest, text: afterText)],
+                           tone: .focus, summary: String(localized: "Focused \(then) a day before, \(now) during it."))
         }
         return AskFacts(lead: lead, detail: detail, facts: facts + [basis], visual: visual, basis: basis)
     }
@@ -697,33 +752,52 @@ struct AskFactsBuilder {
     private func metricText(_ metric: CoachMetric, _ value: Double) -> String {
         switch metric {
         case .sessionRate:  return percent(value)
-        case .siteMinutes:  return "\(Int(value.rounded())) min a day"
+        case .siteMinutes:
+            let minutes = Int(value.rounded())
+            return String(localized: "\(minutes) min a day")
         case .firstSession: return clock(minutes: Int(value.rounded()))
-        case .callDayFocus, .weekdayFocus: return "\(WindowFormat.hm(value)) focused a day"
+        case .callDayFocus, .weekdayFocus:
+            let time = WindowFormat.hm(value)
+            return String(localized: "\(time) focused a day")
         }
     }
 
     // MARK: Questions it can't answer
 
     func cantAnswer(suggestion: String?) -> AskFacts {
-        AskFacts(lead: "That's not something FocusGuard can see.",
-                 detail: "It sees which app or site you used, when, and for how long. It can't see what you did inside them.",
-                 basis: "Worked out on this Mac",
+        AskFacts(lead: String(localized: "That's not something FocusGuard can see."),
+                 detail: String(localized: "It sees which app or site you used, when, and for how long. It can't see what you did inside them."),
+                 basis: String(localized: "Worked out on this Mac"),
                  suggestion: suggestion)
     }
 
     // MARK: - Pieces
 
-    static let rateMeaning = "Focus rate is focused time against focused plus drifted time."
+    static let rateMeaning = String(localized: "Focus rate is focused time against focused plus drifted time.")
 
     private func tooLittle(_ basis: String) -> AskFacts {
-        AskFacts(lead: "Too little tracked to tell yet.",
-                 detail: "Ask again after a few more days of work with FocusGuard running.",
+        AskFacts(lead: String(localized: "Too little tracked to tell yet."),
+                 detail: String(localized: "Ask again after a few more days of work with FocusGuard running."),
                  basis: basis)
     }
 
     private func basisLine(_ days: [DaySummary], sessions: Int) -> String {
-        sessions > 0 ? "\(Self.period) · \(count(sessions, "session"))" : "\(Self.period) · \(count(activeDays(days), "day")) tracked"
+        sessions > 0 ? basisLine(sessions: sessions) : basisLine(daysTracked: activeDays(days))
+    }
+
+    private func basisLine(sessions: Int) -> String {
+        let period = Self.period
+        return String(localized: "\(period) · \(sessions) sessions", comment: "Plural on sessions: 1 session / 2 sessions. From the last 4 weeks · 36 sessions")
+    }
+
+    private func basisLine(daysTracked days: Int) -> String {
+        let period = Self.period
+        return String(localized: "\(period) · \(days) days tracked", comment: "Plural on days: 1 day tracked / 2 days tracked. From the last 4 weeks · 12 days tracked")
+    }
+
+    /// "Slack 2h, Mail 40m", a chart's values for VoiceOver.
+    private static func nameList(_ items: [(name: String, value: String)]) -> String {
+        items.map { "\($0.name) \($0.value)" }.joined(separator: ", ")
     }
 
     private func tracked(_ day: DaySummary) -> TimeInterval {
@@ -735,8 +809,8 @@ struct AskFactsBuilder {
     }
 
     private func startAction(_ minutes: Int) -> AskAction {
-        AskAction(kind: .startSession(minutes: minutes), title: "Start a \(minutes)-minute session",
-                  doneTitle: "Session started")
+        AskAction(kind: .startSession(minutes: minutes), title: String(localized: "Start a \(minutes)-minute session"),
+                  doneTitle: String(localized: "Session started"))
     }
 
     /// A daily limit on a distracting site, sized from its usual day.
@@ -754,16 +828,12 @@ struct AskFactsBuilder {
               !context.limitedSites.contains(where: { Classifier.host(host, matches: $0) }) else { return nil }
         let minutes = min(60, max(10, Int((dailySeconds / 60 * 0.6 / 5).rounded()) * 5))
         return AskAction(kind: .limit(host: host, minutes: minutes),
-                         title: "Limit \(host) to \(minutes) minutes a day",
-                         doneTitle: "\(host) is limited to \(minutes) minutes a day")
+                         title: String(localized: "Limit \(host) to \(minutes) minutes a day"),
+                         doneTitle: String(localized: "\(host) is limited to \(minutes) minutes a day"))
     }
 
     private func percent(_ rate: Double) -> String {
-        "\(Int((rate * 100).rounded()))%"
-    }
-
-    private func count(_ n: Int, _ noun: String) -> String {
-        WindowFormat.count(n, noun)
+        CoachDraft.percent(rate)
     }
 
     /// "09:00", in the user's clock style.
@@ -779,11 +849,12 @@ struct AskFactsBuilder {
 
     /// "09:00 to 12:00".
     private func span(_ hours: Range<Int>) -> String {
-        "\(clock(hours.lowerBound)) to \(clock(hours.upperBound))"
+        let from = clock(hours.lowerBound), to = clock(hours.upperBound)
+        return String(localized: "\(from) to \(to)", comment: "Two times: 09:00 to 12:00")
     }
 
     private func partOfDay(_ hour: Int) -> String {
-        hour < 12 ? "Mornings" : hour < 17 ? "Afternoons" : "Evenings"
+        hour < 12 ? String(localized: "Mornings") : hour < 17 ? String(localized: "Afternoons") : String(localized: "Evenings")
     }
 
     private var localizedCalendar: Calendar {
@@ -794,9 +865,9 @@ struct AskFactsBuilder {
 
     /// "Friday", or "Fridays".
     private func weekdayName(_ weekday: Int, plural: Bool = false) -> String {
+        if plural { return FocusGoal.pluralWeekday(weekday, locale: locale, calendar: calendar) }
         let symbols = localizedCalendar.weekdaySymbols
-        let name = symbols.indices.contains(weekday - 1) ? symbols[weekday - 1] : "That day"
-        return plural ? name + "s" : name
+        return symbols.indices.contains(weekday - 1) ? symbols[weekday - 1] : String(localized: "That day")
     }
 
     private var dayMonth: Date.FormatStyle {
@@ -810,14 +881,28 @@ struct AskFactsBuilder {
 
 /// The questions the page offers.
 enum AskSuggestions {
+    /// In the same order as `intents`.
     static let all = [
-        "When do I focus best?",
-        "What pulls me away most?",
-        "How did this week compare with last?",
-        "Which day drifts most, and why?",
-        "How long should my sessions be?",
-        "Did last week's experiment work?",
+        String(localized: "When do I focus best?"),
+        String(localized: "What pulls me away most?"),
+        String(localized: "How did this week compare with last?"),
+        String(localized: "Which day drifts most, and why?"),
+        String(localized: "How long should my sessions be?"),
+        String(localized: "Did last week's experiment work?"),
     ]
+
+    private static let intents: [AskIntent] = [.bestHours, .pullsAway, .weekCompare, .driftDay, .sessionLength, .coachExperiment]
+
+    /// "How much time on Slack this week?", offered when a name wasn't found.
+    static func timeOn(_ name: String) -> String {
+        String(localized: "How much time on \(name) this week?")
+    }
+
+    /// What one of the page's own questions asks, whatever the language.
+    static func intent(of question: String) -> AskIntent? {
+        let asked = AskText.normalized(question).trimmingCharacters(in: .whitespacesAndNewlines)
+        return all.firstIndex { AskText.normalized($0) == asked }.map { intents[$0] }
+    }
 
     /// Up to `limit` suggestions not asked yet, in order; once all have
     /// been asked, all again.

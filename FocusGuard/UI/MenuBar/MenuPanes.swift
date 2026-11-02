@@ -157,11 +157,6 @@ func formatDuration(_ seconds: TimeInterval) -> String {
     return String(localized: "\(h)h \(m)m", comment: "Compact duration")
 }
 
-/// "1 day", "3 days": a count with its noun in the right number.
-func counted(_ count: Int, _ noun: String, plural: String? = nil) -> String {
-    "\(count) \(count == 1 ? noun : plural ?? noun + "s")"
-}
-
 func kindColor(_ classification: Classification) -> Color {
     switch classification {
     case .focus:       return Theme.focus

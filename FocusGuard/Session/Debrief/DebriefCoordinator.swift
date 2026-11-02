@@ -54,7 +54,7 @@ final class DebriefCoordinator {
     static let minimumTracked: TimeInterval = 2 * 60
 
     init(context: ModelContext, isOptedOut: @escaping (String) -> Bool,
-         model: @escaping () -> (any OnDeviceModel)? = OnDeviceAI.model,
+         model: @escaping () -> (any OnDeviceModel)? = OnDeviceAI.writer,
          entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
         self.context = context
         self.isOptedOut = isOptedOut

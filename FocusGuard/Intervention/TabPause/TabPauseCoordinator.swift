@@ -41,6 +41,8 @@ enum PausedPage {
                 ("rate", String(summary.focusPercent)),
             ]
         }
+        // The page has its own strings (paused.html); it reads English by default.
+        if OnDeviceAI.appLanguage != "en" { fields.append(("lang", OnDeviceAI.appLanguage)) }
         let fragment = fields.map { "\($0)=\(encode($1))" }.joined(separator: "&")
         var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
         components?.percentEncodedFragment = fragment

@@ -140,7 +140,8 @@ struct WorkLogContent: View {
     private var appleIntelligenceNote: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles").foregroundStyle(Theme.focus).accessibilityHidden(true)
-            Text("Needs Apple Intelligence (macOS 26) to write debriefs. Goals, times and apps still show here.")
+            Text(OnDeviceAI.isAvailable ? "Debriefs aren't written in this language yet. Goals, times and apps still show here."
+                 : "Needs Apple Intelligence (macOS 26) to write debriefs. Goals, times and apps still show here.")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.bodyText)
                 .lineLimit(1)
