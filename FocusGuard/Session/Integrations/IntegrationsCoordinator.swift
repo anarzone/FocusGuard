@@ -30,6 +30,10 @@ final class IntegrationsCoordinator {
     /// Why a session's task was left as it was, until the next try.
     private(set) var tickNotes: [UUID: String] = [:]
 
+    /// Signing in to GitHub and Linear; nil keeps the pasted token alone,
+    /// until the app is registered.
+    @ObservationIgnored let githubSignIn: GitHubSignIn?
+    @ObservationIgnored let linearSignIn: LinearSignIn?
     @ObservationIgnored let calendarWriter: SessionCalendarWriter
     @ObservationIgnored private let calendar: CalendarStore
     @ObservationIgnored private let reminders: ReminderStore
@@ -57,14 +61,23 @@ final class IntegrationsCoordinator {
     /// The next meeting is looked up this often.
     static let meetingInterval: TimeInterval = 60
 
-    /// - Parameter tasks: where tasks come from; Reminders (from
-    ///   `reminders`), Things, Todoist, Linear, GitHub and Jira when nil.
+    /// - Parameters:
+    ///   - tasks: where tasks come from; Reminders (from `reminders`), Things,
+    ///     Todoist, Linear, GitHub and Jira when nil.
+    ///   - githubSignIn: its tokens are the ones `tasks` should use. The app's
+    ///     own, from Info.plist, when `tasks` is nil.
+    ///   - linearSignIn: the same.
     init(calendar: CalendarStore, reminders: ReminderStore, tasks: [TaskStore]? = nil,
-         entitlements: Entitlements? = nil, defaults: UserDefaults = .standard) {
+         entitlements: Entitlements? = nil, defaults: UserDefaults = .standard,
+         githubSignIn: GitHubSignIn? = nil, linearSignIn: LinearSignIn? = nil) {
         self.calendar = calendar
         self.reminders = reminders
-        let stores = tasks ?? [ReminderTasks(store: reminders, defaults: defaults), ThingsTasks(), TodoistTasks(), LinearTasks(),
-                                GitHubTasks(), JiraTasks(defaults: defaults)]
+        let github = tasks == nil ? GitHubSignIn.bundled() : githubSignIn
+        let linear = tasks == nil ? LinearSignIn.bundled() : linearSignIn
+        self.githubSignIn = github
+        self.linearSignIn = linear
+        let stores = tasks ?? [ReminderTasks(store: reminders, defaults: defaults), ThingsTasks(), TodoistTasks(),
+                               LinearTasks(signIn: linear?.tokens), GitHubTasks(signIn: github?.tokens), JiraTasks(defaults: defaults)]
         self.taskStores = Dictionary(stores.map { ($0.source, $0) }, uniquingKeysWith: { first, _ in first })
         self.defaults = defaults
         self.entitlements = entitlements ?? .shared
@@ -73,6 +86,8 @@ final class IntegrationsCoordinator {
            let saved = try? JSONDecoder().decode([String: TaskLink].self, from: data) {
             taskLinks = Dictionary(uniqueKeysWithValues: saved.compactMap { key, link in UUID(uuidString: key).map { ($0, link) } })
         }
+        github?.onConnected = { [weak self] in self?.signedIn(.github) }
+        linear?.onConnected = { [weak self] in self?.signedIn(.linear) }
     }
 
     convenience init() {
@@ -346,6 +361,36 @@ final class IntegrationsCoordinator {
     /// Whether a source that signs in has its token saved.
     func isConnected(_ source: TaskSource) -> Bool {
         (taskStores[source] as? ConnectedTaskStore)?.hasToken ?? false
+    }
+
+    /// Connected by signing in, rather than with a pasted token.
+    func isSignedIn(_ source: TaskSource) -> Bool {
+        (taskStores[source] as? SignInTaskStore)?.isSignedIn ?? false
+    }
+
+    /// The service ended the sign-in; Settings offers to connect again.
+    func wasSignedOut(_ source: TaskSource) -> Bool {
+        (taskStores[source] as? SignInTaskStore)?.wasSignedOut ?? false
+    }
+
+    /// Settings offers signing in to this source, not just a pasted token.
+    func offersSignIn(_ source: TaskSource) -> Bool {
+        switch source {
+        case .github: return githubSignIn != nil
+        case .linear: return linearSignIn != nil
+        default:      return false
+        }
+    }
+
+    /// A sign-in finished: its tasks are read straight after.
+    private func signedIn(_ source: TaskSource) {
+        setProblem(nil, for: source)
+        Task { await refreshTasks() }
+    }
+
+    /// Whether GitHub's sign-in reaches any repository, for Settings.
+    func githubRepositoryAccess() async -> RepositoryAccess {
+        await (taskStores[.github] as? GitHubTasks)?.repositoryAccess() ?? .unknown
     }
 
     /// Checks a pasted token with the service and keeps it if it's taken;

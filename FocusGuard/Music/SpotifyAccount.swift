@@ -496,16 +496,25 @@ enum PKCE {
 
 // MARK: - Loopback receiver
 
-/// A one-shot HTTP listener on 127.0.0.1 for the sign-in redirect. Only
-/// reachable from this Mac, and gone once the redirect arrives or after five
-/// minutes.
+/// A one-shot HTTP listener on 127.0.0.1 for the sign-in redirect, Spotify's
+/// and Linear's. Only reachable from this Mac, and gone once the redirect
+/// arrives or after five minutes.
 final class LoopbackReceiver: @unchecked Sendable {
+    /// What the browser shows, with a code or without one.
+    private let signedIn: String
+    private let refused: String
     private var listener: NWListener?
     private var continuation: CheckedContinuation<[String: String], Error>?
     /// A redirect that arrived before anyone waited for it (an account that
     /// already approved FocusGuard bounces straight back).
     private var early: Result<[String: String], Error>?
-    private let queue = DispatchQueue(label: "com.anar.focusguard.spotify-signin")
+    private let queue = DispatchQueue(label: "com.anar.focusguard.loopback-signin")
+
+    init(signedIn: String = String(localized: "Signed in to Spotify. You can close this tab and go back to FocusGuard."),
+         refused: String = String(localized: "FocusGuard didn't get permission from Spotify. You can close this tab.")) {
+        self.signedIn = signedIn
+        self.refused = refused
+    }
 
     /// Listens on 127.0.0.1, on `port` or any free one if nil.
     func start(port: UInt16? = nil) async throws -> UInt16 {
@@ -558,9 +567,7 @@ final class LoopbackReceiver: @unchecked Sendable {
             let request = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
             let line = request.components(separatedBy: "\r\n").first ?? ""
             let parameters = PKCE.callbackParameters(fromRequestLine: line)
-            let body = parameters?["code"] != nil
-                ? String(localized: "Signed in to Spotify. You can close this tab and go back to FocusGuard.")
-                : String(localized: "FocusGuard didn't get permission from Spotify. You can close this tab.")
+            let body = (parameters?["code"] != nil ? self?.signedIn : self?.refused) ?? ""
             let html = "<!doctype html><meta charset=utf-8><title>FocusGuard</title>"
                 + "<body style=\"font:16px -apple-system;margin:4em;text-align:center\">\(body)</body>"
             let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"

@@ -43,6 +43,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>FGDiscordApplicationID</key>
 	<string>$(DISCORD_APPLICATION_ID)</string>
+	<key>FGGitHubAppSlug</key>
+	<string>$(GITHUB_APP_SLUG)</string>
+	<key>FGGitHubClientID</key>
+	<string>$(GITHUB_CLIENT_ID)</string>
+	<key>FGLinearClientID</key>
+	<string>$(LINEAR_CLIENT_ID)</string>
 	<key>FGSlackClientID</key>
 	<string>$(SLACK_CLIENT_ID)</string>
 	<key>LSMinimumSystemVersion</key>

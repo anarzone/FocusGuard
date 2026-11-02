@@ -8,13 +8,19 @@ enum TaskTokens {
     static func keychain(for source: TaskSource) -> TokenStore {
         KeychainTokenStore(service: service, account: source.rawValue)
     }
+
+    /// A sign-in's tokens (`RotatingTokens`), apart from a pasted token.
+    static func signInKeychain(for source: TaskSource) -> TokenStore {
+        KeychainTokenStore(service: service, account: "\(source.rawValue).sign-in")
+    }
 }
 
 /// Requests to Todoist, Linear, GitHub and Jira.
 enum TaskWeb {
     /// The body and status code; a failed connection can't be reached.
-    static func send(_ request: URLRequest, session: URLSession) async throws -> (Data, Int) {
-        let (data, response) = try await exchange(request, session: session)
+    static func send(_ request: URLRequest, session: URLSession,
+                     staysOn: (@Sendable (URL) -> Bool)? = nil) async throws -> (Data, Int) {
+        let (data, response) = try await exchange(request, session: session, staysOn: staysOn)
         return (data, response.statusCode)
     }
 

@@ -1,42 +1,79 @@
 import Foundation
 
 /// Open GitHub issues assigned to the user across repositories, through its
-/// REST API with a personal access token, kept in the Keychain. github.com
-/// only. Done closes the issue as completed; Undo reopens it.
+/// REST API with a sign-in (`GitHubSignIn`) or a personal access token, kept
+/// in the Keychain. github.com only. Done closes the issue as completed; Undo
+/// reopens it.
 ///
-/// `GET /issues` and `GET /user` work with classic and fine-grained tokens.
-/// A fine-grained token only sees one owner's repositories, and closing an
-/// issue needs its "Issues" write permission; a classic token needs `repo`.
-final class GitHubTasks: TokenTaskStore {
+/// `GET /issues` and `GET /user` work with classic and fine-grained tokens,
+/// and with a GitHub App's user token. A fine-grained token only sees one
+/// owner's repositories, and closing an issue needs its "Issues" write
+/// permission; a classic token needs `repo`. A user token only reaches what
+/// the user and the app both can, so nothing until the app is installed.
+final class GitHubTasks: SignInTaskStore {
     static let base = URL(string: "https://api.github.com")!
     static let apiVersion = "2022-11-28"
     /// Issues come 100 to a page, oldest first; this many pages at most.
     static let pageSize = 100
     static let maxPages = 3
+    /// Installations looked through for a repository, at most.
+    static let maxInstallations = 5
 
     let source = TaskSource.github
-    private let tokens: TokenStore
+    private let credentials: TaskCredentials
     private let session: URLSession
 
-    init(tokens: TokenStore = TaskTokens.keychain(for: .github), session: URLSession = .shared) {
-        self.tokens = tokens
+    init(tokens: TokenStore = TaskTokens.keychain(for: .github), signIn: RotatingTokens? = nil, session: URLSession = .shared) {
+        self.credentials = TaskCredentials(personal: tokens, signIn: signIn)
         self.session = session
     }
 
-    var hasToken: Bool { tokens.read()?.isEmpty == false }
+    var hasToken: Bool { credentials.hasToken }
+    var isSignedIn: Bool { credentials.isSignedIn }
+    var wasSignedOut: Bool { credentials.wasSignedOut }
 
     func openTasks() async throws -> [TaskItem] {
-        guard let token = tokens.read(), !token.isEmpty else { return [] }
         var items: [TaskItem] = []
-        var request = Self.issuesRequest(token: token)
+        var build: (String) -> URLRequest? = { Self.issuesRequest(token: $0) }
         for _ in 0..<Self.maxPages {
-            let (data, response) = try await TaskWeb.exchange(request, session: session, staysOn: Self.isGitHub)
+            guard let (data, response) = try await send(build) else { break }
             try Self.check(response, data)
             items += try Self.decode([RawIssue].self, from: data).compactMap(\.item)
             guard let next = Self.nextPage(response.value(forHTTPHeaderField: "Link")) else { break }
-            request = Self.authorized(next, token: token)
+            build = { Self.authorized(next, token: $0) }
         }
         return items
+    }
+
+    /// One request with a token good to use now. A sign-in's token turned down
+    /// with a 401 is refreshed and the request tried once more. Nil when not
+    /// connected.
+    private func send(_ build: (String) -> URLRequest?) async throws -> (Data, HTTPURLResponse)? {
+        guard let credential = try await credentials.current(), let request = build(credential.token) else { return nil }
+        let answer = try await TaskWeb.exchange(request, session: session, staysOn: Self.isGitHub)
+        guard answer.1.statusCode == 401, let fresh = try await credentials.renewed(after: credential),
+              let again = build(fresh.token) else { return answer }
+        return try await TaskWeb.exchange(again, session: session, staysOn: Self.isGitHub)
+    }
+
+    /// Whether a sign-in reaches any repository at all, for the line in
+    /// Settings that says to install the app. A pasted token isn't asked about.
+    func repositoryAccess() async -> RepositoryAccess {
+        guard isSignedIn,
+              let (data, response) = try? await send({ Self.installationsRequest(token: $0) }),
+              (200..<300).contains(response.statusCode),
+              let list = try? Self.decode(RawInstallations.self, from: data) else { return .unknown }
+        var failed = false
+        for installation in list.installations.filter({ $0.suspendedAt == nil }).prefix(Self.maxInstallations) {
+            guard let (data, response) = try? await send({ Self.repositoriesRequest(token: $0, installation: installation.id) }),
+                  (200..<300).contains(response.statusCode),
+                  let repositories = try? Self.decode(RawRepositories.self, from: data) else {
+                failed = true
+                continue
+            }
+            if repositories.totalCount > 0 { return .reachable }
+        }
+        return failed ? .unknown : .noRepositories
     }
 
     func setCompleted(_ task: TaskItem, _ completed: Bool) async -> Bool {
@@ -44,9 +81,7 @@ final class GitHubTasks: TokenTaskStore {
     }
 
     func change(_ task: TaskItem, completed: Bool) async -> TaskChange {
-        guard let token = tokens.read(), !token.isEmpty,
-              let request = Self.stateRequest(token: token, id: task.id, open: !completed),
-              let (data, response) = try? await TaskWeb.exchange(request, session: session, staysOn: Self.isGitHub)
+        guard let (data, response) = try? await send({ Self.stateRequest(token: $0, id: task.id, open: !completed) })
         else { return .failed }
         switch response.statusCode {
         case 200..<300:
@@ -55,7 +90,9 @@ final class GitHubTasks: TokenTaskStore {
             let saved = try? Self.decode(RawIssue.self, from: data)
             return saved?.state == (completed ? "closed" : "open") ? .saved : .failed
         case 403 where !Self.isRateLimited(response, data), 404, 410, 422:
-            return .refused(String(localized: "GitHub refused the change. The token needs write access to this repository's issues."))
+            return .refused(isSignedIn
+                ? String(localized: "GitHub refused the change. You or FocusGuard's GitHub app may not have write access to this repository's issues.")
+                : String(localized: "GitHub refused the change. The token needs write access to this repository's issues."))
         default:
             return .failed
         }
@@ -67,7 +104,7 @@ final class GitHubTasks: TokenTaskStore {
         do {
             let (data, response) = try await TaskWeb.exchange(Self.userRequest(token: token), session: session, staysOn: Self.isGitHub)
             try Self.check(response, data)
-            tokens.write(token)
+            credentials.personal.write(token)
             return .accepted
         } catch TaskSourceProblem.rejected {
             return .rejected
@@ -76,7 +113,9 @@ final class GitHubTasks: TokenTaskStore {
         }
     }
 
-    func disconnect() { tokens.delete() }
+    /// Clears the Keychain. A sign-in stays on GitHub's side, which only
+    /// revokes with the app's secret (`GitHubDeviceFlow`).
+    func disconnect() { credentials.forget() }
 
     // MARK: - Requests
 
@@ -90,6 +129,16 @@ final class GitHubTasks: TokenTaskStore {
     /// Takes any token, whatever it may do: the check before it's kept.
     static func userRequest(token: String) -> URLRequest {
         authorized(TaskWeb.url(base, path: "user"), token: token)
+    }
+
+    static func installationsRequest(token: String) -> URLRequest {
+        authorized(TaskWeb.url(base, path: "user/installations", query: [URLQueryItem(name: "per_page", value: "100")]), token: token)
+    }
+
+    /// One repository is enough: the answer has the total.
+    static func repositoriesRequest(token: String, installation: Int) -> URLRequest {
+        authorized(TaskWeb.url(base, path: "user/installations/\(installation)/repositories",
+                               query: [URLQueryItem(name: "per_page", value: "1")]), token: token)
     }
 
     /// Closes the issue as completed, or reopens it; nil for an id that
@@ -167,6 +216,21 @@ final class GitHubTasks: TokenTaskStore {
         }
     }
 
+    /// `GET /user/installations`.
+    struct RawInstallations: Decodable {
+        struct Installation: Decodable {
+            let id: Int
+            let suspendedAt: String?
+        }
+
+        let installations: [Installation]
+    }
+
+    /// `GET /user/installations/{id}/repositories`.
+    struct RawRepositories: Decodable {
+        let totalCount: Int
+    }
+
     struct RawIssue: Decodable {
         struct Repository: Decodable {
             let name: String
@@ -202,4 +266,13 @@ final class GitHubTasks: TokenTaskStore {
             return parts.count == 2 ? parts.joined(separator: "/") : nil
         }
     }
+}
+
+/// Whether a sign-in can reach any of the user's repositories.
+enum RepositoryAccess: Equatable, Sendable {
+    case reachable
+    /// The app isn't installed anywhere the user can see.
+    case noRepositories
+    /// Couldn't tell, or not signed in.
+    case unknown
 }

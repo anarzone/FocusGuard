@@ -64,6 +64,12 @@ targets:
         # hides that app's row.
         FGSlackClientID: $(SLACK_CLIENT_ID)
         FGDiscordApplicationID: $(DISCORD_APPLICATION_ID)
+        # Signing in to GitHub (GitHub App, device flow) and Linear (OAuth with
+        # PKCE) for tasks as goals; neither has a secret. Empty keeps only the
+        # pasted token.
+        FGGitHubClientID: $(GITHUB_CLIENT_ID)
+        FGGitHubAppSlug: $(GITHUB_APP_SLUG)
+        FGLinearClientID: $(LINEAR_CLIENT_ID)
         CFBundleDisplayName: FocusGuard
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -106,6 +112,13 @@ targets:
         SLACK_CLIENT_ID: "12167211366341.12482406261761"
         # Application ID of FocusGuard's Discord application; empty hides Discord.
         DISCORD_APPLICATION_ID: "1566805256136957962"
+        # FocusGuard's GitHub App: public Client ID, and the slug in its
+        # github.com/apps/ address. Empty keeps only the pasted token.
+        GITHUB_CLIENT_ID: "Iv23liM1a28t1I8Roend"
+        GITHUB_APP_SLUG: "focusguard-for-mac"
+        # Public Client ID of FocusGuard's Linear app (redirect
+        # http://127.0.0.1:47182/callback); empty keeps only the pasted key.
+        LINEAR_CLIENT_ID: "696ca61ec7656993a2cf59722fcd3e58"
         GENERATE_INFOPLIST_FILE: NO
         COMBINE_HIDPI_IMAGES: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

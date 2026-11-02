@@ -487,6 +487,22 @@
         }
       }
     },
+    "%@ didn't connect. Try again" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ qoşulmadı. Yenidən cəhd edin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde nicht verbunden. Versuch es noch mal"
+          }
+        }
+      }
+    },
     "%@ didn't take that key. Check it and try again." : {
       "localizations" : {
         "az" : {
@@ -1612,6 +1628,22 @@
         }
       }
     },
+    "%@ no longer takes this sign-in" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ artıq bu girişi qəbul etmir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akzeptiert diese Anmeldung nicht mehr"
+          }
+        }
+      }
+    },
     "%@ no longer takes this token" : {
       "localizations" : {
         "az" : {
@@ -1785,6 +1817,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ short of your %2$@ goal."
+          }
+        }
+      }
+    },
+    "%@ signed FocusGuard out. Connect again" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ FocusGuard-u hesabdan çıxardı. Yenidən qoşun"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ hat FocusGuard abgemeldet. Verbinde es erneut"
           }
         }
       }
@@ -10266,6 +10314,22 @@
         }
       }
     },
+    "Asking GitHub for a code…" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub-dan kod istənilir…"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub wird nach einem Code gefragt …"
+          }
+        }
+      }
+    },
     "Asks before ending the session" : {
       "localizations" : {
         "az" : {
@@ -12372,6 +12436,38 @@
         }
       }
     },
+    "Connect your GitHub account" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub hesabınızı qoşun"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinde dein GitHub-Konto"
+          }
+        }
+      }
+    },
+    "Connect your Linear account" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear hesabınızı qoşun"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbinde dein Linear-Konto"
+          }
+        }
+      }
+    },
     "Connected" : {
       "localizations" : {
         "az" : {
@@ -13786,6 +13882,22 @@
         }
       }
     },
+    "Disconnect, then connect again" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantını kəsin, sonra yenidən qoşun"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trenne die Verbindung und verbinde dann erneut"
+          }
+        }
+      }
+    },
     "Disconnect, then paste a new one" : {
       "localizations" : {
         "az" : {
@@ -15055,6 +15167,22 @@
         }
       }
     },
+    "Enter this code on GitHub" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu kodu GitHub-da daxil edin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib diesen Code bei GitHub ein"
+          }
+        }
+      }
+    },
     "Enter your licence key" : {
       "localizations" : {
         "az" : {
@@ -16222,6 +16350,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard bittet Slack nur um zwei Dinge: deinen Status zu ändern und deine Mitteilungen zu pausieren. Deine Nachrichten und Channels kann es nicht lesen."
+          }
+        }
+      }
+    },
+    "FocusGuard can't see any repositories yet" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard hələ heç bir repozitoriyanı görmür"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard sieht noch keine Repositorys"
+          }
+        }
+      }
+    },
+    "FocusGuard didn't get permission from Linear. You can close this tab." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard Linear-dan icazə ala bilmədi. Bu tabı bağlaya bilərsiniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard hat von Linear keine Berechtigung erhalten. Du kannst diesen Tab schließen."
           }
         }
       }
@@ -17993,6 +18153,38 @@
         }
       }
     },
+    "GitHub refused the change. You or FocusGuard's GitHub app may not have write access to this repository's issues." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub dəyişikliyi qəbul etmədi. Sizin və ya FocusGuard-un GitHub tətbiqinin bu repozitoriyanın tapşırıqlarına yazma icazəsi olmaya bilər."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub hat die Änderung abgelehnt. Dir oder der GitHub-App von FocusGuard fehlt vielleicht der Schreibzugriff auf die Issues dieses Repositorys."
+          }
+        }
+      }
+    },
+    "GitHub sign-in isn't available right now. Try again, or use a token instead." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub-a daxil olmaq hazırda mümkün deyil. Yenidən cəhd edin və ya əvəzinə token istifadə edin."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anmeldung bei GitHub ist gerade nicht möglich. Versuch es noch mal oder verwende stattdessen ein Token."
+          }
+        }
+      }
+    },
     "Give a session a goal when it starts and say how it went when it ends. FocusGuard turns that into a work log, a standup draft and a timesheet." : {
       "localizations" : {
         "az" : {
@@ -19065,6 +19257,22 @@
         }
       }
     },
+    "Install on your repositories" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repozitoriyalarınıza quraşdırın"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf deinen Repositorys installieren"
+          }
+        }
+      }
+    },
     "Installed" : {
       "localizations" : {
         "az" : {
@@ -19577,6 +19785,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Es läuft noch."
+          }
+        }
+      }
+    },
+    "Its GitHub app has to be installed on them first" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əvvəlcə onun GitHub tətbiqi onlara quraşdırılmalıdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuerst muss seine GitHub-App dort installiert werden"
           }
         }
       }
@@ -24792,6 +25016,22 @@
         }
       }
     },
+    "Open GitHub" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub-ı aç"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub öffnen"
+          }
+        }
+      }
+    },
     "Open Notification Settings…" : {
       "localizations" : {
         "az" : {
@@ -25144,6 +25384,38 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Opens GitHub to sign in. FocusGuard can reach your issues, not your code. Kept in your Keychain." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daxil olmaq üçün GitHub açılır. FocusGuard kodunuza deyil, yalnız tapşırıqlarınıza çıxış əldə edir. Açar dəstinizdə saxlanılır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet GitHub zur Anmeldung. FocusGuard kommt an deine Issues, nicht an deinen Code. Wird in deinem Schlüsselbund aufbewahrt."
+          }
+        }
+      }
+    },
+    "Opens Linear to sign in. FocusGuard reads your issues and moves the ones you finish. Kept in your Keychain." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daxil olmaq üçün Linear açılır. FocusGuard tapşırıqlarınızı oxuyur və bitirdiklərinizi köçürür. Açar dəstinizdə saxlanılır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet Linear zur Anmeldung. FocusGuard liest deine Issues und verschiebt die, die du abschließt. Wird in deinem Schlüsselbund aufbewahrt."
           }
         }
       }
@@ -29959,6 +30231,22 @@
         }
       }
     },
+    "Sign in instead" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əvəzinə daxil olun"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stattdessen anmelden"
+          }
+        }
+      }
+    },
     "Sign in to Spotify to see the songs. Play works without it." : {
       "localizations" : {
         "az" : {
@@ -30019,6 +30307,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Von Spotify abmelden"
+          }
+        }
+      }
+    },
+    "Signed in to Linear. You can close this tab and go back to FocusGuard." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear hesabına daxil oldunuz. Bu tabı bağlayıb FocusGuard-a qayıda bilərsiniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei Linear angemeldet. Du kannst diesen Tab schließen und zu FocusGuard zurückkehren."
           }
         }
       }
@@ -33075,6 +33379,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Danke. Alle Pro-Funktionen sind aktiv."
+          }
+        }
+      }
+    },
+    "That code ran out. Connect to get a new one." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu kodun vaxtı bitdi. Yenisini almaq üçün yenidən qoşun."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Code ist abgelaufen. Verbinde erneut, um einen neuen zu bekommen."
           }
         }
       }
@@ -36175,6 +36495,22 @@
         }
       }
     },
+    "Use a token instead" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əvəzinə token istifadə edin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stattdessen ein Token verwenden"
+          }
+        }
+      }
+    },
     "Use the daily goal" : {
       "localizations" : {
         "az" : {
@@ -36387,6 +36723,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Warten auf die Erweiterung"
+          }
+        }
+      }
+    },
+    "Waiting for you to finish in your browser" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brauzerdə tamamlamağınız gözlənilir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet, bis du im Browser fertig bist"
           }
         }
       }
@@ -39452,6 +39804,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Einrichtung"
+          }
+        }
+      }
+    },
+    "Your sign-in is in your Keychain" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Girişiniz Açar dəstinizdədir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Anmeldung liegt in deinem Schlüsselbund"
           }
         }
       }

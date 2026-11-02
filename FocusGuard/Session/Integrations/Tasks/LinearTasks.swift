@@ -1,10 +1,10 @@
 import Foundation
 
 /// Linear issues assigned to the user that are started or not started yet,
-/// through its GraphQL API with a personal API key (Linear › Settings ›
-/// Security & access), kept in the Keychain. Done moves the issue to its
-/// team's completed state; Undo moves it back to the state it was in.
-final class LinearTasks: TokenTaskStore {
+/// through its GraphQL API with a sign-in (`LinearSignIn`) or a personal API key
+/// (Linear › Settings › Security & access), kept in the Keychain. Done moves the
+/// issue to its team's completed state; Undo moves it back to the state it was in.
+final class LinearTasks: SignInTaskStore {
     static let endpoint = URL(string: "https://api.linear.app/graphql")!
 
     static let issuesQuery = """
@@ -33,34 +33,38 @@ final class LinearTasks: TokenTaskStore {
     static let viewerQuery = "query FocusGuardViewer { viewer { id } }"
 
     let source = TaskSource.linear
-    private let tokens: TokenStore
+    private let credentials: TaskCredentials
     private let session: URLSession
+    /// Telling Linear to drop a sign-in, after Disconnect; tests wait for it.
+    private(set) var revoking: Task<Void, Never>?
 
-    init(tokens: TokenStore = TaskTokens.keychain(for: .linear), session: URLSession = .shared) {
-        self.tokens = tokens
+    init(tokens: TokenStore = TaskTokens.keychain(for: .linear), signIn: RotatingTokens? = nil, session: URLSession = .shared) {
+        self.credentials = TaskCredentials(personal: tokens, signIn: signIn)
         self.session = session
     }
 
-    var hasToken: Bool { tokens.read()?.isEmpty == false }
+    var hasToken: Bool { credentials.hasToken }
+    var isSignedIn: Bool { credentials.isSignedIn }
+    var wasSignedOut: Bool { credentials.wasSignedOut }
 
     func openTasks() async throws -> [TaskItem] {
-        guard let key = tokens.read(), !key.isEmpty else { return [] }
-        let data: IssuesData = try await send(Self.issuesQuery, key: key)
+        guard hasToken else { return [] }
+        let data: IssuesData = try await send(Self.issuesQuery)
         return data.viewer.assignedIssues.nodes.compactMap(\.item)
     }
 
     func setCompleted(_ task: TaskItem, _ completed: Bool) async -> Bool {
-        guard let key = tokens.read(), !key.isEmpty else { return false }
+        guard hasToken else { return false }
         do {
             let target: String?
             if completed {
-                let states: DoneStatesData = try await send(Self.doneStatesQuery, variables: ["id": task.id], key: key)
+                let states: DoneStatesData = try await send(Self.doneStatesQuery, variables: ["id": task.id])
                 target = Self.doneState(in: states)
             } else {
                 target = task.state
             }
             guard let target else { return false }
-            let moved: MoveData = try await send(Self.moveMutation, variables: ["id": task.id, "stateId": target], key: key)
+            let moved: MoveData = try await send(Self.moveMutation, variables: ["id": task.id, "stateId": target])
             return moved.issueUpdate.success
         } catch {
             return false
@@ -71,8 +75,8 @@ final class LinearTasks: TokenTaskStore {
         let key = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { return .rejected }
         do {
-            let _: ViewerData = try await send(Self.viewerQuery, key: key)
-            tokens.write(key)
+            let _: ViewerData = try await post(Self.viewerQuery, credential: .personal(key))
+            credentials.personal.write(key)
             return .accepted
         } catch TaskSourceProblem.rejected {
             return .rejected
@@ -81,21 +85,58 @@ final class LinearTasks: TokenTaskStore {
         }
     }
 
-    func disconnect() { tokens.delete() }
+    /// Clears the Keychain, and asks Linear to drop a sign-in.
+    func disconnect() {
+        let held = credentials.signIn?.read()
+        credentials.forget()
+        guard let held else { return }
+        revoking = Task { [session] in
+            for request in LinearOAuth.revokeRequests(held) {
+                _ = try? await TaskWeb.exchange(request, session: session, staysOn: Self.isLinear)
+            }
+        }
+    }
 
-    private func send<Payload: Decodable>(_ query: String, variables: [String: String] = [:], key: String) async throws -> Payload {
-        let (data, status) = try await TaskWeb.send(Self.request(query, variables: variables, key: key), session: session)
+    /// One query with a token good to use now. A sign-in's token turned down is
+    /// refreshed and the query tried once more.
+    private func send<Payload: Decodable>(_ query: String, variables: [String: String] = [:]) async throws -> Payload {
+        guard let credential = try await credentials.current() else { throw TaskSourceProblem.unreachable }
+        do {
+            return try await post(query, variables: variables, credential: credential)
+        } catch TaskSourceProblem.rejected {
+            guard let fresh = try await credentials.renewed(after: credential) else { throw TaskSourceProblem.rejected }
+            return try await post(query, variables: variables, credential: fresh)
+        }
+    }
+
+    private func post<Payload: Decodable>(_ query: String, variables: [String: String] = [:],
+                                          credential: TaskCredential) async throws -> Payload {
+        let (data, status) = try await TaskWeb.send(Self.request(query, variables: variables, credential: credential),
+                                                    session: session, staysOn: Self.isLinear)
         return try Self.payload(Payload.self, from: data, status: status)
+    }
+
+    /// Tokens only ever go to Linear's API, over https.
+    @Sendable static func isLinear(_ url: URL) -> Bool {
+        url.scheme == "https" && url.host == endpoint.host && url.port == nil
     }
 
     // MARK: - Requests
 
-    /// A personal key goes in `Authorization` as it is, without "Bearer".
     static func request(_ query: String, variables: [String: String] = [:], key: String) -> URLRequest {
+        request(query, variables: variables, credential: .personal(key))
+    }
+
+    /// A personal key goes in `Authorization` as it is, without "Bearer"; a
+    /// sign-in's token goes with it.
+    static func request(_ query: String, variables: [String: String] = [:], credential: TaskCredential) -> URLRequest {
         var post = URLRequest(url: endpoint, timeoutInterval: 15)
         post.httpMethod = "POST"
         post.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        post.setValue(key, forHTTPHeaderField: "Authorization")
+        switch credential {
+        case .personal(let key):   post.setValue(key, forHTTPHeaderField: "Authorization")
+        case .signedIn(let token): post.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         post.httpBody = try? JSONEncoder().encode(Body(query: query, variables: variables.isEmpty ? nil : variables))
         return post
     }
