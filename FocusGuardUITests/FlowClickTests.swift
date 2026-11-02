@@ -60,11 +60,11 @@ final class FlowClickTests: XCTestCase {
         window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", words)).firstMatch
     }
 
-    /// Whether `words` are on screen. A heading has only a label and other
-    /// text only a value, and one predicate over both misses the headings.
+    /// Whether `words` are on screen. Most text has a value; a heading can
+    /// only be found whole, by subscript.
     private func isShown(_ words: String) -> Bool {
-        window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] %@", words)).firstMatch.exists
-            || window.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", words)).firstMatch.exists
+        window.staticTexts[words].exists
+            || window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] %@", words)).firstMatch.exists
     }
 
     private func waitForText(_ words: String, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -92,6 +92,11 @@ final class FlowClickTests: XCTestCase {
                                   XCUIElement.ElementType.switch.rawValue, XCUIElement.ElementType.checkBox.rawValue,
                                   XCUIElement.ElementType.toggle.rawValue, title))
             .firstMatch
+    }
+
+    /// The element covers the whole row; the switch is at its right end.
+    private func flip(_ toggle: XCUIElement) {
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).click()
     }
 
     private func isOn(_ toggle: XCUIElement) -> Bool {
@@ -285,7 +290,8 @@ final class FlowClickTests: XCTestCase {
     // MARK: - Reports
 
     func testReportsMonthInReviewAndTrialFromIt() throws {
-        launch()
+        // Months of data, so last month has a review to open.
+        launch(seed: "big")
         try open("Reports")
         try click(button("Month"))
         waitForText("Month in review", "Month in review isn't offered")
@@ -293,8 +299,9 @@ final class FlowClickTests: XCTestCase {
 
         // Trying it starts the (pretend) trial and opens the review.
         try click(button("Try Pro free"))
-        waitFor(buttonStarting("Open"), "The review didn't open up")
-        try click(buttonStarting("Open"))
+        let openReview = window.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Open ' AND label ENDSWITH 'in review'")).firstMatch
+        waitFor(openReview, "The review didn't open up")
+        try click(openReview)
         let close = window.sheets.buttons["Close"].firstMatch
         waitFor(close, "The review sheet didn't open")
         shoot("month-review")
@@ -492,7 +499,7 @@ final class FlowClickTests: XCTestCase {
             let control = toggle(item.title)
             waitFor(control, "\(item.title) is missing")
             let before = isOn(control)
-            control.click()
+            flip(control)
             let changed = expectation(for: NSPredicate { _, _ in self.isOn(control) != before }, evaluatedWith: nil)
             XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 4), .completed, "\(item.title) didn't flip")
             flipped[item.title] = !before
@@ -511,7 +518,7 @@ final class FlowClickTests: XCTestCase {
             waitFor(toggle(item.title), "\(item.title) went missing after a relaunch")
             XCTAssertEqual(isOn(toggle(item.title)), flipped[item.title], "\(item.title) didn't survive a relaunch")
             // Back as it was, for the tests after this one.
-            toggle(item.title).click()
+            flip(toggle(item.title))
         }
     }
 
