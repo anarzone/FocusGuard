@@ -29,8 +29,10 @@ final class AIEvalTests: XCTestCase {
         return RecordingModel(base: base)
     }
 
+    /// As `HabitFormat.time` writes it: 24 hours without a leading zero for
+    /// en_GB on this Mac, 12 hours for en_US.
     private func clock(_ hour: Int, _ scenario: EvalScenario) -> String {
-        if scenario.calendar.timeZone.identifier == "UTC" { return String(format: "%02d:00", hour % 24) }
+        if scenario.locale.identifier != "en_US" { return "\(hour % 24):00" }
         let h = hour % 12 == 0 ? 12 : hour % 12
         return "\(h):00 \(hour % 24 < 12 ? "AM" : "PM")"
     }
@@ -66,8 +68,11 @@ final class AIEvalTests: XCTestCase {
                 await store.askFacts(AskQuestion(text: text, intent: intent), settings: AskContext(), now: scenario.now,
                                      calendar: scenario.calendar, locale: scenario.locale)
             }
-            func report(_ intent: String, _ question: String, _ got: AskFacts, must: [String], expectTooLittle: Bool = false) {
+            func report(_ intent: String, _ question: String, _ got: AskFacts, must rawMust: [String], expectTooLittle: Bool = false) {
                 let text = normal([got.lead, got.detail].joined(separator: " | "))
+                // A flat answer names no hours or day, so only its figures are checked.
+                let flat = got.lead.hasSuffix("stand out.") || got.lead.hasSuffix("stands out.")
+                let must = flat ? [] : rawMust
                 let missing = must.filter { !text.contains($0) }
                 let tooLittle = got.lead.hasPrefix("Too ") || got.lead.hasPrefix("Nothing ")
                 log.write(["scenario": scenario.name, "intent": intent, "question": question, "lead": normal(got.lead), "detail": normal(got.detail),
