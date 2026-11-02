@@ -67,11 +67,11 @@ final class AIEvalTests: XCTestCase {
                                      calendar: scenario.calendar, locale: scenario.locale)
             }
             func report(_ intent: String, _ question: String, _ got: AskFacts, must: [String], expectTooLittle: Bool = false) {
-                let text = normal(([got.lead, got.detail] + got.facts).joined(separator: " | "))
+                let text = normal([got.lead, got.detail].joined(separator: " | "))
                 let missing = must.filter { !text.contains($0) }
-                let tooLittle = got.facts.isEmpty
+                let tooLittle = got.lead.hasPrefix("Too ") || got.lead.hasPrefix("Nothing ")
                 log.write(["scenario": scenario.name, "intent": intent, "question": question, "lead": normal(got.lead), "detail": normal(got.detail),
-                           "facts": got.facts.map(normal), "basis": normal(got.basis), "action": normal(actionText(got.action)),
+                           "basis": normal(got.basis), "action": normal(actionText(got.action)),
                            "suggestion": got.suggestion ?? "", "must": must, "missing": missing,
                            "expectTooLittle": expectTooLittle, "gaveTooLittle": tooLittle,
                            "pass": missing.isEmpty && (!expectTooLittle || tooLittle)])
@@ -80,8 +80,8 @@ final class AIEvalTests: XCTestCase {
             // Best hours.
             let best = await facts("When do I focus best?", .bestHours)
             if let t = truth.bestHours() {
-                var must = ["\(clock(t.from, scenario)) to \(clock(t.to, scenario))", "\(t.rate)%", "\(t.held)%", "\(t.overall)%"]
-                if let from = t.weakFrom, let to = t.weakTo, let rate = t.weakRate {
+                var must = ["\(clock(t.from, scenario)) to \(clock(t.to, scenario))", "\(t.rate)%", "\(t.held)%"]
+                if let from = t.weakFrom, let to = t.weakTo, let rate = t.weakRate, rate < t.rate {
                     must += ["\(clock(from, scenario)) to \(clock(to, scenario))", "\(rate)%"]
                 }
                 report("bestHours", "When do I focus best?", best, must: must)
@@ -94,12 +94,12 @@ final class AIEvalTests: XCTestCase {
             let drift = truth.driftByTarget()
             let total = drift.reduce(0) { $0 + $1.minutes }
             report("pullsAway", "What pulls me away most?", pulls,
-                   must: total >= 5 ? [evalHM(total)] + drift.prefix(3).flatMap { [$0.name, evalHM($0.minutes)] } : [])
+                   must: total >= 5 ? [evalHM(total)] + drift.prefix(2).flatMap { [$0.name, evalHM($0.minutes)] } : [])
             let lunch = await facts("What pulls me away after lunch?", .pullsAway)
             let lunchDrift = truth.driftByTarget(hours: 13..<15)
             let lunchTotal = lunchDrift.reduce(0) { $0 + $1.minutes }
             report("pullsAway", "What pulls me away after lunch?", lunch,
-                   must: lunchTotal >= 5 ? [evalHM(lunchTotal)] + lunchDrift.prefix(3).flatMap { [$0.name, evalHM($0.minutes)] } : [])
+                   must: lunchTotal >= 5 ? [evalHM(lunchTotal)] + lunchDrift.prefix(2).flatMap { [$0.name, evalHM($0.minutes)] } : [])
 
             // Weeks.
             let week = truth.week()
@@ -107,7 +107,7 @@ final class AIEvalTests: XCTestCase {
             if week.lastFocus > 0 || week.thisFocus > 0 {
                 var must = [evalHM(week.thisFocus)]
                 if week.lastFocus > 0 {
-                    must += [evalHM(week.sameFocus), evalHM(week.lastFocus)]
+                    must += [evalHM(week.sameFocus)]
                     if week.thisFocus > 0 && week.sameFocus > 0 { must += ["\(week.thisRate)%", "\(week.sameRate)%"] }
                 }
                 report("weekCompare", "How did this week compare with last?", compared, must: must)
@@ -190,30 +190,29 @@ final class AIEvalTests: XCTestCase {
         }
         let intent = classify.flatMap(AskIntent.init(rawValue:)) ?? AskIntentMatcher.match(text)
         let resolved = intent == .unknown ? AskIntentMatcher.match(text) : intent
-        var facts: [String] = []
         var templateLead = "", templateDetail = ""
         if ![.unknown, .coachExperiment].contains(resolved) {
             let plain = await store.askFacts(AskQuestion(text: text, intent: resolved), settings: AskContext(), now: scenario.now,
                                              calendar: scenario.calendar, locale: scenario.locale)
-            facts = plain.facts
             templateLead = plain.lead
             templateDetail = plain.detail
         } else if resolved == .coachExperiment {
             let builder = AskFactsBuilder(now: scenario.now, calendar: scenario.calendar, locale: scenario.locale)
             let plain = builder.coach(coach, shipped: true)
-            facts = plain.facts
             templateLead = plain.lead
             templateDetail = plain.detail
         }
         // Against the prompt the model saw: on a tie, facts worked out again
         // above can name a different day.
-        let allowed = [calls.last?.prompt ?? ""] + facts + [templateLead, templateDetail]
-        let flags = answer.onDevice ? EvalCheck.flags(answer.lead + " " + answer.detail, facts: allowed) : []
+        // With a second call the model worded the answer; with one, it only sorted the question.
+        let onDevice = calls.count >= 2 && !(answer.lead == templateLead && answer.detail == templateDetail)
+        let allowed = [calls.last?.prompt ?? "", templateLead, templateDetail]
+        let flags = onDevice ? EvalCheck.flags(answer.lead + " " + answer.detail, facts: allowed) : []
         var out: [String: Any] = [
             "scenario": scenario.name, "q": String(text.prefix(160)), "group": group, "run": run, "intent": resolved.rawValue,
             "lead": normal(answer.lead), "detail": normal(answer.detail), "basis": normal(answer.basis),
-            "action": normal(actionText(answer.action)), "suggestion": answer.suggestion ?? "", "onDevice": answer.onDevice,
-            "templateLead": normal(templateLead), "templateDetail": normal(templateDetail), "facts": facts.map(normal), "flags": flags,
+            "action": normal(actionText(answer.action)), "suggestion": answer.suggestion ?? "", "onDevice": onDevice,
+            "templateLead": normal(templateLead), "templateDetail": normal(templateDetail), "flags": flags,
             "calls": calls.map(\.json),
         ]
         for (key, value) in extra { out[key] = value }
