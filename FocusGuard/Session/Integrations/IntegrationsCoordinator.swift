@@ -304,7 +304,6 @@ final class IntegrationsCoordinator {
         guard taskLinks[id]?.ticked == true else { return }
         await setTicked(false, session: id)
         guard taskLinks[id]?.ticked == false else { return }
-        taskLinks[id]?.undone = true
         saveLinks()
     }
 
@@ -321,7 +320,6 @@ final class IntegrationsCoordinator {
         if case .refused(let why) = change { tickNotes[id] = why } else { tickNotes[id] = nil }
         guard change == .saved else { return }
         taskLinks[id]?.ticked = ticked
-        if ticked { taskLinks[id]?.undone = false }
         saveLinks()
         let source = link.task.source
         if ticked { tasksBySource[source]?.removeAll { $0.isSame(as: link.task) } }
