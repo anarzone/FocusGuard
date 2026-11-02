@@ -284,6 +284,20 @@ final class SmartCategoriesTests: XCTestCase {
         XCTAssertEqual(YouTubeVideos.kind("", title: "Best F1 overtakes", classification: .distraction), "not about work")
     }
 
+    func test_videoKind_isNeverTheCategory() {
+        XCTAssertEqual(YouTubeVideos.kind("focus", title: "Swift concurrency", classification: .focus), "talk or tutorial")
+        XCTAssertEqual(YouTubeVideos.kind("distracting", title: "Best F1 overtakes", classification: .distraction), "not about work")
+    }
+
+    func test_workToolsAndMusicAreSuggestedAsNeutral() async {
+        use("com.tinyspeck.slackmacgap", name: "Slack", minutes: 40)
+        use("com.spotify.client", name: "Spotify", minutes: 40)
+        answers = ["Slack": ("distracting", 60, "team chat"), "Spotify": ("distracting", 50, "music player")]
+        let engine = makeEngine()
+        await engine.run()
+        XCTAssertEqual(Set(engine.needsYou.map(\.suggested)), [.neutral])
+    }
+
     func test_cleanTitle_dropsUnreadCount_andShortensLongOnes() {
         XCTAssertEqual(SmartEvidenceBuilder.cleanTitle("(3) Inbox"), "Inbox")
         XCTAssertEqual(SmartEvidenceBuilder.cleanTitle(String(repeating: "a", count: 90)).count, SmartEvidenceBuilder.titleLength)

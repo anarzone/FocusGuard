@@ -33,6 +33,9 @@ enum SmartCategorizer {
     /// What people work in, even when it can pull them away: blocked by
     /// mistake, these cost someone their job's chat or call. They always ask.
     private static let workTools = ["chat", "messag", "mail", "call", "meeting", "calendar", "conferenc", "team", "collaborat"]
+    /// The instructions call these neutral, and the model files them under
+    /// distracting anyway: it's what's suggested to the person that changes.
+    private static let backgroundTools = workTools + ["music", "audio", "password"]
 
     static func decide(_ verdict: Verdict, evidence: SmartEvidence) -> Decision {
         switch verdict.classification {
@@ -132,7 +135,9 @@ enum SmartCategorizer {
             guard let index = ids.firstIndex(of: item.id), seen.insert(item.id).inserted,
                   let classification = category(item.category) else { return nil }
             let evidence = batch[index]
-            return Verdict(key: evidence.key, classification: classification,
+            let what = item.what.lowercased()
+            let category = classification == .distraction && backgroundTools.contains(where: what.contains) ? Classification.neutral : classification
+            return Verdict(key: evidence.key, classification: category,
                            sure: min(100, max(0, item.sure)), reason: reason(what: item.what, evidence: evidence), what: item.what)
         }
     }
