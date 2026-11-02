@@ -3,6 +3,7 @@
 
 import { SHIELD, fillTop } from './icon.js';
 import { tileLetter } from './format.js';
+import { t, textLanguage, uiLanguage } from './i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_TAGS = new Set(['svg', 'path', 'circle', 'rect', 'g', 'defs', 'clipPath', 'text', 'line']);
@@ -116,6 +117,20 @@ export function waitDial(secondsLeft, total) {
     h('circle', { cx: 10, cy: 10, r: 8, fill: 'none', stroke: 'var(--fill-3)', 'stroke-width': 2 }),
     done > 0 ? h('path', { d: `M10 2 A8 8 0 ${angle > 180 ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)}`, fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 2, 'stroke-linecap': 'round' }) : null,
     h('text', { x: 10, y: 13.4, 'font-size': 9, fill: 'var(--ink-2)', 'text-anchor': 'middle', 'font-weight': 600, 'font-family': 'inherit' }, String(Math.ceil(secondsLeft))));
+}
+
+// Fills in the words in a page's own HTML, marked data-i18n (the element's
+// text) or data-i18n-title, -placeholder, -aria-label (that attribute), and
+// says which language the page is in. The English in the HTML is there until
+// this runs, so nothing is ever blank.
+export function localizePage() {
+  const ui = uiLanguage();
+  const text = textLanguage();
+  document.documentElement.lang = ui.split(/[-_]/)[0].toLowerCase() === text ? ui : text;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const name of ['title', 'placeholder', 'aria-label']) {
+    for (const el of document.querySelectorAll(`[data-i18n-${name}]`)) el.setAttribute(name, t(el.getAttribute(`data-i18n-${name}`)));
+  }
 }
 
 // Tells the background the page's light or dark look, for the toolbar glyph.

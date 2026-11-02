@@ -2,17 +2,18 @@
 // start, the running session or break, and this page's category.
 
 import { Conn, GET_APP_URL } from '../src/lib/protocol.js';
-import { clock, displayHost, goalLabel, isWebURL, lastSeen, listSummary, minutesLabel, pagePattern, timeOfDay } from '../src/lib/format.js';
+import { clock, displayHost, goalLabel, isWebURL, lastSeen, listSummary, minutesLabel, minutesPhrase, pagePattern, timeOfDay } from '../src/lib/format.js';
+import { plural, t } from '../src/lib/i18n.js';
 import { barSegments, breakClock, presetName, presetRules, sessionClock } from '../src/lib/view.js';
-import { appIcon, ask, h, icons, mount, reportAppearance, shieldIcon, siteTile, subscribe, tell } from '../src/lib/dom.js';
+import { appIcon, ask, h, icons, localizePage, mount, reportAppearance, shieldIcon, siteTile, subscribe, tell } from '../src/lib/dom.js';
 
 const app = document.getElementById('app');
 const SITE_ACCESS = { permissions: ['scripting'], origins: ['<all_urls>'] };
 const LENGTHS = [25, 50, 90, null];
 const CATEGORIES = [
-  { id: 'focus', label: 'Focus', color: 'var(--indigo-fill)' },
-  { id: 'neutral', label: 'Neutral', color: 'var(--grey)' },
-  { id: 'distracting', label: 'Distracting', color: 'var(--orange)' },
+  { id: 'focus', label: t('categoryFocus'), color: 'var(--indigo-fill)' },
+  { id: 'neutral', label: t('categoryNeutral'), color: 'var(--grey)' },
+  { id: 'distracting', label: t('categoryDistracting'), color: 'var(--orange)' },
 ];
 
 let snap = null;
@@ -30,6 +31,7 @@ try {
   if (saved !== null) length = saved === 'none' ? null : Number(saved) || 50;
 } catch { /* storage can be off; keep the default */ }
 
+localizePage();
 reportAppearance();
 subscribe('popup', (next) => {
   const wasConnected = snap?.conn === Conn.connected;
@@ -77,7 +79,7 @@ async function setCategory(category) {
     page = { ...page, category: reply.result.category, ruleScope: reply.result.ruleScope };
   } else {
     page = { ...page, category: previous };
-    message = "Couldn't change it. Is FocusGuard still open?";
+    message = t('popupChangeFailed');
   }
   render();
 }
@@ -87,9 +89,9 @@ async function startSession() {
   const reply = await ask({ type: 'startSession', minutes: length });
   if (!reply?.ok) {
     message = {
-      onBreak: 'Finish the break first.',
-      alreadyRunning: 'A session is already running.',
-    }[reply?.error] || "Couldn't start it. Is FocusGuard still open?";
+      onBreak: t('popupOnBreak'),
+      alreadyRunning: t('sessionAlreadyRunning'),
+    }[reply?.error] || t('popupStartFailed');
     render();
   }
 }
@@ -168,11 +170,11 @@ function header({ icon, name, sub, state, badge, options = true }) {
       sub ? h('div', { class: 'sub' }, sub) : null),
     state ? h('span', { class: 'state' }, state) : null,
     badge,
-    options ? h('button', { class: 'icon-btn', 'aria-label': 'Options', 'data-focus-key': 'options', onclick: openOptions }, icons.sliders()) : null);
+    options ? h('button', { class: 'icon-btn', 'aria-label': t('popupOptionsLabel'), 'data-focus-key': 'options', onclick: openOptions }, icons.sliders()) : null);
 }
 
 function links(...items) {
-  return h('nav', { class: 'links', 'aria-label': 'More' },
+  return h('nav', { class: 'links', 'aria-label': t('popupMoreLabel') },
     items.map(([label, action]) => h('a', { href: '#', onclick: (e) => { e.preventDefault(); action(); } }, label)));
 }
 
@@ -180,45 +182,46 @@ function links(...items) {
 
 function notInstalled() {
   return [
-    header({ icon: shieldIcon({ color: 'var(--grey)', slashed: true }), name: 'FocusGuard', state: 'Not connected', options: false }),
+    header({ icon: shieldIcon({ color: 'var(--grey)', slashed: true }), name: 'FocusGuard', state: t('popupNotConnected'), options: false }),
     h('section', { class: 'card hero' },
       appIcon(56),
-      h('h1', null, 'Get the FocusGuard app'),
-      h('p', null, "This extension works with FocusGuard for Mac. The app runs your sessions; the extension tells it which page you're on and pauses distracting tabs while you focus."),
-      h('button', { class: 'btn btn-primary btn-wide', onclick: () => { chrome.tabs.create({ url: GET_APP_URL }); window.close(); } }, 'Get FocusGuard for Mac'),
-      h('div', { class: 'foot' }, 'Free to download · needs macOS 26')),
+      h('h1', null, t('popupGetAppTitle')),
+      h('p', null, t('popupGetAppBody')),
+      h('button', { class: 'btn btn-primary btn-wide', onclick: () => { chrome.tabs.create({ url: GET_APP_URL }); window.close(); } }, t('getForMac')),
+      h('div', { class: 'foot' }, t('popupFreeToDownload'))),
     h('section', { class: 'card row-card' },
       h('div', { class: 'text' },
-        h('div', { class: 'title' }, 'Already installed it?'),
-        h('div', { class: 'detail' }, 'Open FocusGuard once, then try again.')),
-      h('button', { class: 'btn btn-quiet', onclick: () => tell({ type: 'reconnect' }) }, 'Try again')),
-    h('div', { class: 'footnote' }, 'Until the app is connected, nothing in this browser is tracked or paused.'),
+        h('div', { class: 'title' }, t('popupAlreadyInstalled')),
+        h('div', { class: 'detail' }, t('popupOpenOnce'))),
+      h('button', { class: 'btn btn-quiet', onclick: () => tell({ type: 'reconnect' }) }, t('tryAgain'))),
+    h('div', { class: 'footnote' }, t('popupUntilConnected')),
   ];
 }
 
 function notRunning() {
   const seen = lastSeen(snap.lastConnectedAt);
+  // The setting's name goes in bold, wherever this language's sentence puts it.
+  const [beforeSetting, afterSetting] = t('popupKeepRunningNote', '\n').split('\n');
   return [
-    header({ icon: shieldIcon({ color: 'var(--grey)', slashed: true }), name: 'FocusGuard', state: 'Not connected', options: false }),
+    header({ icon: shieldIcon({ color: 'var(--grey)', slashed: true }), name: 'FocusGuard', state: t('popupNotConnected'), options: false }),
     h('section', { class: 'card hero' },
       appIcon(56),
-      h('h1', null, "FocusGuard isn't running"),
-      h('p', null, 'Open it to count your time in this browser and keep distracting sites out of your sessions.'),
-      h('button', { class: 'btn btn-primary btn-wide', onclick: () => openApp() }, 'Open FocusGuard'),
-      seen ? h('div', { class: 'foot' }, `Last connected ${seen}`) : null),
+      h('h1', null, t('appNotRunning')),
+      h('p', null, t('popupNotRunningBody')),
+      h('button', { class: 'btn btn-primary btn-wide', onclick: () => openApp() }, t('openApp')),
+      seen ? h('div', { class: 'foot' }, seen) : null),
     h('section', { class: 'card note-card' },
       icons.clock(),
-      h('div', null, "While it's closed, nothing here is tracked or paused. To keep it running, turn on ",
-        h('strong', null, 'Open at login'), " in FocusGuard's settings.")),
+      h('div', null, beforeSetting, h('strong', null, t('popupOpenAtLogin')), afterSetting)),
     h('div', { class: 'center-link' },
-      h('a', { href: '#', onclick: (e) => { e.preventDefault(); chrome.tabs.create({ url: GET_APP_URL }); window.close(); } }, 'Not on this Mac? Get FocusGuard')),
+      h('a', { href: '#', onclick: (e) => { e.preventDefault(); chrome.tabs.create({ url: GET_APP_URL }); window.close(); } }, t('popupNotOnThisMac'))),
   ];
 }
 
 function connecting() {
   return [
-    header({ icon: shieldIcon({ color: 'var(--grey)' }), name: 'FocusGuard', state: 'Connecting…', options: false }),
-    h('section', { class: 'card note-card', role: 'status' }, icons.clock(), h('div', null, 'Looking for FocusGuard on this Mac…')),
+    header({ icon: shieldIcon({ color: 'var(--grey)' }), name: 'FocusGuard', state: t('popupConnecting'), options: false }),
+    h('section', { class: 'card note-card', role: 'status' }, icons.clock(), h('div', null, t('popupLookingOnMac'))),
   ];
 }
 
@@ -226,35 +229,37 @@ function connecting() {
 
 function readyView(state) {
   const recap = state.phase === 'complete' && state.recap ? state.recap : null;
-  const sub = recap ? `Connected · ${recap.name} ended at ${timeOfDay(recap.endedAt)}` : 'Connected · no session running';
+  const sub = recap ? t('popupConnectedRecap', recap.name, timeOfDay(recap.endedAt)) : t('popupConnectedIdle');
   const goal = state.today.goalMinutes * 60;
   const share = goal > 0 ? Math.min(1, state.today.focusSeconds / goal) : 0;
   return [
     header({ icon: recap ? shieldIcon({ solid: true, check: true, color: 'var(--indigo-fill)' }) : shieldIcon(), name: 'FocusGuard', sub }),
-    h('section', { class: 'card today', 'aria-label': 'Today' },
+    h('section', { class: 'card today', 'aria-label': t('popupTodayLabel') },
       h('div', { class: 'line' },
         h('span', { class: 'big num' }, minutesLabel(state.today.focusSeconds)),
-        h('span', { class: 'label' }, 'focus today'),
-        h('span', { class: 'label', style: { flex: 'none' } }, `Goal ${goalLabel(state.today.goalMinutes)}`)),
-      h('div', { class: 'meter', role: 'img', 'aria-label': `${minutesLabel(state.today.focusSeconds)} of a ${goalLabel(state.today.goalMinutes)} goal` },
+        h('span', { class: 'label' }, t('popupFocusToday')),
+        h('span', { class: 'label', style: { flex: 'none' } }, t('popupGoal', goalLabel(state.today.goalMinutes)))),
+      h('div', { class: 'meter', role: 'img', 'aria-label': t('popupGoalMeterLabel', minutesLabel(state.today.focusSeconds), goalLabel(state.today.goalMinutes)) },
         h('div', { style: { width: `${share * 100}%` } }))),
     pageCard(state),
     startCard(state),
-    links(['Open FocusGuard', () => openApp()], ["Today's report", () => openApp('reports')]),
+    links([t('openApp'), () => openApp()], [t('todaysReport'), () => openApp('reports')]),
   ];
 }
 
 function startCard(state) {
   const blocking = !!state.plan.features?.blockInBrowser && siteAccess;
-  const label = length ? `Start ${length}-minute session` : 'Start a session with no end';
+  const label = length ? t('popupStartMinutes', length) : t('popupStartOpen');
   const foot = h('div', { class: 'foot' });
   live.push((now) => {
-    const ends = length ? `Ends at ${timeOfDay(now + length * 60000)}. ` : 'No set end. ';
-    foot.textContent = ends + (blocking ? 'Blocking turns on when it starts.' : 'Distracting tabs pause if you drift.');
+    const ends = timeOfDay(now + length * 60000);
+    foot.textContent = length
+      ? (blocking ? t('popupStartEndsBlocking', ends) : t('popupStartEndsPausing', ends))
+      : (blocking ? t('popupStartOpenBlocking') : t('popupStartOpenPausing'));
   });
-  return h('section', { class: 'card start', 'aria-label': 'Start a session' },
-    h('div', { class: 'section-label' }, 'Start a session'),
-    h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': 'Length' },
+  return h('section', { class: 'card start', 'aria-label': t('popupStartSection') },
+    h('div', { class: 'section-label' }, t('popupStartSection')),
+    h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': t('popupLengthLabel') },
       LENGTHS.map((m) => h('button', {
         role: 'radio', 'aria-checked': String(m === length), 'data-focus-key': `len-${m}`,
         onclick: () => {
@@ -262,7 +267,7 @@ function startCard(state) {
           try { localStorage.setItem('length', m === null ? 'none' : String(m)); } catch { /* fine */ }
           render();
         },
-      }, m ? `${m} min` : 'No end'))),
+      }, m ? t('popupLengthMinutes', m) : t('popupLengthOpen')))),
     h('button', { class: 'btn btn-primary', onclick: startSession }, label),
     message ? h('div', { class: 'error', role: 'alert' }, message) : foot);
 }
@@ -272,29 +277,29 @@ function startCard(state) {
 function pageCard(state) {
   if (!page) return null;
   if (!page.web) {
-    return h('section', { class: 'card page-card', 'aria-label': 'This page' },
-      h('div', { class: 'section-label' }, 'This page'),
+    return h('section', { class: 'card page-card', 'aria-label': t('popupThisPage') },
+      h('div', { class: 'section-label' }, t('popupThisPage')),
       h('div', { class: 'page-note faint', style: { fontSize: '12px' } },
-        page.own ? 'A FocusGuard page. Time here isn\'t counted as drift.' : "Browser pages aren't sorted."));
+        page.own ? t('popupOwnPage') : t('popupBrowserPage')));
   }
   const category = CATEGORIES.find((c) => c.id === page.category);
   const chip = category
     ? h('button', {
       class: `chip-btn chip-${category.id}`, 'aria-haspopup': 'menu', 'aria-expanded': String(menuOpen),
-      'aria-label': `Category: ${category.label}. Change`, 'data-focus-key': 'chip',
+      'aria-label': t('popupCategoryChange', category.label), 'data-focus-key': 'chip',
       onclick: (e) => { e.stopPropagation(); menuOpen = !menuOpen; render(); },
     }, category.label, icons.chevron())
     : h('span', { class: 'faint', style: { fontSize: '12px' } }, '…');
   const onBreak = state.phase === 'break';
-  return h('section', { class: 'card page-card', 'aria-label': 'This page' },
-    h('div', { class: 'section-label' }, 'This page'),
+  return h('section', { class: 'card page-card', 'aria-label': t('popupThisPage') },
+    h('div', { class: 'section-label' }, t('popupThisPage')),
     h('div', { class: 'page-row' },
       siteTile(page.host),
       h('div', { class: 'text' },
         h('div', { class: 'host' }, page.host),
         page.title ? h('div', { class: 'title' }, page.title) : null),
       chip),
-    onBreak ? h('div', { class: 'note' }, "Breaks don't count as drift.") : null,
+    onBreak ? h('div', { class: 'note' }, t('popupBreakNoDrift')) : null,
     menuOpen && category ? categoryMenu(category.id) : null);
 }
 
@@ -304,13 +309,13 @@ function categoryMenu(current) {
     role: 'menuitemradio', 'aria-checked': String(checked), onclick: (e) => { e.stopPropagation(); onclick(); },
     onkeydown: menuKeys,
   }, h('span', { class: 'tick' }, checked ? icons.check() : null), extra, h('span', { style: { flex: '1 1 auto', whiteSpace: 'nowrap' } }, label));
-  return h('div', { class: 'menu', role: 'menu', 'aria-label': `Category for ${page.host}` },
+  return h('div', { class: 'menu', role: 'menu', 'aria-label': t('popupCategoryFor', page.host) },
     CATEGORIES.map((c) => item(c.id === current, c.label, () => setCategory(c.id), icons.dot(c.color))),
     h('div', { class: 'sep', role: 'separator' }),
-    h('div', { class: 'heading' }, 'Apply to'),
-    item(scopeChoice === 'site', `All of ${page.host}`, () => { scopeChoice = 'site'; render(); }),
-    pageOnly ? item(scopeChoice === 'page', 'Only this page', () => { scopeChoice = 'page'; render(); }) : null,
-    h('div', { class: 'hint' }, 'Also changes time already counted today.'));
+    h('div', { class: 'heading' }, t('popupApplyTo')),
+    item(scopeChoice === 'site', t('popupApplyAllOf', page.host), () => { scopeChoice = 'site'; render(); }),
+    pageOnly ? item(scopeChoice === 'page', t('popupApplyPage'), () => { scopeChoice = 'page'; render(); }) : null,
+    h('div', { class: 'hint' }, t('popupApplyHint')));
 }
 
 function menuKeys(event) {
@@ -332,21 +337,21 @@ function sessionView(state) {
   const blockingOn = pro && siteAccess && !paused;
   const preset = presetName(state.preset);
   const sub = paused
-    ? `Paused · ${preset}`
-    : blockingOn ? `Focusing · blocking is on · ${preset}` : `Focusing · ${preset}`;
+    ? t('popupPausedSub', preset)
+    : blockingOn ? t('popupFocusingBlockingSub', preset) : t('popupFocusingSub', preset);
   const c0 = sessionClock(s);
   return [
     header({
       icon: shieldIcon({ size: 24, fill: c0.progress ?? Math.min(1, c0.elapsed / 3600), color: paused ? 'var(--grey)' : 'var(--indigo-fill)' }),
       name: s.name, sub,
-      badge: state.plan.tier === 'free' ? h('span', { class: 'badge badge-free' }, 'FREE') : null,
+      badge: state.plan.tier === 'free' ? h('span', { class: 'badge badge-free' }, t('badgeFree')) : null,
     }),
     sessionClockCard(s),
     pageCard(state),
     pro ? blockedCard(state) : freeCard(state),
     pro
-      ? links(['Open FocusGuard', () => openApp()], ['Edit blocked sites', () => openApp('blocking')])
-      : links(['Open FocusGuard', () => openApp()], ["Today's report", () => openApp('reports')]),
+      ? links([t('openApp'), () => openApp()], [t('popupEditBlocked'), () => openApp('blocking')])
+      : links([t('openApp'), () => openApp()], [t('todaysReport'), () => openApp('reports')]),
   ];
 }
 
@@ -357,85 +362,85 @@ function sessionClockCard(s) {
   live.push((now) => {
     const c = sessionClock(s, now);
     big.textContent = clock(c.left ?? c.elapsed);
-    left.textContent = c.left !== null ? (s.paused ? 'left · paused' : 'left') : (s.paused ? 'so far · paused' : 'so far');
-    ends.textContent = c.endsAt ? `ends ${timeOfDay(c.endsAt)}` : (c.planned ? '' : 'no end');
+    left.textContent = c.left !== null ? (s.paused ? t('clockLeftPaused') : t('clockLeft')) : (s.paused ? t('clockSoFarPaused') : t('clockSoFar'));
+    ends.textContent = c.endsAt ? t('popupEnds', timeOfDay(c.endsAt)) : (c.planned ? '' : t('popupNoEnd'));
   });
   const segments = barSegments(s);
   const c = sessionClock(s);
-  const minutes = (sec) => `${Math.round(sec / 60)} ${Math.round(sec / 60) === 1 ? 'minute' : 'minutes'}`;
-  const barLabel = `${c.planned ? `${Math.round(c.planned / 60)}-minute session, ` : ''}${minutes(c.elapsed)} in: `
-    + `${minutes(s.focusSeconds)} focus, ${minutes(s.driftSeconds)} drift, ${minutes(s.otherSeconds)} other`;
-  return h('section', { class: 'card clock-card', 'aria-label': 'Session' },
+  const spent = [minutesPhrase(c.elapsed), minutesPhrase(s.focusSeconds), minutesPhrase(s.driftSeconds), minutesPhrase(s.otherSeconds)];
+  const barLabel = c.planned ? t('popupBarPlanned', Math.round(c.planned / 60), ...spent) : t('popupBarOpen', ...spent);
+  return h('section', { class: 'card clock-card', 'aria-label': t('popupSessionLabel') },
     h('div', { class: 'line' }, big, left, ends),
     h('div', { class: 'bar', role: 'img', 'aria-label': barLabel },
       segments.map((seg) => h('div', { class: seg.kind, style: { width: `${seg.pct}%` } }))),
     h('div', { class: 'legend' },
-      h('span', null, h('span', { class: 'swatch swatch-f' }), `${minutesLabel(s.focusSeconds)} focus`),
-      h('span', null, h('span', { class: 'swatch swatch-d' }), `${minutesLabel(s.driftSeconds)} drift`),
-      h('span', null, h('span', { class: 'swatch swatch-o' }), `${minutesLabel(s.otherSeconds)} other`)));
+      h('span', null, h('span', { class: 'swatch swatch-f' }), t('popupLegendFocus', minutesLabel(s.focusSeconds))),
+      h('span', null, h('span', { class: 'swatch swatch-d' }), t('popupLegendDrift', minutesLabel(s.driftSeconds))),
+      h('span', null, h('span', { class: 'swatch swatch-o' }), t('popupLegendOther', minutesLabel(s.otherSeconds)))));
 }
 
 function ruleLine(state) {
   const rules = presetRules(state.policy);
   const name = presetName(state.preset);
   if (!rules.pass) {
-    const until = state.blocking.lockedUntil ? ` until ${timeOfDay(state.blocking.lockedUntil)}` : ' until the session ends';
-    return `These pages don't load. ${name} lets nobody through${until}.`;
+    return state.blocking.lockedUntil
+      ? t('popupRuleNobodyUntil', name, timeOfDay(state.blocking.lockedUntil))
+      : t('popupRuleNobodySession', name);
   }
-  const length = minutesLabel(rules.passSeconds).replace(/m$/, ' minutes').replace(/^1 minutes$/, '1 minute');
+  const length = minutesPhrase(rules.passSeconds);
   return rules.passWait > 0
-    ? `These pages don't load. ${name} lets you through after a ${rules.passWait}-second wait, for ${length}.`
-    : `These pages don't load. ${name} lets you through right away, for ${length}.`;
+    ? t('popupRuleWait', name, rules.passWait, length)
+    : t('popupRuleNow', name, length);
 }
 
 function blockedCard(state) {
   const b = state.blocking;
   if (!siteAccess) {
-    return h('section', { class: 'card plan-card', 'aria-label': 'Blocking' },
+    return h('section', { class: 'card plan-card', 'aria-label': t('popupBlockingLabel') },
       h('div', { class: 'item' },
-        h('div', { class: 'item-top' }, icons.lock(), h('span', { class: 'name grow' }, 'Block before pages load')),
-        h('div', { class: 'desc' }, 'FocusGuard needs access to sites to keep distracting pages from loading. It still never reads what\'s on them.')),
-      h('button', { class: 'btn btn-primary', onclick: allowSiteAccess }, 'Allow site access'));
+        h('div', { class: 'item-top' }, icons.lock(), h('span', { class: 'name grow' }, t('blockBeforeLoad'))),
+        h('div', { class: 'desc' }, t('popupSiteAccessBody'))),
+      h('button', { class: 'btn btn-primary', onclick: allowSiteAccess }, t('popupAllowSiteAccess')));
   }
   const visits = state.session.stoppedVisits;
-  return h('section', { class: 'card blocked', 'aria-label': 'Blocked this session' },
+  return h('section', { class: 'card blocked', 'aria-label': t('popupBlockedThisSession') },
     h('div', { class: 'top' },
-      h('div', { class: 'section-label' }, 'Blocked this session'),
-      visits > 0 ? h('span', { class: 'count num' }, `stopped ${visits} ${visits === 1 ? 'visit' : 'visits'}`) : null),
+      h('div', { class: 'section-label' }, t('popupBlockedThisSession')),
+      visits > 0 ? h('span', { class: 'count num' }, plural('popupStoppedVisits', visits)) : null),
     b.sites.length ? h('div', { class: 'group' },
-      h('div', { class: 'group-label' }, 'Whole sites'),
+      h('div', { class: 'group-label' }, t('popupWholeSites')),
       h('div', { class: 'pills' }, b.sites.map((s) => h('span', null, s)))) : null,
     b.parts.length && state.plan.features?.partsOfSites ? h('div', { class: 'group' },
-      h('div', { class: 'group-label' }, 'Parts of sites'),
+      h('div', { class: 'group-label' }, t('popupPartsOfSites')),
       h('div', { class: 'pills' }, b.parts.map((s) => h('span', null, s)))) : null,
-    !b.sites.length && !b.parts.length ? h('div', { class: 'rule' }, 'Nothing is blocked yet. Mark sites Distracting to block them during sessions.') : null,
+    !b.sites.length && !b.parts.length ? h('div', { class: 'rule' }, t('popupNothingBlocked')) : null,
     h('div', { class: 'rule' }, ruleLine(state)));
 }
 
 function freeCard(state) {
   const pause = state.blocking.pauseTab;
-  return h('section', { class: 'card plan-card', 'aria-label': 'Blocking' },
+  return h('section', { class: 'card plan-card', 'aria-label': t('popupBlockingLabel') },
     h('div', { class: 'item' },
       h('div', { class: 'item-top' },
         h('span', { style: { color: 'var(--indigo-ink)', display: 'flex' } }, icons.tabPause()),
-        h('span', { class: 'name grow' }, 'Pause the tab'),
-        h('span', { class: 'value' }, pause ? 'On' : 'Off')),
-      h('div', { class: 'desc' }, 'If you stay on a distracting site, the block screen shows on your Mac and this tab switches to a calm page.')),
+        h('span', { class: 'name grow' }, t('popupPauseTab')),
+        h('span', { class: 'value' }, pause ? t('popupPauseOn') : t('popupPauseOff'))),
+      h('div', { class: 'desc' }, t('popupPauseTabBody'))),
     snap.settings?.hideProCard ? null : [
       h('div', { class: 'sep' }),
       h('div', { class: 'item', style: { gap: '6px' } },
         h('div', { class: 'item-top' },
           h('span', { style: { color: 'var(--ink-2)', display: 'flex' } }, icons.lock()),
-          h('span', { class: 'name' }, 'Block before pages load'),
-          h('span', { class: 'badge badge-pro' }, 'PRO'),
+          h('span', { class: 'name' }, t('blockBeforeLoad')),
+          h('span', { class: 'badge badge-pro' }, t('badgePro')),
           h('span', { class: 'grow' }),
-          h('button', { class: 'hide-btn', onclick: () => tell({ type: 'setSetting', key: 'hideProCard', value: true }) }, 'Hide')),
+          h('button', { class: 'hide-btn', onclick: () => tell({ type: 'setSetting', key: 'hideProCard', value: true }) }, t('popupHide'))),
         h('div', { class: 'list' },
-          h('span', null, 'Distracting pages never open'),
-          h('span', null, 'Parts of sites, like youtube.com/shorts'),
-          h('span', null, 'YouTube sorted video by video'),
-          h('span', null, 'Daily limits on as many sites as you like')),
-        h('a', { class: 'more', href: '#', onclick: (e) => { e.preventDefault(); openApp('upgrade'); } }, 'See Pro, free for 14 days')),
+          h('span', null, t('proNeverOpen')),
+          h('span', null, t('popupProParts')),
+          h('span', null, t('proYoutube')),
+          h('span', null, t('proLimits'))),
+        h('a', { class: 'more', href: '#', onclick: (e) => { e.preventDefault(); openApp('upgrade'); } }, t('proTrial'))),
     ]);
 }
 
@@ -449,33 +454,33 @@ function breakView(state) {
   live.push((now) => {
     const c = breakClock(info, now);
     big.textContent = clock(c.left);
-    back.textContent = `back at ${timeOfDay(info.endsAt)}`;
+    back.textContent = t('popupBackAt', timeOfDay(info.endsAt));
     fill.style.width = `${c.progress * 100}%`;
   });
   const blocked = [...state.blocking.sites, ...state.blocking.parts];
   const pausedText = state.plan.features?.blockInBrowser && blocked.length
-    ? `${listSummary(blocked)} open normally until the break ends.`
-    : 'Tabs won\'t pause until the break ends.';
+    ? plural('popupBreakSitesOpen', blocked.length, listSummary(blocked))
+    : t('popupTabsWontPause');
   return [
-    header({ icon: h('span', { style: { color: 'var(--indigo-fill)', display: 'flex' } }, icons.cup({ size: 24 })), name: 'Break', sub: info.after ? `After ${info.after}` : null }),
-    h('section', { class: 'card clock-card', 'aria-label': 'Break' },
-      h('div', { class: 'line' }, big, h('span', { class: 'left' }, 'left'), back),
-      h('div', { class: 'bar', role: 'img', 'aria-label': `${Math.round(info.plannedSeconds / 60)}-minute break` }, fill),
-      h('div', { class: 'tip' }, 'Stand up, refill your water, look at something far away.')),
+    header({ icon: h('span', { style: { color: 'var(--indigo-fill)', display: 'flex' } }, icons.cup({ size: 24 })), name: t('popupBreakTitle'), sub: info.after ? t('popupBreakAfter', info.after) : null }),
+    h('section', { class: 'card clock-card', 'aria-label': t('popupBreakTitle') },
+      h('div', { class: 'line' }, big, h('span', { class: 'left' }, t('clockLeft')), back),
+      h('div', { class: 'bar', role: 'img', 'aria-label': t('popupBreakBarLabel', Math.round(info.plannedSeconds / 60)) }, fill),
+      h('div', { class: 'tip' }, t('popupBreakTip'))),
     pageCard(state),
     h('section', { class: 'card paused-card' },
       icons.pauseBars(),
       h('div', null,
-        h('div', { class: 'title' }, 'Blocking is paused'),
+        h('div', { class: 'title' }, t('popupBlockingPaused')),
         h('div', { class: 'detail' }, pausedText))),
     h('div', { class: 'pair' },
-      h('button', { class: 'btn btn-quiet', onclick: () => ask({ type: 'extendBreak', minutes: 5 }) }, '+5 minutes'),
+      h('button', { class: 'btn btn-quiet', onclick: () => ask({ type: 'extendBreak', minutes: 5 }) }, t('popupExtendBreak')),
       h('button', {
         class: 'btn btn-quiet', disabled: !info.canEndEarly,
-        title: info.canEndEarly ? null : 'Breaks run to the end (Settings › Sessions)',
+        title: info.canEndEarly ? null : t('popupBreaksRunToEnd'),
         onclick: () => ask({ type: 'endBreak' }),
-      }, 'End break')),
+      }, t('popupEndBreak'))),
     message ? h('div', { class: 'error', role: 'alert' }, message) : null,
-    links(['Open FocusGuard', () => openApp()], ["Today's report", () => openApp('reports')]),
+    links([t('openApp'), () => openApp()], [t('todaysReport'), () => openApp('reports')]),
   ];
 }

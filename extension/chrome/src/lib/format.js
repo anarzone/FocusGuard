@@ -1,5 +1,7 @@
-// Small pure helpers for addresses and times. No chrome.* here, so the
-// tests can run them in Node.
+// Small helpers for addresses and times. The only chrome.* they touch is
+// chrome.i18n, through i18n.js, which the tests stub.
+
+import { plural, t, uiLanguage } from './i18n.js';
 
 // "https://www.x.com/home" → "x.com"; null for anything but http(s).
 export function displayHost(url) {
@@ -82,13 +84,18 @@ export function clock(seconds) {
   return (h > 0 ? `${h}:` : '') + `${mm}:${String(sec).padStart(2, '0')}`;
 }
 
-// "24m", "1h 5m", "2h".
+// "24m", "1h 5m", "2h" (de "24 Min", az "24 dəq").
 export function minutesLabel(seconds) {
   const total = Math.max(0, Math.round(seconds / 60));
   const h = Math.floor(total / 60);
   const m = total % 60;
-  if (h === 0) return `${m}m`;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  if (h === 0) return t('durationMinutes', m);
+  return m === 0 ? t('durationHours', h) : t('durationHoursMinutes', h, m);
+}
+
+// "1 minute", "2 minutes": for sentences and screen readers.
+export function minutesPhrase(seconds) {
+  return plural('minutesPhrase', Math.round(seconds / 60));
 }
 
 // "4h", "3h 30m", "45m" from minutes.
@@ -97,25 +104,26 @@ export function goalLabel(minutes) {
 }
 
 // "21:40" in the user's own clock style.
-export function timeOfDay(ms, locale) {
-  return new Date(ms).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+export function timeOfDay(ms) {
+  return new Date(ms).toLocaleTimeString(uiLanguage(), { hour: 'numeric', minute: '2-digit' });
 }
 
-// "today at 18:05", "yesterday at 9:12", "on 21 Oct".
-export function lastSeen(ms, now = Date.now(), locale) {
+// "21 Oct". Chromium's Intl has no month names for languages its own UI doesn't
+// ship (Azerbaijani comes out as "M10 21"), so those get digits: "21.10".
+export function dayAndMonth(ms) {
+  const date = new Date(ms);
+  const text = date.toLocaleDateString(uiLanguage(), { day: 'numeric', month: 'short' });
+  return /^M\d/.test(text) ? `${date.getDate()}.${String(date.getMonth() + 1).padStart(2, '0')}` : text;
+}
+
+// "Last connected today at 18:05", "… yesterday at 9:12", "… on 21 Oct".
+export function lastSeen(ms, now = Date.now()) {
   if (!ms) return null;
-  const day = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const day = (time) => { const d = new Date(time); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const diffDays = Math.round((day(now) - day(ms)) / 86400000);
-  if (diffDays === 0) return `today at ${timeOfDay(ms, locale)}`;
-  if (diffDays === 1) return `yesterday at ${timeOfDay(ms, locale)}`;
-  return `on ${new Date(ms).toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
-}
-
-// 1 → "1st", 3 → "3rd", 11 → "11th".
-export function ordinal(n) {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-  return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+  if (diffDays === 0) return t('popupLastConnectedToday', timeOfDay(ms));
+  if (diffDays === 1) return t('popupLastConnectedYesterday', timeOfDay(ms));
+  return t('popupLastConnectedOn', dayAndMonth(ms));
 }
 
 // First letter for a site's tile, e.g. "x.com" → "X".
@@ -124,11 +132,10 @@ export function tileLetter(host) {
   return (name[0] || '?').toUpperCase();
 }
 
-// "x.com, reddit.com and 4 more"
-export function listSummary(items, shown = 2) {
+// "x.com", "x.com and reddit.com", "x.com, reddit.com and 4 more"
+export function listSummary(items) {
   if (items.length === 0) return '';
-  if (items.length <= shown) {
-    return items.length === 1 ? items[0] : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-  }
-  return `${items.slice(0, shown).join(', ')} and ${items.length - shown} more`;
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return t('listTwo', items[0], items[1]);
+  return t('listMore', items[0], items[1], items.length - 2);
 }

@@ -11,6 +11,12 @@
 // Options: --chrome PATH (default: Google Chrome in /Applications)
 //          --out DIR     (default: ./smoke-shots)
 //          --headful     (watch it run)
+//          --lang CODE   (run in that language: de, or az, see below)
+//
+// On a Mac, Chrome takes its language from -AppleLanguages and ignores --lang.
+// It has no Azerbaijani UI at all, so chrome.i18n never picks az: --lang az
+// loads a copy of the extension with az's catalog in de's place, in a German
+// Chrome.
 //
 // Branded Chrome ignores --load-extension since 137, so the extension goes
 // in through puppeteer's pipe (Extensions.loadUnpacked).
@@ -36,6 +42,8 @@ const HELPER = arg('--helper');
 const CHROME = arg('--chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
 const OUT = path.resolve(arg('--out', 'smoke-shots'));
 const HEADFUL = args.includes('--headful');
+const LANG = arg('--lang');
+const UI_LANGUAGE = LANG === 'az' ? 'de' : LANG;
 
 if (!HELPER || !fs.existsSync(HELPER)) {
   console.error('Pass --helper with the path to FocusGuardBrowserHelper (inside a built FocusGuard.app).');
@@ -49,6 +57,24 @@ async function loadPuppeteer() {
     const require = createRequire(path.join(process.cwd(), 'noop.js'));
     return (await import(require.resolve('puppeteer-core'))).default;
   }
+}
+
+function extensionToLoad() {
+  if (LANG !== 'az') return EXTENSION;
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'fg-smoke-az-'));
+  fs.cpSync(EXTENSION, copy, { recursive: true });
+  fs.copyFileSync(path.join(EXTENSION, '_locales/az/messages.json'), path.join(copy, '_locales/de/messages.json'));
+  return copy;
+}
+
+// Waits for a message, in whatever language the page is in, to show.
+function shows(page, key, ...values) {
+  return page.waitForFunction((k, v) => document.body.textContent.includes(chrome.i18n.getMessage(k, v)), { timeout: 10000 }, key, values);
+}
+
+// Clicks the element with this message as its text.
+function clickMessage(page, selector, key) {
+  return page.evaluate((s, k) => [...document.querySelectorAll(s)].find((el) => el.textContent.includes(chrome.i18n.getMessage(k)))?.click(), selector, key);
 }
 
 // ---------------------------------------------------------------------------
@@ -197,14 +223,16 @@ async function main() {
   await new Promise((r) => web.listen(0, '127.0.0.1', r));
   const site = `http://127.0.0.1:${web.address().port}`;
 
+  const extension = extensionToLoad();
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: !HEADFUL,
     pipe: true,
-    enableExtensions: [EXTENSION],
+    enableExtensions: [extension],
     userDataDir: profile,
     env: { ...process.env, FOCUSGUARD_BROWSER_SOCKET: SOCKET },
-    args: ['--no-first-run', '--no-default-browser-check', '--window-size=1280,800'],
+    args: ['--no-first-run', '--no-default-browser-check', '--window-size=1280,800',
+      ...(UI_LANGUAGE ? [`--lang=${UI_LANGUAGE}`, '-AppleLanguages', `(${UI_LANGUAGE})`] : [])],
     defaultViewport: null,
   });
 
@@ -237,8 +265,8 @@ async function main() {
       await page.click('button.big-btn');
       await page.waitForSelector('.steps');
       await shot(page, 'first-2-pin');
-      await page.evaluate(() => [...document.querySelectorAll('a')].find((a) => a.textContent.includes('Skip'))?.click());
-      await page.waitForFunction(() => document.body.textContent.includes("You're set."));
+      await clickMessage(page, 'a', 'welcomeSkip');
+      await shows(page, 'welcomeDoneTitle');
       await shot(page, 'first-3-done');
       await page.close();
     });
@@ -300,14 +328,14 @@ async function main() {
       await shot(page, 'block-paused-free-dark', { dark: true });
 
       // "Reopen after the session", answered by the app moving the page on.
-      await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.includes('Reopen after'))?.click());
+      await clickMessage(page, 'button', 'pausedReopenAfter');
       await waitFor('tabAction', () => received.find((m) => m.type === 'tabAction' && m.action === 'reopenLater' && m.pauseId === 'pause-1'));
       sendAll({ type: 'redirectTab', pauseId: 'pause-1', fragment: fields('queued') });
-      await page.waitForFunction(() => document.body.textContent.includes('will reopen when your session ends'));
+      await shows(page, 'pausedQueuedTitle', '127.0.0.1');
       await shot(page, 'block-paused-queued');
 
       sendAll({ type: 'redirectTab', pauseId: 'pause-1', fragment: fields('over') });
-      await page.waitForFunction(() => document.body.textContent.includes('Your session is over'));
+      await shows(page, 'pausedOverTitle');
       await shot(page, 'block-paused-over');
 
       sendAll({ type: 'redirectTab', pauseId: 'pause-1', url: `${site}/` });
@@ -321,7 +349,7 @@ async function main() {
       await page.waitForSelector('.ring');
       await shot(page, 'block-site-standard');
       setState(strict);
-      await page.waitForFunction(() => document.body.textContent.includes('stays closed'));
+      await shows(page, 'blockStrictLede', strict.session.name);
       await shot(page, 'block-site-strict-dark', { dark: true });
       setState(focusingPro);
       await page.goto(`chrome-extension://${EXTENSION_ID}/pages/block.html?kind=part&target=youtube.com%2Fshorts#https://www.youtube.com/shorts/abc`);
@@ -341,7 +369,7 @@ async function main() {
       await page.waitForSelector('.panel');
       await shot(page, 'options-free-dark', { width: 1100, height: 900, dark: true });
       setState(focusingPro);
-      await page.waitForFunction(() => document.body.textContent.includes('Decide YouTube video by video'));
+      await shows(page, 'optionsYoutubeTitle');
       await shot(page, 'options-pro', { width: 1100, height: 900 });
       await page.close();
     });
@@ -363,7 +391,7 @@ async function main() {
     await step('popup: FocusGuard not running', async () => {
       await stopApp();
       const popup = await extPage('popup.html', { width: 340, height: 600 });
-      await popup.waitForFunction(() => document.body.textContent.includes("FocusGuard isn't running"), { timeout: 10000 });
+      await shows(popup, 'appNotRunning');
       await shot(popup, 'popup-not-running', { width: 340, height: 600 });
       await popup.close();
     });
@@ -372,6 +400,7 @@ async function main() {
     web.close();
     try { await stopApp(); } catch { /* already stopped */ }
     fs.rmSync(profile, { recursive: true, force: true });
+    if (extension !== EXTENSION) fs.rmSync(extension, { recursive: true, force: true });
   }
 
   const failed = results.filter((r) => r[0] === 'FAIL');

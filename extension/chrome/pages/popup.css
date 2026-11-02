@@ -60,7 +60,7 @@ body { width: 340px; --slash-gap: var(--popup); }
 /* Today */
 .today { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .today .line { display: flex; align-items: baseline; gap: 6px; }
-.today .big { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.today .big { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
 .today .label { font-size: 12px; color: var(--ink-2); flex: 1 1 auto; }
 .meter { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
 .meter > div { height: 6px; border-radius: 3px; background: var(--indigo-fill); }
@@ -77,7 +77,7 @@ body { width: 340px; --slash-gap: var(--popup); }
 .bar .d { background: var(--orange); }
 .bar .o { background: var(--other); }
 .bar .brk { background: rgba(97, 85, 245, 0.45); height: 8px; }
-.legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--ink-2); }
 .legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .clock-card .tip { font-size: 12px; color: var(--ink-body); line-height: 1.45; }
 
@@ -194,7 +194,7 @@ body { width: 340px; --slash-gap: var(--popup); }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .pair .btn { height: 34px; border-radius: 17px; }
 
-.links { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 2px; }
+.links { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 12px; padding: 0 6px 2px; }
 .links a { font-size: 12px; white-space: nowrap; }
 .center-link { display: flex; justify-content: center; padding: 2px 0 4px; }
 .center-link a { font-size: 12px; }

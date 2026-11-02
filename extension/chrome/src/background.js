@@ -468,6 +468,7 @@ async function showPassPill(tabId, until) {
     target: { tabId },
     args: [until, backTo],
     func: (untilMs, backToName) => {
+      // Runs in the page, so it can't import i18n.js; content scripts do get chrome.i18n.
       document.getElementById('focusguard-pass')?.remove();
       const pill = document.createElement('div');
       pill.id = 'focusguard-pass';
@@ -488,15 +489,16 @@ async function showPassPill(tabId, until) {
           button:focus-visible { outline: 2px solid #9AA3FF; outline-offset: 2px; }
         </style>
         <div class="pill"><span class="dot"></span><span class="text"><span class="main"></span>
-        <span class="sub">You let yourself through · this counts as drift</span></span><button type="button"></button></div>`;
+        <span class="sub"></span></span><button type="button"></button></div>`;
       const main = shadow.querySelector('.main');
       const button = shadow.querySelector('button');
-      button.textContent = backToName ? `Back to ${backToName}` : 'Close tab';
+      shadow.querySelector('.sub').textContent = chrome.i18n.getMessage('passPillNote');
+      button.textContent = backToName ? chrome.i18n.getMessage('backTo', [backToName]) : chrome.i18n.getMessage('closeTab');
       button.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'backToWork' }));
       const host = location.hostname.replace(/^www\./, '');
       const tickPill = () => {
         const left = Math.max(0, Math.ceil((untilMs - Date.now()) / 1000));
-        main.textContent = `${host} closes in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+        main.textContent = chrome.i18n.getMessage('passPillCloses', [host, `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`]);
         if (left <= 0) { clearInterval(timer); pill.remove(); }
       };
       const timer = setInterval(tickPill, 1000);
