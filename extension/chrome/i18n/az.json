@@ -1,0 +1,1706 @@
+{
+  "localeCode": {
+    "message": "az"
+  },
+  "extDescription": {
+    "message": "Mac üçün FocusGuard ilə işləyir: vaxtınızı saytlar üzrə sayır, fokus zamanı yayındıran tabları dayandırır. Mac-dən çıxmır."
+  },
+  "extActionTitle": {
+    "message": "FocusGuard"
+  },
+  "appNotRunning": {
+    "message": "FocusGuard işləmir"
+  },
+  "openApp": {
+    "message": "FocusGuard tətbiqini açın"
+  },
+  "getForMac": {
+    "message": "Mac üçün FocusGuard yükləyin"
+  },
+  "getApp": {
+    "message": "FocusGuard yükləyin"
+  },
+  "tryAgain": {
+    "message": "Yenidən cəhd edin"
+  },
+  "todaysReport": {
+    "message": "Bugünkü hesabat"
+  },
+  "closeTab": {
+    "message": "Tabı bağlayın"
+  },
+  "closeTabKey": {
+    "message": "tabı bağlayın"
+  },
+  "allow": {
+    "message": "İcazə verin"
+  },
+  "backTo": {
+    "message": "$name$ tətbiqinə qayıdın",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "backToKey": {
+    "message": "$name$ tətbiqinə qayıdın",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "backToWork": {
+    "message": "İşə qayıdın"
+  },
+  "backToWorkKey": {
+    "message": "işə qayıdın"
+  },
+  "keyEsc": {
+    "message": "esc"
+  },
+  "keyReturn": {
+    "message": "return"
+  },
+  "sessionAlreadyRunning": {
+    "message": "Artıq bir sessiya gedir."
+  },
+  "blockBeforeLoad": {
+    "message": "Səhifələr açılmadan bloklayın"
+  },
+  "proNeverOpen": {
+    "message": "Diqqəti yayındıran səhifələr heç açılmır"
+  },
+  "proYoutube": {
+    "message": "YouTube hər video üzrə ayrıca çeşidlənir"
+  },
+  "proLimits": {
+    "message": "İstədiyiniz qədər sayt üçün gündəlik limit"
+  },
+  "proTrial": {
+    "message": "Pro planına baxın, 14 gün pulsuz"
+  },
+  "categoryFocus": {
+    "message": "Fokus"
+  },
+  "categoryNeutral": {
+    "message": "Neytral"
+  },
+  "categoryDistracting": {
+    "message": "Yayındıran"
+  },
+  "presetGentle": {
+    "message": "Yumşaq"
+  },
+  "presetStandard": {
+    "message": "Standart"
+  },
+  "presetStrict": {
+    "message": "Sərt"
+  },
+  "badgeFree": {
+    "message": "PULSUZ"
+  },
+  "badgePro": {
+    "message": "PRO"
+  },
+  "badgeTrial": {
+    "message": "SINAQ"
+  },
+  "durationMinutes": {
+    "message": "$minutes$ dəq",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "durationHours": {
+    "message": "$hours$ saat",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "durationHoursMinutes": {
+    "message": "$hours$ saat $minutes$ dəq",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      }
+    }
+  },
+  "minutesPhrase_one": {
+    "message": "$count$ dəqiqə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesPhrase_other": {
+    "message": "$count$ dəqiqə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "clockLeft": {
+    "message": "qalıb"
+  },
+  "clockLeftPaused": {
+    "message": "qalıb · dayandırılıb"
+  },
+  "clockSoFar": {
+    "message": "keçib"
+  },
+  "clockSoFarPaused": {
+    "message": "keçib · dayandırılıb"
+  },
+  "listTwo": {
+    "message": "$first$ və $second$",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "listMore": {
+    "message": "$first$, $second$ və daha $count$ sayt",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
+  },
+  "toolbarPaused": {
+    "message": "dayandırılıb"
+  },
+  "toolbarMinutesLeft": {
+    "message": "$minutes$ dəq qalıb",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSoFar": {
+    "message": "$time$ keçib",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarLetThrough": {
+    "message": "keçid: $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSitesBlocked_one": {
+    "message": "$count$ sayt bloklanıb",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSitesBlocked_other": {
+    "message": "$count$ sayt bloklanıb",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarBreakUntil": {
+    "message": "FocusGuard · fasilə $time$ saatına qədər",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarDone": {
+    "message": "FocusGuard · $name$ sessiyası bitdi",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarReady": {
+    "message": "FocusGuard · hazırdır"
+  },
+  "passPillNote": {
+    "message": "Özünüzə keçid verdiniz · bu, yayınma sayılır"
+  },
+  "passPillCloses": {
+    "message": "$host$ bağlanır: $time$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupOptionsLabel": {
+    "message": "Seçimlər"
+  },
+  "popupMoreLabel": {
+    "message": "Daha çox"
+  },
+  "popupNotConnected": {
+    "message": "Qoşulmayıb"
+  },
+  "popupGetAppTitle": {
+    "message": "FocusGuard tətbiqini yükləyin"
+  },
+  "popupGetAppBody": {
+    "message": "Bu genişləndirmə Mac üçün FocusGuard ilə işləyir. Sessiyaları tətbiq idarə edir, genişləndirmə isə hansı səhifədə olduğunuzu ona bildirir və fokus zamanı diqqəti yayındıran tabları dayandırır."
+  },
+  "popupFreeToDownload": {
+    "message": "Pulsuz · macOS 26 tələb olunur"
+  },
+  "popupAlreadyInstalled": {
+    "message": "Artıq quraşdırmısınız?"
+  },
+  "popupOpenOnce": {
+    "message": "FocusGuard tətbiqini bir dəfə açın, sonra yenidən cəhd edin."
+  },
+  "popupUntilConnected": {
+    "message": "Tətbiq qoşulana qədər bu brauzerdə heç nə izlənmir və dayandırılmır."
+  },
+  "popupNotRunningBody": {
+    "message": "Bu brauzerdəki vaxtınızın sayılması və diqqəti yayındıran saytların sessiyalarınıza mane olmaması üçün tətbiqi açın."
+  },
+  "popupLastConnectedToday": {
+    "message": "Son qoşulma: bu gün, saat $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLastConnectedYesterday": {
+    "message": "Son qoşulma: dünən, saat $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLastConnectedOn": {
+    "message": "Son qoşulma: $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupKeepRunningNote": {
+    "message": "Tətbiq bağlı olanda burada heç nə izlənmir və dayandırılmır. Onun işlək qalması üçün FocusGuard ayarlarında $setting$ seçimini aktiv edin.",
+    "placeholders": {
+      "setting": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupOpenAtLogin": {
+    "message": "Girişdə açılsın"
+  },
+  "popupNotOnThisMac": {
+    "message": "Bu Mac-də yoxdur? FocusGuard yükləyin"
+  },
+  "popupConnecting": {
+    "message": "Qoşulur…"
+  },
+  "popupLookingOnMac": {
+    "message": "FocusGuard bu Mac-də axtarılır…"
+  },
+  "popupConnectedRecap": {
+    "message": "Qoşulub · $name$ sessiyası $time$ saatında bitdi",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupConnectedIdle": {
+    "message": "Qoşulub · aktiv sessiya yoxdur"
+  },
+  "popupTodayLabel": {
+    "message": "Bu gün"
+  },
+  "popupFocusToday": {
+    "message": "bugünkü fokus"
+  },
+  "popupGoal": {
+    "message": "Hədəf $goal$",
+    "placeholders": {
+      "goal": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupGoalMeterLabel": {
+    "message": "Hədəf $goal$, tamamlanıb $done$",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "goal": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupStartMinutes": {
+    "message": "$minutes$ dəqiqəlik sessiya başladın",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartOpen": {
+    "message": "Sonsuz sessiya başladın"
+  },
+  "popupStartEndsBlocking": {
+    "message": "Bitmə vaxtı: $time$. Başlayanda bloklama aktiv olur.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartEndsPausing": {
+    "message": "Bitmə vaxtı: $time$. Diqqətiniz yayınsa, yayındıran tablar dayandırılır.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartOpenBlocking": {
+    "message": "Bitmə vaxtı yoxdur. Başlayanda bloklama aktiv olur."
+  },
+  "popupStartOpenPausing": {
+    "message": "Bitmə vaxtı yoxdur. Diqqətiniz yayınsa, yayındıran tablar dayandırılır."
+  },
+  "popupStartSection": {
+    "message": "Sessiya başladın"
+  },
+  "popupLengthLabel": {
+    "message": "Müddət"
+  },
+  "popupLengthMinutes": {
+    "message": "$minutes$ dəq",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLengthOpen": {
+    "message": "Sonsuz"
+  },
+  "popupChangeFailed": {
+    "message": "Dəyişmək alınmadı. FocusGuard hələ də açıqdır?"
+  },
+  "popupOnBreak": {
+    "message": "Əvvəlcə fasiləni bitirin."
+  },
+  "popupStartFailed": {
+    "message": "Başlatmaq alınmadı. FocusGuard hələ də açıqdır?"
+  },
+  "popupThisPage": {
+    "message": "Bu səhifə"
+  },
+  "popupOwnPage": {
+    "message": "FocusGuard səhifəsidir. Burada keçən vaxt yayınma sayılmır."
+  },
+  "popupBrowserPage": {
+    "message": "Brauzer səhifələri çeşidlənmir."
+  },
+  "popupCategoryChange": {
+    "message": "Kateqoriya: $category$. Dəyişin",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakNoDrift": {
+    "message": "Fasilələr yayınma sayılmır."
+  },
+  "popupCategoryFor": {
+    "message": "$host$ üçün kateqoriya",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupApplyTo": {
+    "message": "Harada tətbiq olunsun"
+  },
+  "popupApplyAllOf": {
+    "message": "Bütün $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupApplyPage": {
+    "message": "Yalnız bu səhifə"
+  },
+  "popupApplyHint": {
+    "message": "Bu gün artıq sayılmış vaxtı da dəyişir."
+  },
+  "popupPausedSub": {
+    "message": "Dayandırılıb · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupFocusingBlockingSub": {
+    "message": "Fokus · bloklama aktivdir · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupFocusingSub": {
+    "message": "Fokus · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupEnds": {
+    "message": "bitir: $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoEnd": {
+    "message": "sonsuz"
+  },
+  "popupSessionLabel": {
+    "message": "Sessiya"
+  },
+  "popupBarPlanned": {
+    "message": "$planned$ dəqiqəlik sessiya, keçib: $elapsed$. Fokus: $focus$, yayınma: $drift$, digər: $other$",
+    "placeholders": {
+      "planned": {
+        "content": "$1"
+      },
+      "elapsed": {
+        "content": "$2"
+      },
+      "focus": {
+        "content": "$3"
+      },
+      "drift": {
+        "content": "$4"
+      },
+      "other": {
+        "content": "$5"
+      }
+    }
+  },
+  "popupBarOpen": {
+    "message": "Keçib: $elapsed$. Fokus: $focus$, yayınma: $drift$, digər: $other$",
+    "placeholders": {
+      "elapsed": {
+        "content": "$1"
+      },
+      "focus": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "other": {
+        "content": "$4"
+      }
+    }
+  },
+  "popupLegendFocus": {
+    "message": "$time$ fokus",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLegendDrift": {
+    "message": "$time$ yayınma",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLegendOther": {
+    "message": "$time$ digər",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRuleNobodyUntil": {
+    "message": "Bu səhifələr açılmır. $preset$ rejim $time$ saatına qədər heç kimə keçid vermir.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupRuleNobodySession": {
+    "message": "Bu səhifələr açılmır. $preset$ rejim sessiya bitənə qədər heç kimə keçid vermir.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRuleWait": {
+    "message": "Bu səhifələr açılmır. $preset$ rejim $seconds$ saniyə gözlədikdən sonra $length$ müddətinə keçid verir.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      },
+      "length": {
+        "content": "$3"
+      }
+    }
+  },
+  "popupRuleNow": {
+    "message": "Bu səhifələr açılmır. $preset$ rejim dərhal $length$ müddətinə keçid verir.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "length": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupSiteAccessBody": {
+    "message": "Diqqəti yayındıran səhifələrin açılmaması üçün FocusGuard saytlara giriş tələb edir. Yenə də onların məzmununu oxumur."
+  },
+  "popupAllowSiteAccess": {
+    "message": "Saytlara girişə icazə verin"
+  },
+  "popupBlockingLabel": {
+    "message": "Bloklama"
+  },
+  "popupBlockedThisSession": {
+    "message": "Bu sessiyada bloklanıb"
+  },
+  "popupStoppedVisits_one": {
+    "message": "$count$ giriş dayandırılıb",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStoppedVisits_other": {
+    "message": "$count$ giriş dayandırılıb",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupWholeSites": {
+    "message": "Bütöv saytlar"
+  },
+  "popupPartsOfSites": {
+    "message": "Saytların hissələri"
+  },
+  "popupNothingBlocked": {
+    "message": "Hələ heç nə bloklanmayıb. Sessiya zamanı bloklamaq üçün saytları Yayındıran kimi işarələyin."
+  },
+  "popupPauseTab": {
+    "message": "Tabın dayandırılması"
+  },
+  "popupPauseOn": {
+    "message": "Aktiv"
+  },
+  "popupPauseOff": {
+    "message": "Deaktiv"
+  },
+  "popupPauseTabBody": {
+    "message": "Diqqəti yayındıran saytda qalsanız, Mac-də bloklama ekranı görünür, bu tab isə sakit bir səhifəyə keçir."
+  },
+  "popupHide": {
+    "message": "Gizlədin"
+  },
+  "popupProParts": {
+    "message": "Saytların hissələri, məsələn, youtube.com/shorts"
+  },
+  "popupEditBlocked": {
+    "message": "Bloklananları redaktə edin"
+  },
+  "popupBreakTitle": {
+    "message": "Fasilə"
+  },
+  "popupBreakAfter": {
+    "message": "$name$ sessiyasından sonra",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBackAt": {
+    "message": "qayıdış: $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakBarLabel": {
+    "message": "$minutes$ dəqiqəlik fasilə",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakTip": {
+    "message": "Ayağa qalxın, su götürün, uzaq bir nöqtəyə baxın."
+  },
+  "popupBlockingPaused": {
+    "message": "Bloklama dayandırılıb"
+  },
+  "popupBreakSitesOpen_one": {
+    "message": "Fasilə bitənə qədər $sites$ adi qaydada açılır.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "sites": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupBreakSitesOpen_other": {
+    "message": "Fasilə bitənə qədər $sites$ adi qaydada açılır.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "sites": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupTabsWontPause": {
+    "message": "Fasilə bitənə qədər tablar dayandırılmayacaq."
+  },
+  "popupExtendBreak": {
+    "message": "+5 dəqiqə"
+  },
+  "popupEndBreak": {
+    "message": "Fasiləni bitirin"
+  },
+  "popupBreaksRunToEnd": {
+    "message": "Fasilələr sona qədər davam edir (Ayarlar › Sessiyalar)"
+  },
+  "blockDocTitlePaused": {
+    "message": "Dayandırılıb · FocusGuard"
+  },
+  "blockDocTitleBlocked": {
+    "message": "Bloklanıb · FocusGuard"
+  },
+  "blockThisSite": {
+    "message": "Bu sayt"
+  },
+  "blockProblemStrict": {
+    "message": "Sərt rejim aktivdir, ona görə sessiya bitənə qədər keçid yoxdur."
+  },
+  "blockProblemNotPro": {
+    "message": "Özünüzə keçid vermək Pro planına daxildir."
+  },
+  "blockProblemNoSession": {
+    "message": "Sessiya bitib."
+  },
+  "blockProblemNoExtraTime": {
+    "message": "Bu gün əlavə vaxt qalmayıb."
+  },
+  "blockProblemNotConnected": {
+    "message": "FocusGuard qoşulmayıb."
+  },
+  "blockProblemNotOpen": {
+    "message": "FocusGuard açıq deyil."
+  },
+  "blockProblemGeneric": {
+    "message": "Alınmadı. FocusGuard hələ də açıqdır?"
+  },
+  "blockRingEnds": {
+    "message": "Sessiya dairəsi: $planned$ dəqiqənin $done$ dəqiqəsi keçib, bunun $drift$ dəqiqəsi yayınmadır. $clock$ qalıb, bitmə vaxtı: $time$.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "planned": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "clock": {
+        "content": "$4"
+      },
+      "time": {
+        "content": "$5"
+      }
+    }
+  },
+  "blockRingPlanned": {
+    "message": "Sessiya dairəsi: $planned$ dəqiqənin $done$ dəqiqəsi keçib, bunun $drift$ dəqiqəsi yayınmadır. $clock$ qalıb.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "planned": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "clock": {
+        "content": "$4"
+      }
+    }
+  },
+  "blockRingOpen": {
+    "message": "Sessiya dairəsi: $done$ dəqiqə keçib, bunun $drift$ dəqiqəsi yayınmadır. Cəmi keçib: $clock$.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "drift": {
+        "content": "$2"
+      },
+      "clock": {
+        "content": "$3"
+      }
+    }
+  },
+  "blockAvailableIn": {
+    "message": "$label$, $seconds$ saniyə sonra aktiv olacaq",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockChangeBlocked": {
+    "message": "Bloklananları dəyişin"
+  },
+  "blockPartTitle": {
+    "message": "$host$ saytının bu hissəsi fokus zamanı bloklanıb.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockPartLede": {
+    "message": "$host$ saytının qalan hissəsi açılır.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockStrictTitleUntil": {
+    "message": "$host$ $time$ saatına qədər bağlı qalır.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockStrictTitleSession": {
+    "message": "$host$ bu sessiyada bağlı qalır.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockStrictLede": {
+    "message": "Sərt rejim aktivdir, ona görə $name$ sessiyası zamanı özünüzə keçid verə bilməzsiniz.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWaitTitleUntil": {
+    "message": "$host$ $time$ saatına qədər gözləyə bilər.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockWaitTitleSession": {
+    "message": "$host$ sessiya bitənə qədər gözləyə bilər.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWaitLede": {
+    "message": "$name$ sessiyası zamanı bloklanıb, ona görə səhifə açılmadı.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockGoTo": {
+    "message": "$host$ saytına keçin",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockForWork": {
+    "message": "Bu, iş üçündür"
+  },
+  "blockLetMeThrough": {
+    "message": "Keçməyə icazə verin"
+  },
+  "blockFooterBy": {
+    "message": "FocusGuard tərəfindən bloklanıb"
+  },
+  "blockFooterLockedUntil": {
+    "message": "bloklanma siyahısı $time$ saatına qədər kilidlidir",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterLockedSession": {
+    "message": "bloklanma siyahısı sessiya bitənə qədər kilidlidir"
+  },
+  "blockFooterOnlyPart": {
+    "message": "yalnız $part$ bloklanıb",
+    "placeholders": {
+      "part": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_one": {
+    "message": "bu sessiyada $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_two": {
+    "message": "bu sessiyada $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_few": {
+    "message": "bu sessiyada $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_other": {
+    "message": "bu sessiyada $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWhyForWork": {
+    "message": "$host$ həqiqətən işlə bağlıdırsa, “Bu, iş üçündür” düyməsi $seconds$ saniyə sonra aktiv olacaq.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockKeyLetThrough": {
+    "message": "keçid, $length$ müddətinə",
+    "placeholders": {
+      "length": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitDoneTitle": {
+    "message": "$site$ bu gün üçün bitdi.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitMinutesTitle": {
+    "message": "$site$ üçün bugünkü $minutes$ dəqiqəniz bitdi.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "site": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitTimeTitle": {
+    "message": "$site$ üçün bugünkü vaxtınız bitdi.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeMinutes": {
+    "message": "$minutes$ dəqiqənizi istifadə etdiniz. Sabah yenidən açılacaq.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeUsed": {
+    "message": "Dəqiqələrinizi istifadə etdiniz. Sabah yenidən açılacaq."
+  },
+  "limitLedeMinutesPreset": {
+    "message": "$minutes$ dəqiqənizi istifadə etdiniz. $preset$ rejim aktivdir, ona görə sabah yenidən açılacaq.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "preset": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitLedeUsedPreset": {
+    "message": "Dəqiqələrinizi istifadə etdiniz. $preset$ rejim aktivdir, ona görə sabah yenidən açılacaq.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeExtra": {
+    "message": "Sabah yenidən açılacaq. Limitlər bütün gün, sessiya zamanı və ondan kənarda işləyir."
+  },
+  "limitMoreMinutes": {
+    "message": "Daha $minutes$ dəqiqə",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitOnceADay": {
+    "message": "gündə bir dəfə"
+  },
+  "limitTimesLeft_one": {
+    "message": "bu gün daha $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTimesLeft_other": {
+    "message": "bu gün daha $count$ dəfə",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTag": {
+    "message": "Gündəlik limit"
+  },
+  "limitTagMinutes": {
+    "message": "Gündəlik limit · $minutes$ dəq",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTodayOn": {
+    "message": "Bu gün: $site$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitUsedOf": {
+    "message": "$used$ / $minutes$ dəq",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitMeterLabel": {
+    "message": "$minutes$ dəqiqənin $used$ dəqiqəsi istifadə olunub, giriş sayı: $visits$",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      },
+      "visits": {
+        "content": "$3"
+      }
+    }
+  },
+  "limitVisits_one": {
+    "message": "$count$ giriş",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitVisits_other": {
+    "message": "$count$ giriş",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitVisitsLast_one": {
+    "message": "$count$ giriş, sonuncu saat $time$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitVisitsLast_other": {
+    "message": "$count$ giriş, sonuncu saat $time$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitResets": {
+    "message": "Sıfırlanma vaxtı: 00:00"
+  },
+  "limitKeyExtra": {
+    "message": "daha $minutes$ dəqiqə, $hint$",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "hint": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitFooter": {
+    "message": "FocusGuard gündəlik limiti · $preset$ ·",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitChangeTomorrow": {
+    "message": "Sabah üçün limiti dəyişin"
+  },
+  "limitChange": {
+    "message": "Limiti dəyişin"
+  },
+  "pausedReopenHost": {
+    "message": "$host$ saytını yenidən açın",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedTag": {
+    "message": "Dayandırılıb"
+  },
+  "pausedTagLater": {
+    "message": "Sonra açılacaq"
+  },
+  "pausedQueuedTitle": {
+    "message": "$host$ sessiyanız bitəndə yenidən açılacaq",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedQueuedLede": {
+    "message": "Bu tabda, qaldığınız yerdən qayıdacaq."
+  },
+  "pausedDontReopen": {
+    "message": "Yenidən açmayın"
+  },
+  "pausedOverTitle": {
+    "message": "Sessiyanız bitdi"
+  },
+  "pausedOverLede": {
+    "message": "$host$ hələ dayandırılıb. Əvvəlcə fasilə verin və ya saytı indi açın.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedTakeBreak": {
+    "message": "$minutes$ dəqiqəlik fasilə verin",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitTitle": {
+    "message": "$host$ bu gün üçün dayandırılıb",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitLedeMinutes": {
+    "message": "$minutes$ dəqiqənizi istifadə etdiniz. Gecə yarısı yenidən açılacaq.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitLede": {
+    "message": "Gecə yarısı yenidən açılacaq."
+  },
+  "pausedTitle": {
+    "message": "$host$ fokus zamanı dayandırılıb",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLede": {
+    "message": "Sessiyanız bitəndə burada olacaq."
+  },
+  "pausedLedeAfter": {
+    "message": "Sessiyanız bitəndə burada olacaq, ya da sonra yenidən açın."
+  },
+  "pausedReopenAfter": {
+    "message": "Sessiyadan sonra yenidən açın"
+  },
+  "pausedLeftInSession": {
+    "message": "sessiyanızda qalıb"
+  },
+  "pausedSessionEnding": {
+    "message": "sessiyanız bitir"
+  },
+  "pausedKeyReopen": {
+    "message": "$host$ saytını yenidən açın",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedFooterPro": {
+    "message": "FocusGuard tərəfindən dayandırılıb. Bu səhifədən heç nə internetə getmir."
+  },
+  "pausedFooterFree": {
+    "message": "FocusGuard tərəfindən dayandırılıb · Pulsuz plan. Pro planında diqqəti yayındıran səhifələr heç açılmır."
+  },
+  "pausedHowProBlocks": {
+    "message": "Pro necə bloklayır"
+  },
+  "overTitle": {
+    "message": "Sessiya bitdi."
+  },
+  "overNotRunning": {
+    "message": "FocusGuard işləmir."
+  },
+  "overLede": {
+    "message": "$host$ artıq bloklanmayıb.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "overLedeNotRunning": {
+    "message": "Tətbiq bağlı olanda heç nə bloklanmır."
+  },
+  "overOpenHost": {
+    "message": "$host$ saytını açın",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "overKeyOpen": {
+    "message": "$host$ saytını açın",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsPageTitle": {
+    "message": "FocusGuard seçimləri"
+  },
+  "optionsHeading": {
+    "message": "FocusGuard genişləndirməsi"
+  },
+  "optionsVersion": {
+    "message": "Versiya $version$ · Chrome, Arc, Brave və Edge brauzerlərində işləyir",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsConnected": {
+    "message": "Bu Mac-dəki FocusGuard tətbiqinə qoşulub"
+  },
+  "optionsConnectedDetail": {
+    "message": "FocusGuard $version$ · birbaşa tətbiqlə əlaqə saxlayır, heç vaxt internetlə yox",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsNotOnMac": {
+    "message": "FocusGuard bu Mac-də yoxdur"
+  },
+  "optionsWorksWithMac": {
+    "message": "Genişləndirmə Mac üçün FocusGuard ilə işləyir."
+  },
+  "optionsOpenToCount": {
+    "message": "Buradakı vaxtınızın sayılması və diqqəti yayındıran tabların dayandırılması üçün tətbiqi açın."
+  },
+  "optionsSiteAccess": {
+    "message": "Saytlara giriş"
+  },
+  "optionsSiteAccessProHint": {
+    "message": "Səhifələri açılmadan bloklamaq üçün lazımdır"
+  },
+  "optionsAllSites": {
+    "message": "Bütün saytlar"
+  },
+  "optionsSiteAccessFreeHint": {
+    "message": "Pulsuz planda lazım deyil. Brauzerdə bloklamanı aktiv edəndə Pro icazə istəyəcək."
+  },
+  "optionsRemove": {
+    "message": "Silin"
+  },
+  "optionsNone": {
+    "message": "Yoxdur"
+  },
+  "optionsPrivateWindows": {
+    "message": "Məxfi pəncərələr"
+  },
+  "optionsPrivateOnBlocked": {
+    "message": "Aktiv: məxfi pəncərələrdə də bloklanır və sayılır"
+  },
+  "optionsPrivateOnPaused": {
+    "message": "Aktiv: məxfi pəncərələrdə də dayandırılır və sayılır"
+  },
+  "optionsPrivateOffBlocked": {
+    "message": "Deaktiv: məxfi pəncərələrdə heç nə bloklanmır və sayılmır"
+  },
+  "optionsPrivateOffPaused": {
+    "message": "Deaktiv: məxfi pəncərələrdə heç nə dayandırılmır və sayılmır"
+  },
+  "optionsChange": {
+    "message": "Dəyişin"
+  },
+  "optionsAllowPrivate": {
+    "message": "Məxfi pəncərələrdə icazə verin"
+  },
+  "optionsConnectionLabel": {
+    "message": "Bağlantı"
+  },
+  "optionsLimitPerDay": {
+    "message": "gündə $minutes$ dəq",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsLimitPerDayFree": {
+    "message": "gündə $minutes$ dəq · 1 pulsuz limitiniz",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsWholeSite": {
+    "message": "Bütöv sayt"
+  },
+  "optionsPartOfSite": {
+    "message": "Saytın hissəsi"
+  },
+  "optionsPartNeedsPro": {
+    "message": "Saytın hissəsi, Pro tələb olunur"
+  },
+  "optionsBlockedHeading": {
+    "message": "Sessiya zamanı bloklanır"
+  },
+  "optionsDistractingLabel": {
+    "message": "Diqqəti yayındıran saytlar"
+  },
+  "optionsPausedHeading": {
+    "message": "Sessiya zamanı dayandırılır"
+  },
+  "optionsSyncedPro": {
+    "message": "FocusGuard tətbiqindən sinxronlaşdırılıb · siyahını orada redaktə edin"
+  },
+  "optionsSyncedFree": {
+    "message": "FocusGuard tətbiqindən sinxronlaşdırılıb · bloklama ekranı görünəndə tablar dayandırılır"
+  },
+  "optionsEditInApp": {
+    "message": "Tətbiqdə redaktə edin"
+  },
+  "optionsNothingYet": {
+    "message": "Hələ heç nə yoxdur. FocusGuard tətbiqində Yayındıran kimi işarələdiyiniz saytlar burada görünəcək."
+  },
+  "optionsShowsOnceConnected": {
+    "message": "FocusGuard qoşulandan sonra görünəcək."
+  },
+  "optionsYoutubeTitle": {
+    "message": "YouTube-da hər videoya ayrıca qərar verin"
+  },
+  "optionsYoutubeBody": {
+    "message": "FocusGuard hər videonun adını və kanalını oxuyur və bu Mac-də çeşidləyir. Swift mühazirəsi fokus sayılır, oyun yayımı isə yox."
+  },
+  "optionsYoutubeOffHint": {
+    "message": "Deaktiv: bütün youtube.com öz kateqoriyası üzrə işləyir."
+  },
+  "optionsYoutubeNeedsAccess": {
+    "message": "Kanalı oxumaq üçün saytlara giriş lazımdır."
+  },
+  "optionsProNeverOpen": {
+    "message": "Diqqəti yayındıran səhifələr heç açılmır, ona görə baxmağa bir şey qalmır"
+  },
+  "optionsProParts": {
+    "message": "Saytların hissələri, məsələn, youtube.com/shorts və linkedin.com/feed"
+  },
+  "optionsSharesHeading": {
+    "message": "Bu genişləndirmə nəyi paylaşır"
+  },
+  "optionsSendsToApp": {
+    "message": "Bu Mac-dəki FocusGuard tətbiqinə göndərir"
+  },
+  "optionsShareAddress": {
+    "message": "Baxdığınız tabın ünvanı və başlığı, hər dəyişəndə"
+  },
+  "optionsShareVideo": {
+    "message": "YouTube videosunun adı və kanalı, hər video üzrə seçim aktiv olanda"
+  },
+  "optionsNever": {
+    "message": "Heç vaxt"
+  },
+  "optionsNeverServer": {
+    "message": "Serverlə əlaqə saxlamır. Əlaqə saxlayacağı FocusGuard serveri yoxdur."
+  },
+  "optionsNeverReadsOther": {
+    "message": "Səhifədəki başqa məlumatları, yazdıqlarınızı, parolları və ya kukiləri oxumur"
+  },
+  "optionsNeverReads": {
+    "message": "Səhifənin məzmununu, yazdıqlarınızı, parolları və ya kukiləri oxumur"
+  },
+  "optionsNeverBackground": {
+    "message": "Arxa plandakı tablara və ya brauzer tarixçənizə baxmır"
+  },
+  "optionsNeverPrivate": {
+    "message": "Siz icazə verməsəniz, məxfi pəncərələrdə işləmir"
+  },
+  "optionsToolbarLabel": {
+    "message": "Alətlər panelindəki düymə"
+  },
+  "optionsBadgeTitle": {
+    "message": "Alətlər panelindəki düymədə qalan dəqiqələri göstərin"
+  },
+  "optionsBadgeHint": {
+    "message": "Sessiya zamanı, kiçik nişan kimi"
+  },
+  "welcomePageTitle": {
+    "message": "FocusGuard quraşdırılması"
+  },
+  "welcomeStepsLabel": {
+    "message": "Quraşdırma addımları"
+  },
+  "welcomeStepConnect": {
+    "message": "Qoşulma"
+  },
+  "welcomeStepPin": {
+    "message": "Bərkitmə"
+  },
+  "welcomeStepDone": {
+    "message": "Hazırdır"
+  },
+  "welcomeTitle": {
+    "message": "FocusGuard brauzerinizdədir."
+  },
+  "welcomeLede": {
+    "message": "Mac-dəki FocusGuard tətbiqi ilə işləyir. Quraşdırma təxminən bir dəqiqə çəkir."
+  },
+  "welcomeTimeName": {
+    "message": "Hər sayt üzrə vaxtınız"
+  },
+  "welcomeTimeText": {
+    "message": "Hansı səhifədə olduğunuzu görür, ona görə kod yoxlaması ilə YouTube-da saatlarla vaxt itirmək eyni sayılmır."
+  },
+  "welcomeBlockName": {
+    "message": "Səhifələr açılmadan bloklayır"
+  },
+  "welcomeBlockText": {
+    "message": "Diqqəti yayındıran saytlar və YouTube Shorts kimi sayt hissələri sessiya zamanı bağlı qalır."
+  },
+  "welcomeMacName": {
+    "message": "Mac-dən kənara çıxmır"
+  },
+  "welcomeMacText": {
+    "message": "Səhifə ünvanları və başlıqları birbaşa tətbiqə gedir. FocusGuard serveri yoxdur."
+  },
+  "welcomeSetUp": {
+    "message": "Quraşdırın"
+  },
+  "welcomeNext": {
+    "message": "Növbəti addım: tətbiqə qoşulun, sonra düyməni bərkidin"
+  },
+  "welcomeNotOnMacTitle": {
+    "message": "FocusGuard hələ bu Mac-də yoxdur"
+  },
+  "welcomeInstallOpen": {
+    "message": "Tətbiqi quraşdırıb bir dəfə açın. Bu səhifə özü növbəti addıma keçəcək."
+  },
+  "welcomeNotOpenTitle": {
+    "message": "FocusGuard bu Mac-dədir, amma açıq deyil"
+  },
+  "welcomeLookingTitle": {
+    "message": "FocusGuard axtarılır"
+  },
+  "welcomeOpenMovesOn": {
+    "message": "Tətbiqi açın, bu səhifə özü növbəti addıma keçəcək."
+  },
+  "welcomeConnectTitle": {
+    "message": "FocusGuard tətbiqinə qoşulun"
+  },
+  "welcomeConnectLede": {
+    "message": "Genişləndirmənin işləməsi üçün tətbiq bu Mac-də açıq olmalıdır."
+  },
+  "welcomeAppLabel": {
+    "message": "FocusGuard tətbiqi"
+  },
+  "welcomeLookingStatus": {
+    "message": "FocusGuard axtarılır…"
+  },
+  "welcomeNoAppTitle": {
+    "message": "Hələ FocusGuard yoxdur?"
+  },
+  "welcomeFreeNeeds": {
+    "message": "Mac üçün pulsuzdur, macOS 26 tələb olunur."
+  },
+  "welcomeNativeNote": {
+    "message": "Genişləndirmə və tətbiq brauzerinizin “native messaging” vasitəsilə yalnız bu Mac-də əlaqə saxlayır."
+  },
+  "welcomePinTitle": {
+    "message": "FocusGuard nişanını alətlər panelinə bərkidin"
+  },
+  "welcomePinLede": {
+    "message": "Beləliklə, qalan vaxt və bloklananlar bir klik uzağınızda olacaq."
+  },
+  "welcomeHowToPinLabel": {
+    "message": "Necə bərkitmək olar"
+  },
+  "welcomePinStep1": {
+    "message": "Genişləndirmələr düyməsinə klikləyin"
+  },
+  "welcomePinStep1Detail": {
+    "message": "Ünvan sətrinin yanında, yuxarı sağdakı tapmaca parçası."
+  },
+  "welcomePinStep2": {
+    "message": "FocusGuard yanındakı sancağa klikləyin"
+  },
+  "welcomePinStep2Detail": {
+    "message": "Ünvan sətrinin yanında qalxan görünəcək, bu səhifə də növbəti addıma keçəcək."
+  },
+  "welcomeWaitingPin": {
+    "message": "Bərkidilməsi gözlənilir…"
+  },
+  "welcomeSkip": {
+    "message": "Hələlik keçin"
+  },
+  "welcomeNoPuzzle": {
+    "message": "Tapmaca parçası görünmür? Bəzi brauzerlərdə genişləndirmələr əsas menyuda olur."
+  },
+  "welcomeDoneTitle": {
+    "message": "Hər şey hazırdır."
+  },
+  "welcomeDoneLedePro": {
+    "message": "Sessiyanı alətlər panelindəki qalxandan və ya menyu sətrindən başladın. Fokus zamanı diqqəti yayındıran səhifələr bağlı qalır."
+  },
+  "welcomeDoneLedeFree": {
+    "message": "Sessiyanı alətlər panelindəki qalxandan və ya menyu sətrindən başladın. Diqqətiniz yayınanda yayındıran tablar dayandırılır."
+  },
+  "welcomeSummaryLabel": {
+    "message": "Quraşdırmanın xülasəsi"
+  },
+  "welcomeConnectedVersion": {
+    "message": "FocusGuard $version$ ilə əlaqə qurulub",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcomeOnThisMac": {
+    "message": "bu Mac-də"
+  },
+  "welcomeNotConnected": {
+    "message": "FocusGuard hazırda qoşulmayıb"
+  },
+  "welcomePinned": {
+    "message": "Alətlər panelinə bərkidilib"
+  },
+  "welcomeNotPinned": {
+    "message": "Hələ bərkidilməyib"
+  },
+  "welcomePinPath": {
+    "message": "tapmaca parçası › sancaq"
+  },
+  "welcomeSummaryPro": {
+    "message": "Pro: heç açılmayan səhifələr, sayt hissələri, YouTube hər video üzrə"
+  },
+  "welcomeSummaryFree": {
+    "message": "Pulsuz plan: hər sayt üzrə vaxt və diqqətiniz yayınanda dayanan tablar"
+  },
+  "welcomeNeedsAccess": {
+    "message": "Bloklama üçün saytlara giriş lazımdır"
+  },
+  "welcomePrivateCovered": {
+    "message": "Məxfi pəncərələr də əhatə olunur"
+  },
+  "welcomePrivateNotCovered": {
+    "message": "Məxfi pəncərələr hələ əhatə olunmur"
+  },
+  "welcomeSessionStarted": {
+    "message": "Sessiya başladı"
+  },
+  "welcomeStartMinutes": {
+    "message": "$minutes$ dəqiqəlik sessiya başladın",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcomeCloseThisTab": {
+    "message": "Bu tabı bağlayın"
+  },
+  "welcomeStartFailed": {
+    "message": "Başlatmaq alınmadı. FocusGuard açıqdır?"
+  },
+  "welcomeProLine": {
+    "message": "Diqqəti yayındıran səhifələrin heç açılmamasını istəyirsiniz? Bu, FocusGuard Pro planıdır, 14 gün pulsuz."
+  },
+  "welcomeSeePro": {
+    "message": "Pro planına baxın"
+  }
+}

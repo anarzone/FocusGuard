@@ -1,0 +1,1706 @@
+{
+  "localeCode": {
+    "message": "de"
+  },
+  "extDescription": {
+    "message": "Arbeitet mit FocusGuard für Mac: zählt deine Zeit pro Website und pausiert ablenkende Tabs im Fokus. Bleibt auf deinem Mac."
+  },
+  "extActionTitle": {
+    "message": "FocusGuard"
+  },
+  "appNotRunning": {
+    "message": "FocusGuard läuft nicht"
+  },
+  "openApp": {
+    "message": "FocusGuard öffnen"
+  },
+  "getForMac": {
+    "message": "FocusGuard für Mac holen"
+  },
+  "getApp": {
+    "message": "FocusGuard holen"
+  },
+  "tryAgain": {
+    "message": "Erneut versuchen"
+  },
+  "todaysReport": {
+    "message": "Heutiger Bericht"
+  },
+  "closeTab": {
+    "message": "Tab schließen"
+  },
+  "closeTabKey": {
+    "message": "Tab schließen"
+  },
+  "allow": {
+    "message": "Erlauben"
+  },
+  "backTo": {
+    "message": "Zurück zu $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "backToKey": {
+    "message": "zurück zu $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "backToWork": {
+    "message": "Zurück zur Arbeit"
+  },
+  "backToWorkKey": {
+    "message": "zurück zur Arbeit"
+  },
+  "keyEsc": {
+    "message": "esc"
+  },
+  "keyReturn": {
+    "message": "return"
+  },
+  "sessionAlreadyRunning": {
+    "message": "Es läuft schon eine Session."
+  },
+  "blockBeforeLoad": {
+    "message": "Blockieren, bevor Seiten laden"
+  },
+  "proNeverOpen": {
+    "message": "Ablenkende Seiten öffnen sich gar nicht"
+  },
+  "proYoutube": {
+    "message": "YouTube, Video für Video einsortiert"
+  },
+  "proLimits": {
+    "message": "Tageslimits für beliebig viele Websites"
+  },
+  "proTrial": {
+    "message": "Pro ansehen, 14 Tage gratis"
+  },
+  "categoryFocus": {
+    "message": "Fokus"
+  },
+  "categoryNeutral": {
+    "message": "Neutral"
+  },
+  "categoryDistracting": {
+    "message": "Ablenkend"
+  },
+  "presetGentle": {
+    "message": "Sanft"
+  },
+  "presetStandard": {
+    "message": "Standard"
+  },
+  "presetStrict": {
+    "message": "Streng"
+  },
+  "badgeFree": {
+    "message": "GRATIS"
+  },
+  "badgePro": {
+    "message": "PRO"
+  },
+  "badgeTrial": {
+    "message": "TEST"
+  },
+  "durationMinutes": {
+    "message": "$minutes$ Min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "durationHours": {
+    "message": "$hours$ Std.",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      }
+    }
+  },
+  "durationHoursMinutes": {
+    "message": "$hours$ Std. $minutes$ Min",
+    "placeholders": {
+      "hours": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      }
+    }
+  },
+  "minutesPhrase_one": {
+    "message": "$count$ Minute",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "minutesPhrase_other": {
+    "message": "$count$ Minuten",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "clockLeft": {
+    "message": "übrig"
+  },
+  "clockLeftPaused": {
+    "message": "übrig · pausiert"
+  },
+  "clockSoFar": {
+    "message": "bisher"
+  },
+  "clockSoFarPaused": {
+    "message": "bisher · pausiert"
+  },
+  "listTwo": {
+    "message": "$first$ und $second$",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      }
+    }
+  },
+  "listMore": {
+    "message": "$first$, $second$ und $count$ weitere",
+    "placeholders": {
+      "first": {
+        "content": "$1"
+      },
+      "second": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
+  },
+  "toolbarPaused": {
+    "message": "pausiert"
+  },
+  "toolbarMinutesLeft": {
+    "message": "noch $minutes$ Min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSoFar": {
+    "message": "bisher $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarLetThrough": {
+    "message": "durchgelassen für $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSitesBlocked_one": {
+    "message": "$count$ Website blockiert",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarSitesBlocked_other": {
+    "message": "$count$ Websites blockiert",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarBreakUntil": {
+    "message": "FocusGuard · Pause bis $time$ Uhr",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarDone": {
+    "message": "FocusGuard · $name$ ist fertig",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "toolbarReady": {
+    "message": "FocusGuard · bereit"
+  },
+  "passPillNote": {
+    "message": "Du hast dich durchgelassen · das zählt als Ablenkung"
+  },
+  "passPillCloses": {
+    "message": "$host$ schließt in $time$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupOptionsLabel": {
+    "message": "Optionen"
+  },
+  "popupMoreLabel": {
+    "message": "Mehr"
+  },
+  "popupNotConnected": {
+    "message": "Nicht verbunden"
+  },
+  "popupGetAppTitle": {
+    "message": "Hol dir die FocusGuard-App"
+  },
+  "popupGetAppBody": {
+    "message": "Diese Erweiterung arbeitet mit FocusGuard für Mac. Die App führt deine Sessions; die Erweiterung sagt ihr, auf welcher Seite du bist, und pausiert ablenkende Tabs, solange du im Fokus bist."
+  },
+  "popupFreeToDownload": {
+    "message": "Kostenlos · braucht macOS 26"
+  },
+  "popupAlreadyInstalled": {
+    "message": "Schon installiert?"
+  },
+  "popupOpenOnce": {
+    "message": "Öffne FocusGuard einmal und versuch es dann noch mal."
+  },
+  "popupUntilConnected": {
+    "message": "Solange die App nicht verbunden ist, wird in diesem Browser nichts erfasst oder pausiert."
+  },
+  "popupNotRunningBody": {
+    "message": "Öffne die App, damit deine Zeit in diesem Browser zählt und ablenkende Websites aus deinen Sessions draußen bleiben."
+  },
+  "popupLastConnectedToday": {
+    "message": "Zuletzt verbunden: heute um $time$ Uhr",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLastConnectedYesterday": {
+    "message": "Zuletzt verbunden: gestern um $time$ Uhr",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLastConnectedOn": {
+    "message": "Zuletzt verbunden am $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupKeepRunningNote": {
+    "message": "Solange die App geschlossen ist, wird hier nichts erfasst oder pausiert. Damit sie weiterläuft, aktiviere $setting$ in den Einstellungen von FocusGuard.",
+    "placeholders": {
+      "setting": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupOpenAtLogin": {
+    "message": "Beim Anmelden öffnen"
+  },
+  "popupNotOnThisMac": {
+    "message": "Nicht auf diesem Mac? FocusGuard holen"
+  },
+  "popupConnecting": {
+    "message": "Wird verbunden…"
+  },
+  "popupLookingOnMac": {
+    "message": "FocusGuard wird auf diesem Mac gesucht…"
+  },
+  "popupConnectedRecap": {
+    "message": "Verbunden · $name$ endete um $time$ Uhr",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupConnectedIdle": {
+    "message": "Verbunden · keine Session aktiv"
+  },
+  "popupTodayLabel": {
+    "message": "Heute"
+  },
+  "popupFocusToday": {
+    "message": "Fokus heute"
+  },
+  "popupGoal": {
+    "message": "Ziel $goal$",
+    "placeholders": {
+      "goal": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupGoalMeterLabel": {
+    "message": "$done$ von $goal$ Ziel",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "goal": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupStartMinutes": {
+    "message": "$minutes$-Minuten-Session starten",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartOpen": {
+    "message": "Session ohne Ende starten"
+  },
+  "popupStartEndsBlocking": {
+    "message": "Endet um $time$ Uhr. Das Blockieren beginnt mit dem Start.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartEndsPausing": {
+    "message": "Endet um $time$ Uhr. Ablenkende Tabs pausieren, wenn du abschweifst.",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStartOpenBlocking": {
+    "message": "Kein festes Ende. Das Blockieren beginnt mit dem Start."
+  },
+  "popupStartOpenPausing": {
+    "message": "Kein festes Ende. Ablenkende Tabs pausieren, wenn du abschweifst."
+  },
+  "popupStartSection": {
+    "message": "Session starten"
+  },
+  "popupLengthLabel": {
+    "message": "Länge"
+  },
+  "popupLengthMinutes": {
+    "message": "$minutes$ Min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLengthOpen": {
+    "message": "Ohne Ende"
+  },
+  "popupChangeFailed": {
+    "message": "Das hat nicht geklappt. Ist FocusGuard noch offen?"
+  },
+  "popupOnBreak": {
+    "message": "Beende zuerst die Pause."
+  },
+  "popupStartFailed": {
+    "message": "Der Start hat nicht geklappt. Ist FocusGuard noch offen?"
+  },
+  "popupThisPage": {
+    "message": "Diese Seite"
+  },
+  "popupOwnPage": {
+    "message": "Eine FocusGuard-Seite. Die Zeit hier zählt nicht als Ablenkung."
+  },
+  "popupBrowserPage": {
+    "message": "Browser-Seiten werden nicht einsortiert."
+  },
+  "popupCategoryChange": {
+    "message": "Kategorie: $category$. Ändern",
+    "placeholders": {
+      "category": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakNoDrift": {
+    "message": "Pausen zählen nicht als Ablenkung."
+  },
+  "popupCategoryFor": {
+    "message": "Kategorie für $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupApplyTo": {
+    "message": "Anwenden auf"
+  },
+  "popupApplyAllOf": {
+    "message": "Ganz $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupApplyPage": {
+    "message": "Nur diese Seite"
+  },
+  "popupApplyHint": {
+    "message": "Ändert auch die heute schon gezählte Zeit."
+  },
+  "popupPausedSub": {
+    "message": "Pausiert · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupFocusingBlockingSub": {
+    "message": "Im Fokus · Blockieren ist an · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupFocusingSub": {
+    "message": "Im Fokus · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupEnds": {
+    "message": "endet $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupNoEnd": {
+    "message": "kein Ende"
+  },
+  "popupSessionLabel": {
+    "message": "Session"
+  },
+  "popupBarPlanned": {
+    "message": "$planned$-Minuten-Session, $elapsed$ vorbei: $focus$ Fokus, $drift$ Ablenkung, $other$ Sonstiges",
+    "placeholders": {
+      "planned": {
+        "content": "$1"
+      },
+      "elapsed": {
+        "content": "$2"
+      },
+      "focus": {
+        "content": "$3"
+      },
+      "drift": {
+        "content": "$4"
+      },
+      "other": {
+        "content": "$5"
+      }
+    }
+  },
+  "popupBarOpen": {
+    "message": "$elapsed$ vorbei: $focus$ Fokus, $drift$ Ablenkung, $other$ Sonstiges",
+    "placeholders": {
+      "elapsed": {
+        "content": "$1"
+      },
+      "focus": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "other": {
+        "content": "$4"
+      }
+    }
+  },
+  "popupLegendFocus": {
+    "message": "$time$ Fokus",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLegendDrift": {
+    "message": "$time$ Ablenkung",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupLegendOther": {
+    "message": "$time$ Sonstiges",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRuleNobodyUntil": {
+    "message": "Diese Seiten laden nicht. $preset$ lässt bis $time$ Uhr niemanden durch.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupRuleNobodySession": {
+    "message": "Diese Seiten laden nicht. $preset$ lässt bis zum Ende der Session niemanden durch.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupRuleWait": {
+    "message": "Diese Seiten laden nicht. $preset$ lässt dich nach $seconds$ Sek. Wartezeit durch, für $length$.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      },
+      "length": {
+        "content": "$3"
+      }
+    }
+  },
+  "popupRuleNow": {
+    "message": "Diese Seiten laden nicht. $preset$ lässt dich sofort durch, für $length$.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      },
+      "length": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupSiteAccessBody": {
+    "message": "FocusGuard braucht Zugriff auf Websites, damit ablenkende Seiten gar nicht erst laden. Was darauf steht, liest es trotzdem nie."
+  },
+  "popupAllowSiteAccess": {
+    "message": "Website-Zugriff erlauben"
+  },
+  "popupBlockingLabel": {
+    "message": "Blockieren"
+  },
+  "popupBlockedThisSession": {
+    "message": "In dieser Session blockiert"
+  },
+  "popupStoppedVisits_one": {
+    "message": "$count$ Besuch gestoppt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupStoppedVisits_other": {
+    "message": "$count$ Besuche gestoppt",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupWholeSites": {
+    "message": "Ganze Websites"
+  },
+  "popupPartsOfSites": {
+    "message": "Teile von Websites"
+  },
+  "popupNothingBlocked": {
+    "message": "Noch ist nichts blockiert. Markiere Websites als Ablenkend, um sie während Sessions zu blockieren."
+  },
+  "popupPauseTab": {
+    "message": "Tab pausieren"
+  },
+  "popupPauseOn": {
+    "message": "An"
+  },
+  "popupPauseOff": {
+    "message": "Aus"
+  },
+  "popupPauseTabBody": {
+    "message": "Bleibst du auf einer ablenkenden Website, erscheint auf deinem Mac der Blockierbildschirm und dieser Tab wechselt zu einer ruhigen Seite."
+  },
+  "popupHide": {
+    "message": "Ausblenden"
+  },
+  "popupProParts": {
+    "message": "Teile von Websites, z. B. youtube.com/shorts"
+  },
+  "popupEditBlocked": {
+    "message": "Blockierte Websites bearbeiten"
+  },
+  "popupBreakTitle": {
+    "message": "Pause"
+  },
+  "popupBreakAfter": {
+    "message": "Nach $name$",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBackAt": {
+    "message": "zurück um $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakBarLabel": {
+    "message": "$minutes$-Minuten-Pause",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "popupBreakTip": {
+    "message": "Steh auf, hol dir Wasser, schau in die Ferne."
+  },
+  "popupBlockingPaused": {
+    "message": "Blockieren ist pausiert"
+  },
+  "popupBreakSitesOpen_one": {
+    "message": "$sites$ öffnet sich normal, bis die Pause endet.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "sites": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupBreakSitesOpen_other": {
+    "message": "$sites$ öffnen sich normal, bis die Pause endet.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "sites": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupTabsWontPause": {
+    "message": "Bis zum Ende der Pause wird kein Tab pausiert."
+  },
+  "popupExtendBreak": {
+    "message": "+5 Minuten"
+  },
+  "popupEndBreak": {
+    "message": "Pause beenden"
+  },
+  "popupBreaksRunToEnd": {
+    "message": "Pausen laufen bis zum Ende (Einstellungen › Sessions)"
+  },
+  "blockDocTitlePaused": {
+    "message": "Pausiert · FocusGuard"
+  },
+  "blockDocTitleBlocked": {
+    "message": "Blockiert · FocusGuard"
+  },
+  "blockThisSite": {
+    "message": "Diese Website"
+  },
+  "blockProblemStrict": {
+    "message": "Streng ist an, daher gibt es bis zum Ende der Session keine Ausnahmen."
+  },
+  "blockProblemNotPro": {
+    "message": "Sich durchlassen gehört zu Pro."
+  },
+  "blockProblemNoSession": {
+    "message": "Die Session ist beendet."
+  },
+  "blockProblemNoExtraTime": {
+    "message": "Heute gibt es keine Extrazeit mehr."
+  },
+  "blockProblemNotConnected": {
+    "message": "FocusGuard ist nicht verbunden."
+  },
+  "blockProblemNotOpen": {
+    "message": "FocusGuard ist nicht offen."
+  },
+  "blockProblemGeneric": {
+    "message": "Das hat nicht geklappt. Ist FocusGuard noch offen?"
+  },
+  "blockRingEnds": {
+    "message": "Session-Ring: $done$ von $planned$ Minuten vorbei, davon $drift$ Ablenkung. Noch $clock$, endet um $time$ Uhr.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "planned": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "clock": {
+        "content": "$4"
+      },
+      "time": {
+        "content": "$5"
+      }
+    }
+  },
+  "blockRingPlanned": {
+    "message": "Session-Ring: $done$ von $planned$ Minuten vorbei, davon $drift$ Ablenkung. Noch $clock$.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "planned": {
+        "content": "$2"
+      },
+      "drift": {
+        "content": "$3"
+      },
+      "clock": {
+        "content": "$4"
+      }
+    }
+  },
+  "blockRingOpen": {
+    "message": "Session-Ring: $done$ Minuten vorbei, davon $drift$ Ablenkung. Bisher $clock$.",
+    "placeholders": {
+      "done": {
+        "content": "$1"
+      },
+      "drift": {
+        "content": "$2"
+      },
+      "clock": {
+        "content": "$3"
+      }
+    }
+  },
+  "blockAvailableIn": {
+    "message": "$label$, verfügbar in $seconds$ Sek.",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockChangeBlocked": {
+    "message": "Blockierte Websites ändern"
+  },
+  "blockPartTitle": {
+    "message": "Dieser Teil von $host$ ist blockiert, solange du im Fokus bist.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockPartLede": {
+    "message": "Der Rest von $host$ öffnet sich weiterhin.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockStrictTitleUntil": {
+    "message": "$host$ bleibt bis $time$ Uhr zu.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockStrictTitleSession": {
+    "message": "$host$ bleibt in dieser Session zu.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockStrictLede": {
+    "message": "Streng ist an, daher kannst du dich während $name$ nicht durchlassen.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWaitTitleUntil": {
+    "message": "$host$ kann bis $time$ Uhr warten.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockWaitTitleSession": {
+    "message": "$host$ kann warten, bis die Session endet.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWaitLede": {
+    "message": "Die Website ist während $name$ blockiert, die Seite wurde also gar nicht geladen.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockGoTo": {
+    "message": "Weiter zu $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockForWork": {
+    "message": "Das ist für die Arbeit"
+  },
+  "blockLetMeThrough": {
+    "message": "Lass mich durch"
+  },
+  "blockFooterBy": {
+    "message": "Blockiert von FocusGuard"
+  },
+  "blockFooterLockedUntil": {
+    "message": "die Blockierliste ist bis $time$ Uhr gesperrt",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterLockedSession": {
+    "message": "die Blockierliste ist bis zum Ende der Session gesperrt"
+  },
+  "blockFooterOnlyPart": {
+    "message": "nur $part$ ist blockiert",
+    "placeholders": {
+      "part": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_one": {
+    "message": "zum $count$. Mal in dieser Session",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_two": {
+    "message": "zum $count$. Mal in dieser Session",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_few": {
+    "message": "zum $count$. Mal in dieser Session",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockFooterNth_other": {
+    "message": "zum $count$. Mal in dieser Session",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "blockWhyForWork": {
+    "message": "Falls $host$ wirklich Arbeit ist: „Das ist für die Arbeit“ wird nach $seconds$ Sek. frei.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      },
+      "seconds": {
+        "content": "$2"
+      }
+    }
+  },
+  "blockKeyLetThrough": {
+    "message": "durchlassen, für $length$",
+    "placeholders": {
+      "length": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitDoneTitle": {
+    "message": "$site$ ist für heute durch.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitMinutesTitle": {
+    "message": "Das waren deine $minutes$ Minuten auf $site$ für heute.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "site": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitTimeTitle": {
+    "message": "Das war deine Zeit auf $site$ für heute.",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeMinutes": {
+    "message": "Du hast deine $minutes$ Minuten verbraucht. Morgen öffnet sie wieder.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeUsed": {
+    "message": "Du hast deine Minuten verbraucht. Morgen öffnet sie wieder."
+  },
+  "limitLedeMinutesPreset": {
+    "message": "Du hast deine $minutes$ Minuten verbraucht. $preset$ ist an, daher öffnet sie erst morgen wieder.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "preset": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitLedeUsedPreset": {
+    "message": "Du hast deine Minuten verbraucht. $preset$ ist an, daher öffnet sie erst morgen wieder.",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitLedeExtra": {
+    "message": "Morgen öffnet sie wieder. Limits gelten den ganzen Tag, in und außerhalb von Sessions."
+  },
+  "limitMoreMinutes": {
+    "message": "$minutes$ Minuten mehr",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitOnceADay": {
+    "message": "einmal am Tag"
+  },
+  "limitTimesLeft_one": {
+    "message": "heute noch $count$-mal",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTimesLeft_other": {
+    "message": "heute noch $count$-mal",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTag": {
+    "message": "Tageslimit"
+  },
+  "limitTagMinutes": {
+    "message": "Tageslimit · $minutes$ Min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitTodayOn": {
+    "message": "Heute auf $site$",
+    "placeholders": {
+      "site": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitUsedOf": {
+    "message": "$used$ von $minutes$ Min",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitMeterLabel": {
+    "message": "$used$ von $minutes$ Minuten verbraucht, Besuche: $visits$",
+    "placeholders": {
+      "used": {
+        "content": "$1"
+      },
+      "minutes": {
+        "content": "$2"
+      },
+      "visits": {
+        "content": "$3"
+      }
+    }
+  },
+  "limitVisits_one": {
+    "message": "$count$ Besuch",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitVisits_other": {
+    "message": "$count$ Besuche",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitVisitsLast_one": {
+    "message": "$count$ Besuch, zuletzt um $time$ Uhr",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitVisitsLast_other": {
+    "message": "$count$ Besuche, zuletzt um $time$ Uhr",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "time": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitResets": {
+    "message": "Wird um 00:00 Uhr zurückgesetzt"
+  },
+  "limitKeyExtra": {
+    "message": "$minutes$ Minuten mehr, $hint$",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      },
+      "hint": {
+        "content": "$2"
+      }
+    }
+  },
+  "limitFooter": {
+    "message": "Tageslimit von FocusGuard · $preset$ ·",
+    "placeholders": {
+      "preset": {
+        "content": "$1"
+      }
+    }
+  },
+  "limitChangeTomorrow": {
+    "message": "Limit für morgen ändern"
+  },
+  "limitChange": {
+    "message": "Limit ändern"
+  },
+  "pausedReopenHost": {
+    "message": "$host$ wieder öffnen",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedTag": {
+    "message": "Pausiert"
+  },
+  "pausedTagLater": {
+    "message": "Öffnet später"
+  },
+  "pausedQueuedTitle": {
+    "message": "$host$ öffnet sich wieder, wenn deine Session endet",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedQueuedLede": {
+    "message": "Die Seite kommt in diesem Tab zurück, genau dort, wo du warst."
+  },
+  "pausedDontReopen": {
+    "message": "Nicht wieder öffnen"
+  },
+  "pausedOverTitle": {
+    "message": "Deine Session ist vorbei"
+  },
+  "pausedOverLede": {
+    "message": "$host$ ist noch pausiert. Mach erst eine Pause oder öffne die Website jetzt.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedTakeBreak": {
+    "message": "$minutes$ Minuten Pause machen",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitTitle": {
+    "message": "$host$ ist für heute pausiert",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitLedeMinutes": {
+    "message": "Du hast deine $minutes$ Minuten verbraucht. Um Mitternacht öffnet sie wieder.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLimitLede": {
+    "message": "Um Mitternacht öffnet sie wieder."
+  },
+  "pausedTitle": {
+    "message": "$host$ ist pausiert, solange du im Fokus bist",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedLede": {
+    "message": "Wenn deine Session endet, ist sie wieder da."
+  },
+  "pausedLedeAfter": {
+    "message": "Wenn deine Session endet, ist sie wieder da, oder öffne sie danach neu."
+  },
+  "pausedReopenAfter": {
+    "message": "Nach der Session wieder öffnen"
+  },
+  "pausedLeftInSession": {
+    "message": "übrig in deiner Session"
+  },
+  "pausedSessionEnding": {
+    "message": "deine Session endet gerade"
+  },
+  "pausedKeyReopen": {
+    "message": "$host$ wieder öffnen",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "pausedFooterPro": {
+    "message": "Pausiert von FocusGuard. Von dieser Seite geht nichts online."
+  },
+  "pausedFooterFree": {
+    "message": "Pausiert von FocusGuard · Gratis-Plan. Mit Pro öffnen sich ablenkende Seiten gar nicht erst."
+  },
+  "pausedHowProBlocks": {
+    "message": "So blockiert Pro"
+  },
+  "overTitle": {
+    "message": "Die Session ist vorbei."
+  },
+  "overNotRunning": {
+    "message": "FocusGuard läuft nicht."
+  },
+  "overLede": {
+    "message": "$host$ ist nicht mehr blockiert.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "overLedeNotRunning": {
+    "message": "Solange die App zu ist, wird nichts blockiert."
+  },
+  "overOpenHost": {
+    "message": "$host$ öffnen",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "overKeyOpen": {
+    "message": "$host$ öffnen",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsPageTitle": {
+    "message": "FocusGuard-Optionen"
+  },
+  "optionsHeading": {
+    "message": "FocusGuard-Erweiterung"
+  },
+  "optionsVersion": {
+    "message": "Version $version$ · läuft in Chrome, Arc, Brave und Edge",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsConnected": {
+    "message": "Mit FocusGuard auf diesem Mac verbunden"
+  },
+  "optionsConnectedDetail": {
+    "message": "FocusGuard $version$ · spricht direkt mit der App, nie über das Internet",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsNotOnMac": {
+    "message": "FocusGuard ist nicht auf diesem Mac"
+  },
+  "optionsWorksWithMac": {
+    "message": "Die Erweiterung arbeitet mit FocusGuard für Mac."
+  },
+  "optionsOpenToCount": {
+    "message": "Öffne die App, damit deine Zeit hier zählt und ablenkende Tabs pausieren."
+  },
+  "optionsSiteAccess": {
+    "message": "Website-Zugriff"
+  },
+  "optionsSiteAccessProHint": {
+    "message": "Nötig, um Seiten vor dem Laden zu blockieren"
+  },
+  "optionsAllSites": {
+    "message": "Alle Websites"
+  },
+  "optionsSiteAccessFreeHint": {
+    "message": "Im Gratis-Plan nicht nötig. Pro fragt danach, wenn du das Blockieren im Browser aktivierst."
+  },
+  "optionsRemove": {
+    "message": "Entfernen"
+  },
+  "optionsNone": {
+    "message": "Keiner"
+  },
+  "optionsPrivateWindows": {
+    "message": "Private Fenster"
+  },
+  "optionsPrivateOnBlocked": {
+    "message": "An: auch in privaten Fenstern blockiert und gezählt"
+  },
+  "optionsPrivateOnPaused": {
+    "message": "An: auch in privaten Fenstern pausiert und gezählt"
+  },
+  "optionsPrivateOffBlocked": {
+    "message": "Aus: In privaten Fenstern wird nichts blockiert oder gezählt"
+  },
+  "optionsPrivateOffPaused": {
+    "message": "Aus: In privaten Fenstern wird nichts pausiert oder gezählt"
+  },
+  "optionsChange": {
+    "message": "Ändern"
+  },
+  "optionsAllowPrivate": {
+    "message": "In privaten Fenstern erlauben"
+  },
+  "optionsConnectionLabel": {
+    "message": "Verbindung"
+  },
+  "optionsLimitPerDay": {
+    "message": "$minutes$ Min pro Tag",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsLimitPerDayFree": {
+    "message": "$minutes$ Min pro Tag · dein 1 Gratis-Limit",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsWholeSite": {
+    "message": "Ganze Website"
+  },
+  "optionsPartOfSite": {
+    "message": "Teil einer Website"
+  },
+  "optionsPartNeedsPro": {
+    "message": "Teil einer Website, braucht Pro"
+  },
+  "optionsBlockedHeading": {
+    "message": "Während Sessions blockiert"
+  },
+  "optionsDistractingLabel": {
+    "message": "Ablenkende Websites"
+  },
+  "optionsPausedHeading": {
+    "message": "Während Sessions pausiert"
+  },
+  "optionsSyncedPro": {
+    "message": "Aus FocusGuard synchronisiert · bearbeite die Liste dort"
+  },
+  "optionsSyncedFree": {
+    "message": "Aus FocusGuard synchronisiert · Tabs pausieren, wenn der Blockierbildschirm erscheint"
+  },
+  "optionsEditInApp": {
+    "message": "In FocusGuard bearbeiten"
+  },
+  "optionsNothingYet": {
+    "message": "Noch nichts. Websites, die du in FocusGuard als Ablenkend markierst, erscheinen hier."
+  },
+  "optionsShowsOnceConnected": {
+    "message": "Erscheint, sobald FocusGuard verbunden ist."
+  },
+  "optionsYoutubeTitle": {
+    "message": "YouTube Video für Video entscheiden"
+  },
+  "optionsYoutubeBody": {
+    "message": "FocusGuard liest Titel und Kanal jedes Videos und sortiert es auf diesem Mac ein. Ein Swift-Vortrag zählt als Fokus, ein Gaming-Stream nicht."
+  },
+  "optionsYoutubeOffHint": {
+    "message": "Aus: Ganz youtube.com folgt seiner eigenen Kategorie."
+  },
+  "optionsYoutubeNeedsAccess": {
+    "message": "Braucht Website-Zugriff, um den Kanal zu lesen."
+  },
+  "optionsProNeverOpen": {
+    "message": "Ablenkende Seiten öffnen sich gar nicht, es gibt also nichts zu spicken"
+  },
+  "optionsProParts": {
+    "message": "Teile von Websites, z. B. youtube.com/shorts und linkedin.com/feed"
+  },
+  "optionsSharesHeading": {
+    "message": "Was diese Erweiterung teilt"
+  },
+  "optionsSendsToApp": {
+    "message": "Sendet an FocusGuard auf diesem Mac"
+  },
+  "optionsShareAddress": {
+    "message": "Adresse und Titel des Tabs, den du gerade ansiehst, bei jeder Änderung"
+  },
+  "optionsShareVideo": {
+    "message": "Titel und Kanal eines YouTube-Videos, solange Video für Video an ist"
+  },
+  "optionsNever": {
+    "message": "Niemals"
+  },
+  "optionsNeverServer": {
+    "message": "Mit einem Server sprechen. Es gibt gar keinen FocusGuard-Server."
+  },
+  "optionsNeverReadsOther": {
+    "message": "Etwas anderes auf einer Seite lesen, deine Eingaben, Passwörter oder Cookies"
+  },
+  "optionsNeverReads": {
+    "message": "Lesen, was auf einer Seite steht, deine Eingaben, Passwörter oder Cookies"
+  },
+  "optionsNeverBackground": {
+    "message": "Hintergrund-Tabs oder deinen Browserverlauf ansehen"
+  },
+  "optionsNeverPrivate": {
+    "message": "In privaten Fenstern laufen, außer du erlaubst es"
+  },
+  "optionsToolbarLabel": {
+    "message": "Symbolleisten-Schaltfläche"
+  },
+  "optionsBadgeTitle": {
+    "message": "Restminuten auf der Symbolleisten-Schaltfläche zeigen"
+  },
+  "optionsBadgeHint": {
+    "message": "Während einer Session, als kleines Badge"
+  },
+  "welcomePageTitle": {
+    "message": "FocusGuard einrichten"
+  },
+  "welcomeStepsLabel": {
+    "message": "Einrichtungsschritte"
+  },
+  "welcomeStepConnect": {
+    "message": "Verbinden"
+  },
+  "welcomeStepPin": {
+    "message": "Anpinnen"
+  },
+  "welcomeStepDone": {
+    "message": "Fertig"
+  },
+  "welcomeTitle": {
+    "message": "FocusGuard ist in deinem Browser."
+  },
+  "welcomeLede": {
+    "message": "Es arbeitet mit der FocusGuard-App auf deinem Mac. Die Einrichtung dauert etwa eine Minute."
+  },
+  "welcomeTimeName": {
+    "message": "Deine Zeit, Website für Website"
+  },
+  "welcomeTimeText": {
+    "message": "Es sieht, auf welcher Seite du bist, damit ein Code-Review und eine YouTube-Spirale nicht gleich zählen."
+  },
+  "welcomeBlockName": {
+    "message": "Blockiert, bevor Seiten laden"
+  },
+  "welcomeBlockText": {
+    "message": "Ablenkende Websites und Teile von Websites wie YouTube Shorts bleiben während Sessions zu."
+  },
+  "welcomeMacName": {
+    "message": "Bleibt auf deinem Mac"
+  },
+  "welcomeMacText": {
+    "message": "Adressen und Titel von Seiten gehen direkt an die App. Es gibt keinen FocusGuard-Server."
+  },
+  "welcomeSetUp": {
+    "message": "Einrichten"
+  },
+  "welcomeNext": {
+    "message": "Als Nächstes: mit der App verbinden, dann die Schaltfläche anpinnen"
+  },
+  "welcomeNotOnMacTitle": {
+    "message": "FocusGuard ist noch nicht auf diesem Mac"
+  },
+  "welcomeInstallOpen": {
+    "message": "Installiere die App und öffne sie einmal. Diese Seite geht dann von selbst weiter."
+  },
+  "welcomeNotOpenTitle": {
+    "message": "FocusGuard ist auf diesem Mac, aber nicht offen"
+  },
+  "welcomeLookingTitle": {
+    "message": "FocusGuard wird gesucht"
+  },
+  "welcomeOpenMovesOn": {
+    "message": "Öffne die App, dann geht diese Seite von selbst weiter."
+  },
+  "welcomeConnectTitle": {
+    "message": "Mit FocusGuard verbinden"
+  },
+  "welcomeConnectLede": {
+    "message": "Die Erweiterung braucht die laufende App auf diesem Mac."
+  },
+  "welcomeAppLabel": {
+    "message": "FocusGuard-App"
+  },
+  "welcomeLookingStatus": {
+    "message": "FocusGuard wird gesucht…"
+  },
+  "welcomeNoAppTitle": {
+    "message": "Hast du FocusGuard noch nicht?"
+  },
+  "welcomeFreeNeeds": {
+    "message": "Kostenlos für Mac, braucht macOS 26."
+  },
+  "welcomeNativeNote": {
+    "message": "Erweiterung und App sprechen über das Native Messaging deines Browsers miteinander, nur auf diesem Mac."
+  },
+  "welcomePinTitle": {
+    "message": "FocusGuard an die Symbolleiste anpinnen"
+  },
+  "welcomePinLede": {
+    "message": "Dann sind Restzeit und Blockierliste nur einen Klick entfernt."
+  },
+  "welcomeHowToPinLabel": {
+    "message": "So pinnst du an"
+  },
+  "welcomePinStep1": {
+    "message": "Klicke auf die Schaltfläche „Erweiterungen“"
+  },
+  "welcomePinStep1Detail": {
+    "message": "Das Puzzleteil neben der Adressleiste, oben rechts."
+  },
+  "welcomePinStep2": {
+    "message": "Klicke auf die Stecknadel neben FocusGuard"
+  },
+  "welcomePinStep2Detail": {
+    "message": "Der Schild erscheint neben der Adressleiste und diese Seite geht weiter."
+  },
+  "welcomeWaitingPin": {
+    "message": "Warten auf das Anpinnen…"
+  },
+  "welcomeSkip": {
+    "message": "Vorerst überspringen"
+  },
+  "welcomeNoPuzzle": {
+    "message": "Kein Puzzleteil zu sehen? Manche Browser haben Erweiterungen stattdessen im Hauptmenü."
+  },
+  "welcomeDoneTitle": {
+    "message": "Alles bereit."
+  },
+  "welcomeDoneLedePro": {
+    "message": "Starte eine Session über den Schild in der Symbolleiste oder über die Menüleiste. Ablenkende Seiten bleiben zu, solange du im Fokus bist."
+  },
+  "welcomeDoneLedeFree": {
+    "message": "Starte eine Session über den Schild in der Symbolleiste oder über die Menüleiste. Ablenkende Tabs pausieren, wenn du abschweifst."
+  },
+  "welcomeSummaryLabel": {
+    "message": "Zusammenfassung der Einrichtung"
+  },
+  "welcomeConnectedVersion": {
+    "message": "Verbunden mit FocusGuard $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcomeOnThisMac": {
+    "message": "auf diesem Mac"
+  },
+  "welcomeNotConnected": {
+    "message": "FocusGuard ist gerade nicht verbunden"
+  },
+  "welcomePinned": {
+    "message": "An die Symbolleiste angepinnt"
+  },
+  "welcomeNotPinned": {
+    "message": "Noch nicht angepinnt"
+  },
+  "welcomePinPath": {
+    "message": "Puzzleteil › Stecknadel"
+  },
+  "welcomeSummaryPro": {
+    "message": "Pro: Seiten, die nie laden, Teile von Websites, YouTube Video für Video"
+  },
+  "welcomeSummaryFree": {
+    "message": "Gratis-Plan: Zeit pro Website und Tabs, die pausieren, wenn du abschweifst"
+  },
+  "welcomeNeedsAccess": {
+    "message": "Blockieren braucht Website-Zugriff"
+  },
+  "welcomePrivateCovered": {
+    "message": "Private Fenster sind auch abgedeckt"
+  },
+  "welcomePrivateNotCovered": {
+    "message": "Private Fenster sind noch nicht abgedeckt"
+  },
+  "welcomeSessionStarted": {
+    "message": "Session gestartet"
+  },
+  "welcomeStartMinutes": {
+    "message": "$minutes$-Minuten-Session starten",
+    "placeholders": {
+      "minutes": {
+        "content": "$1"
+      }
+    }
+  },
+  "welcomeCloseThisTab": {
+    "message": "Diesen Tab schließen"
+  },
+  "welcomeStartFailed": {
+    "message": "Der Start hat nicht geklappt. Ist FocusGuard offen?"
+  },
+  "welcomeProLine": {
+    "message": "Sollen ablenkende Seiten gar nicht erst laden? Das ist FocusGuard Pro, 14 Tage gratis."
+  },
+  "welcomeSeePro": {
+    "message": "Pro ansehen"
+  }
+}

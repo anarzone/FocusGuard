@@ -1,0 +1,1912 @@
+{
+  "localeCode": {
+    "message": "en",
+    "description": "This catalog's language. Not shown: it picks the plural rules and <html lang>. Must match the language of the catalog."
+  },
+  "extDescription": {
+    "message": "Works with FocusGuard for Mac: counts your time site by site and pauses distracting tabs while you focus. Stays on your Mac.",
+    "description": "Store and extensions page. At most 132 characters."
+  },
+  "extActionTitle": {
+    "message": "FocusGuard",
+    "description": "Toolbar button tooltip before the extension has started. The name stays untranslated."
+  },
+  "appNotRunning": {
+    "message": "FocusGuard isn't running"
+  },
+  "openApp": {
+    "message": "Open FocusGuard"
+  },
+  "getForMac": {
+    "message": "Get FocusGuard for Mac"
+  },
+  "getApp": {
+    "message": "Get FocusGuard"
+  },
+  "tryAgain": {
+    "message": "Try again"
+  },
+  "todaysReport": {
+    "message": "Today's report"
+  },
+  "closeTab": {
+    "message": "Close tab"
+  },
+  "closeTabKey": {
+    "message": "close tab",
+    "description": "Beside the esc key on the block page."
+  },
+  "allow": {
+    "message": "Allow"
+  },
+  "backTo": {
+    "message": "Back to $name$",
+    "description": "name is an app, e.g. Xcode.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "backToKey": {
+    "message": "back to $name$",
+    "description": "Beside the esc key. name is an app, e.g. Xcode.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "backToWork": {
+    "message": "Back to work"
+  },
+  "backToWorkKey": {
+    "message": "back to work",
+    "description": "Beside the esc key."
+  },
+  "keyEsc": {
+    "message": "esc",
+    "description": "A key on the keyboard, as printed on it."
+  },
+  "keyReturn": {
+    "message": "return",
+    "description": "A key on the keyboard, as printed on it."
+  },
+  "sessionAlreadyRunning": {
+    "message": "A session is already running."
+  },
+  "blockBeforeLoad": {
+    "message": "Block before pages load"
+  },
+  "proNeverOpen": {
+    "message": "Distracting pages never open"
+  },
+  "proYoutube": {
+    "message": "YouTube sorted video by video"
+  },
+  "proLimits": {
+    "message": "Daily limits on as many sites as you like"
+  },
+  "proTrial": {
+    "message": "See Pro, free for 14 days"
+  },
+  "categoryFocus": {
+    "message": "Focus"
+  },
+  "categoryNeutral": {
+    "message": "Neutral"
+  },
+  "categoryDistracting": {
+    "message": "Distracting"
+  },
+  "presetGentle": {
+    "message": "Gentle",
+    "description": "A blocking preset."
+  },
+  "presetStandard": {
+    "message": "Standard",
+    "description": "A blocking preset."
+  },
+  "presetStrict": {
+    "message": "Strict",
+    "description": "A blocking preset."
+  },
+  "badgeFree": {
+    "message": "FREE"
+  },
+  "badgePro": {
+    "message": "PRO"
+  },
+  "badgeTrial": {
+    "message": "TRIAL"
+  },
+  "durationMinutes": {
+    "message": "$minutes$m",
+    "description": "Compact, e.g. 24m.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "durationHours": {
+    "message": "$hours$h",
+    "description": "Compact, e.g. 2h.",
+    "placeholders": {
+      "hours": {
+        "content": "$1",
+        "example": "2"
+      }
+    }
+  },
+  "durationHoursMinutes": {
+    "message": "$hours$h $minutes$m",
+    "description": "Compact, e.g. 1h 5m.",
+    "placeholders": {
+      "hours": {
+        "content": "$1",
+        "example": "2"
+      },
+      "minutes": {
+        "content": "$2",
+        "example": "50"
+      }
+    }
+  },
+  "minutesPhrase_one": {
+    "message": "$count$ minute",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "minutesPhrase_other": {
+    "message": "$count$ minutes",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "clockLeft": {
+    "message": "left",
+    "description": "After a countdown: 23:14 left."
+  },
+  "clockLeftPaused": {
+    "message": "left · paused"
+  },
+  "clockSoFar": {
+    "message": "so far",
+    "description": "After a running time: 23:14 so far."
+  },
+  "clockSoFarPaused": {
+    "message": "so far · paused"
+  },
+  "listTwo": {
+    "message": "$first$ and $second$",
+    "placeholders": {
+      "first": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "second": {
+        "content": "$2",
+        "example": "reddit.com"
+      }
+    }
+  },
+  "listMore": {
+    "message": "$first$, $second$ and $count$ more",
+    "placeholders": {
+      "first": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "second": {
+        "content": "$2",
+        "example": "reddit.com"
+      },
+      "count": {
+        "content": "$3",
+        "example": "4"
+      }
+    }
+  },
+  "toolbarPaused": {
+    "message": "paused"
+  },
+  "toolbarMinutesLeft": {
+    "message": "$minutes$ min left",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "toolbarSoFar": {
+    "message": "$time$ so far",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "toolbarLetThrough": {
+    "message": "let through for $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "toolbarSitesBlocked_one": {
+    "message": "$count$ site blocked",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "toolbarSitesBlocked_other": {
+    "message": "$count$ sites blocked",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "toolbarBreakUntil": {
+    "message": "FocusGuard · break until $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "toolbarDone": {
+    "message": "FocusGuard · $name$ is done",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "toolbarReady": {
+    "message": "FocusGuard · ready"
+  },
+  "passPillNote": {
+    "message": "You let yourself through · this counts as drift"
+  },
+  "passPillCloses": {
+    "message": "$host$ closes in $time$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupOptionsLabel": {
+    "message": "Options"
+  },
+  "popupMoreLabel": {
+    "message": "More"
+  },
+  "popupNotConnected": {
+    "message": "Not connected"
+  },
+  "popupGetAppTitle": {
+    "message": "Get the FocusGuard app"
+  },
+  "popupGetAppBody": {
+    "message": "This extension works with FocusGuard for Mac. The app runs your sessions; the extension tells it which page you're on and pauses distracting tabs while you focus."
+  },
+  "popupFreeToDownload": {
+    "message": "Free to download · needs macOS 26"
+  },
+  "popupAlreadyInstalled": {
+    "message": "Already installed it?"
+  },
+  "popupOpenOnce": {
+    "message": "Open FocusGuard once, then try again."
+  },
+  "popupUntilConnected": {
+    "message": "Until the app is connected, nothing in this browser is tracked or paused."
+  },
+  "popupNotRunningBody": {
+    "message": "Open it to count your time in this browser and keep distracting sites out of your sessions."
+  },
+  "popupLastConnectedToday": {
+    "message": "Last connected today at $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupLastConnectedYesterday": {
+    "message": "Last connected yesterday at $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupLastConnectedOn": {
+    "message": "Last connected on $date$",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "21 Oct"
+      }
+    }
+  },
+  "popupKeepRunningNote": {
+    "message": "While it's closed, nothing here is tracked or paused. To keep it running, turn on $setting$ in FocusGuard's settings.",
+    "description": "setting is the name of a setting in the Mac app, shown in bold.",
+    "placeholders": {
+      "setting": {
+        "content": "$1",
+        "example": "Open at login"
+      }
+    }
+  },
+  "popupOpenAtLogin": {
+    "message": "Open at login",
+    "description": "The name of a setting in the Mac app: keep it the same as there."
+  },
+  "popupNotOnThisMac": {
+    "message": "Not on this Mac? Get FocusGuard"
+  },
+  "popupConnecting": {
+    "message": "Connecting…"
+  },
+  "popupLookingOnMac": {
+    "message": "Looking for FocusGuard on this Mac…"
+  },
+  "popupConnectedRecap": {
+    "message": "Connected · $name$ ended at $time$",
+    "description": "name is the session's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupConnectedIdle": {
+    "message": "Connected · no session running"
+  },
+  "popupTodayLabel": {
+    "message": "Today"
+  },
+  "popupFocusToday": {
+    "message": "focus today",
+    "description": "After a duration: 2h 48m focus today."
+  },
+  "popupGoal": {
+    "message": "Goal $goal$",
+    "placeholders": {
+      "goal": {
+        "content": "$1",
+        "example": "4h"
+      }
+    }
+  },
+  "popupGoalMeterLabel": {
+    "message": "$done$ of a $goal$ goal",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "2h 48m"
+      },
+      "goal": {
+        "content": "$2",
+        "example": "4h"
+      }
+    }
+  },
+  "popupStartMinutes": {
+    "message": "Start $minutes$-minute session",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "popupStartOpen": {
+    "message": "Start a session with no end"
+  },
+  "popupStartEndsBlocking": {
+    "message": "Ends at $time$. Blocking turns on when it starts.",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupStartEndsPausing": {
+    "message": "Ends at $time$. Distracting tabs pause if you drift.",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupStartOpenBlocking": {
+    "message": "No set end. Blocking turns on when it starts."
+  },
+  "popupStartOpenPausing": {
+    "message": "No set end. Distracting tabs pause if you drift."
+  },
+  "popupStartSection": {
+    "message": "Start a session"
+  },
+  "popupLengthLabel": {
+    "message": "Length"
+  },
+  "popupLengthMinutes": {
+    "message": "$minutes$ min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "popupLengthOpen": {
+    "message": "No end"
+  },
+  "popupChangeFailed": {
+    "message": "Couldn't change it. Is FocusGuard still open?"
+  },
+  "popupOnBreak": {
+    "message": "Finish the break first."
+  },
+  "popupStartFailed": {
+    "message": "Couldn't start it. Is FocusGuard still open?"
+  },
+  "popupThisPage": {
+    "message": "This page"
+  },
+  "popupOwnPage": {
+    "message": "A FocusGuard page. Time here isn't counted as drift."
+  },
+  "popupBrowserPage": {
+    "message": "Browser pages aren't sorted."
+  },
+  "popupCategoryChange": {
+    "message": "Category: $category$. Change",
+    "placeholders": {
+      "category": {
+        "content": "$1",
+        "example": "Focus"
+      }
+    }
+  },
+  "popupBreakNoDrift": {
+    "message": "Breaks don't count as drift."
+  },
+  "popupCategoryFor": {
+    "message": "Category for $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "popupApplyTo": {
+    "message": "Apply to"
+  },
+  "popupApplyAllOf": {
+    "message": "All of $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "popupApplyPage": {
+    "message": "Only this page"
+  },
+  "popupApplyHint": {
+    "message": "Also changes time already counted today."
+  },
+  "popupPausedSub": {
+    "message": "Paused · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "popupFocusingBlockingSub": {
+    "message": "Focusing · blocking is on · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "popupFocusingSub": {
+    "message": "Focusing · $preset$",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "popupEnds": {
+    "message": "ends $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupNoEnd": {
+    "message": "no end"
+  },
+  "popupSessionLabel": {
+    "message": "Session"
+  },
+  "popupBarPlanned": {
+    "message": "$planned$-minute session, $elapsed$ in: $focus$ focus, $drift$ drift, $other$ other",
+    "description": "Read by screen readers. elapsed, focus, drift and other are phrases like 2 minutes.",
+    "placeholders": {
+      "planned": {
+        "content": "$1",
+        "example": "50"
+      },
+      "elapsed": {
+        "content": "$2",
+        "example": "27 minutes"
+      },
+      "focus": {
+        "content": "$3",
+        "example": "24 minutes"
+      },
+      "drift": {
+        "content": "$4",
+        "example": "2 minutes"
+      },
+      "other": {
+        "content": "$5",
+        "example": "1 minute"
+      }
+    }
+  },
+  "popupBarOpen": {
+    "message": "$elapsed$ in: $focus$ focus, $drift$ drift, $other$ other",
+    "description": "Read by screen readers. Phrases like 2 minutes.",
+    "placeholders": {
+      "elapsed": {
+        "content": "$1",
+        "example": "27 minutes"
+      },
+      "focus": {
+        "content": "$2",
+        "example": "24 minutes"
+      },
+      "drift": {
+        "content": "$3",
+        "example": "2 minutes"
+      },
+      "other": {
+        "content": "$4",
+        "example": "1 minute"
+      }
+    }
+  },
+  "popupLegendFocus": {
+    "message": "$time$ focus",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupLegendDrift": {
+    "message": "$time$ drift",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupLegendOther": {
+    "message": "$time$ other",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupRuleNobodyUntil": {
+    "message": "These pages don't load. $preset$ lets nobody through until $time$.",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupRuleNobodySession": {
+    "message": "These pages don't load. $preset$ lets nobody through until the session ends.",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "popupRuleWait": {
+    "message": "These pages don't load. $preset$ lets you through after a $seconds$-second wait, for $length$.",
+    "description": "length is a phrase like 2 minutes.",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "5"
+      },
+      "length": {
+        "content": "$3",
+        "example": "2 minutes"
+      }
+    }
+  },
+  "popupRuleNow": {
+    "message": "These pages don't load. $preset$ lets you through right away, for $length$.",
+    "description": "length is a phrase like 2 minutes.",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      },
+      "length": {
+        "content": "$2",
+        "example": "2 minutes"
+      }
+    }
+  },
+  "popupSiteAccessBody": {
+    "message": "FocusGuard needs access to sites to keep distracting pages from loading. It still never reads what's on them."
+  },
+  "popupAllowSiteAccess": {
+    "message": "Allow site access"
+  },
+  "popupBlockingLabel": {
+    "message": "Blocking"
+  },
+  "popupBlockedThisSession": {
+    "message": "Blocked this session"
+  },
+  "popupStoppedVisits_one": {
+    "message": "stopped $count$ visit",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "popupStoppedVisits_other": {
+    "message": "stopped $count$ visits",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "popupWholeSites": {
+    "message": "Whole sites"
+  },
+  "popupPartsOfSites": {
+    "message": "Parts of sites"
+  },
+  "popupNothingBlocked": {
+    "message": "Nothing is blocked yet. Mark sites Distracting to block them during sessions."
+  },
+  "popupPauseTab": {
+    "message": "Pause the tab"
+  },
+  "popupPauseOn": {
+    "message": "On"
+  },
+  "popupPauseOff": {
+    "message": "Off"
+  },
+  "popupPauseTabBody": {
+    "message": "If you stay on a distracting site, the block screen shows on your Mac and this tab switches to a calm page."
+  },
+  "popupHide": {
+    "message": "Hide"
+  },
+  "popupProParts": {
+    "message": "Parts of sites, like youtube.com/shorts"
+  },
+  "popupEditBlocked": {
+    "message": "Edit blocked sites"
+  },
+  "popupBreakTitle": {
+    "message": "Break"
+  },
+  "popupBreakAfter": {
+    "message": "After $name$",
+    "description": "name is the session's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "popupBackAt": {
+    "message": "back at $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "popupBreakBarLabel": {
+    "message": "$minutes$-minute break",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "popupBreakTip": {
+    "message": "Stand up, refill your water, look at something far away."
+  },
+  "popupBlockingPaused": {
+    "message": "Blocking is paused"
+  },
+  "popupBreakSitesOpen_one": {
+    "message": "$sites$ opens normally until the break ends.",
+    "description": "sites is one site.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "sites": {
+        "content": "$2",
+        "example": "x.com and reddit.com"
+      }
+    }
+  },
+  "popupBreakSitesOpen_other": {
+    "message": "$sites$ open normally until the break ends.",
+    "description": "sites is a list: x.com, reddit.com and 4 more.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "sites": {
+        "content": "$2",
+        "example": "x.com and reddit.com"
+      }
+    }
+  },
+  "popupTabsWontPause": {
+    "message": "Tabs won't pause until the break ends."
+  },
+  "popupExtendBreak": {
+    "message": "+5 minutes"
+  },
+  "popupEndBreak": {
+    "message": "End break"
+  },
+  "popupBreaksRunToEnd": {
+    "message": "Breaks run to the end (Settings › Sessions)",
+    "description": "Points at a page in the Mac app: keep its names the same as there."
+  },
+  "blockDocTitlePaused": {
+    "message": "Paused · FocusGuard",
+    "description": "The tab's title. Never name the site here."
+  },
+  "blockDocTitleBlocked": {
+    "message": "Blocked · FocusGuard",
+    "description": "The tab's title. Never name the site here."
+  },
+  "blockThisSite": {
+    "message": "This site",
+    "description": "Stands in for a host name when the address is unknown."
+  },
+  "blockProblemStrict": {
+    "message": "Strict is on, so there are no passes until the session ends."
+  },
+  "blockProblemNotPro": {
+    "message": "Letting yourself through is part of Pro."
+  },
+  "blockProblemNoSession": {
+    "message": "The session has ended."
+  },
+  "blockProblemNoExtraTime": {
+    "message": "No more extra time today."
+  },
+  "blockProblemNotConnected": {
+    "message": "FocusGuard isn't connected."
+  },
+  "blockProblemNotOpen": {
+    "message": "FocusGuard isn't open."
+  },
+  "blockProblemGeneric": {
+    "message": "That didn't work. Is FocusGuard still open?"
+  },
+  "blockRingEnds": {
+    "message": "Session ring: $done$ of $planned$ minutes done, $drift$ of it drift. $clock$ left, ends at $time$.",
+    "description": "Read by screen readers.",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "2h 48m"
+      },
+      "planned": {
+        "content": "$2",
+        "example": "50"
+      },
+      "drift": {
+        "content": "$3",
+        "example": "2 minutes"
+      },
+      "clock": {
+        "content": "$4",
+        "example": "23:14"
+      },
+      "time": {
+        "content": "$5",
+        "example": "21:40"
+      }
+    }
+  },
+  "blockRingPlanned": {
+    "message": "Session ring: $done$ of $planned$ minutes done, $drift$ of it drift. $clock$ left.",
+    "description": "Read by screen readers.",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "2h 48m"
+      },
+      "planned": {
+        "content": "$2",
+        "example": "50"
+      },
+      "drift": {
+        "content": "$3",
+        "example": "2 minutes"
+      },
+      "clock": {
+        "content": "$4",
+        "example": "23:14"
+      }
+    }
+  },
+  "blockRingOpen": {
+    "message": "Session ring: $done$ minutes done, $drift$ of it drift. $clock$ so far.",
+    "description": "Read by screen readers.",
+    "placeholders": {
+      "done": {
+        "content": "$1",
+        "example": "2h 48m"
+      },
+      "drift": {
+        "content": "$2",
+        "example": "2 minutes"
+      },
+      "clock": {
+        "content": "$3",
+        "example": "23:14"
+      }
+    }
+  },
+  "blockAvailableIn": {
+    "message": "$label$, available in $seconds$ seconds",
+    "description": "Read by screen readers. label is the button's own text.",
+    "placeholders": {
+      "label": {
+        "content": "$1",
+        "example": "Let me through"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "blockChangeBlocked": {
+    "message": "Change what's blocked"
+  },
+  "blockPartTitle": {
+    "message": "This part of $host$ is blocked while you focus.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "blockPartLede": {
+    "message": "The rest of $host$ still opens.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "blockStrictTitleUntil": {
+    "message": "$host$ stays closed until $time$.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "blockStrictTitleSession": {
+    "message": "$host$ stays closed for this session.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "blockStrictLede": {
+    "message": "Strict is on, so there's no letting yourself through during $name$.",
+    "description": "name is the session's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "blockWaitTitleUntil": {
+    "message": "$host$ can wait until $time$.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "blockWaitTitleSession": {
+    "message": "$host$ can wait until the session ends.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "blockWaitLede": {
+    "message": "It's blocked during $name$, so the page never loaded.",
+    "description": "name is the session's name.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Evening focus"
+      }
+    }
+  },
+  "blockGoTo": {
+    "message": "Go to $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "blockForWork": {
+    "message": "It's for work"
+  },
+  "blockLetMeThrough": {
+    "message": "Let me through"
+  },
+  "blockFooterBy": {
+    "message": "Blocked by FocusGuard"
+  },
+  "blockFooterLockedUntil": {
+    "message": "the blocked list is locked until $time$",
+    "placeholders": {
+      "time": {
+        "content": "$1",
+        "example": "21:40"
+      }
+    }
+  },
+  "blockFooterLockedSession": {
+    "message": "the blocked list is locked until the session ends"
+  },
+  "blockFooterOnlyPart": {
+    "message": "only $part$ is blocked",
+    "placeholders": {
+      "part": {
+        "content": "$1",
+        "example": "youtube.com/shorts"
+      }
+    }
+  },
+  "blockFooterNth_one": {
+    "message": "$count$st time this session",
+    "description": "An ordinal: 1st, 21st. Azerbaijani rephrases to avoid a suffix on the number.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "blockFooterNth_two": {
+    "message": "$count$nd time this session",
+    "description": "An ordinal: 2nd, 22nd.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "blockFooterNth_few": {
+    "message": "$count$rd time this session",
+    "description": "An ordinal: 3rd, 23rd.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "blockFooterNth_other": {
+    "message": "$count$th time this session",
+    "description": "An ordinal: 4th, 11th.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "blockWhyForWork": {
+    "message": "If $host$ really is work, \"It's for work\" unlocks after $seconds$ seconds.",
+    "description": "Quotes the blockForWork button.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      },
+      "seconds": {
+        "content": "$2",
+        "example": "5"
+      }
+    }
+  },
+  "blockKeyLetThrough": {
+    "message": "let me through, for $length$",
+    "description": "Beside the return key. length is a phrase like 2 minutes.",
+    "placeholders": {
+      "length": {
+        "content": "$1",
+        "example": "2 minutes"
+      }
+    }
+  },
+  "limitDoneTitle": {
+    "message": "$site$ is done for today.",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "reddit.com"
+      }
+    }
+  },
+  "limitMinutesTitle": {
+    "message": "That's your $minutes$ minutes of $site$ today.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      },
+      "site": {
+        "content": "$2",
+        "example": "reddit.com"
+      }
+    }
+  },
+  "limitTimeTitle": {
+    "message": "That's your time on $site$ today.",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "reddit.com"
+      }
+    }
+  },
+  "limitLedeMinutes": {
+    "message": "You've used your $minutes$ minutes. It opens again tomorrow.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "limitLedeUsed": {
+    "message": "You've used your minutes. It opens again tomorrow."
+  },
+  "limitLedeMinutesPreset": {
+    "message": "You've used your $minutes$ minutes. $preset$ is on, so it opens again tomorrow.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      },
+      "preset": {
+        "content": "$2",
+        "example": "Standard"
+      }
+    }
+  },
+  "limitLedeUsedPreset": {
+    "message": "You've used your minutes. $preset$ is on, so it opens again tomorrow.",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "limitLedeExtra": {
+    "message": "It opens again tomorrow. Limits count all day, in sessions and out."
+  },
+  "limitMoreMinutes": {
+    "message": "$minutes$ more minutes",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "limitOnceADay": {
+    "message": "once a day"
+  },
+  "limitTimesLeft_one": {
+    "message": "$count$ more time today",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "limitTimesLeft_other": {
+    "message": "$count$ more times today",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "limitTag": {
+    "message": "Daily limit"
+  },
+  "limitTagMinutes": {
+    "message": "Daily limit · $minutes$ min",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "limitTodayOn": {
+    "message": "Today on $site$",
+    "placeholders": {
+      "site": {
+        "content": "$1",
+        "example": "reddit.com"
+      }
+    }
+  },
+  "limitUsedOf": {
+    "message": "$used$ of $minutes$ min",
+    "placeholders": {
+      "used": {
+        "content": "$1",
+        "example": "30"
+      },
+      "minutes": {
+        "content": "$2",
+        "example": "50"
+      }
+    }
+  },
+  "limitMeterLabel": {
+    "message": "$used$ of $minutes$ minutes used, over $visits$ visits",
+    "description": "Read by screen readers.",
+    "placeholders": {
+      "used": {
+        "content": "$1",
+        "example": "30"
+      },
+      "minutes": {
+        "content": "$2",
+        "example": "50"
+      },
+      "visits": {
+        "content": "$3",
+        "example": "6"
+      }
+    }
+  },
+  "limitVisits_one": {
+    "message": "$count$ visit",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "limitVisits_other": {
+    "message": "$count$ visits",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      }
+    }
+  },
+  "limitVisitsLast_one": {
+    "message": "$count$ visit, the last at $time$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "limitVisitsLast_other": {
+    "message": "$count$ visits, the last at $time$",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "4"
+      },
+      "time": {
+        "content": "$2",
+        "example": "21:40"
+      }
+    }
+  },
+  "limitResets": {
+    "message": "Resets at 00:00"
+  },
+  "limitKeyExtra": {
+    "message": "$minutes$ more minutes, $hint$",
+    "description": "Beside the return key. hint is limitOnceADay or limitTimesLeft.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      },
+      "hint": {
+        "content": "$2",
+        "example": "once a day"
+      }
+    }
+  },
+  "limitFooter": {
+    "message": "Daily limit from FocusGuard · $preset$ ·",
+    "placeholders": {
+      "preset": {
+        "content": "$1",
+        "example": "Standard"
+      }
+    }
+  },
+  "limitChangeTomorrow": {
+    "message": "Change the limit for tomorrow"
+  },
+  "limitChange": {
+    "message": "Change the limit"
+  },
+  "pausedReopenHost": {
+    "message": "Reopen $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedTag": {
+    "message": "Paused"
+  },
+  "pausedTagLater": {
+    "message": "Reopens later"
+  },
+  "pausedQueuedTitle": {
+    "message": "$host$ will reopen when your session ends",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedQueuedLede": {
+    "message": "It comes back in this tab, right where you left it."
+  },
+  "pausedDontReopen": {
+    "message": "Don’t reopen it"
+  },
+  "pausedOverTitle": {
+    "message": "Your session is over"
+  },
+  "pausedOverLede": {
+    "message": "$host$ is still paused. Take a break first, or open it now.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedTakeBreak": {
+    "message": "Take a $minutes$-minute break",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "pausedLimitTitle": {
+    "message": "$host$ is paused for today",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedLimitLedeMinutes": {
+    "message": "You’ve used your $minutes$ minutes. It opens again at midnight.",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "pausedLimitLede": {
+    "message": "It opens again at midnight."
+  },
+  "pausedTitle": {
+    "message": "$host$ is paused while you focus",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedLede": {
+    "message": "It’s here when your session ends."
+  },
+  "pausedLedeAfter": {
+    "message": "It’s here when your session ends, or reopen it after."
+  },
+  "pausedReopenAfter": {
+    "message": "Reopen after the session"
+  },
+  "pausedLeftInSession": {
+    "message": "left in your session",
+    "description": "Under a countdown."
+  },
+  "pausedSessionEnding": {
+    "message": "your session is ending",
+    "description": "Under a countdown at 0:00."
+  },
+  "pausedKeyReopen": {
+    "message": "reopen $host$",
+    "description": "Beside the return key.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "pausedFooterPro": {
+    "message": "Paused by FocusGuard. Nothing on this page goes online."
+  },
+  "pausedFooterFree": {
+    "message": "Paused by FocusGuard · Free plan. With Pro, distracting pages don't open at all."
+  },
+  "pausedHowProBlocks": {
+    "message": "How Pro blocks"
+  },
+  "overTitle": {
+    "message": "The session is over."
+  },
+  "overNotRunning": {
+    "message": "FocusGuard isn't running."
+  },
+  "overLede": {
+    "message": "$host$ isn't blocked any more.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "overLedeNotRunning": {
+    "message": "Nothing is blocked while it's closed."
+  },
+  "overOpenHost": {
+    "message": "Open $host$",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "overKeyOpen": {
+    "message": "open $host$",
+    "description": "Beside the return key.",
+    "placeholders": {
+      "host": {
+        "content": "$1",
+        "example": "x.com"
+      }
+    }
+  },
+  "optionsPageTitle": {
+    "message": "FocusGuard options"
+  },
+  "optionsHeading": {
+    "message": "FocusGuard extension"
+  },
+  "optionsVersion": {
+    "message": "Version $version$ · works in Chrome, Arc, Brave and Edge",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "1.0"
+      }
+    }
+  },
+  "optionsConnected": {
+    "message": "Connected to FocusGuard on this Mac"
+  },
+  "optionsConnectedDetail": {
+    "message": "FocusGuard $version$ · talks to the app directly, never over the internet",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "1.0"
+      }
+    }
+  },
+  "optionsNotOnMac": {
+    "message": "FocusGuard isn't on this Mac"
+  },
+  "optionsWorksWithMac": {
+    "message": "The extension works with FocusGuard for Mac."
+  },
+  "optionsOpenToCount": {
+    "message": "Open it to count your time here and pause distracting tabs."
+  },
+  "optionsSiteAccess": {
+    "message": "Site access"
+  },
+  "optionsSiteAccessProHint": {
+    "message": "Needed to block pages before they load"
+  },
+  "optionsAllSites": {
+    "message": "All sites"
+  },
+  "optionsSiteAccessFreeHint": {
+    "message": "Not needed on the free plan. Pro asks for it when you turn on browser blocking."
+  },
+  "optionsRemove": {
+    "message": "Remove"
+  },
+  "optionsNone": {
+    "message": "None",
+    "description": "Site access: none."
+  },
+  "optionsPrivateWindows": {
+    "message": "Private windows"
+  },
+  "optionsPrivateOnBlocked": {
+    "message": "On: blocked and counted in private windows too"
+  },
+  "optionsPrivateOnPaused": {
+    "message": "On: paused and counted in private windows too"
+  },
+  "optionsPrivateOffBlocked": {
+    "message": "Off: nothing is blocked or counted in private windows"
+  },
+  "optionsPrivateOffPaused": {
+    "message": "Off: nothing is paused or counted in private windows"
+  },
+  "optionsChange": {
+    "message": "Change"
+  },
+  "optionsAllowPrivate": {
+    "message": "Allow in private windows"
+  },
+  "optionsConnectionLabel": {
+    "message": "Connection"
+  },
+  "optionsLimitPerDay": {
+    "message": "$minutes$ min a day",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "optionsLimitPerDayFree": {
+    "message": "$minutes$ min a day · your 1 free limit",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "optionsWholeSite": {
+    "message": "Whole site"
+  },
+  "optionsPartOfSite": {
+    "message": "Part of a site"
+  },
+  "optionsPartNeedsPro": {
+    "message": "Part of a site, needs Pro"
+  },
+  "optionsBlockedHeading": {
+    "message": "Blocked during sessions"
+  },
+  "optionsDistractingLabel": {
+    "message": "Distracting sites"
+  },
+  "optionsPausedHeading": {
+    "message": "Paused during sessions"
+  },
+  "optionsSyncedPro": {
+    "message": "Synced from FocusGuard · edit the list there"
+  },
+  "optionsSyncedFree": {
+    "message": "Synced from FocusGuard · tabs pause when the block screen shows"
+  },
+  "optionsEditInApp": {
+    "message": "Edit in FocusGuard"
+  },
+  "optionsNothingYet": {
+    "message": "Nothing yet. Sites you mark Distracting in FocusGuard show up here."
+  },
+  "optionsShowsOnceConnected": {
+    "message": "Shows once FocusGuard is connected."
+  },
+  "optionsYoutubeTitle": {
+    "message": "Decide YouTube video by video"
+  },
+  "optionsYoutubeBody": {
+    "message": "FocusGuard reads each video's title and channel and sorts it on this Mac. A Swift talk counts as focus, a gaming stream doesn't."
+  },
+  "optionsYoutubeOffHint": {
+    "message": "Off: all of youtube.com follows its own category."
+  },
+  "optionsYoutubeNeedsAccess": {
+    "message": "Needs site access, to read the channel."
+  },
+  "optionsProNeverOpen": {
+    "message": "Distracting pages never open, so there's nothing to peek at"
+  },
+  "optionsProParts": {
+    "message": "Parts of sites, like youtube.com/shorts and linkedin.com/feed"
+  },
+  "optionsSharesHeading": {
+    "message": "What this extension shares"
+  },
+  "optionsSendsToApp": {
+    "message": "Sends to FocusGuard on this Mac"
+  },
+  "optionsShareAddress": {
+    "message": "The address and title of the tab you're looking at, each time it changes"
+  },
+  "optionsShareVideo": {
+    "message": "A YouTube video's title and channel, while video by video is on"
+  },
+  "optionsNever": {
+    "message": "Never",
+    "description": "A heading over the next four lines, which say what the extension never does."
+  },
+  "optionsNeverServer": {
+    "message": "Talks to a server. There's no FocusGuard server for it to talk to.",
+    "description": "Under the heading Never."
+  },
+  "optionsNeverReadsOther": {
+    "message": "Reads anything else on a page, what you type, passwords or cookies",
+    "description": "Under the heading Never."
+  },
+  "optionsNeverReads": {
+    "message": "Reads what's on a page, what you type, passwords or cookies",
+    "description": "Under the heading Never."
+  },
+  "optionsNeverBackground": {
+    "message": "Looks at background tabs or your browsing history",
+    "description": "Under the heading Never."
+  },
+  "optionsNeverPrivate": {
+    "message": "Runs in private windows, unless you allow it",
+    "description": "Under the heading Never."
+  },
+  "optionsToolbarLabel": {
+    "message": "Toolbar button"
+  },
+  "optionsBadgeTitle": {
+    "message": "Show minutes left on the toolbar button"
+  },
+  "optionsBadgeHint": {
+    "message": "During a session, as a small badge"
+  },
+  "welcomePageTitle": {
+    "message": "Set up FocusGuard"
+  },
+  "welcomeStepsLabel": {
+    "message": "Setup steps"
+  },
+  "welcomeStepConnect": {
+    "message": "Connect"
+  },
+  "welcomeStepPin": {
+    "message": "Pin"
+  },
+  "welcomeStepDone": {
+    "message": "Done"
+  },
+  "welcomeTitle": {
+    "message": "FocusGuard is in your browser."
+  },
+  "welcomeLede": {
+    "message": "It works with the FocusGuard app on your Mac. Setting it up takes about a minute."
+  },
+  "welcomeTimeName": {
+    "message": "Your time, site by site"
+  },
+  "welcomeTimeText": {
+    "message": "It sees which page you're on, so a code review and a YouTube rabbit hole don't count the same."
+  },
+  "welcomeBlockName": {
+    "message": "Blocks before pages load"
+  },
+  "welcomeBlockText": {
+    "message": "Distracting sites, and parts of sites like YouTube Shorts, stay closed during sessions."
+  },
+  "welcomeMacName": {
+    "message": "Stays on your Mac"
+  },
+  "welcomeMacText": {
+    "message": "Page addresses and titles go straight to the app. There's no FocusGuard server."
+  },
+  "welcomeSetUp": {
+    "message": "Set up"
+  },
+  "welcomeNext": {
+    "message": "Next: connect to the app, then pin the button"
+  },
+  "welcomeNotOnMacTitle": {
+    "message": "FocusGuard isn't on this Mac yet"
+  },
+  "welcomeInstallOpen": {
+    "message": "Install it and open it once. This page moves on by itself."
+  },
+  "welcomeNotOpenTitle": {
+    "message": "FocusGuard is on this Mac, but it isn't open"
+  },
+  "welcomeLookingTitle": {
+    "message": "Looking for FocusGuard"
+  },
+  "welcomeOpenMovesOn": {
+    "message": "Open it and this page moves on by itself."
+  },
+  "welcomeConnectTitle": {
+    "message": "Connect to FocusGuard"
+  },
+  "welcomeConnectLede": {
+    "message": "The extension needs the app running on this Mac."
+  },
+  "welcomeAppLabel": {
+    "message": "FocusGuard app"
+  },
+  "welcomeLookingStatus": {
+    "message": "Looking for FocusGuard…"
+  },
+  "welcomeNoAppTitle": {
+    "message": "Don't have FocusGuard yet?"
+  },
+  "welcomeFreeNeeds": {
+    "message": "Free to download for Mac, needs macOS 26."
+  },
+  "welcomeNativeNote": {
+    "message": "The extension and the app talk through your browser's native messaging, on this Mac only."
+  },
+  "welcomePinTitle": {
+    "message": "Pin FocusGuard to the toolbar"
+  },
+  "welcomePinLede": {
+    "message": "Then the time left and what's blocked are one click away."
+  },
+  "welcomeHowToPinLabel": {
+    "message": "How to pin"
+  },
+  "welcomePinStep1": {
+    "message": "Click the Extensions button"
+  },
+  "welcomePinStep1Detail": {
+    "message": "The puzzle piece next to the address bar, top right."
+  },
+  "welcomePinStep2": {
+    "message": "Click the pin next to FocusGuard"
+  },
+  "welcomePinStep2Detail": {
+    "message": "The shield appears beside the address bar and this page moves on."
+  },
+  "welcomeWaitingPin": {
+    "message": "Waiting for the pin…"
+  },
+  "welcomeSkip": {
+    "message": "Skip for now"
+  },
+  "welcomeNoPuzzle": {
+    "message": "Can't see a puzzle piece? Some browsers keep extensions in their main menu instead."
+  },
+  "welcomeDoneTitle": {
+    "message": "You're set."
+  },
+  "welcomeDoneLedePro": {
+    "message": "Start a session from the shield in the toolbar or from the menu bar. Distracting pages stay closed while you focus."
+  },
+  "welcomeDoneLedeFree": {
+    "message": "Start a session from the shield in the toolbar or from the menu bar. Distracting tabs pause when you drift."
+  },
+  "welcomeSummaryLabel": {
+    "message": "Setup summary"
+  },
+  "welcomeConnectedVersion": {
+    "message": "Connected to FocusGuard $version$",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "1.0"
+      }
+    }
+  },
+  "welcomeOnThisMac": {
+    "message": "on this Mac"
+  },
+  "welcomeNotConnected": {
+    "message": "FocusGuard isn't connected right now"
+  },
+  "welcomePinned": {
+    "message": "Pinned to the toolbar"
+  },
+  "welcomeNotPinned": {
+    "message": "Not pinned yet"
+  },
+  "welcomePinPath": {
+    "message": "puzzle piece › pin"
+  },
+  "welcomeSummaryPro": {
+    "message": "Pro: pages that never load, parts of sites, YouTube video by video"
+  },
+  "welcomeSummaryFree": {
+    "message": "Free plan: time per site, and tabs that pause when you drift"
+  },
+  "welcomeNeedsAccess": {
+    "message": "Blocking needs site access"
+  },
+  "welcomePrivateCovered": {
+    "message": "Private windows are covered too"
+  },
+  "welcomePrivateNotCovered": {
+    "message": "Private windows aren't covered yet"
+  },
+  "welcomeSessionStarted": {
+    "message": "Session started"
+  },
+  "welcomeStartMinutes": {
+    "message": "Start a $minutes$-minute session",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "50"
+      }
+    }
+  },
+  "welcomeCloseThisTab": {
+    "message": "Close this tab"
+  },
+  "welcomeStartFailed": {
+    "message": "Couldn't start it. Is FocusGuard open?"
+  },
+  "welcomeProLine": {
+    "message": "Want distracting pages to never load at all? That's FocusGuard Pro, 14 days free."
+  },
+  "welcomeSeePro": {
+    "message": "See Pro"
+  }
+}

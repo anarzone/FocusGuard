@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import './chrome-i18n.mjs';
 import {
-  clock, displayHost, goalLabel, hostname, listSummary, minutesLabel, ordinal, pagePattern, splitPart, tileLetter,
+  clock, displayHost, goalLabel, hostname, listSummary, minutesLabel, pagePattern, splitPart, tileLetter,
 } from '../src/lib/format.js';
 
 test('displayHost keeps web hosts and drops www', () => {
@@ -42,9 +43,7 @@ test('minute labels', () => {
   assert.equal(goalLabel(210), '3h 30m');
 });
 
-test('ordinals, tiles and list summaries', () => {
-  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(ordinal),
-    ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st']);
+test('tiles and list summaries', () => {
   assert.equal(tileLetter('www.medium.com'), 'M');
   assert.equal(listSummary(['x.com']), 'x.com');
   assert.equal(listSummary(['x.com', 'reddit.com']), 'x.com and reddit.com');

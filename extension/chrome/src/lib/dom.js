@@ -3,6 +3,7 @@
 
 import { SHIELD, fillTop } from './icon.js';
 import { tileLetter } from './format.js';
+import { loadLanguage, pageLanguage, t } from './i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_TAGS = new Set(['svg', 'path', 'circle', 'rect', 'g', 'defs', 'clipPath', 'text', 'line']);
@@ -116,6 +117,20 @@ export function waitDial(secondsLeft, total) {
     h('circle', { cx: 10, cy: 10, r: 8, fill: 'none', stroke: 'var(--fill-3)', 'stroke-width': 2 }),
     done > 0 ? h('path', { d: `M10 2 A8 8 0 ${angle > 180 ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)}`, fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 2, 'stroke-linecap': 'round' }) : null,
     h('text', { x: 10, y: 13.4, 'font-size': 9, fill: 'var(--ink-2)', 'text-anchor': 'middle', 'font-weight': 600, 'font-family': 'inherit' }, String(Math.ceil(secondsLeft))));
+}
+
+// Picks the language, says it in <html lang> and fills in the words in the
+// page's own HTML, marked data-i18n (the element's text) or data-i18n-title,
+// -placeholder, -aria-label (that attribute). Await it before anything else on
+// a page. The HTML holds only the product's name until then, and pages render
+// nothing before it, so no other language shows first.
+export async function localizePage() {
+  await loadLanguage();
+  document.documentElement.lang = pageLanguage();
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const name of ['title', 'placeholder', 'aria-label']) {
+    for (const el of document.querySelectorAll(`[data-i18n-${name}]`)) el.setAttribute(name, t(el.getAttribute(`data-i18n-${name}`)));
+  }
 }
 
 // Tells the background the page's light or dark look, for the toolbar glyph.

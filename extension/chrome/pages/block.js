@@ -9,9 +9,12 @@
 // For the Pro kinds the original address follows the "#", unescaped.
 
 import { Conn } from '../src/lib/protocol.js';
-import { clock, displayHost, ordinal, parseFragment, safeWebURL, splitPart, timeOfDay } from '../src/lib/format.js';
+import { clock, displayHost, minutesPhrase, parseFragment, safeWebURL, splitPart, timeOfDay } from '../src/lib/format.js';
+import { ordinal, plural, t } from '../src/lib/i18n.js';
 import { presetName, presetRules, ringArcs, sessionClock } from '../src/lib/view.js';
-import { h, icons, mount, reportAppearance, siteTile, subscribe, tell, waitDial } from '../src/lib/dom.js';
+import { h, icons, localizePage, mount, reportAppearance, siteTile, subscribe, tell, waitDial } from '../src/lib/dom.js';
+
+await localizePage();
 
 const params = new URLSearchParams(location.search);
 const kind = params.get('kind') || 'paused';
@@ -19,7 +22,8 @@ const target = params.get('target') || '';
 const openedAt = Date.now();
 let fields = {};
 let originalURL = '';
-let host = 'This site';
+let host = '';           // the site's name as the page shows it
+let reportedHost = '';   // and as the app hears it, never translated
 readAddress();
 
 const app = document.getElementById('app');
@@ -29,7 +33,7 @@ let live = [];
 let busy = false;
 
 // No site name in the title: title rules must never match this page.
-document.title = kind === 'paused' ? 'Paused · FocusGuard' : 'Blocked · FocusGuard';
+document.title = kind === 'paused' ? t('blockDocTitlePaused') : t('blockDocTitleBlocked');
 // The app moves a paused tab on by changing the fields after the "#".
 window.addEventListener('hashchange', () => {
   readAddress();
@@ -47,22 +51,25 @@ if (kind !== 'paused') {
   try {
     if (!sessionStorage.getItem(mark)) {
       sessionStorage.setItem(mark, '1');
-      tell({ type: 'blockedVisit', host });
+      tell({ type: 'blockedVisit', host: reportedHost });
     }
   } catch {
-    tell({ type: 'blockedVisit', host });
+    tell({ type: 'blockedVisit', host: reportedHost });
   }
 }
 
 function readAddress() {
+  let known;
   if (kind === 'paused') {
     fields = parseFragment(location.hash);
     originalURL = safeWebURL(fields.url) || '';
-    host = fields.host || displayHost(originalURL) || 'This site';
+    known = fields.host || displayHost(originalURL);
   } else {
     originalURL = decodeOriginal(location.hash.slice(1));
-    host = displayHost(originalURL) || target || 'This site';
+    known = displayHost(originalURL) || target;
   }
+  host = known || t('blockThisSite');
+  reportedHost = known || 'This site';
 }
 
 function decodeOriginal(raw) {
@@ -100,7 +107,7 @@ async function forWork() {
 async function extraTime() {
   if (busy) return;
   busy = true;
-  const reply = await tell({ type: 'extraTime', site: target || host, url: originalURL });
+  const reply = await tell({ type: 'extraTime', site: target || reportedHost, url: originalURL });
   busy = false;
   if (!reply?.ok) showProblem(reply?.error);
 }
@@ -127,13 +134,13 @@ function closeTab() {
 let problem = null;
 function showProblem(error) {
   problem = {
-    strict: 'Strict is on, so there are no passes until the session ends.',
-    notPro: 'Letting yourself through is part of Pro.',
-    noSession: 'The session has ended.',
-    notAllowed: 'No more extra time today.',
-    notConnected: "FocusGuard isn't connected.",
-    notRunning: "FocusGuard isn't open.",
-  }[error] || "That didn't work. Is FocusGuard still open?";
+    strict: t('blockProblemStrict'),
+    notPro: t('blockProblemNotPro'),
+    noSession: t('blockProblemNoSession'),
+    notAllowed: t('blockProblemNoExtraTime'),
+    notConnected: t('blockProblemNotConnected'),
+    notRunning: t('blockProblemNotOpen'),
+  }[error] || t('blockProblemGeneric');
   renderedKey = '';
   render();
 }
@@ -193,7 +200,7 @@ function sitePill(tag, tagClass = '') {
 
 function backLabel(state) {
   const name = state?.session?.backTo;
-  return name ? `Back to ${name}` : 'Close tab';
+  return name ? t('backTo', name) : t('closeTab');
 }
 
 function backAction(state) {
@@ -220,11 +227,14 @@ function ring(state) {
   live.push((now) => {
     const c = sessionClock(s, now);
     big.textContent = clock(c.left ?? c.elapsed);
-    small.textContent = c.left !== null ? (s.paused ? 'left · paused' : 'left') : 'so far';
+    small.textContent = c.left !== null ? (s.paused ? t('clockLeftPaused') : t('clockLeft')) : t('clockSoFar');
     const done = Math.round(c.elapsed / 60);
-    box.setAttribute('aria-label', `Session ring: ${done} ${c.planned ? `of ${Math.round(c.planned / 60)} ` : ''}minutes done, `
-      + `${Math.round(s.driftSeconds / 60)} of it drift. ${clock(c.left ?? c.elapsed)} ${c.left !== null ? 'left' : 'so far'}`
-      + `${c.endsAt ? `, ends at ${timeOfDay(c.endsAt)}` : ''}.`);
+    const planned = Math.round((c.planned || 0) / 60);
+    const drift = Math.round(s.driftSeconds / 60);
+    const shown = clock(c.left ?? c.elapsed);
+    box.setAttribute('aria-label', !c.planned ? t('blockRingOpen', done, drift, shown)
+      : c.endsAt ? t('blockRingEnds', done, planned, drift, shown, timeOfDay(c.endsAt))
+        : t('blockRingPlanned', done, planned, drift, shown));
   });
   return box;
 }
@@ -241,7 +251,7 @@ function waitButton(label, wait, onclick, { quiet = false } = {}) {
     const left = wait - (now - openedAt) / 1000;
     if (left > 0) {
       button.disabled = true;
-      button.setAttribute('aria-label', `${label}, available in ${Math.ceil(left)} seconds`);
+      button.setAttribute('aria-label', t('blockAvailableIn', label, Math.ceil(left)));
       button.replaceChildren(waitDial(left, wait), label);
     } else if (button.disabled) {
       button.disabled = false;
@@ -262,7 +272,7 @@ function footer(...parts) {
   return h('div', { class: 'footer' }, parts.filter(Boolean));
 }
 
-function changeLink(label = "Change what's blocked") {
+function changeLink(label = t('blockChangeBlocked')) {
   return h('a', { href: '#', onclick: (e) => { e.preventDefault(); tell({ type: 'openApp', page: 'blocking' }); } }, label);
 }
 
@@ -286,61 +296,56 @@ function blockedView(state) {
   let lede;
   if (kind === 'part') {
     const { host: partHost } = splitPart(target);
-    title = `This part of ${partHost} is blocked while you focus.`;
-    lede = `The rest of ${partHost} still opens.`;
+    title = t('blockPartTitle', partHost);
+    lede = t('blockPartLede', partHost);
   } else if (!rules.pass) {
-    title = until ? `${host} stays closed until ${until}.` : `${host} stays closed for this session.`;
-    lede = `Strict is on, so there's no letting yourself through during ${s.name}.`;
+    title = until ? t('blockStrictTitleUntil', host, until) : t('blockStrictTitleSession', host);
+    lede = t('blockStrictLede', s.name);
   } else {
-    title = until ? `${host} can wait until ${until}.` : `${host} can wait until the session ends.`;
-    lede = `It's blocked during ${s.name}, so the page never loaded.`;
+    title = until ? t('blockWaitTitleUntil', host, until) : t('blockWaitTitleSession', host);
+    lede = t('blockWaitLede', s.name);
   }
 
   const buttons = [h('button', { class: 'btn btn-primary', onclick: back }, backLabel(state))];
   if (kind === 'part') {
     const partHost = splitPart(target).host;
-    buttons.push(h('button', { class: 'btn btn-quiet', onclick: () => tell({ type: 'goTo', url: `https://${partHost}/` }) }, `Go to ${partHost}`));
+    buttons.push(h('button', { class: 'btn btn-quiet', onclick: () => tell({ type: 'goTo', url: `https://${partHost}/` }) }, t('blockGoTo', partHost)));
   } else if (rules.forWorkWait > 0) {
-    buttons.push(waitButton("It's for work", rules.forWorkWait, forWork, { quiet: true }));
+    buttons.push(waitButton(t('blockForWork'), rules.forWorkWait, forWork, { quiet: true }));
   } else {
-    buttons.push(h('button', { class: 'btn btn-quiet', onclick: forWork }, "It's for work"));
+    buttons.push(h('button', { class: 'btn btn-quiet', onclick: forWork }, t('blockForWork')));
   }
   let passButton = null;
   if (rules.pass) {
-    passButton = waitButton('Let me through', rules.passWait, letMeThrough);
+    passButton = waitButton(t('blockLetMeThrough'), rules.passWait, letMeThrough);
     buttons.push(passButton);
   } else if (kind !== 'part') {
-    buttons.push(h('button', { class: 'btn btn-quiet', onclick: closeTab }, 'Close tab'));
+    buttons.push(h('button', { class: 'btn btn-quiet', onclick: closeTab }, t('closeTab')));
   }
 
   keyActions.esc = back;
   keyActions.enter = () => (passButton && !passButton.disabled ? letMeThrough : null);
 
   const footerText = !rules.pass
-    ? `Blocked by FocusGuard · Strict · the blocked list is locked${until ? ` until ${until}` : ' until the session ends'}`
-    : `Blocked by FocusGuard · ${name}${kind === 'part' ? ` · only ${target} is blocked` : ''}${visits > 0 ? ` · ${ordinal(visits)} time this session` : ''} ·`;
+    ? [t('blockFooterBy'), t('presetStrict'), until ? t('blockFooterLockedUntil', until) : t('blockFooterLockedSession')].join(' · ')
+    : `${[t('blockFooterBy'), name, kind === 'part' ? t('blockFooterOnlyPart', target) : null, visits > 0 ? ordinal('blockFooterNth', visits) : null].filter(Boolean).join(' · ')} ·`;
 
   return [
-    sitePill('Distracting', 'drift'),
+    sitePill(t('categoryDistracting'), 'drift'),
     h('h1', null, title),
     h('p', { class: 'lede' }, lede),
     ring(state),
     h('div', { class: 'actions' }, buttons),
     !rules.pass && kind !== 'part'
-      ? h('p', { class: 'why' }, `If ${host} really is work, "It's for work" unlocks after ${rules.forWorkWait} seconds.`)
+      ? h('p', { class: 'why' }, t('blockWhyForWork', host, rules.forWorkWait))
       : null,
     problemLine(),
     keys(
-      ['esc', state.session.backTo ? `back to ${state.session.backTo}` : 'close tab'],
-      rules.pass ? ['return', `let me through, for ${passLength(rules.passSeconds)}`] : null,
+      [t('keyEsc'), state.session.backTo ? t('backToKey', state.session.backTo) : t('closeTabKey')],
+      rules.pass ? [t('keyReturn'), t('blockKeyLetThrough', minutesPhrase(rules.passSeconds))] : null,
     ),
     footer(h('span', null, footerText), rules.pass ? changeLink() : null),
   ];
-}
-
-function passLength(seconds) {
-  const minutes = Math.round(seconds / 60);
-  return minutes === 1 ? '1 minute' : `${minutes} minutes`;
 }
 
 // --- Pro: daily limit -------------------------------------------------------
@@ -353,44 +358,44 @@ function limitView(state, connected) {
   const extraOffered = !!rules.extra && (limit?.extraLeft || 0) > 0;
   const minutes = limit?.minutes;
   const title = !extraOffered
-    ? `${site} is done for today.`
-    : minutes ? `That's your ${minutes} minutes of ${site} today.` : `That's your time on ${site} today.`;
-  const lede = !extraOffered
-    ? `You've used your${minutes ? ` ${minutes}` : ''} minutes. ${rules.extra ? 'It' : `${presetName(preset)} is on, so it`} opens again tomorrow.`
-    : 'It opens again tomorrow. Limits count all day, in sessions and out.';
+    ? t('limitDoneTitle', site)
+    : minutes ? t('limitMinutesTitle', minutes, site) : t('limitTimeTitle', site);
+  let lede = t('limitLedeExtra');
+  if (!extraOffered && rules.extra) lede = minutes ? t('limitLedeMinutes', minutes) : t('limitLedeUsed');
+  if (!extraOffered && !rules.extra) lede = minutes ? t('limitLedeMinutesPreset', minutes, presetName(preset)) : t('limitLedeUsedPreset', presetName(preset));
 
-  const buttons = [h('button', { class: 'btn btn-primary', onclick: closeTab }, 'Close tab')];
+  const buttons = [h('button', { class: 'btn btn-primary', onclick: closeTab }, t('closeTab'))];
   let extraButton = null;
   if (extraOffered) {
-    extraButton = waitButton(`${rules.extra.minutes} more minutes`, rules.extra.waitSeconds, extraTime, { quiet: true });
+    extraButton = waitButton(t('limitMoreMinutes', rules.extra.minutes), rules.extra.waitSeconds, extraTime, { quiet: true });
     buttons.push(extraButton);
   }
   keyActions.esc = closeTab;
   keyActions.enter = () => (extraButton && !extraButton.disabled ? extraTime : null);
   const extraHint = !extraOffered ? null
-    : rules.extra.timesPerDay === 1 ? 'once a day' : `${limit.extraLeft} more ${limit.extraLeft === 1 ? 'time' : 'times'} today`;
+    : rules.extra.timesPerDay === 1 ? t('limitOnceADay') : plural('limitTimesLeft', limit.extraLeft);
 
   const used = limit ? Math.round(limit.usedSeconds / 60) : minutes;
   return [
-    sitePill(minutes ? `Daily limit · ${minutes} min` : 'Daily limit'),
+    sitePill(minutes ? t('limitTagMinutes', minutes) : t('limitTag')),
     h('h1', null, title),
     h('p', { class: 'lede' }, lede),
-    limit ? h('section', { class: 'limit-card', 'aria-label': `Today on ${site}` },
+    limit ? h('section', { class: 'limit-card', 'aria-label': t('limitTodayOn', site) },
       h('div', { class: 'top' },
-        h('span', { class: 'title' }, `Today on ${site}`),
-        h('span', { class: 'used num' }, `${used} of ${minutes} min`)),
-      h('div', { class: 'meter', role: 'img', 'aria-label': `${used} of ${minutes} minutes used, over ${limit.visits} visits` },
+        h('span', { class: 'title' }, t('limitTodayOn', site)),
+        h('span', { class: 'used num' }, t('limitUsedOf', used, minutes))),
+      h('div', { class: 'meter', role: 'img', 'aria-label': t('limitMeterLabel', used, minutes, limit.visits) },
         h('div', { style: { width: `${Math.min(100, (limit.usedSeconds / (minutes * 60)) * 100)}%` } })),
       h('div', { class: 'bottom' },
         h('span', null, limit.visits
-          ? `${limit.visits} ${limit.visits === 1 ? 'visit' : 'visits'}${limit.lastVisitAt ? `, the last at ${timeOfDay(limit.lastVisitAt)}` : ''}`
+          ? (limit.lastVisitAt ? plural('limitVisitsLast', limit.visits, timeOfDay(limit.lastVisitAt)) : plural('limitVisits', limit.visits))
           : ''),
-        h('span', null, 'Resets at 00:00'))) : null,
+        h('span', null, t('limitResets')))) : null,
     h('div', { class: 'actions' }, buttons),
     problemLine(),
-    keys(['esc', 'close tab'], extraButton ? ['return', `${rules.extra.minutes} more minutes, ${extraHint}`] : null),
-    footer(h('span', null, `Daily limit from FocusGuard · ${presetName(preset)} ·`),
-      changeLink(rules.limitChangesWaitForTomorrow ? 'Change the limit for tomorrow' : 'Change the limit')),
+    keys([t('keyEsc'), t('closeTabKey')], extraButton ? [t('keyReturn'), t('limitKeyExtra', rules.extra.minutes, extraHint)] : null),
+    footer(h('span', null, t('limitFooter', presetName(preset))),
+      changeLink(rules.limitChangesWaitForTomorrow ? t('limitChangeTomorrow') : t('limitChange'))),
   ];
 }
 
@@ -408,47 +413,47 @@ function pausedState(now = Date.now()) {
 }
 
 function pausedView(state) {
-  const back = fields.back ? `Back to ${fields.back}` : 'Back to work';
+  const back = fields.back ? t('backTo', fields.back) : t('backToWork');
   const goBack = () => tabAction('back');
   const { state: pageState, left } = pausedState();
   const running = state?.session && (state.phase === 'focusing' || state.phase === 'paused');
   const pro = !!state?.plan?.features?.blockInBrowser;
-  const reopenSite = originalURL ? h('button', { class: 'btn btn-quiet', onclick: reopen }, `Reopen ${host}`) : null;
+  const reopenSite = originalURL ? h('button', { class: 'btn btn-quiet', onclick: reopen }, t('pausedReopenHost', host)) : null;
 
   let title;
   let lede;
   let buttons;
-  let tag = 'Paused';
+  let tag = t('pausedTag');
   keyActions.esc = goBack;
   if (pageState === 'queued') {
-    title = `${host} will reopen when your session ends`;
-    lede = 'It comes back in this tab, right where you left it.';
-    tag = 'Reopens later';
+    title = t('pausedQueuedTitle', host);
+    lede = t('pausedQueuedLede');
+    tag = t('pausedTagLater');
     buttons = [
       h('button', { class: 'btn btn-primary', onclick: goBack }, back),
-      h('button', { class: 'btn btn-quiet', onclick: () => tabAction('keepPaused') }, 'Don’t reopen it'),
+      h('button', { class: 'btn btn-quiet', onclick: () => tabAction('keepPaused') }, t('pausedDontReopen')),
     ];
   } else if (pageState === 'over') {
-    title = 'Your session is over';
-    lede = `${host} is still paused. Take a break first, or open it now.`;
+    title = t('pausedOverTitle');
+    lede = t('pausedOverLede', host);
     keyActions.esc = null;
     keyActions.enter = () => (originalURL ? reopen : null);
     buttons = [
-      h('button', { class: 'btn btn-primary', onclick: () => tabAction('startBreak', { minutes: 10 }) }, 'Take a 10-minute break'),
+      h('button', { class: 'btn btn-primary', onclick: () => tabAction('startBreak', { minutes: 10 }) }, t('pausedTakeBreak', 10)),
       reopenSite,
     ];
   } else if (pageState === 'limit') {
     const minutes = Number(fields.minutes) || 0;
-    title = `${host} is paused for today`;
-    lede = `${minutes ? `You’ve used your ${minutes} minutes. ` : ''}It opens again at midnight.`;
-    tag = minutes ? `Daily limit · ${minutes} min` : 'Daily limit';
+    title = t('pausedLimitTitle', host);
+    lede = minutes ? t('pausedLimitLedeMinutes', minutes) : t('pausedLimitLede');
+    tag = minutes ? t('limitTagMinutes', minutes) : t('limitTag');
     buttons = [h('button', { class: 'btn btn-primary', onclick: goBack }, back)];
   } else {
-    title = `${host} is paused while you focus`;
-    lede = Number(fields.ends) ? 'It’s here when your session ends.' : 'It’s here when your session ends, or reopen it after.';
+    title = t('pausedTitle', host);
+    lede = Number(fields.ends) ? t('pausedLede') : t('pausedLedeAfter');
     buttons = [
       h('button', { class: 'btn btn-primary', onclick: goBack }, back),
-      h('button', { class: 'btn btn-quiet', onclick: () => tabAction('reopenLater') }, 'Reopen after the session'),
+      h('button', { class: 'btn btn-quiet', onclick: () => tabAction('reopenLater') }, t('pausedReopenAfter')),
     ];
   }
 
@@ -463,7 +468,7 @@ function pausedView(state) {
     live.push((now) => {
       const { left: l } = pausedState(now);
       big.textContent = clock(Math.max(0, l));
-      small.textContent = l > 0 ? 'left in your session' : 'your session is ending';
+      small.textContent = l > 0 ? t('pausedLeftInSession') : t('pausedSessionEnding');
     });
     middle = h('div', { class: 'ring' }, h('div', { class: 'center' }, big, small));
   }
@@ -476,13 +481,13 @@ function pausedView(state) {
     h('div', { class: 'actions' }, buttons),
     problemLine(),
     keys(
-      keyActions.esc ? ['esc', fields.back ? `back to ${fields.back}` : 'back to work'] : null,
-      pageState === 'over' && originalURL ? ['return', `reopen ${host}`] : null,
+      keyActions.esc ? [t('keyEsc'), fields.back ? t('backToKey', fields.back) : t('backToWorkKey')] : null,
+      pageState === 'over' && originalURL ? [t('keyReturn'), t('pausedKeyReopen', host)] : null,
     ),
     footer(
-      h('span', null, pro ? 'Paused by FocusGuard. Nothing on this page goes online.'
-        : "Paused by FocusGuard · Free plan. With Pro, distracting pages don't open at all."),
-      pro ? null : h('a', { href: '#', onclick: (e) => { e.preventDefault(); tell({ type: 'openApp', page: 'upgrade' }); } }, 'How Pro blocks')),
+      h('span', null, pro ? t('pausedFooterPro')
+        : t('pausedFooterFree')),
+      pro ? null : h('a', { href: '#', onclick: (e) => { e.preventDefault(); tell({ type: 'openApp', page: 'upgrade' }); } }, t('pausedHowProBlocks'))),
   ];
 }
 
@@ -494,11 +499,11 @@ function overView(state) {
   keyActions.enter = () => (originalURL ? () => tell({ type: 'goTo', url: originalURL }) : null);
   return [
     sitePill(null),
-    h('h1', null, connected ? 'The session is over.' : "FocusGuard isn't running."),
-    h('p', { class: 'lede' }, connected ? `${host} isn't blocked any more.` : 'Nothing is blocked while it\'s closed.'),
+    h('h1', null, connected ? t('overTitle') : t('overNotRunning')),
+    h('p', { class: 'lede' }, connected ? t('overLede', host) : t('overLedeNotRunning')),
     h('div', { class: 'actions' },
-      originalURL ? h('button', { class: 'btn btn-primary', onclick: () => tell({ type: 'goTo', url: originalURL }) }, `Open ${host}`) : null,
-      h('button', { class: 'btn btn-quiet', onclick: closeTab }, 'Close tab')),
-    keys(originalURL ? ['return', `open ${host}`] : null, ['esc', 'close tab']),
+      originalURL ? h('button', { class: 'btn btn-primary', onclick: () => tell({ type: 'goTo', url: originalURL }) }, t('overOpenHost', host)) : null,
+      h('button', { class: 'btn btn-quiet', onclick: closeTab }, t('closeTab'))),
+    keys(originalURL ? [t('keyReturn'), t('overKeyOpen', host)] : null, [t('keyEsc'), t('closeTabKey')]),
   ];
 }

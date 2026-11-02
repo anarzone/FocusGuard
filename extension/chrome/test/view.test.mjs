@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import './chrome-i18n.mjs';
 import { Conn, connFromDisconnect } from '../src/lib/protocol.js';
 import { barSegments, breakClock, passFor, presetRules, ringArcs, sessionClock, toolbar } from '../src/lib/view.js';
 

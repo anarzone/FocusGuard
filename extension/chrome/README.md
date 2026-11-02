@@ -71,8 +71,10 @@ FocusGuard.app/Contents/Helpers/FocusGuardBrowserHelper ──Unix socket──�
 | Path | What |
 | --- | --- |
 | `manifest.json` | MV3 manifest, with the development `key` |
+| `_locales/` | the words for English (the source) and German, as `messages.json` |
+| `i18n/az.json` | the words for Azerbaijani, in the same format (see Languages) |
 | `src/background.js` | native connection, tab reports, pausing tabs, Pro blocking rules, toolbar button |
-| `src/lib/` | pure helpers (addresses, times, blocking rules, view state, the toolbar glyph, a tiny DOM builder) |
+| `src/lib/` | pure helpers (addresses, times, blocking rules, view state, the toolbar glyph, a tiny DOM builder, `i18n.js` for strings) |
 | `pages/popup.*` | toolbar popup: not installed, not running, ready, focusing, break, free with the Pro card |
 | `pages/block.*` | the page a paused or blocked tab shows (`kind=paused` with the app's fields, or the Pro `site`, `part`, `limit`) |
 | `pages/options.*` | options |
@@ -80,6 +82,24 @@ FocusGuard.app/Contents/Helpers/FocusGuardBrowserHelper ──Unix socket──�
 | `icons/` | PNG icons, drawn by `scripts/make-icons.py` |
 | `test/` | Node tests (`npm test`) |
 | `scripts/smoke.mjs` | loads the extension into real Chrome against a fake app (below) |
+
+## Languages
+
+To add a string, put it in `_locales/en/messages.json`, `_locales/de/messages.json`
+and `i18n/az.json`, and read it with `t('key')` from `src/lib/i18n.js` (`plural` and
+`ordinal` for counts, `data-i18n="key"` in HTML). `npm test` fails on a missing key,
+a mismatched placeholder or an unused message.
+
+English and German follow the browser's UI language, through `chrome.i18n`. To try
+German on a Mac, quit the browser and start it with `-AppleLanguages '(de)'` (Chrome
+ignores `--lang` there).
+
+Chrome has no Azerbaijani UI and doesn't support `az` in `_locales`, so `i18n/az.json`
+is loaded by the extension itself, when Azerbaijani is the top language in the
+browser's settings. To try it, go to `chrome://settings/languages`, add Azerbaijani
+and move it to the top, then reopen the popup or page. The rest of Chrome stays in
+its own language, and so does the extension's description on `chrome://extensions`,
+which only `_locales` can translate.
 
 ## Permissions
 
@@ -111,7 +131,8 @@ node /path/to/extension/chrome/scripts/smoke.mjs --helper /path/to/FocusGuard.ap
 It starts Google Chrome with a throwaway profile, connects through the real
 helper to a fake app on a test socket, walks connect, tab reports, the popup's
 states, pausing a tab and giving it back, the block pages, options and first
-run, and saves a screenshot of each.
+run, and saves a screenshot of each. `--lang de` or `--lang az` does the same in
+that language.
 
 ## Publishing (to do)
 

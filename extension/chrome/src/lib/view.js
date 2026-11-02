@@ -1,6 +1,7 @@
 // What the toolbar button, popup and block pages show, worked out from the
 // app's state and the clock. Pure, so it's tested in Node.
 
+import { plural, t } from './i18n.js';
 import { Conn } from './protocol.js';
 import { clock, minutesLabel, timeOfDay } from './format.js';
 import { hostMatches } from './blocking.js';
@@ -59,7 +60,7 @@ export function presetRules(policy) {
 }
 
 export function presetName(preset) {
-  return { gentle: 'Gentle', standard: 'Standard', strict: 'Strict' }[preset] || 'Standard';
+  return { gentle: t('presetGentle'), standard: t('presetStandard'), strict: t('presetStrict') }[preset] || t('presetStandard');
 }
 
 // The pass running on this host, if any.
@@ -72,7 +73,7 @@ export function passFor(state, host, now = Date.now()) {
 //   kind: off | ready | focus | paused | break | done
 export function toolbar({ conn, state, now = Date.now(), activeHost = null, badgeMinutes = false }) {
   if (conn !== Conn.connected || !state) {
-    return { kind: 'off', fill: 0, badge: null, title: "FocusGuard isn't running" };
+    return { kind: 'off', fill: 0, badge: null, title: t('appNotRunning') };
   }
   const features = state.plan?.features || {};
   const blockedCount = features.blockInBrowser
@@ -91,24 +92,24 @@ export function toolbar({ conn, state, now = Date.now(), activeHost = null, badg
         badge = { text: String(Math.ceil(c.left / 60)), color: '#6155F5', textColor: '#FFFFFF' };
       }
       const parts = ['FocusGuard'];
-      if (state.phase === 'paused') parts.push('paused');
-      else parts.push(c.left !== null ? `${Math.ceil(c.left / 60)} min left` : `${minutesLabel(c.elapsed)} so far`);
-      if (pass) parts.push(`let through for ${clock((pass.until - now) / 1000)}`);
-      else if (blockedCount > 0 && state.phase === 'focusing') parts.push(`${blockedCount} ${blockedCount === 1 ? 'site' : 'sites'} blocked`);
+      if (state.phase === 'paused') parts.push(t('toolbarPaused'));
+      else parts.push(c.left !== null ? t('toolbarMinutesLeft', Math.ceil(c.left / 60)) : t('toolbarSoFar', minutesLabel(c.elapsed)));
+      if (pass) parts.push(t('toolbarLetThrough', clock((pass.until - now) / 1000)));
+      else if (blockedCount > 0 && state.phase === 'focusing') parts.push(plural('toolbarSitesBlocked', blockedCount));
       return { kind: state.phase === 'paused' ? 'paused' : 'focus', fill, badge, title: parts.join(' · ') };
     }
     case 'break':
       return {
         kind: 'break', fill: 0, badge: null,
-        title: `FocusGuard · break until ${timeOfDay(state.break?.endsAt ?? now)}`,
+        title: t('toolbarBreakUntil', timeOfDay(state.break?.endsAt ?? now)),
       };
     case 'complete':
       if (state.recap && state.recap.showUntil > now) {
-        return { kind: 'done', fill: 1, badge: null, title: `FocusGuard · ${state.recap.name} is done` };
+        return { kind: 'done', fill: 1, badge: null, title: t('toolbarDone', state.recap.name) };
       }
-      return { kind: 'ready', fill: 0, badge: null, title: 'FocusGuard · ready' };
+      return { kind: 'ready', fill: 0, badge: null, title: t('toolbarReady') };
     default:
-      return { kind: 'ready', fill: 0, badge: null, title: 'FocusGuard · ready' };
+      return { kind: 'ready', fill: 0, badge: null, title: t('toolbarReady') };
   }
 }
 

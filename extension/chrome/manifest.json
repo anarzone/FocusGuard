@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "FocusGuard",
   "short_name": "FocusGuard",
-  "description": "Works with FocusGuard for Mac: counts your time site by site and pauses distracting tabs while you focus. Stays on your Mac.",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "version": "1.0.0",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArzX2dDrjKK6OacrBBGu7GUKNhZPwkGnMgjXZ6CpVyGLISs++Zvluce+IMWg/a2UjQ8LFrxOWLax2BcyOatyNtdTtNsIVUMu9ysz5Z10I7xLqWg8yUubYOH84g+rHz61FQi7LW034fB2MqsRuQw29rOh4SogJh7lZV1BQst9mnKiU6bZPTOlTIyqYfXxkVLy1pYAqP2FukKQvdkzxlKdDONiH63K64mLWKxeF/+AOGfyODyjWrLA7HEVsBh6mw3Ust26QywPGGGvgFB/r6/ugPmKSmLAAtyBz1V19jBkBzH+QAKqN5qVt6EbT0+da5WzsddNdKV+BNJ92eS3gdvYaswIDAQAB",
@@ -13,7 +14,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "FocusGuard",
+    "default_title": "__MSG_extActionTitle__",
     "default_popup": "pages/popup.html",
     "default_icon": {
       "16": "icons/toolbar16.png",
