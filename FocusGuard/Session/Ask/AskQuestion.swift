@@ -232,6 +232,7 @@ enum AskIntentMatcher {
             return .appTime
         }
         if says("going up", "going down") { return .weekCompare }
+        if says("morning person", "night owl", "early bird") { return .bestHours }
         if has("week") && has("compare", "compared", "comparison", "vs", "versus", "than", "last", "previous",
                               "better", "worse", "go", "went", "going", "more", "less", "improving", "improve") {
             return .weekCompare

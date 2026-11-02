@@ -486,6 +486,7 @@ final class AskTests: XCTestCase {
         XCTAssertEqual(AskIntentMatcher.match("How much did I sleep?"), .unknown)
         XCTAssertEqual(AskIntentMatcher.match("How much did I spend this month?"), .unknown)
         XCTAssertEqual(AskIntentMatcher.match("Is my focus rate going up?"), .weekCompare)
+        XCTAssertEqual(AskIntentMatcher.match("Am I a morning person or a night owl?"), .bestHours)
     }
 
     func testWhatPeopleCallThings() {
