@@ -8,11 +8,19 @@ import SwiftData
 /// coach. It opens straight into the window.
 enum UITestMode {
     static let argument = "-FocusGuardUITesting"
-    static let isOn = ProcessInfo.processInfo.arguments.contains(argument)
+    /// A `var` so the unit tests can build an in-memory `AppState` too
+    /// (`FlowAppStateTests`, on CI only).
+    static var isOn = ProcessInfo.processInfo.arguments.contains(argument)
 
     /// A week of mornings and today's last few hours, with a session each
-    /// day, so every page has something to show.
+    /// day, so every page has something to show. `-FocusGuardUITestSeed`
+    /// asks for another state: `empty`, or `big` (years of data, long names).
     static func seed(_ context: ModelContext, now: Date = .now, calendar: Calendar = .current) {
+        switch UserDefaults.standard.string(forKey: "FocusGuardUITestSeed") {
+        case "empty": return
+        case "big": return seedBig(context, now: now, calendar: calendar)
+        default: break
+        }
         let today = calendar.startOfDay(for: now)
         for back in 1...7 {
             guard let day = calendar.date(byAdding: .day, value: -back, to: today),
@@ -21,6 +29,33 @@ enum UITestMode {
         }
         // Today: a finished session ending an hour ago, whatever the time.
         addSession(context, start: now.addingTimeInterval(-2 * 3600), focus: 45 * 60, drift: 6 * 60)
+        try? context.save()
+    }
+
+    /// Three years of long days under long names: what the pages have to
+    /// hold in the end.
+    private static func seedBig(_ context: ModelContext, now: Date, calendar: Calendar) {
+        let today = calendar.startOfDay(for: now)
+        for back in 0...(3 * 365) {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: today),
+                  let six = calendar.date(byAdding: .hour, value: 6, to: day) else { continue }
+            let session = Session(startedAt: six, label: "A very long session name that goes on well past anything the row was built for",
+                                  status: .completed, plannedDurationMinutes: 720)
+            session.endedAt = six.addingTimeInterval(13 * 3600)
+            context.insert(session)
+            let work = ActivityEvent(startedAt: six, endedAt: six.addingTimeInterval(11 * 3600 + 5 * 60),
+                                     bundleIdentifier: "com.example.long-named-app", appName: "An Application With A Really Very Long Name",
+                                     session: session)
+            work.classification = .focus
+            context.insert(work)
+            let away = ActivityEvent(startedAt: six.addingTimeInterval(11 * 3600 + 5 * 60), endedAt: six.addingTimeInterval(13 * 3600),
+                                     bundleIdentifier: "com.apple.Safari", appName: "Safari",
+                                     url: "https://a-rather-long-subdomain.an-extremely-long-domain-name-example.com/home", session: session)
+            away.classification = .distraction
+            context.insert(away)
+        }
+        context.insert(DailyLimit(target: "a-rather-long-subdomain.an-extremely-long-domain-name-example.com", isSite: true,
+                                  name: "a-rather-long-subdomain.an-extremely-long-domain-name-example.com", minutes: 240))
         try? context.save()
     }
 

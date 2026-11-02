@@ -261,6 +261,9 @@ final class AppState {
             }
         }
 
+        // "Share week" posts .openShareComposer.
+        ShareComposerWindow.shared.observe(self)
+
         // The UI tests' copy stops here: the widgets' shared snapshot and the
         // coach's notes belong to the real app.
         guard !UITestMode.isOn else { return }
@@ -268,8 +271,6 @@ final class AppState {
         // Shortcuts, Siri, Spotlight, the Focus filter, the widgets and the
         // Control Center control act on this state.
         SurfaceHost.attach(self)
-        // "Share week" posts .openShareComposer.
-        ShareComposerWindow.shared.observe(self)
         // The weekly coach's experiments act through the limits and settings.
         WeeklyCoach.shared.attach(self)
     }

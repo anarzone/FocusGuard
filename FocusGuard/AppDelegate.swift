@@ -201,9 +201,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = NSSize(width: 980, height: 640)
             window.center()
             // The click tests' Macs can have screens narrower than the window
-            // (1024 points): their copy sits at the left edge, sidebar in view.
+            // (1024 points): their copy is cut to fit, with the window's own
+            // minimum as the floor, so the whole of it can be clicked.
             if UITestMode.isOn, let visible = NSScreen.main?.visibleFrame {
-                window.setFrameTopLeftPoint(NSPoint(x: visible.minX, y: visible.maxY))
+                var frame = window.frame
+                frame.size.width = max(window.minSize.width, min(frame.width, visible.width))
+                frame.size.height = max(window.minSize.height, min(frame.height, visible.height))
+                frame.origin = NSPoint(x: visible.minX, y: visible.maxY - frame.height)
+                window.setFrame(frame, display: false)
             }
 
             // When the user clicks the red traffic light, drop the Dock icon
