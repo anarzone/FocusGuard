@@ -471,6 +471,23 @@ final class AskTests: XCTestCase {
         }
     }
 
+    func testADayItNamesIsntAQuestionOfWhichDay() async {
+        let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["kind": "driftDay"]) }
+        let classifier = AskClassifier(model: model)
+        let named = await classifier.classify("What distracts me on Mondays?")
+        XCTAssertEqual(named.intent, .pullsAway)
+        let why = await classifier.classify("Why do I drift on Fridays?")
+        XCTAssertEqual(why.intent, .pullsAway)
+        let worst = await classifier.classify("Are Mondays my worst day?")
+        XCTAssertEqual(worst.intent, .driftDay)
+    }
+
+    func testThingsItCantSeeDontBecomeATimeQuestion() {
+        XCTAssertEqual(AskIntentMatcher.match("How much did I sleep?"), .unknown)
+        XCTAssertEqual(AskIntentMatcher.match("How much did I spend this month?"), .unknown)
+        XCTAssertEqual(AskIntentMatcher.match("Is my focus rate going up?"), .weekCompare)
+    }
+
     func testWhatPeopleCallThings() {
         let x = AskFactsBuilder.Target(key: "x.com", name: "x.com", isSite: true, seconds: 60, names: ["x.com", "twitter", "tweets"])
         XCTAssertEqual(AskFactsBuilder.match("Did I use Twitter a lot?", in: [x])?.key, "x.com")

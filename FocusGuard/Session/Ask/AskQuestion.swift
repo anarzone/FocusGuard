@@ -19,7 +19,7 @@ enum AskIntent: String, CaseIterable, Sendable {
         switch self {
         case .bestHours:       return "when they focus best: the best hours or days for focus"
         case .pullsAway:       return "what distracts them or pulls them away, or which app or site wastes or takes their time, when they don't name one"
-        case .weekCompare:     return "how this week compares with last week"
+        case .weekCompare:     return "how this week compares with last week, or whether their focus or focus rate is going up, going down or improving"
         case .driftDay:        return "which day of the week they drift or get distracted most"
         case .sessionLength:   return "how long their focus sessions should be, or which lengths go best"
         case .coachExperiment: return "whether the weekly coach's experiment from last week worked"
@@ -228,9 +228,10 @@ enum AskIntentMatcher {
         if days && drift && !has("today") { return .driftDay }
         if says("time on ", "time in ", "spend on ", "spent on ", "spend in ", "spent in ", "hours on ", "minutes on ",
                 "how much time", "how long on ", "how long in ", "how long was i on", "how often",
-                "how many hours", "how much ", "did i use", "do i use") {
+                "how many hours in ", "did i use", "do i use") {
             return .appTime
         }
+        if says("going up", "going down") { return .weekCompare }
         if has("week") && has("compare", "compared", "comparison", "vs", "versus", "than", "last", "previous",
                               "better", "worse", "go", "went", "going", "more", "less", "improving", "improve") {
             return .weekCompare
@@ -346,8 +347,17 @@ struct AskClassifier {
               let answer = try? await TimedOnDeviceModel(base: model, limit: Self.timeLimit)
                 .respond(Answer.self, instructions: Self.instructions, prompt: Self.prompt(text), shape: Self.shape),
               let intent = AskIntent(rawValue: answer.kind) else {
-            return AskQuestion(text: text, intent: fallback)
+            return AskQuestion(text: text, intent: Self.refined(fallback, text))
         }
-        return AskQuestion(text: text, intent: intent == .unknown ? fallback : intent)
+        return AskQuestion(text: text, intent: Self.refined(intent == .unknown ? fallback : intent, text))
+    }
+
+    /// "What distracts me on Mondays?" names its day, so it asks what's on
+    /// that day, not which day is worst. "Are Mondays my worst day?" still does.
+    private static func refined(_ intent: AskIntent, _ text: String) -> AskIntent {
+        let words = AskText.words(text)
+        guard intent == .driftDay, AskWeekdays.parse(text).count == 1, words.contains("what") || words.contains("why"),
+              !words.contains("worst"), !words.contains("which") else { return intent }
+        return .pullsAway
     }
 }
