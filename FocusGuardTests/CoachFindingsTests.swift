@@ -20,14 +20,14 @@ extension CoachFixture {
     /// afternoon sessions change app every 2 minutes.
     static func busyTuesday(everyDay: Bool = false) -> CoachFixture {
         var f = CoachFixture()
-        let hopping = (0..<25).map { i -> (Classification, Int, String) in (.focus, 2, i % 2 == 0 ? "xcode" : "slack") }
+        let hopping = (0..<25).map { i -> (Classification, Int, String) in i % 2 == 0 ? (.focus, 2, "xcode") : (.neutral, 2, "slack") }
         for day in 0..<5 {
-            f.session(day, 9, 0, [(.focus, 25, "xcode"), (.focus, 25, "figma")])
+            f.session(day, 9, 0, [(.focus, 25, "xcode"), (.neutral, 25, "figma")])
             if day == 1 || everyDay {
                 f.session(day, 14, 0, hopping)
                 f.session(day, 15, 0, hopping)
             } else {
-                f.session(day, 14, 0, [(.focus, 25, "xcode"), (.focus, 25, "figma")])
+                f.session(day, 14, 0, [(.focus, 25, "xcode"), (.neutral, 25, "figma")])
             }
         }
         return f

@@ -60,7 +60,19 @@ enum SessionNamer {
 
     /// The name to store: always English.
     static func name(segments: [SessionTimeline.Segment], runningSeconds: TimeInterval) -> String {
-        "\(pattern(of: segments).rawValue) \(Length(minutes: runningSeconds / 60).rawValue)"
+        let word = countedShare(segments, runningSeconds: runningSeconds) < minimumCountedShare ? Pattern.quiet : pattern(of: segments)
+        return "\(word.rawValue) \(Length(minutes: runningSeconds / 60).rawValue)"
+    }
+
+    /// Below this share of the session in focus or drift, the rate says too
+    /// little to name it by: a minute of Xcode in an hour of Slack, or in two
+    /// hours away, isn't "Locked-in".
+    static let minimumCountedShare = 0.5
+
+    private static func countedShare(_ segments: [SessionTimeline.Segment], runningSeconds: TimeInterval) -> Double {
+        let counted = segments.filter { $0.classification != .neutral }.reduce(0) { $0 + max(0, $1.seconds) }
+        let total = max(runningSeconds, segments.reduce(0) { $0 + max(0, $1.seconds) })
+        return total > 0 ? counted / total : 0
     }
 
     static func name(for session: Session, endedAt: Date? = nil) -> String {

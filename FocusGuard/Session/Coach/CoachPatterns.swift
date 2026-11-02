@@ -120,6 +120,9 @@ enum CoachFinding: Equatable, Sendable {
         let switches: Int
         /// The part of the day most of those sessions ran in.
         let hours: CoachHours
+        /// The other days had no changes at all, so `usualMinutesPerSwitch`
+        /// isn't a rate to quote.
+        var noneOnOtherDays = false
     }
 
     struct SessionLength: Equatable, Sendable {
@@ -230,6 +233,11 @@ enum CoachPatternFinder {
 
     // MARK: - Time of day
 
+    /// Sessions, and rated time, each part of the day needs before it's
+    /// compared: four 15-minute sessions say nothing about a time of day.
+    static let timeOfDaySessions = 3
+    static let timeOfDaySeconds: TimeInterval = 45 * 60
+
     /// The part of the day whose sessions ran at the lowest focus rate,
     /// against the one with the highest, 15 points apart or more.
     static func timeOfDay(_ data: CoachData, calendar: Calendar = .current) -> CoachFinding? {
@@ -256,7 +264,7 @@ enum CoachPatternFinder {
             parts[hours] = part
         }
         let rated: [(CoachHours, Part)] = CoachHours.parts.compactMap { hours in
-            guard let part = parts[hours], part.sessions >= 2, part.focus + part.drift >= 20 * 60 else { return nil }
+            guard let part = parts[hours], part.sessions >= timeOfDaySessions, part.focus + part.drift >= timeOfDaySeconds else { return nil }
             return (hours, part)
         }
         guard rated.count >= 2,
@@ -273,11 +281,16 @@ enum CoachPatternFinder {
 
     // MARK: - Right after sessions
 
+    /// A stay this short after a session is a glance, not reaching for it.
+    static let afterSessionMinimum: TimeInterval = 60
+
     /// The distraction opened first within 3 minutes of a session ending,
-    /// when it's the same one after at least 3 sessions and half of them.
+    /// when it's the same one after at least 3 sessions and half of them, and
+    /// it comes to minutes a day.
     static func afterSessions(_ data: CoachData, calendar: Calendar = .current) -> CoachFinding? {
         guard data.sessions.count >= 4 else { return nil }
-        let loose = data.events.filter { $0.session == nil && $0.kind == .distraction }.sorted { $0.start < $1.start }
+        let loose = data.events.filter { $0.session == nil && $0.kind == .distraction && $0.duration >= afterSessionMinimum }
+            .sorted { $0.start < $1.start }
         var counts: [String: (name: String, isSite: Bool, count: Int)] = [:]
         for session in data.sessions {
             let window = session.end.addingTimeInterval(-1)...session.end.addingTimeInterval(afterSessionWindow)
@@ -323,18 +336,33 @@ enum CoachPatternFinder {
 
     // MARK: - Late starts
 
+    /// Calls this long before a day's first session are why it started late.
+    static let callsBeforeFirstSession: TimeInterval = 60 * 60
+
     /// Days whose first session started at or after `cutoff`, against days
-    /// that started earlier, when the early ones focused clearly more.
+    /// that started earlier, when the early ones focused clearly more. A day
+    /// whose morning went on calls doesn't count: starting earlier wouldn't
+    /// have been an option, and the call-heavy days pattern speaks to it.
     static func lateStarts(_ data: CoachData, cutoff: Int = 600, calendar: Calendar = .current) -> CoachFinding? {
         let firstByDay = Dictionary(grouping: data.sessions) { calendar.startOfDay(for: $0.start) }
             .compactMapValues { $0.map(\.start).min() }
         let focusByDay = Dictionary(grouping: data.events.filter { $0.kind == .focus }) { calendar.startOfDay(for: $0.start) }
             .mapValues { $0.reduce(0) { $0 + $1.duration } }
+        let calls = data.events.filter(\.isCall).map { DateInterval(start: $0.start, end: $0.end) } + data.busy
         var late: [TimeInterval] = [], early: [TimeInterval] = []
         for (day, first) in firstByDay {
             let parts = calendar.dateComponents([.hour, .minute], from: first)
             let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-            if minute >= cutoff { late.append(focusByDay[day] ?? 0) } else { early.append(focusByDay[day] ?? 0) }
+            if minute >= cutoff {
+                let before = calls.compactMap { span -> DateInterval? in
+                    let start = max(span.start, day), end = min(span.end, first)
+                    return end > start ? DateInterval(start: start, end: end) : nil
+                }
+                guard CoachData.covered(before) < callsBeforeFirstSession else { continue }
+                late.append(focusByDay[day] ?? 0)
+            } else {
+                early.append(focusByDay[day] ?? 0)
+            }
         }
         guard late.count >= 2, early.count >= 2 else { return nil }
         let lateFocus = late.reduce(0, +) / Double(late.count)
@@ -348,7 +376,8 @@ enum CoachPatternFinder {
 
     /// The day in `data` whose sessions changed app at least twice as often
     /// as sessions on the other days of `history` (at most every 5 minutes,
-    /// 10 changes or more).
+    /// 10 changes or more). Going between two focus apps is just work, so
+    /// only a change to or from something else counts.
     static func switching(_ data: CoachData, history: CoachData? = nil,
                           calendar: Calendar = .current) -> CoachFinding? {
         struct Day {
@@ -366,7 +395,8 @@ enum CoachPatternFinder {
                 if let part = CoachHours.parts.first(where: { $0.contains(event.start, calendar: calendar) }) {
                     entry.byPart[part, default: 0] += event.duration
                 }
-                if index > 0, ordered[index - 1].target != event.target { entry.switches += 1 }
+                if index > 0, ordered[index - 1].target != event.target,
+                   !(ordered[index - 1].kind == .focus && event.kind == .focus) { entry.switches += 1 }
                 days[day] = entry
             }
         }
@@ -385,7 +415,7 @@ enum CoachPatternFinder {
             guard mine <= 5, times >= 2, best.map({ times > $0.times }) ?? true,
                   let part = entry.byPart.max(by: { ($0.value, $1.key.from) < ($1.value, $0.key.from) }) else { continue }
             best = (.init(day: day, minutesPerSwitch: mine, usualMinutesPerSwitch: usual,
-                          switches: entry.switches, hours: part.key), times)
+                          switches: entry.switches, hours: part.key, noneOnOtherDays: otherSwitches == 0), times)
         }
         return best.map { .switching($0.finding) }
     }
@@ -418,18 +448,19 @@ enum CoachPatternFinder {
             FocusRate.of(focused: sessions.reduce(0) { $0 + $1.focus }, drifted: sessions.reduce(0) { $0 + $1.drift })
         }
 
-        var best: CoachFinding.SessionLength?
-        for minutes in Set(rated.map(\.minutes)).sorted() {
-            let at = rated.filter { $0.minutes == minutes }
-            let longer = rated.filter { $0.minutes >= minutes + 15 }
-            guard at.count >= 3, longer.count >= 3, Set(at.map(\.week)).count >= 2 else { continue }
-            let atRate = rate(at), longerRate = rate(longer)
-            guard atRate >= 0.7, atRate - longerRate >= 0.12,
-                  best.map({ atRate - longerRate > $0.rate - $0.longerRate }) ?? true else { continue }
-            best = .init(minutes: minutes, rate: atRate, sessions: at.count,
-                         longerRate: longerRate, longerSessions: longer.count, weeks: weeks)
-        }
-        return best.map { .sessionLength($0) }
+        // The one that really went best: the widest gap to longer ones can
+        // belong to a length that others beat.
+        let lengths = Set(rated.map(\.minutes)).filter { minutes in rated.filter { $0.minutes == minutes }.count >= 3 }
+        guard let minutes = lengths.max(by: { a, b in
+            (rate(rated.filter { $0.minutes == a }), b) < (rate(rated.filter { $0.minutes == b }), a)
+        }) else { return nil }
+        let at = rated.filter { $0.minutes == minutes }
+        let longer = rated.filter { $0.minutes >= minutes + 15 }
+        guard longer.count >= 3, Set(at.map(\.week)).count >= 2 else { return nil }
+        let atRate = rate(at), longerRate = rate(longer)
+        guard atRate >= 0.7, atRate - longerRate >= 0.12 else { return nil }
+        return .sessionLength(.init(minutes: minutes, rate: atRate, sessions: at.count,
+                                    longerRate: longerRate, longerSessions: longer.count, weeks: weeks))
     }
 
     // MARK: - Meeting-heavy days
@@ -501,7 +532,7 @@ enum CoachPatternFinder {
     /// One weekday was the lowest of its week, at 60% of the other days or
     /// less, in each of the last `weeks` whole weeks of `data`. Days with
     /// under half an hour tracked don't count; weekends only when they
-    /// count toward the goal.
+    /// count toward the goal. Days level with it mean it isn't the weakest.
     static func weeklyRhythm(_ data: CoachData, weeks: Int = 3, weekendsCount: Bool = false,
                              calendar: Calendar = .current) -> CoachFinding? {
         var spans: [DateInterval] = []
@@ -526,7 +557,8 @@ enum CoachPatternFinder {
                   weekday == nil || weekday == lowest.weekday else { return nil }
             let others = days.filter { $0.weekday != lowest.weekday }.map(\.focus)
             let othersAverage = others.reduce(0, +) / Double(max(1, others.count))
-            guard othersAverage >= 3600, lowest.focus <= othersAverage * 0.6 else { return nil }
+            guard othersAverage >= 3600, lowest.focus <= othersAverage * 0.6,
+                  !days.contains(where: { $0.weekday != lowest.weekday && $0.focus - lowest.focus < 10 * 60 }) else { return nil }
             weekday = lowest.weekday
             low.append(lowest.focus)
             rest.append(othersAverage)

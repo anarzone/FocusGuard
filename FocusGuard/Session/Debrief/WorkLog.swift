@@ -28,6 +28,8 @@ struct WorkLogEntry: Identifiable, Equatable {
     /// "github.com · Xcode · x.com 7m"
     let apps: String
     let focused: TimeInterval
+    /// When it was focused, so a session across midnight counts on both days.
+    var focusSpans: [DateInterval] = []
 
     var isLive: Bool { end == nil }
 }
@@ -262,7 +264,7 @@ enum WorkLogBuilder {
             id: input.id, start: input.start, end: input.end, name: input.name,
             focusRate: facts.focusRate, hasRate: facts.focused + facts.drifted >= 60,
             title: title, hasGoal: input.goal != nil, project: input.project,
-            state: state, note: note, apps: appsLine(facts), focused: facts.focused
+            state: state, note: note, apps: appsLine(facts), focused: facts.focused, focusSpans: facts.focusSpans
         )
     }
 
@@ -287,8 +289,20 @@ enum WorkLogBuilder {
         let index = Dictionary(uniqueKeysWithValues: days.enumerated().map { ($0.element, $0.offset) })
         var grid: [String?: [TimeInterval]] = [:]
         for entry in entries {
-            guard let i = index[calendar.startOfDay(for: entry.start)] else { continue }
-            grid[entry.project, default: Array(repeating: 0, count: days.count)][i] += entry.focused
+            guard index[calendar.startOfDay(for: entry.start)] != nil else { continue }
+            var row = grid[entry.project] ?? Array(repeating: 0, count: days.count)
+            for span in entry.focusSpans {
+                // Past the week's end it stays on its last day, in the week it started.
+                var cursor = span.start
+                while cursor < span.end {
+                    let day = calendar.startOfDay(for: cursor)
+                    let next = calendar.date(byAdding: .day, value: 1, to: day) ?? span.end
+                    let end = min(span.end, next)
+                    row[index[day] ?? days.count - 1] += end.timeIntervalSince(cursor)
+                    cursor = end
+                }
+            }
+            grid[entry.project] = row
         }
         let kept = days.indices.filter { i in
             !calendar.isDateInWeekend(days[i]) || grid.values.contains { $0[i] >= 60 }

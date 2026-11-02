@@ -429,10 +429,10 @@ final class WeeklyCoachTests: XCTestCase {
         fixture = F.septemberAndOctober()
         clock = F.at(14, 10)
         let reviewer = makeReviewer()
-        reviewer.model = { FakeModel(headline: "Your October ran at 80%, 5 points up on September") }
+        reviewer.model = { FakeModel(headline: "Your October ran at 80% over 13h 20m, 5 points up on September") }
         await reviewer.load(F.october)
         let review = try XCTUnwrap(reviewer.review(for: F.october))
-        XCTAssertEqual(review.headline, "Your October ran at 80%, 5 points up on September.")
+        XCTAssertEqual(review.headline, "Your October ran at 80% over 13h 20m, 5 points up on September.")
         XCTAssertTrue(review.onDevice)
     }
 
