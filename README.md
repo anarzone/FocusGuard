@@ -4,7 +4,7 @@
 
 Native macOS menu bar app that detects distractions during focus sessions and escalates from silent logging → motivational notification → full-screen block. Generates per-session and per-day reports so you can see where time leaks.
 
-Privacy-first: your activity data lives on your Mac and is never uploaded. FocusGuard only goes online to check for updates, fetch site icons from the sites themselves, and for Spotify when you use it.
+Privacy-first: your activity data lives on your Mac and is never uploaded. FocusGuard only goes online to check for updates, fetch site icons from the sites themselves, and for Spotify, Todoist, Linear and Slack when you use them.
 
 ## Features
 
@@ -31,7 +31,7 @@ FocusGuard updates itself via [Sparkle](https://sparkle-project.org). It checks 
 versions in the background and prompts when one is available; you can also check on demand
 from **Settings → About → Check for Updates…**, or turn off automatic checks there. (Besides
 update checks, FocusGuard only goes online to fetch site icons from the sites themselves and
-for Spotify when you use it — your activity data never leaves your Mac.)
+for Spotify, Todoist, Linear and Slack when you use them — your activity data never leaves your Mac.)
 `brew upgrade --cask anarzone/tap/focusguard` still works too.
 
 ## AI Insights (optional)
