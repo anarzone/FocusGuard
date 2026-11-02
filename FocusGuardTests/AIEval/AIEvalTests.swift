@@ -791,21 +791,26 @@ final class AIEvalTests: XCTestCase {
                 do {
                     let stored = DebriefCleanup.tidy(try await DebriefWriter.write(prompt, with: model), hasGoal: facts.goal != nil)
                     let calls = model.take()
-                    let shown = SessionDebrief.written(stored, facts: facts, label: "Test", verdict: stored.verdict)
-                    let project = ProjectGuess.guess(goal: facts.goal, modelProject: stored.project, titles: facts.titles, apps: facts.apps, known: [])
+                    // What the person sees. Read from the raw reply as well, so this
+                    // compiles and compares before and after the model lost the verdict.
+                    let shown = SessionDebrief.written(stored, facts: facts, label: "Test", verdict: nil)
+                    let raw = (calls.first?.raw).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] } ?? [:]
+                    let verdict = raw["verdict"] as? String ?? ""
+                    let rawStandup = raw["standup"] as? String ?? ""
+                    let project = ProjectGuess.guess(goal: facts.goal, modelProject: shown.project, titles: facts.titles, apps: facts.apps, known: [])
                     func check(_ text: String?) -> [String] {
                         text.map { EvalCheck.flags($0, facts: [prompt.text]) } ?? []
                     }
-                    log.write(["kind": "run", "scenario": item.name, "run": run, "verdict": stored.verdict?.rawValue ?? "",
-                               "verdictOK": item.accept.isEmpty ? stored.verdict == nil : stored.verdict.map(item.accept.contains) ?? false,
-                               "evidence": stored.evidence ?? "", "evidenceShort": stored.evidenceShort ?? "",
-                               "workedOn": stored.workedOn.map { "\($0.app): \($0.what)" }, "shownItems": shown.workedOn.map { "\($0.app): \($0.what)" },
-                               "driftDetail": stored.driftDetail ?? "", "tip": stored.tip ?? "", "tipDetail": stored.tipDetail ?? "",
-                               "project": stored.project ?? "", "projectGuess": project ?? "", "standup": stored.standup ?? "",
-                               "flags": ["evidence": check(stored.evidence), "what": stored.workedOn.flatMap { check($0.what) },
-                                         "drift": check(stored.driftDetail), "tip": check(stored.tip), "tipDetail": check(stored.tipDetail),
-                                         "standup": check(stored.standup)],
-                               "leaksOptedOut": [stored.evidence, stored.standup, stored.tip, stored.tipDetail, stored.driftDetail].compactMap { $0 }.contains { $0.contains("SECRET") },
+                    log.write(["kind": "run", "scenario": item.name, "run": run, "verdict": verdict,
+                               "verdictOK": item.accept.isEmpty ? verdict.isEmpty : item.accept.map(\.rawValue).contains(verdict),
+                               "evidence": shown.evidence ?? "", "evidenceShort": shown.evidenceShort ?? "",
+                               "rawEvidence": stored.evidence ?? "",
+                               "workedOn": shown.workedOn.map { "\($0.app): \($0.what)" }, "rawWorkedOn": stored.workedOn.map { "\($0.app): \($0.what)" },
+                               "driftDetail": shown.driftDetail ?? "", "tip": shown.tip ?? "", "tipDetail": shown.tipDetail ?? "",
+                               "project": shown.project ?? "", "projectGuess": project ?? "", "standup": rawStandup,
+                               "flags": ["evidence": check(shown.evidence), "what": shown.workedOn.flatMap { check($0.what) },
+                                         "drift": check(shown.driftDetail), "tip": check(shown.tip), "tipDetail": check(shown.tipDetail)],
+                               "leaksOptedOut": [shown.evidence, shown.tip, shown.tipDetail, shown.driftDetail].compactMap { $0 }.contains { $0.contains("SECRET") },
                                "ms": calls.first?.ms ?? 0, "raw": calls.first?.raw ?? ""])
                 } catch {
                     let calls = model.take()
@@ -1185,7 +1190,7 @@ final class AIEvalTests: XCTestCase {
             let prompt = DebriefPrompt(facts: debriefFacts(debriefCases[0]))
             do {
                 let stored = try await DebriefWriter.write(prompt, with: model)
-                log.write(["case": name, "feature": "debrief", "verdict": stored.verdict?.rawValue ?? "", "evidence": stored.evidence ?? ""])
+                log.write(["case": name, "feature": "debrief", "evidence": stored.evidence ?? ""])
             } catch {
                 log.write(["case": name, "feature": "debrief", "threw": String(describing: error)])
             }
