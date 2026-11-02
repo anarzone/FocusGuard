@@ -135,12 +135,6 @@ enum WindowFormat {
         if delta == 0 { return String(localized: "same", comment: "No change from the period before") }
         return "\(delta > 0 ? "+" : "−")\(hm(TimeInterval(abs(delta) * 60)))"
     }
-
-    /// "1 day", "3 days". English only: copy uses a plural key instead,
-    /// `String(localized: "\(n) days", comment: "Plural on n: ...")`.
-    static func count(_ n: Int, _ noun: String, plural: String? = nil) -> String {
-        "\(n) \(n == 1 ? noun : plural ?? noun + "s")"
-    }
 }
 
 // MARK: - Page chrome
