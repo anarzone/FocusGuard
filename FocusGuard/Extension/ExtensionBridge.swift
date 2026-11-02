@@ -59,6 +59,8 @@ final class ExtensionBridge {
     /// through" does, for what the snapshot shows, so a pass taken in the
     /// browser isn't followed by the block screen.
     @ObservationIgnored var grantEnginePass: (ActivitySnapshot) -> Void = { _ in }
+    /// Whether Strict has the blocked list locked (`AppState.isStrictLocked`).
+    @ObservationIgnored var listLocked: () -> Bool = { false }
     /// A browser reported another tab, or the grace after switching to one
     /// ran out: the tracker looks again now instead of at its next tick.
     @ObservationIgnored var onTabChange: (() -> Void)?
@@ -96,6 +98,7 @@ final class ExtensionBridge {
 
     func start(appState: AppState) {
         self.appState = appState
+        listLocked = { [weak appState] in appState?.isStrictLocked ?? false }
         NativeHostInstaller().install()
         do {
             try server.start()
@@ -197,7 +200,9 @@ final class ExtensionBridge {
         case .classify(let requestId, let url):
             reply(id, requestId, result: classification(of: url, browser: clients[id]?.browser))
         case .setCategory(let requestId, let url, let scope, let category):
-            setCategory(url: url, scope: scope, category: category)
+            if let refusal = setCategory(url: url, scope: scope, category: category) {
+                return reply(id, requestId, error: refusal)
+            }
             reply(id, requestId, result: classification(of: url, browser: clients[id]?.browser))
         case .startSession(let requestId, let minutes):
             reply(id, requestId, error: startSession(minutes: minutes))
@@ -258,16 +263,20 @@ final class ExtensionBridge {
         return .init(host: host, category: BrowserCategory(rule?.classification ?? .neutral), ruleScope: scope)
     }
 
-    private func setCategory(url: String, scope: CategoryScope, category: BrowserCategory) {
-        guard let classifier = appState?.classifier, let host = Self.displayHost(url) else { return }
+    /// Nil on success, else why not.
+    @discardableResult
+    func setCategory(url: String, scope: CategoryScope, category: BrowserCategory) -> String? {
+        guard !listLocked() else { return "locked" }
+        guard let classifier = appState?.classifier, let host = Self.displayHost(url) else { return nil }
         switch scope {
         case .site:
             classifier.setOverride(host: host, classification: category.classification)
         case .page:
-            guard let prefix = Self.pagePattern(url) else { return }
+            guard let prefix = Self.pagePattern(url) else { return nil }
             classifier.setOverride(urlPrefix: prefix, classification: category.classification)
         }
         blockListCache = nil
+        return nil
     }
 
     /// Nil on success, else why not.

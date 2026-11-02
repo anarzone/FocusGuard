@@ -195,19 +195,18 @@ struct TaskLink: Codable, Equatable {
     /// When the session started, to keep only recent links.
     let linkedAt: Date
     var ticked = false
-    /// The user took the tick back. Only their own "Done" ticks it again,
-    /// not the debrief's.
-    var undone = false
 
     /// What to do with the task after the verdict changed.
     enum Change: Equatable {
         case tick, untick, none
     }
 
-    /// Done ticks it off; anything else takes back a tick FocusGuard made.
+    /// The user's own Done ticks it off; anything else takes back a tick
+    /// FocusGuard made. The debrief's verdict is the model's guess, and a tick
+    /// can close a real issue, so it never ticks anything.
     func change(for verdict: GoalVerdict?, byUser: Bool) -> Change {
         if verdict == .done {
-            return !ticked && (byUser || !undone) ? .tick : .none
+            return !ticked && byUser ? .tick : .none
         }
         return ticked ? .untick : .none
     }
@@ -216,7 +215,7 @@ struct TaskLink: Codable, Equatable {
 extension TaskLink {
     private enum CodingKeys: String, CodingKey {
         /// 0.3.34 saved the task as `reminder`.
-        case task, reminder, linkedAt, ticked, undone
+        case task, reminder, linkedAt, ticked
     }
 
     init(from decoder: Decoder) throws {
@@ -225,7 +224,6 @@ extension TaskLink {
             ?? container.decode(TaskItem.self, forKey: .reminder)
         linkedAt = try container.decode(Date.self, forKey: .linkedAt)
         ticked = try container.decodeIfPresent(Bool.self, forKey: .ticked) ?? false
-        undone = try container.decodeIfPresent(Bool.self, forKey: .undone) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -233,6 +231,5 @@ extension TaskLink {
         try container.encode(task, forKey: .task)
         try container.encode(linkedAt, forKey: .linkedAt)
         try container.encode(ticked, forKey: .ticked)
-        try container.encode(undone, forKey: .undone)
     }
 }

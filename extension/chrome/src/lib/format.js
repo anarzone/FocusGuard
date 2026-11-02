@@ -8,7 +8,7 @@ export function displayHost(url) {
   try {
     const u = new URL(url);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
-    let host = u.hostname.toLowerCase();
+    let host = withoutRootDot(u.hostname.toLowerCase());
     if (!host) return null;
     if (host.startsWith('www.')) host = host.slice(4);
     return host;
@@ -17,10 +17,27 @@ export function displayHost(url) {
   }
 }
 
+// "x.com." is x.com written with DNS's root dot, and browsers load it.
+export function withoutRootDot(host) {
+  return String(host).replace(/\.+$/, '');
+}
+
+// The same address without that dot, so the app hears about the site it knows.
+export function withoutHostDot(url) {
+  try {
+    const u = new URL(url);
+    if (!u.hostname.endsWith('.')) return url;
+    u.hostname = withoutRootDot(u.hostname);
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
 // The address's own hostname, lowercased (keeps "www.").
 export function hostname(url) {
   try {
-    return new URL(url).hostname.toLowerCase() || null;
+    return withoutRootDot(new URL(url).hostname.toLowerCase()) || null;
   } catch {
     return null;
   }

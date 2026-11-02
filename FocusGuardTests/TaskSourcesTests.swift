@@ -176,13 +176,12 @@ final class TaskItemTests: XCTestCase {
         XCTAssertEqual(picked.source, .todoist)
         XCTAssertEqual(picked.due, Date(timeIntervalSinceReferenceDate: 815_000_000))
 
-        let linear = #"{"task":{"source":"linear","id":"uuid-1","title":"ENG-142 Fix login","list":"Engineering","started":true,"state":"state-started"},"linkedAt":815000000,"ticked":true,"undone":true}"#
+        let linear = #"{"task":{"source":"linear","id":"uuid-1","title":"ENG-142 Fix login","list":"Engineering","started":true,"state":"state-started"},"linkedAt":815000000,"ticked":true}"#
         let link = try JSONDecoder().decode(TaskLink.self, from: Data(linear.utf8))
         XCTAssertEqual(link.task.source, .linear)
         XCTAssertEqual(link.task.state, "state-started")
         XCTAssertTrue(link.task.started)
         XCTAssertTrue(link.ticked)
-        XCTAssertTrue(link.undone)
 
         let things = #"{"source":"things","id":"8xcpS6r4","title":"Walk","list":""}"#
         XCTAssertEqual(try JSONDecoder().decode(TaskItem.self, from: Data(things.utf8)).source, .things)
@@ -1283,7 +1282,7 @@ final class TaskSourcesCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.taskLinks[session.id]?.task.source, .todoist)
 
         session.goalVerdict = .done
-        await coordinator.verdictChanged(session, byUser: false)
+        await coordinator.verdictChanged(session, byUser: true)
         XCTAssertEqual(todoist.completions.map(\.0), ["rent"])
         XCTAssertTrue(reminders.completions.isEmpty)
         XCTAssertEqual(coordinator.nextTasks[session.id]?.id, "eng")
@@ -1304,7 +1303,7 @@ final class TaskSourcesCoordinatorTests: XCTestCase {
 
         todoist.refusal = "No transition"
         session.goalVerdict = .done
-        await coordinator.verdictChanged(session, byUser: false)
+        await coordinator.verdictChanged(session, byUser: true)
         XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, false)
         XCTAssertEqual(coordinator.tickNotes[session.id], "No transition")
         XCTAssertNil(coordinator.nextTasks[session.id])
@@ -1323,18 +1322,16 @@ final class TaskSourcesCoordinatorTests: XCTestCase {
         let session = session(goal: "Pay rent")
         await coordinator.sessionStarted(session, startedByEvent: false)
         session.goalVerdict = .done
-        await coordinator.verdictChanged(session, byUser: false)
+        await coordinator.verdictChanged(session, byUser: true)
 
         todoist.refusal = "No way back"
         await coordinator.undoTick(session: session.id)
         XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, true)
-        XCTAssertEqual(coordinator.taskLinks[session.id]?.undone, false)
         XCTAssertEqual(coordinator.tickNotes[session.id], "No way back")
 
         todoist.refusal = nil
         await coordinator.undoTick(session: session.id)
         XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, false)
-        XCTAssertEqual(coordinator.taskLinks[session.id]?.undone, true)
         XCTAssertNil(coordinator.tickNotes[session.id])
     }
 
