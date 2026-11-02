@@ -24,6 +24,8 @@ extension AppState {
 
     /// "Session complete: Locked-in Deep Dive. 50 min · 92% focused · 41 min in the zone."
     func presentSessionComplete(for session: Session) {
+        // Not one the Mac slept through, or that was ended for being gone too long.
+        guard session.status != .abandoned else { return }
         let end = session.endedAt ?? .now
         let running = max(0, end.timeIntervalSince(session.startedAt) - session.pausedSeconds)
         let zone = FocusRuns.compute(FocusRuns.spans(from: session.events), now: end).longest

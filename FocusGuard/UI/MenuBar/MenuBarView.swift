@@ -214,7 +214,7 @@ struct MenuBarView: View {
 
         return VStack(alignment: .leading, spacing: 6) {
             if let limit {
-                LimitModule(status: limit, policy: appState.escalationEngine.policy,
+                LimitModule(status: limit, policy: appState.limits.policy(for: limit),
                             pausesTab: appState.limitPausesTab(limit), now: now,
                             onExtraTime: { appState.limits.takeExtraTime(for: limit.id) },
                             onChange: { openPane = .settings })

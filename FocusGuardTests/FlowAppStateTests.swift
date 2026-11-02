@@ -161,11 +161,9 @@ final class FlowAppStateTests: XCTestCase {
         XCTAssertNil(session.pausedAt, "unlocking resumes it")
     }
 
-    /// Pins today's behaviour for the owner to weigh: a session the Mac slept
-    /// through, paused by the screens going off, picks up on wake however long
-    /// it's been, with its old start. A relaunch would have ended the same
-    /// session after 15 minutes (`leftoverOutcome`).
-    func testASessionPausedThroughALongSleepResumesOnWake() async throws {
+    /// A session paused by the screens going off and left for hours doesn't
+    /// pick up on wake: it ends at the pause, under the rule a relaunch uses.
+    func testASessionPausedThroughALongSleepEndsWhereItPaused() async throws {
         sessions.startSession(plannedDurationMinutes: 25)
         let session = try XCTUnwrap(sessions.currentSession)
         tick()
@@ -176,10 +174,57 @@ final class FlowAppStateTests: XCTestCase {
         session.pausedAt = session.startedAt.addingTimeInterval(600)
 
         NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidWakeNotification, object: nil)
+        await settle { sessions.currentSession == nil }
+        XCTAssertNil(sessions.currentSession, "it doesn't pick up")
+        XCTAssertEqual(session.status, .abandoned)
+        XCTAssertEqual(session.endedAt, session.startedAt.addingTimeInterval(600))
+        XCTAssertEqual(sessions.runningSeconds(for: session, now: session.startedAt.addingTimeInterval(600)), 600, accuracy: 5,
+                       "its time didn't grow")
+    }
+
+    func testAShortSleepResumesAsBefore() async throws {
+        sessions.startSession(plannedDurationMinutes: 50)
+        let session = try XCTUnwrap(sessions.currentSession)
+        tick()
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidSleepNotification, object: nil)
+        await settle { session.pausedAt != nil }
+        session.startedAt = Date().addingTimeInterval(-3600)
+        session.pausedAt = Date().addingTimeInterval(-10 * 60)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidWakeNotification, object: nil)
         await settle { session.pausedAt == nil }
-        XCTAssertTrue(sessions.currentSession === session, "still the same session")
+        XCTAssertTrue(sessions.currentSession === session)
         XCTAssertNil(session.pausedAt)
-        XCTAssertEqual(sessions.runningSeconds(for: session), 600, accuracy: 5, "fifteen minutes still to go, the next morning")
+        XCTAssertEqual(session.pausedSeconds, 600, accuracy: 5)
+    }
+
+    /// A long idle spell ends the same way as a long sleep.
+    func testALongIdlePauseEndsTooWhenSomeoneComesBack() throws {
+        sessions.startSession(plannedDurationMinutes: 120)
+        let session = try XCTUnwrap(sessions.currentSession)
+        session.startedAt = Date().addingTimeInterval(-3600)
+        tick()
+        idle = 1200
+        tick()
+        let pausedAt = try XCTUnwrap(session.pausedAt)
+        idle = 0
+        tick()
+        XCTAssertNil(sessions.currentSession)
+        XCTAssertEqual(session.endedAt, pausedAt)
+    }
+
+    // MARK: - Limits on Free
+
+    func testWhatReachesTheExtensionLeavesOutPausedLimits() throws {
+        // A Free runner: the plan keeps one.
+        XCTAssertEqual(Entitlements.shared.dailyLimitCap, 1)
+        let first = try XCTUnwrap(state.limits.addLimit(target: "first.example", isSite: true, minutes: 30))
+        let second = try XCTUnwrap(state.limits.addLimit(target: "second.example", isSite: true, minutes: 30, now: Date().addingTimeInterval(1)))
+        XCTAssertEqual(state.limits.status(for: first.id)?.isPaused, false)
+        XCTAssertEqual(state.limits.status(for: second.id)?.isPaused, true)
+        XCTAssertEqual(state.extensionBridge.limitsProvider().map(\.target), ["first.example"])
+        state.limits.removeLimit(first.id)
+        XCTAssertEqual(state.extensionBridge.limitsProvider().map(\.target), ["second.example"])
+        state.limits.removeLimit(second.id)
     }
 
     // MARK: - The block screen

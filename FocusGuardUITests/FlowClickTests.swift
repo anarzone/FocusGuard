@@ -522,6 +522,25 @@ final class FlowClickTests: XCTestCase {
         }
     }
 
+    // MARK: - Limits on Free
+
+    func testLimitsBeyondFreesOneArePausedAndComeBackOnTheTrial() throws {
+        launch(seed: "limits")
+        try open("Settings")
+        try click(button("Daily limits"))
+        waitForText("Paused: Free keeps one daily limit.", "The limits past the first should say they're paused")
+        shoot("limits-paused")
+        let paused = window.staticTexts.matching(NSPredicate(format: "value BEGINSWITH 'Paused:'"))
+        XCTAssertEqual(paused.count, 2, "All but the oldest")
+
+        try click(button("Try Pro free"))
+        let start = window.sheets.buttons["Start the 14-day free trial"].firstMatch
+        waitFor(start, "The upgrade sheet didn't open")
+        try click(start)
+        waitGone(start, "The upgrade sheet stayed")
+        waitGoneText("Paused: Free keeps one daily limit.", "They should come straight back with the trial")
+    }
+
     // MARK: - First run
 
     func testFirstRunWithNoData() throws {

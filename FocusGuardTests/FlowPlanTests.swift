@@ -153,11 +153,9 @@ final class FlowPlanTests: XCTestCase {
         XCTAssertFalse(LimitGate.canAdd(existing: 1, entitlements: plan))
     }
 
-    /// Pins what happens to limits made during the trial once it's over: the
-    /// engine doesn't look at the plan, so they all go on counting and
-    /// blocking on Free, which keeps "one limit". See the report: whether
-    /// that's wanted is the owner's call.
-    func testLimitsMadeOnTheTrialGoOnCountingOnFree() throws {
+    /// Limits made during the trial, once it's over: the oldest stays in
+    /// force, the rest are paused, none deleted.
+    func testLimitsMadeOnTheTrialPauseOnFree() throws {
         let plan = entitlements()
         plan.startTrialIfNeeded(for: .unlimitedLimits)
         clock.now = clock.now.addingTimeInterval(days(20))
@@ -166,11 +164,12 @@ final class FlowPlanTests: XCTestCase {
         let container = try FlowRig.makeContainer()
         let overlay = EscalationEngineTests.StubOverlay()
         let engine = DailyLimitsEngine(context: container.mainContext, notifier: DailyLimitsEngineTests.RecordingNotifier(),
-                                       overlay: overlay, policy: { .standard }, now: clock.now)
+                                       overlay: overlay, policy: { .standard }, activeCap: { plan.dailyLimitCap }, now: clock.now)
         for site in ["one.example", "two.example", "three.example"] {
             XCTAssertNotNil(engine.addLimit(target: site, isSite: true, minutes: 5, now: clock.now))
         }
         XCTAssertEqual(engine.statuses.count, 3, "the engine keeps them all")
+        XCTAssertEqual(engine.activeStatuses.map(\.target), ["one.example"])
     }
 
     // MARK: - History

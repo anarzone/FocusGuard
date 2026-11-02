@@ -25647,6 +25647,23 @@
         }
       }
     },
+    "Paused: Free keeps one daily limit." : {
+      "comment" : "A daily limit that's off because the Free plan keeps only one",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayandırılıb: Pulsuz planda bir gündəlik limit var."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiert: Die Gratis-Version enthält ein Tageslimit."
+          }
+        }
+      }
+    },
     "PR #" : {
       "comment" : "Placeholder: example text a window title might contain",
       "localizations" : {
@@ -32912,6 +32929,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Streng bleibt aktiv, bis diese Session endet."
+          }
+        }
+      }
+    },
+    "Strict was on today, so limit changes take effect tomorrow." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün Sərt rejim açıq idi, ona görə limit dəyişiklikləri sabahdan qüvvəyə minir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Streng war heute aktiv, daher gelten Limitänderungen erst ab morgen."
+          }
+        }
+      }
+    },
+    "Strict was on today, so this takes effect tomorrow." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün Sərt rejim açıq idi, ona görə bu sabahdan qüvvəyə minir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Streng war heute aktiv, daher gilt das erst ab morgen."
           }
         }
       }

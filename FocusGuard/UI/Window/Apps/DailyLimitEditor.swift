@@ -73,7 +73,16 @@ struct DailyLimitEditor: View {
                         apply(limits.setMinutes(minutes, for: status.id))
                     }
                 }
-                Text(LimitGate.runsOut(appState.escalationEngine.policy, preset: appState.escalationEngine.preset))
+                if status.isPaused {
+                    HStack(spacing: 8) {
+                        Text(String(localized: "Paused: Free keeps one daily limit.", comment: "A daily limit that's off because the Free plan keeps only one"))
+                            .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                        Button(entitlements.canStartTrial ? "Try Pro free" : "See Pro") { openSheet(.upgrade(.unlimitedLimits)) }
+                            .buttonStyle(.textLink)
+                    }
+                }
+                Text(LimitGate.runsOut(limits.policy(for: status),
+                                       preset: status.changesWaitForTomorrow ? .strict : appState.escalationEngine.preset))
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -113,7 +122,10 @@ struct DailyLimitEditor: View {
     }
 
     private func apply(_ change: LimitChange?) {
-        note = change == .fromTomorrow ? String(localized: "Strict is on, so this takes effect tomorrow.") : nil
+        guard change == .fromTomorrow else { return note = nil }
+        note = appState.escalationEngine.policy.limitChangesWaitForTomorrow
+            ? String(localized: "Strict is on, so this takes effect tomorrow.")
+            : String(localized: "Strict was on today, so this takes effect tomorrow.")
     }
 }
 
