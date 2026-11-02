@@ -169,18 +169,26 @@ actor StatsStore {
     func askFacts(_ question: AskQuestion, settings: AskContext, now: Date,
                   calendar: Calendar = .current, locale: Locale = .current) -> AskFacts {
         read { context in
-            let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale, context: settings)
+            var builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale, context: settings)
             let summaries = days(context, now: now, calendar: calendar)
             let today = calendar.startOfDay(for: now)
             let monthStart = calendar.date(byAdding: .day, value: 1 - AskFactsBuilder.lookbackDays, to: today) ?? today
             let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? today
+            let month = summaries.summaries(from: monthStart, to: now) ?? []
+            let (narrowed, scope) = builder.narrowed(month, to: question)
+            builder.scope = scope
             switch question.intent {
             case .bestHours:
-                return builder.bestHours(summaries.summaries(from: monthStart, to: now) ?? [],
-                                         sessionCount: sessionCount(context, from: monthStart, to: now))
+                let count = sessionCount(context, from: monthStart, to: now)
+                if question.weekdays.count >= 2 {
+                    return builder.weekdayCompare(month, first: question.weekdays[0], second: question.weekdays[1])
+                }
+                if question.asksWhichDay { return builder.bestDay(month, sessionCount: count) }
+                return builder.saysItCantNarrow(question, builder.bestHours(narrowed, sessionCount: count, within: question.hours, narrowed: scope != nil))
             case .pullsAway:
-                return builder.pullsAway(summaries.summaries(from: monthStart, to: now) ?? [], hours: question.hours,
-                                         sessionCount: sessionCount(context, from: monthStart, to: now))
+                return builder.saysItCantNarrow(question, builder.pullsAway(narrowed, hours: question.hours,
+                                                                            sessionCount: sessionCount(context, from: monthStart, to: now),
+                                                                            phrase: scope?.phrase))
             case .weekCompare:
                 let lastStart = calendar.date(byAdding: .weekOfYear, value: -1, to: weekStart) ?? weekStart
                 let sameEnd = min(weekStart, lastStart.addingTimeInterval(now.timeIntervalSince(weekStart)))
@@ -195,7 +203,8 @@ actor StatsStore {
                 return builder.driftDay(summaries.summaries(from: from, to: today) ?? [],
                                         sessionCount: sessionCount(context, from: from, to: today))
             case .sessionLength:
-                return builder.sessionLength(askSessions(context, from: monthStart, to: now))
+                let sessions = builder.narrowed(askSessions(context, from: monthStart, to: now), to: question)
+                return builder.saysItCantNarrow(question, builder.sessionLength(sessions, named: question.minutes))
             case .appTime:
                 let from = min(monthStart, calendar.date(byAdding: .weekOfYear, value: -3, to: weekStart) ?? monthStart)
                 return builder.appTime(summaries.summaries(from: from, to: now) ?? [], question: question.text,

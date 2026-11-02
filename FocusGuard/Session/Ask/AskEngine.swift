@@ -8,62 +8,20 @@ struct AskAnswer: Equatable, Sendable {
     let basis: String
     let action: AskAction?
     let suggestion: String?
-    /// Whether the on-device model wrote the words.
-    let onDevice: Bool
 
-    init(_ facts: AskFacts, lead: String? = nil, detail: String? = nil, onDevice: Bool = false) {
-        self.lead = lead ?? facts.lead
-        self.detail = detail ?? facts.detail
+    init(_ facts: AskFacts) {
+        self.lead = facts.lead
+        self.detail = facts.detail
         self.visual = facts.visual
         self.basis = facts.basis
         self.action = facts.action
         self.suggestion = facts.suggestion
-        self.onDevice = onDevice
     }
 }
 
-/// Asks the on-device model to put the facts in its own words, and keeps
-/// them only when they say nothing the facts don't (`CoachWriter.accept`).
-/// Without a model, with nothing to work from, or when it strays, the
-/// template words stay.
-struct AskWriter {
-    let model: (any OnDeviceModel)?
-
-    static let instructions = """
-        You answer one person's question about their own focus time, tracked by an app on their Mac. \
-        Use only the facts you are given. Never add numbers, sites, apps, days or times that are not in the facts, \
-        and never guess at what they did inside an app or a page. Speak to the person as "you", plain and short. \
-        No emoji, no quotation marks, no exclamation marks.
-        """
-
-    static let shape = AnswerShape.object([
-        .init("lead", "The answer in one short sentence, at most 12 words", .text),
-        .init("detail", "One or two sentences with the numbers behind it, at most 40 words", .text),
-    ])
-
-    private struct Answer: Decodable {
-        let lead: String
-        let detail: String
-    }
-
-    func write(_ facts: AskFacts, question: String) async -> AskAnswer {
-        let plain = AskAnswer(facts)
-        guard let model, !facts.facts.isEmpty else { return plain }
-        let prompt = "Question: \(question)\nFacts:\n" + facts.facts.map { "- \($0)" }.joined(separator: "\n")
-            + "\nPlain answer: \(facts.lead) \(facts.detail)"
-        guard let answer = try? await model.respond(Answer.self, instructions: Self.instructions, prompt: prompt,
-                                                    shape: Self.shape) else { return plain }
-        let allowed = facts.facts + [facts.lead, facts.detail]
-        // Both or neither, so the lead and the detail never disagree.
-        guard let lead = CoachWriter.accept(answer.lead, allowed: allowed, maxLength: 100),
-              let detail = CoachWriter.accept(answer.detail, allowed: allowed, maxLength: 280) else { return plain }
-        return AskAnswer(facts, lead: lead, detail: detail, onDevice: true)
-    }
-}
-
-/// Answers one question: sorts it (model or keywords), works out the facts
-/// by rules (on `StatsStore` for anything that reads the store), and has
-/// the model word them, or keeps the template words.
+/// Answers one question: sorts it (model or keywords), then works out the
+/// facts and the words by rules (on `StatsStore` for anything that reads the
+/// store).
 struct AskEngine {
     let stats: StatsStore
     var model: (any OnDeviceModel)?
@@ -88,7 +46,7 @@ struct AskEngine {
         default:
             facts = await stats.askFacts(question, settings: settings, now: now, calendar: calendar, locale: locale)
         }
-        return await AskWriter(model: model).write(facts, question: text)
+        return AskAnswer(facts)
     }
 }
 
@@ -111,7 +69,7 @@ final class AskConversation {
     private(set) var actionNote: (turn: UUID, text: String)?
 
     /// Apple's model, or nil without Apple Intelligence.
-    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.writer
+    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.model
     @ObservationIgnored private var generation = 0
 
     var isWorking: Bool { turns.last.map { $0.answer == nil } ?? false }
