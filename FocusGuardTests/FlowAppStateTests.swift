@@ -80,7 +80,7 @@ final class FlowAppStateTests: XCTestCase {
     // MARK: - Auto-pause
 
     func testIdleAutoPausesAndComingBackAutoResumes() throws {
-        sessions.startSession(plannedDurationMinutes: 50)
+        sessions.startSession(plannedDurationMinutes: 120)
         try XCTUnwrap(sessions.currentSession).startedAt = Date().addingTimeInterval(-3600)
         tick()
         let session = try goIdleUntilAutoPause()
@@ -176,11 +176,12 @@ final class FlowAppStateTests: XCTestCase {
     func testASessionPausedThroughALongSleepResumesOnWake() async throws {
         sessions.startSession(plannedDurationMinutes: 25)
         let session = try XCTUnwrap(sessions.currentSession)
-        session.startedAt = Date().addingTimeInterval(-14 * 3600)
         tick()
         NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidSleepNotification, object: nil)
         await settle { session.pausedAt != nil }
-        session.pausedAt = Date().addingTimeInterval(-14 * 3600 + 600)   // Ten minutes in, last night.
+        // It started last night and paused ten minutes in.
+        session.startedAt = Date().addingTimeInterval(-14 * 3600)
+        session.pausedAt = session.startedAt.addingTimeInterval(600)
 
         NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.screensDidWakeNotification, object: nil)
         await settle { session.pausedAt == nil }

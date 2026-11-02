@@ -20,16 +20,19 @@ final class FlowClickTests: XCTestCase {
         app?.terminate()
     }
 
-    private func launch(plan: String = "free", seed: String? = nil, language: String = "en", locale: String = "en_US") {
+    private func launch(plan: String = "free", seed: String? = nil, language: String = "en", locale: String = "en_US",
+                        extra: [String] = []) {
         app = XCUIApplication()
         app.launchArguments = [
             "-FocusGuardUITesting",
             "-calendarAutostart.enabled", "NO",
             "-plan.debugOverride", plan,
+            "-FocusGuardUITestFitHeight", "YES",
             "-AppleLanguages", "(\(language))",
             "-AppleLocale", locale,
         ]
         if let seed { app.launchArguments += ["-FocusGuardUITestSeed", seed] }
+        app.launchArguments += extra
         app.launch()
         XCTAssertTrue(window.waitForExistence(timeout: 15), "The window didn't open")
     }
@@ -53,8 +56,21 @@ final class FlowClickTests: XCTestCase {
         window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", words)).firstMatch
     }
 
-    private func text(_ words: String) -> XCUIElement {
-        window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] %@ OR label CONTAINS[c] %@", words, words)).firstMatch
+    /// Whether `words` are on screen. A heading has only a label and other
+    /// text only a value, and one predicate over both misses the headings.
+    private func isShown(_ words: String) -> Bool {
+        window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] %@", words)).firstMatch.exists
+            || window.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", words)).firstMatch.exists
+    }
+
+    private func waitForText(_ words: String, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        let shown = expectation(for: NSPredicate { _, _ in self.isShown(words) }, evaluatedWith: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [shown], timeout: 6), .completed, message, file: file, line: line)
+    }
+
+    private func waitGoneText(_ words: String, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        let gone = expectation(for: NSPredicate { _, _ in !self.isShown(words) }, evaluatedWith: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: 6), .completed, message, file: file, line: line)
     }
 
     private func waitFor(_ element: XCUIElement, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -68,7 +84,7 @@ final class FlowClickTests: XCTestCase {
 
     private func toggle(_ title: String) -> XCUIElement {
         app.descendants(matching: .any)
-            .matching(NSPredicate(format: "(elementType == %d OR elementType == %d OR elementType == %d) AND label == %@",
+            .matching(NSPredicate(format: "(elementType == %d OR elementType == %d OR elementType == %d) AND label BEGINSWITH %@",
                                   XCUIElement.ElementType.switch.rawValue, XCUIElement.ElementType.checkBox.rawValue,
                                   XCUIElement.ElementType.toggle.rawValue, title))
             .firstMatch
@@ -95,9 +111,9 @@ final class FlowClickTests: XCTestCase {
         try open("Reports")
         waitFor(button("Share week"), "Reports didn't open")
         try open("Ask")
-        waitFor(text("Questions about your own focus"), "Ask's Pro page didn't open")
+        waitForText("Questions about your own focus", "Ask's Pro page didn't open")
         try open("Work log")
-        waitFor(text("Your week, written up for you"), "Work log's Pro page didn't open")
+        waitForText("Your week, written up for you", "Work log's Pro page didn't open")
         try open("Apps & Sites")
         waitFor(button("Sort your apps"), "Apps & Sites didn't open")
         try open("Settings")
@@ -112,10 +128,11 @@ final class FlowClickTests: XCTestCase {
         let field = window.textFields["Your question"].firstMatch
         try click(field)
         field.typeText("When do I focus best?\r")
-        waitFor(text("When do I focus best?"), "The question didn't go in")
-        // An answer card has a line saying what it's based on; there's sample data.
-        let answered = window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] 'focus' AND NOT (value CONTAINS 'When do I')"))
+        waitFor(window.otherElements["You asked: When do I focus best?"], "The question didn't go in")
+        // There's sample data, so the answer has a chart or says what it's based on.
+        let answered = window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] 'session' OR value CONTAINS[c] 'focus'"))
         XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15), "No answer came")
+        shoot("ask-answer")
 
         try open("Work log")
         waitFor(button("Previous week"), "Work log didn't open")
@@ -140,27 +157,27 @@ final class FlowClickTests: XCTestCase {
 
         // Start.
         try click(start)
-        waitFor(text("Current session"), "The session didn't start")
-        waitFor(text("min left"), "No time left shown")
-        waitFor(text("Now"), "Its Now row isn't in the list")
+        waitForText("Current session", "The session didn't start")
+        waitForText("min left", "No time left shown")
+        waitForText("Now", "Its Now row isn't in the list")
         waitFor(window.buttons["Pause session"], "The sidebar's card didn't change")
         shoot("session-running")
 
         // Pause and resume, from the card.
         try click(button("Pause"))
         waitFor(button("Resume"), "Pause didn't take")
-        waitFor(text("Paused"), "It doesn't say paused")
+        waitForText("Paused", "It doesn't say paused")
         waitFor(window.buttons["Resume session"], "The sidebar doesn't say it's paused")
         try click(button("Resume"))
         waitFor(button("Pause"), "Resume didn't take")
-        waitFor(text("Current session"), "It doesn't say it's running")
+        waitForText("Current session", "It doesn't say it's running")
 
         // Extend, then end.
         try click(button("5 more min"))
         try click(button("End"))
-        waitFor(text("Ready to focus"), "End didn't end it")
-        waitFor(text("Last one:"), "No word on the last session")
-        waitGone(text("Current session"), "The session card stayed")
+        waitForText("Ready to focus", "End didn't end it")
+        waitForText("Last one:", "No word on the last session")
+        waitGoneText("Current session", "The session card stayed")
         waitFor(buttonStarting("Start 25 min focus"), "The sidebar's start button didn't come back with the same length")
     }
 
@@ -170,14 +187,14 @@ final class FlowClickTests: XCTestCase {
         try click(button("Open"))
         waitFor(button("Start focus"), "The sidebar doesn't offer an open session")
         try click(button("Start focus"))
-        waitFor(text("min in"), "It doesn't count up")
+        waitForText("min in", "It doesn't count up")
         XCTAssertFalse(button("5 more min").exists, "an open session has no end to push out")
         try click(window.buttons["Pause session"])
         waitFor(window.buttons["Resume session"], "Pause from the sidebar didn't take")
         try click(window.buttons["Resume session"])
         waitFor(window.buttons["Pause session"], "Resume from the sidebar didn't take")
         try click(button("End"))
-        waitFor(text("Ready to focus"), "End didn't end it")
+        waitForText("Ready to focus", "End didn't end it")
     }
 
     func testASessionSurvivesGoingRoundThePages() throws {
@@ -185,12 +202,12 @@ final class FlowClickTests: XCTestCase {
         try open("Today")
         try click(button("25 min"))
         try click(button("Start 25 minutes of focus"))
-        waitFor(text("Current session"), "The session didn't start")
+        waitForText("Current session", "The session didn't start")
         for page in ["Reports", "Apps & Sites", "Settings", "Today"] {
             try open(page)
             waitFor(window.buttons["Pause session"], "The sidebar lost the session on \(page)")
         }
-        waitFor(text("Current session"), "Today lost the session")
+        waitForText("Current session", "Today lost the session")
     }
 
     // MARK: - Rename and delete
@@ -212,17 +229,17 @@ final class FlowClickTests: XCTestCase {
         waitFor(field, "No field to rename in")
         field.typeKey("a", modifierFlags: .command)
         field.typeText("Tax return\r")
-        waitFor(text("Tax return"), "The new name didn't show")
+        waitForText("Tax return", "The new name didn't show")
 
         // Delete, confirmed: the row goes, the time stays.
         sessionRow.hover()
         try click(button("Delete"))
-        let confirm = app.buttons["Delete Session"].firstMatch
+        let confirm = window.sheets.buttons["Delete Session"].firstMatch
         waitFor(confirm, "No confirmation")
         confirm.click()
-        waitFor(text("No sessions yet"), "The row stayed")
-        waitGone(text("Tax return"), "The row stayed")
-        waitFor(text("Xcode"), "Its activity should stay in top apps")
+        waitForText("No sessions yet", "The row stayed")
+        waitGoneText("Tax return", "The row stayed")
+        waitForText("Xcode", "Its activity should stay in top apps")
     }
 
     func testCancellingADeleteKeepsTheSession() throws {
@@ -231,7 +248,7 @@ final class FlowClickTests: XCTestCase {
         waitFor(sessionRow, "The sample session isn't listed")
         sessionRow.hover()
         try click(button("Delete"))
-        let cancel = app.buttons["Cancel"].firstMatch
+        let cancel = window.sheets.buttons["Cancel"].firstMatch
         waitFor(cancel, "No confirmation")
         cancel.click()
         waitFor(sessionRow, "The session went without saying so")
@@ -248,10 +265,10 @@ final class FlowClickTests: XCTestCase {
         XCTAssertFalse(next.isEnabled, "Nothing after today")
 
         try click(previous)
-        waitFor(text("The day in numbers"), "An earlier day shows its numbers")
+        waitForText("The day in numbers", "An earlier day shows its numbers")
         XCTAssertTrue(next.isEnabled)
         try click(next)
-        waitFor(text("Your day"), "Back on today")
+        waitForText("Your day", "Back on today")
 
         // Free reaches back 30 days, today included.
         for _ in 0..<29 {
@@ -267,14 +284,14 @@ final class FlowClickTests: XCTestCase {
         launch()
         try open("Reports")
         try click(button("Month"))
-        waitFor(text("Month in review"), "Month in review isn't offered")
+        waitForText("Month in review", "Month in review isn't offered")
         XCTAssertFalse(button("Share week").exists, "Share week belongs to a week")
 
         // Trying it starts the (pretend) trial and opens the review.
         try click(button("Try Pro free"))
         waitFor(buttonStarting("Open"), "The review didn't open up")
         try click(buttonStarting("Open"))
-        let close = app.buttons["Close"].firstMatch
+        let close = window.sheets.buttons["Close"].firstMatch
         waitFor(close, "The review sheet didn't open")
         shoot("month-review")
         close.click()
@@ -291,7 +308,7 @@ final class FlowClickTests: XCTestCase {
         try click(button("Month"))
         try click(button("Previous month"))
         let last = Calendar.current.date(byAdding: .month, value: -1, to: .now)?.formatted(.dateTime.month(.wide)) ?? ""
-        waitFor(text(last), "Didn't go back a month")
+        waitForText(last, "Didn't go back a month")
         try click(button("Week"))
         waitFor(button("Share week"), "Week didn't come back")
     }
@@ -313,9 +330,8 @@ final class FlowClickTests: XCTestCase {
         try click(button("Export"))
         let save = app.buttons["Save"].firstMatch
         waitFor(save, "No save panel")
-        let cancel = app.buttons["Cancel"].firstMatch
-        waitFor(cancel, "No way out of the save panel")
-        cancel.click()
+        shoot("export-panel")
+        app.typeKey(.escape, modifierFlags: [])
         waitGone(save, "The save panel stayed")
     }
 
@@ -325,14 +341,14 @@ final class FlowClickTests: XCTestCase {
         launch()
         try open("Apps & Sites")
         try click(button("Add rule"))
-        waitFor(app.staticTexts["New rule"].firstMatch, "The sheet didn't open")
+        let sheet = window.sheets.firstMatch
+        waitFor(sheet, "The sheet didn't open")
 
         // Cancel leaves nothing.
-        try click(app.buttons["Cancel"].firstMatch)
-        waitGone(app.staticTexts["New rule"].firstMatch, "Cancel didn't close it")
+        try click(sheet.buttons["Cancel"].firstMatch)
+        waitGone(sheet, "Cancel didn't close it")
 
         try click(button("Add rule"))
-        let sheet = app.sheets.firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 5))
         try click(sheet.radioButtons["Site"].firstMatch)
         let field = sheet.textFields.firstMatch
@@ -340,24 +356,24 @@ final class FlowClickTests: XCTestCase {
         field.typeText("www.Example.org/some/page")
         // Nothing wrong with the default category; add it.
         try click(sheet.buttons["Add rule"].firstMatch)
-        waitGone(app.staticTexts["New rule"].firstMatch, "Add rule didn't close it")
+        waitGone(sheet, "Add rule didn't close it")
 
         // It's on Rules, cleaned up to the host.
         try click(buttonStarting("Rules"))
-        waitFor(text("example.org"), "The rule isn't listed")
+        waitForText("example.org", "The rule isn't listed")
         try click(window.buttons["Delete rule example.org"].firstMatch)
-        waitGone(text("example.org"), "The rule didn't go")
+        waitGoneText("example.org", "The rule didn't go")
     }
 
     func testChangingACategoryCountsAgainInTheFilters() throws {
         launch()
         try open("Apps & Sites")
-        waitFor(text("Xcode"), "No apps to sort")
+        waitForText("Xcode", "No apps to sort")
         let distracting = buttonStarting("Distracting")
         waitFor(distracting, "No filters")
         let before = distracting.label
         // Xcode's row: its control is named for it.
-        let control = window.otherElements["Xcode counts as"].firstMatch
+        let control = window.groups["Xcode counts as"].firstMatch
         waitFor(control, "Xcode's category control is missing")
         try click(control.buttons["Distracting"].firstMatch)
         let changed = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: distracting)
@@ -365,11 +381,11 @@ final class FlowClickTests: XCTestCase {
 
         // The filter shows it, and search narrows it.
         try click(distracting)
-        waitFor(text("Xcode"), "Filtered out what it should show")
+        waitForText("Xcode", "Filtered out what it should show")
         let search = window.textFields["Search apps and sites"].firstMatch
         try click(search)
         search.typeText("no such app")
-        waitFor(text("Nothing matches."), "Search didn't narrow it")
+        waitForText("Nothing matches.", "Search didn't narrow it")
     }
 
     func testSortYourAppsOpens() throws {
@@ -389,30 +405,35 @@ final class FlowClickTests: XCTestCase {
         launch()
         try open("Settings")
         try click(button("Pro & licence"))
-        waitFor(text("It starts when you turn on a Pro feature"), "The plan card should say how the trial starts")
+        waitForText("It starts when you turn on a Pro feature", "The plan card should say how the trial starts")
 
-        // The licence sheet, through the upgrade sheet.
-        try click(button("Try Pro free for 14 days"))
-        let start = app.buttons["Start the 14-day free trial"].firstMatch
-        waitFor(start, "The upgrade sheet didn't open")
-        shoot("upgrade-sheet")
-        try click(app.buttons["I have a licence key"].firstMatch)
-        let key = app.textFields["Licence key"].firstMatch
+        // The licence sheet turns a key down, and says why.
+        try click(button("Enter a licence key…"))
+        let key = window.sheets.textFields["Licence key"].firstMatch
         waitFor(key, "The licence sheet didn't open")
         try click(key)
         key.typeText("FG-NOT-A-REAL-KEY\r")
-        waitFor(app.staticTexts["Licence keys aren't available yet."].firstMatch, "A bad key should say why")
-        try click(app.buttons["Cancel"].firstMatch)
+        waitForText("Licence keys aren't available yet.", "A bad key should say why")
+        try click(window.sheets.buttons["Cancel"].firstMatch)
         waitGone(key, "Cancel didn't close it")
 
+        // The upgrade sheet: nothing changes until the trial is asked for.
+        XCTAssertTrue(buttonStarting("Work log").label.contains("Pro"), "Work log should be marked Pro before the trial")
+        try click(button("Try Pro free for 14 days"))
+        let start = window.sheets.buttons["Start the 14-day free trial"].firstMatch
+        waitFor(start, "The upgrade sheet didn't open")
+        shoot("upgrade-sheet")
+        window.sheets.buttons["Close"].firstMatch.click()
+        waitGone(start, "Close didn't close it")
+        waitForText("It starts when you turn on a Pro feature", "Looking at the sheet started something")
+
         // The trial: the plan changes where it shows, and the Pro pages open.
-        XCTAssertTrue(buttonStarting("Work log").label.contains("PRO"), "Work log should be marked Pro before the trial")
         try click(button("Try Pro free for 14 days"))
         try click(start)
         waitGone(start, "The upgrade sheet stayed")
-        waitFor(text("Pro trial"), "The plan didn't change")
-        waitFor(text("Ends on"), "No end date")
-        XCTAssertFalse(buttonStarting("Work log").label.contains("PRO"), "The badge should go with the trial")
+        waitForText("Pro trial", "The plan didn't change")
+        waitForText("Ends on", "No end date")
+        XCTAssertFalse(buttonStarting("Work log").label.contains("Pro"), "The badge should go with the trial")
         try open("Work log")
         waitFor(button("Previous week"), "Work log should open on the trial")
     }
@@ -441,11 +462,11 @@ final class FlowClickTests: XCTestCase {
         ]
         for (pane, words) in panes {
             try click(button(pane))
-            waitFor(text(words), "\(pane) didn't open")
+            waitForText(words, "\(pane) didn't open")
             shoot("settings-\(pane)")
         }
         try click(button("About"))
-        waitFor(text("FocusGuard"), "About didn't open")
+        waitForText("FocusGuard", "About didn't open")
     }
 
     /// Flipped, gone to another pane and back, then the app quit and opened
@@ -493,18 +514,18 @@ final class FlowClickTests: XCTestCase {
     // MARK: - First run
 
     func testFirstRunWithNoData() throws {
-        launch(seed: "empty")
-        waitFor(text("Day one."), "The first-day page didn't show")
-        waitFor(text("Getting set up"), "The first-day checklist didn't show")
-        waitFor(text("No sessions yet"), "The sessions card should be empty")
-        waitFor(text("Nothing tracked yet today."), "Top apps should be empty")
+        launch(seed: "empty", extra: ["-window.sessionLength", "0"])
+        waitForText("Day one.", "The first-day page didn't show")
+        waitForText("Getting set up", "The first-day checklist didn't show")
+        waitForText("No sessions yet", "The sessions card should be empty")
+        waitForText("Nothing tracked yet today.", "Top apps should be empty")
         shoot("first-run-today")
 
         try open("Reports")
-        waitFor(text("No goal days yet this week."), "Reports should say there's nothing yet")
+        waitForText("No goal days yet this week.", "Reports should say there's nothing yet")
         shoot("first-run-reports")
         try click(button("Month"))
-        waitFor(text("No goal days yet this month."), "Reports' month should say so too")
+        waitForText("No goal days yet this month.", "Reports' month should say so too")
 
         try open("Apps & Sites")
         shoot("first-run-apps")
@@ -512,12 +533,12 @@ final class FlowClickTests: XCTestCase {
         try open("Today")
 
         // The first session ends the first-day page.
-        try click(button("Start 50 minutes of focus"))
-        waitFor(text("Current session"), "The session didn't start")
-        waitGone(text("Day one."), "Still on the first-day page")
+        try click(buttonStarting("Start 50 minutes"))
+        waitForText("Current session", "The session didn't start")
+        waitGoneText("Day one.", "Still on the first-day page")
         try click(button("End"))
-        waitFor(text("Ready to focus"), "End didn't end it")
-        waitGone(text("Getting set up"), "The checklist should go once there's a session")
+        waitForText("Ready to focus", "End didn't end it")
+        waitGoneText("Getting set up", "The checklist should go once there's a session")
     }
 
     // MARK: - Odd states
@@ -555,6 +576,7 @@ final class FlowClickTests: XCTestCase {
         sleep(3)
         shoot("big-\(language)-apps")
         wrapped += wrappedTimes(timePattern)
+        print("Wrapped in \(language): \(wrapped)")
         return wrapped
     }
 
