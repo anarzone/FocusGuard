@@ -89,6 +89,21 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(CoachPoint("All of it bold.", tone: .focus).rest, "")
     }
 
+    // MARK: - Decisions don't read display words
+
+    func testAnUnchangedResultIsKnownWithoutReadingItsWords() {
+        XCTAssertTrue(CoachMetric.sessionRate(.allDay).isUnchanged(from: 0.8, to: 0.8))
+        XCTAssertFalse(CoachMetric.sessionRate(.allDay).isUnchanged(from: 0.8, to: 0.9))
+        XCTAssertTrue(CoachMetric.firstSession.isUnchanged(from: 540, to: 543))
+        XCTAssertFalse(CoachMetric.firstSession.isUnchanged(from: 540, to: 560))
+        XCTAssertFalse(CoachMetric.siteMinutes("x.com").isUnchanged(from: 20, to: 20))
+    }
+
+    func testAnUntitledMeetingIsJustTheMeeting() {
+        let entry = CalendarEntry(id: "a", title: "", start: .now.addingTimeInterval(60), end: .now.addingTimeInterval(120), isAllDay: false, isOwn: false, isDeclined: false)
+        XCTAssertEqual(NextMeeting.pick(from: [entry], now: .now, ownIDs: [])?.shortTitle, "the meeting")
+    }
+
     // MARK: - Ask in other languages
 
     func testGermanQuestionsFindTheirKind() {
