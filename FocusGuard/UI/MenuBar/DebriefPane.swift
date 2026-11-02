@@ -176,12 +176,11 @@ struct DebriefRow: View {
         case .writing:
             return String(localized: "On this Mac, in a few seconds")
         case .written:
-            guard session.goal != nil, let verdict = session.goalVerdict else {
-                return String(localized: "What you did, where you drifted, a tip")
-            }
+            guard session.goal != nil else { return String(localized: "What you did, where you drifted, a tip") }
+            guard let verdict = session.goalVerdict else { return String(localized: "Say how the goal went") }
             let line: String
             switch verdict {
-            case .done:   line = String(localized: "Goal looks done")
+            case .done:   line = String(localized: "Goal done")
             case .partly: line = String(localized: "Goal partly done")
             case .notYet: line = String(localized: "Goal not yet")
             }
@@ -338,7 +337,7 @@ struct DebriefPane: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let evidence = debrief.evidence {
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
-                    Image(systemName: "checkmark.seal")
+                    Image(systemName: "text.magnifyingglass")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)
                         .accessibilityHidden(true)
@@ -349,7 +348,7 @@ struct DebriefPane: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(debrief.verdict == nil ? "How did it go?" : "Not quite?")
+                Text(debrief.verdict == nil ? "How did it go?" : "Changed your mind?")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -358,7 +357,7 @@ struct DebriefPane: View {
                 }
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel("Correct the goal check")
+            .accessibilityLabel("Say how the goal went")
         }
         .paneCard()
     }
@@ -368,7 +367,7 @@ struct DebriefPane: View {
             if verdict == .done {
                 Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
             }
-            Text(verdict.debriefText)
+            Text(verdict.chipText)
         }
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(verdict == .done ? Color.white : Theme.primaryText)
@@ -469,9 +468,9 @@ struct DebriefPane: View {
         .paneCard(padding: EdgeInsets())
     }
 
-    /// The model's standup line, or the goal and how it went.
+    /// The goal and how the person said it went. The model doesn't write this:
+    /// a standup is passed on to others, and it made up what got done.
     private func standup(_ debrief: SessionDebrief) -> String? {
-        if let standup = debrief.standup { return standup }
         guard let goal = debrief.goal else { return nil }
         switch debrief.verdict {
         case .done:   return String(localized: "Done: \(goal).")

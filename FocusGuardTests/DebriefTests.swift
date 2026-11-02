@@ -71,18 +71,18 @@ final class DebriefTests: XCTestCase {
         let debrief = SessionDebrief.plain(facts(), label: "Steady Deep Dive")
         XCTAssertFalse(debrief.isWritten)
         XCTAssertNil(debrief.verdict)
-        XCTAssertNil(debrief.tip)
+        XCTAssertEqual(debrief.tip, "Keep x.com closed next session")
         XCTAssertEqual(debrief.workedOn.map(\.app), ["Xcode", "Claude", "github.com"])
         XCTAssertEqual(debrief.drift, "x.com · 3 min")
         XCTAssertEqual(debrief.focusPercent, 93)
     }
 
     func testAWriteUpKeepsOnlyNamesFromTheSessionAndTheirRealTimes() {
-        let stored = StoredDebrief(verdict: .done, evidence: "PR #49 was merged.", workedOn: [
+        let stored = StoredDebrief(evidence: "PR #49 was merged.", workedOn: [
             .init(app: "xcode", what: "SessionNamer.swift and its tests"),
             .init(app: "Figma", what: "made up"),
             .init(app: "github.com", what: "merged PR #49"),
-        ], tip: "Keep the build log in view")
+        ])
         let debrief = SessionDebrief.written(stored, facts: facts(), label: "Steady Deep Dive", verdict: .partly)
         XCTAssertEqual(debrief.workedOn.map(\.app), ["Xcode", "github.com"])
         XCTAssertEqual(debrief.workedOn.first?.seconds ?? 0, 31 * 60, accuracy: 1)
@@ -93,26 +93,23 @@ final class DebriefTests: XCTestCase {
         XCTAssertNil(noGoal.verdict)
     }
 
-    func testCleanupTrimsDropsEmptiesAndKeepsAVerdictOnlyWithAGoal() {
-        let draft = StoredDebrief(verdict: .done, evidence: "  none ", evidenceShort: "PR #49 merged",
+    func testCleanupTrimsDropsEmptiesAndKeepsGoalLinesOnlyWithAGoal() {
+        let draft = StoredDebrief(evidence: "  none ", evidenceShort: "PR #49 merged",
                                   workedOn: (1...5).map { .init(app: "App\($0)", what: "thing \($0)") } + [.init(app: "X", what: " ")],
-                                  driftDetail: "", tip: " Keep the build log in view ", tipDetail: "3 of 5 drifts began in a build.",
-                                  project: "FocusGuard", standup: "Shipped names.")
+                                  driftDetail: "", project: " FocusGuard ")
         let tidy = DebriefCleanup.tidy(draft, hasGoal: true)
         XCTAssertNil(tidy.evidence)
         XCTAssertEqual(tidy.workedOn.count, 3)
         XCTAssertNil(tidy.driftDetail)
-        XCTAssertEqual(tidy.tip, "Keep the build log in view")
-        XCTAssertEqual(tidy.verdict, .done)
+        XCTAssertEqual(tidy.project, "FocusGuard")
 
         let noGoal = DebriefCleanup.tidy(draft, hasGoal: false)
-        XCTAssertNil(noGoal.verdict)
         XCTAssertNil(noGoal.evidenceShort)
     }
 
     func testAStoredDebriefRoundTripsOnTheSession() {
         let session = Session(startedAt: start)
-        session.storedDebrief = StoredDebrief(verdict: .partly, evidence: "Half the tests pass.", project: "FocusGuard")
+        session.storedDebrief = StoredDebrief(evidence: "Half the tests pass.", project: "FocusGuard")
         XCTAssertEqual(session.storedDebrief?.evidence, "Half the tests pass.")
         session.goalVerdict = .notYet
         XCTAssertEqual(session.goalVerdictRaw, "notYet")
@@ -182,19 +179,18 @@ private final class ScriptedOnDeviceModel: OnDeviceModel {
 final class DebriefWriterTests: XCTestCase {
     func testTheAnswerIsReadIntoAStoredDebrief() async throws {
         let fake = ScriptedOnDeviceModel(reply: """
-        {"verdict":"partly","evidence":"Tests pass, PR still open.","evidenceShort":"PR open",
+        {"evidence":"Tests pass, PR still open.","evidenceShort":"PR open",
          "workedOn":[{"app":"Xcode","what":"SessionNamer tests"}],"driftNote":"At 19:23.",
-         "tip":"Close x.com before a build","tipReason":"Both drifts began in a build.",
-         "project":"FocusGuard","standup":"Wrote the namer tests."}
+         "project":"FocusGuard"}
         """)
         let facts = DebriefFacts.make(goal: "Ship it", start: .now, end: .now.addingTimeInterval(600), events: [
             DebriefFacts.Event(start: .now, end: .now.addingTimeInterval(599), bundleId: "x", appName: "Xcode",
                                title: "FocusGuard — Namer.swift", url: nil, classification: .focus),
         ], isOptedOut: { _ in false })
         let stored = try await DebriefWriter.write(DebriefPrompt(facts: facts), with: fake)
-        XCTAssertEqual(stored.verdict, .partly)
+        XCTAssertEqual(stored.evidence, "Tests pass, PR still open.")
         XCTAssertEqual(stored.workedOn, [.init(app: "Xcode", what: "SessionNamer tests")])
-        XCTAssertEqual(stored.tipDetail, "Both drifts began in a build.")
+        XCTAssertEqual(stored.driftDetail, "At 19:23.")
         XCTAssertTrue(fake.prompts.first?.contains("FocusGuard — Namer.swift") ?? false)
     }
 
@@ -231,9 +227,9 @@ final class DebriefCoordinatorTests: XCTestCase {
         context = ModelContext(container)
         available = true
         model = ScriptedOnDeviceModel(reply: """
-        {"verdict":"done","evidence":"PR #49 was merged at 19:41.","evidenceShort":"PR #49 merged",
-         "workedOn":[{"app":"Xcode","what":"SessionNamer.swift"}],"driftNote":"","tip":"Keep the build log in view",
-         "tipReason":"The drift began in a build.","project":"FocusGuard","standup":"Shipped session names."}
+        {"verdict":"done","evidence":"AppState.swift was on screen in Xcode.","evidenceShort":"AppState.swift open",
+         "workedOn":[{"app":"Xcode","what":"Session.swift"}],"driftNote":"","tip":"Close x.com while in Xcode",
+         "tipReason":"x.com came right after Xcode.","project":"FocusGuard","standup":"Shipped session names."}
         """)
     }
 
@@ -315,14 +311,14 @@ final class DebriefCoordinatorTests: XCTestCase {
 
     func testAFinishedSessionGetsItsDebriefWrittenAndKept() async throws {
         let coordinator = make(optedOut: ["com.apple.MobileSMS"])
-        let session = try finishedSession(goal: "Ship the session-names PR")
+        let session = try finishedSession(goal: "Tidy AppState.swift")
         coordinator.sessionEnded(session)
         XCTAssertEqual(coordinator.status(for: session), .writing)
         await waitForWriting(coordinator)
 
         XCTAssertEqual(coordinator.status(for: session), .written)
-        XCTAssertEqual(session.storedDebrief?.evidence, "PR #49 was merged at 19:41.")
-        XCTAssertEqual(session.goalVerdict, .done)
+        XCTAssertEqual(session.storedDebrief?.evidence, "AppState.swift was on screen in Xcode.")
+        XCTAssertNil(session.goalVerdict, "whether the goal got done is the person's call, whatever the model says")
         XCTAssertEqual(session.project, "FocusGuard")
         XCTAssertFalse(model.prompts.first?.contains("Chat with Sam") ?? true)
 
@@ -410,7 +406,7 @@ final class WorkLogTests: XCTestCase {
         XCTAssertEqual(model.days.first?.entries.map(\.title),
                        ["Finish the Today page", "Review PR #52", "Day strip hover", "Reply to beta testers"])
         XCTAssertEqual(model.days.first?.entries.first?.state, .live)
-        XCTAssertEqual(model.days.first?.entries[1].note, "Approved after the fixes.")
+        XCTAssertNil(model.days.first?.entries[1].note, "nothing in the session backs that up")
         XCTAssertEqual(model.days.last?.entries.first?.title, "Mostly Xcode")
         XCTAssertEqual(model.goalsDone, 2)
         XCTAssertEqual(model.goalsPartly, 2)

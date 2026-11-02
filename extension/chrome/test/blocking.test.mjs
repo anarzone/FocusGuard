@@ -28,6 +28,14 @@ test('a root dot on a host changes nothing', () => {
   assert.ok(new RegExp(partRegex('youtube.com/shorts'), 'i').test('https://youtube.com./shorts/abc'));
 });
 
+test('a login in the address changes nothing', () => {
+  const site = new RegExp(siteRegex('x.com'), 'i');
+  assert.ok(site.test('https://me:pw@x.com/'));
+  assert.ok(site.test('https://me@www.x.com/home'));
+  assert.ok(!site.test('https://x.com@evil.net/'), 'there x.com is the login and evil.net the site');
+  assert.ok(new RegExp(partRegex('youtube.com/shorts'), 'i').test('https://me@youtube.com/shorts/a'));
+});
+
 test('a path is read the way a server reads it', () => {
   assert.equal(plainPath('/%73horts//abc'), '/shorts/abc');
   assert.equal(plainPath('/%E2%9C%93/100%'), '/%e2%9c%93/100%', 'only plain letters are unescaped, and a stray % is fine');

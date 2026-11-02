@@ -5,7 +5,8 @@ import Foundation
 ///
 /// Window titles are only taken from apps that aren't opted out, even
 /// when an older event still has one: titles for opted-out apps never
-/// reach the model or the screen.
+/// reach the model or the screen. Nor does a title that reads like an
+/// instruction to the model.
 struct DebriefFacts: Equatable {
     /// One activity event, stripped down to what the debrief reads.
     struct Event: Equatable {
@@ -103,7 +104,8 @@ struct DebriefFacts: Equatable {
                 order.append(name)
             }
 
-            let allowedTitle = isOptedOut(event.bundleId) ? nil : Self.clean(event.title)
+            let allowedTitle = isOptedOut(event.bundleId) ? nil
+                : Self.clean(event.title).flatMap { UntrustedText.looksLikeInstruction($0) ? nil : $0 }
             if let title = allowedTitle {
                 let key = "\(name)\u{1}\(title)"
                 if let known = titles[key] {
