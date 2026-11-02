@@ -485,7 +485,9 @@ private struct SessionsCard: View {
             Text("\(Int((session.rate * 100).rounded()))%")
                 .font(.system(size: 13, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.primaryText)
-                .frame(width: 38, alignment: .trailing)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(minWidth: 38, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .frame(height: 34)
