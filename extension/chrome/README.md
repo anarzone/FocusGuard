@@ -82,6 +82,7 @@ FocusGuard.app/Contents/Helpers/FocusGuardBrowserHelper ──Unix socket──�
 | `icons/` | PNG icons, drawn by `scripts/make-icons.py` |
 | `test/` | Node tests (`npm test`) |
 | `scripts/smoke.mjs` | loads the extension into real Chrome against a fake app (below) |
+| `scripts/e2e.mjs`, `scripts/e2e-harness.mjs` | the end-to-end test, with its fake app, stand-in helper and local web server (below) |
 
 ## Languages
 
@@ -133,6 +134,24 @@ helper to a fake app on a test socket, walks connect, tab reports, the popup's
 states, pausing a tab and giving it back, the block pages, options and first
 run, and saves a screenshot of each. `--lang de` or `--lang az` does the same in
 that language.
+
+The end-to-end test goes further: getting around a block, the waits on each
+preset, the pass countdown, daily limits, private windows, the worker dying,
+and the extension's own network traffic. It needs no built app, because a
+stand-in for the helper comes with it, and it needs only `puppeteer-core` and
+`openssl`. Every host name resolves to a local server, so nothing leaves the
+Mac and the running app can't be reached:
+
+```bash
+npm i puppeteer-core @puppeteer/browsers     # in a scratch folder, and run from there
+npx @puppeteer/browsers install chrome@stable
+node /path/to/extension/chrome/scripts/e2e.mjs --chrome "/path/to/Google Chrome for Testing"
+```
+
+`--group REGEX` and `--only REGEX` narrow it down. Branded Chrome works too but
+skips two groups, because it ignores `--load-extension`. A test marked `bug` is
+a known bug: it asserts the right behaviour, prints `KNOWN` and doesn't fail the
+run. Once the bug is fixed it prints `FIXED`, so the mark can come off.
 
 ## Publishing (to do)
 
