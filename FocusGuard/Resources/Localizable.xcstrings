@@ -3711,7 +3711,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld xal aşağı."
+            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld bənd aşağı."
           }
         },
         "de" : {
@@ -3778,7 +3778,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld xal yuxarı."
+            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld bənd yuxarı."
           }
         },
         "de" : {
@@ -3889,7 +3889,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld xal aşağı."
+            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld bənd aşağı."
           }
         },
         "de" : {
@@ -3956,7 +3956,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld xal yuxarı."
+            "value" : "%1$@: %2$@ fokus, fokus dərəcəsi %3$@, %5$@ ayından %4$lld bənd yuxarı."
           }
         },
         "de" : {
@@ -7350,7 +7350,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "+%lld xal"
+            "value" : "+%lld bənd"
           }
         },
         "de" : {
@@ -32216,7 +32216,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu sessiya bitənə qədər %@ barədə xəbərdarlıq edilməsin."
+            "value" : "Bu sessiya bitənə qədər %@ barədə xatırlatma olmasın."
           }
         },
         "de" : {
@@ -42494,7 +42494,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "−%lld xal"
+            "value" : "−%lld bənd"
           }
         },
         "de" : {
