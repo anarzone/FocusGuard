@@ -338,20 +338,16 @@ final class GoalSourcesTests: XCTestCase {
         XCTAssertEqual(suggestions.map(\.source), [.task(.reminders, id: "Write the Q4 report", list: "Work")])
     }
 
-    func testDoneTicksTheReminderOffAndUndoSticksAgainstTheDebrief() {
+    func testOnlyTheUsersOwnDoneTicksTheTaskOff() {
         let link = TaskLink(task: item("Write the Q4 report"), linkedAt: at(10))
-        XCTAssertEqual(link.change(for: .done, byUser: false), .tick)
+        XCTAssertEqual(link.change(for: .done, byUser: true), .tick)
+        XCTAssertEqual(link.change(for: .done, byUser: false), .none, "the debrief's verdict is only the model's guess")
         XCTAssertEqual(link.change(for: .partly, byUser: true), .none)
 
         var ticked = link
         ticked.ticked = true
         XCTAssertEqual(ticked.change(for: .notYet, byUser: true), .untick)
         XCTAssertEqual(ticked.change(for: .done, byUser: true), .none)
-
-        var undone = link
-        undone.undone = true
-        XCTAssertEqual(undone.change(for: .done, byUser: false), .none, "the debrief doesn't overrule an undo")
-        XCTAssertEqual(undone.change(for: .done, byUser: true), .tick, "the user's own Done does")
     }
 }
 
@@ -514,7 +510,12 @@ final class IntegrationsCoordinatorTests: XCTestCase {
         XCTAssertNil(coordinator.pickedTask)
 
         session.goalVerdict = .done
+        // The debrief saying Done leaves the reminder open.
         await coordinator.verdictChanged(session, byUser: false)
+        XCTAssertTrue(reminderStore.completed.isEmpty)
+        XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, false)
+
+        await coordinator.verdictChanged(session, byUser: true)
         XCTAssertEqual(reminderStore.completed, ["q4"])
         XCTAssertEqual(coordinator.taskLinks[session.id]?.ticked, true)
         XCTAssertEqual(coordinator.nextTasks[session.id]?.id, "lena")
@@ -523,7 +524,7 @@ final class IntegrationsCoordinatorTests: XCTestCase {
         XCTAssertTrue(reminderStore.completed.isEmpty)
         XCTAssertNil(coordinator.nextTasks[session.id])
 
-        // The debrief saying Done again doesn't overrule the undo.
+        // The debrief saying Done again doesn't either.
         await coordinator.verdictChanged(session, byUser: false)
         XCTAssertTrue(reminderStore.completed.isEmpty)
         // The user's own Done does.
