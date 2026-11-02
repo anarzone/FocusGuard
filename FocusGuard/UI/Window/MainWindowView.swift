@@ -202,6 +202,7 @@ private struct WindowSidebar: View {
                     .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     .foregroundStyle(Theme.primaryText)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
                 if isLocked(item) { ProBadge() }
             }

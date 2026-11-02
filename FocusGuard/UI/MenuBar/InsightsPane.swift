@@ -209,7 +209,9 @@ struct InsightsTodayView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(formatDuration(row.seconds))
                                 .font(.system(size: 12).monospacedDigit())
-                                .frame(width: 52, alignment: .trailing)
+                                .lineLimit(1)
+                                .fixedSize()
+                                .frame(minWidth: 52, alignment: .trailing)
                             CategoryChipMenu(current: row.classification) { onCategory(row, $0) }
                                 .frame(width: 92, alignment: .trailing)
                         }
@@ -317,10 +319,12 @@ struct InsightsWeekView: View {
                                 .truncationMode(.middle)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             LimitBar(fraction: row.seconds / max(1, maxSeconds))
-                                .frame(width: 96)
+                                .frame(minWidth: 40, maxWidth: 96)
                             Text(formatDuration(row.seconds))
                                 .font(.system(size: 12).monospacedDigit())
-                                .frame(width: 48, alignment: .trailing)
+                                .lineLimit(1)
+                                .fixedSize()
+                                .frame(minWidth: 48, alignment: .trailing)
                         }
                         .padding(.horizontal, 2)
                         .accessibilityElement(children: .combine)

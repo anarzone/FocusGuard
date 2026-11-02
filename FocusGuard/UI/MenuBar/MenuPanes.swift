@@ -225,13 +225,15 @@ struct UsageBarRow: View {
                         .frame(width: max(4, geo.size.width * CGFloat(row.seconds / max(1, maxSeconds))))
                 }
             }
-            .frame(width: barWidth ?? (onChange == nil ? 134 : 70), height: 6)
+            // The bar gives way when the time runs long.
+            .frame(minWidth: 24, maxWidth: barWidth ?? (onChange == nil ? 134 : 70), minHeight: 6, maxHeight: 6)
             .accessibilityHidden(true)
             Text(formatDuration(row.seconds))
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .frame(width: 50, alignment: .trailing)
+                .fixedSize()
+                .frame(minWidth: 50, alignment: .trailing)
             Spacer(minLength: 0)
             if let onChange {
                 CategoryMenu(current: row.classification, onChange: onChange)

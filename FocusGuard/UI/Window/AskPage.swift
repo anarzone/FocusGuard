@@ -380,6 +380,7 @@ private struct AskChart: View {
                         .monospacedDigit()
                         .foregroundStyle(Theme.primaryText)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .frame(width: 76, alignment: .trailing)
                 }
                 .font(.system(size: 12))

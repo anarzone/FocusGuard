@@ -590,26 +590,20 @@ final class FlowClickTests: XCTestCase {
         let wrapped = try pagesWithBigData(language: "en", locale: "en_US",
                                            pages: ["Today", "Reports", "Apps & Sites"], previousDay: "Previous day", month: "Month",
                                            timePattern: "[0-9,]+h( [0-9]+m)?")
-        XCTExpectFailure("Bug: TopAppRow (TodayPage.swift:358) gives the time 44 pt with no line limit: '11h 05m' wraps", strict: false) {
-            XCTAssertEqual(wrapped, [])
-        }
+        XCTAssertEqual(wrapped, [], "Time labels keep to one line")
     }
 
     func testThreeYearsAndLongNamesInGerman() throws {
         let wrapped = try pagesWithBigData(language: "de", locale: "de_DE",
                                            pages: ["Heute", "Berichte", "Apps & Websites"], previousDay: "Vorheriger Tag", month: "Monat",
                                            timePattern: "[0-9.]+ Std( [0-9]+ Min)?")
-        XCTExpectFailure("Bug: TopAppRow (TodayPage.swift:358): '11 Std 05 Min' wraps in its 44 pt", strict: false) {
-            XCTAssertEqual(wrapped, [])
-        }
+        XCTAssertEqual(wrapped, [], "Time labels keep to one line")
     }
 
     func testThreeYearsAndLongNamesInAzerbaijani() throws {
         let wrapped = try pagesWithBigData(language: "az", locale: "az_AZ",
                                            pages: ["Bu gün", "Hesabatlar", "Tətbiqlər və saytlar"], previousDay: "Əvvəlki gün", month: "Ay",
                                            timePattern: "[0-9.]+ s( [0-9]+ dəq)?")
-        XCTExpectFailure("Bug: TopAppRow (TodayPage.swift:358): '11 s 05 dəq' wraps in its 44 pt", strict: false) {
-            XCTAssertEqual(wrapped, [])
-        }
+        XCTAssertEqual(wrapped, [], "Time labels keep to one line")
     }
 }
