@@ -71,7 +71,7 @@ final class DebriefTests: XCTestCase {
         let debrief = SessionDebrief.plain(facts(), label: "Steady Deep Dive")
         XCTAssertFalse(debrief.isWritten)
         XCTAssertNil(debrief.verdict)
-        XCTAssertNil(debrief.tip)
+        XCTAssertEqual(debrief.tip, "Keep x.com closed next session")
         XCTAssertEqual(debrief.workedOn.map(\.app), ["Xcode", "Claude", "github.com"])
         XCTAssertEqual(debrief.drift, "x.com · 3 min")
         XCTAssertEqual(debrief.focusPercent, 93)
@@ -82,7 +82,7 @@ final class DebriefTests: XCTestCase {
             .init(app: "xcode", what: "SessionNamer.swift and its tests"),
             .init(app: "Figma", what: "made up"),
             .init(app: "github.com", what: "merged PR #49"),
-        ], tip: "Keep the build log in view")
+        ])
         let debrief = SessionDebrief.written(stored, facts: facts(), label: "Steady Deep Dive", verdict: .partly)
         XCTAssertEqual(debrief.workedOn.map(\.app), ["Xcode", "github.com"])
         XCTAssertEqual(debrief.workedOn.first?.seconds ?? 0, 31 * 60, accuracy: 1)
@@ -93,16 +93,15 @@ final class DebriefTests: XCTestCase {
         XCTAssertNil(noGoal.verdict)
     }
 
-    func testCleanupTrimsDropsEmptiesAndKeepsAVerdictOnlyWithAGoal() {
+    func testCleanupTrimsDropsEmptiesAndKeepsGoalLinesOnlyWithAGoal() {
         let draft = StoredDebrief(evidence: "  none ", evidenceShort: "PR #49 merged",
                                   workedOn: (1...5).map { .init(app: "App\($0)", what: "thing \($0)") } + [.init(app: "X", what: " ")],
-                                  driftDetail: "", tip: " Keep the build log in view ", tipDetail: "3 of 5 drifts began in a build.",
-                                  project: "FocusGuard")
+                                  driftDetail: "", project: " FocusGuard ")
         let tidy = DebriefCleanup.tidy(draft, hasGoal: true)
         XCTAssertNil(tidy.evidence)
         XCTAssertEqual(tidy.workedOn.count, 3)
         XCTAssertNil(tidy.driftDetail)
-        XCTAssertEqual(tidy.tip, "Keep the build log in view")
+        XCTAssertEqual(tidy.project, "FocusGuard")
 
         let noGoal = DebriefCleanup.tidy(draft, hasGoal: false)
         XCTAssertNil(noGoal.evidenceShort)
@@ -182,7 +181,6 @@ final class DebriefWriterTests: XCTestCase {
         let fake = ScriptedOnDeviceModel(reply: """
         {"evidence":"Tests pass, PR still open.","evidenceShort":"PR open",
          "workedOn":[{"app":"Xcode","what":"SessionNamer tests"}],"driftNote":"At 19:23.",
-         "tip":"Close x.com before a build","tipReason":"Both drifts began in a build.",
          "project":"FocusGuard"}
         """)
         let facts = DebriefFacts.make(goal: "Ship it", start: .now, end: .now.addingTimeInterval(600), events: [
@@ -192,7 +190,7 @@ final class DebriefWriterTests: XCTestCase {
         let stored = try await DebriefWriter.write(DebriefPrompt(facts: facts), with: fake)
         XCTAssertEqual(stored.evidence, "Tests pass, PR still open.")
         XCTAssertEqual(stored.workedOn, [.init(app: "Xcode", what: "SessionNamer tests")])
-        XCTAssertEqual(stored.tipDetail, "Both drifts began in a build.")
+        XCTAssertEqual(stored.driftDetail, "At 19:23.")
         XCTAssertTrue(fake.prompts.first?.contains("FocusGuard — Namer.swift") ?? false)
     }
 

@@ -94,8 +94,6 @@ enum DebriefCleanup {
         .prefix(3)
         .map { $0 }
         out.driftDetail = line(draft.driftDetail)
-        out.tip = line(draft.tip, max: 60)
-        out.tipDetail = out.tip == nil ? nil : line(draft.tipDetail)
         out.project = line(draft.project, max: 40)
         return out
     }
@@ -128,8 +126,6 @@ enum DebriefWriter {
                   ]), count: 1...3)),
             .init("driftNote", "When the biggest drift happened and on what, in one short sentence, using only the times and names listed. Empty when there was no drift.",
                   .text),
-            .init("tip", "One thing to try next session, four to seven words, about the drifts or apps listed.", .text),
-            .init("tipReason", "Why that tip, in one short sentence naming an app or site from the list.", .text),
             .init("project", "The name of the project, one to three words, only if the goal or a window title names it. Otherwise empty.", .text),
         ])
     }
@@ -144,15 +140,13 @@ enum DebriefWriter {
         let evidenceShort: String?
         let workedOn: [Line]?
         let driftNote: String?
-        let tip: String?
-        let tipReason: String?
         let project: String?
 
         var stored: StoredDebrief {
             StoredDebrief(
                 evidence: evidence, evidenceShort: evidenceShort,
                 workedOn: (workedOn ?? []).map { StoredDebrief.Line(app: $0.app, what: $0.what) },
-                driftDetail: driftNote, tip: tip, tipDetail: tipReason,
+                driftDetail: driftNote,
                 project: project
             )
         }

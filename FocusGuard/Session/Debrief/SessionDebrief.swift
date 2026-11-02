@@ -32,8 +32,6 @@ struct StoredDebrief: Codable, Equatable {
     var evidenceShort: String?
     var workedOn: [Line] = []
     var driftDetail: String?
-    var tip: String?
-    var tipDetail: String?
     var project: String?
     var writtenAt: Date = .now
 }
@@ -73,6 +71,8 @@ struct SessionDebrief: Equatable {
     /// "x.com · 3 min"
     let drift: String?
     let driftDetail: String?
+    /// For next time, from the biggest drift. By rule: the model's tips were
+    /// things like "Use Mail more clearly".
     let tip: String?
     let tipDetail: String?
     let project: String?
@@ -91,13 +91,14 @@ struct SessionDebrief: Equatable {
             .prefix(3)
             .map { Item(app: $0.name, what: "", seconds: $0.seconds) }
         let top = facts.topDrift
+        let tip = top.flatMap { Self.tip(for: $0) }
         return SessionDebrief(
             sessionLabel: label, start: facts.start, end: facts.end,
             goal: facts.goal, verdict: nil, evidence: nil, evidenceShort: nil,
             workedOn: Array(items),
             drift: top.map(Self.driftText),
             driftDetail: facts.drifts.first(where: { $0.name == top?.name }).map { String(localized: "At \(Self.clock($0.start)).", comment: "When a drift happened") },
-            tip: nil, tipDetail: nil, project: nil,
+            tip: tip?.0, tipDetail: tip?.1, project: nil,
             focused: facts.focused, focusRate: facts.focusRate, isWritten: false
         )
     }
@@ -124,10 +125,18 @@ struct SessionDebrief: Equatable {
             workedOn: items.isEmpty ? plain.workedOn : items,
             drift: plain.drift,
             driftDetail: plain.drift == nil ? nil : (stored.driftDetail ?? plain.driftDetail),
-            tip: stored.tip, tipDetail: stored.tipDetail,
+            tip: plain.tip, tipDetail: plain.tipDetail,
             project: stored.project,
             focused: facts.focused, focusRate: facts.focusRate, isWritten: true
         )
+    }
+
+    /// Something to try, once a drift took a couple of minutes.
+    private static func tip(for drift: (name: String, seconds: TimeInterval)) -> (String, String)? {
+        guard drift.seconds >= 2 * 60 else { return nil }
+        let minutes = Int((drift.seconds / 60).rounded())
+        return (String(localized: "Keep \(drift.name) closed next session"),
+                String(localized: "It took \(minutes) min of this one.", comment: "Of this session"))
     }
 
     /// "x.com · 3 min"

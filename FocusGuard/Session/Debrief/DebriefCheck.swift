@@ -48,11 +48,6 @@ struct DebriefCheck {
         out.evidenceShort = out.evidence == nil ? nil : draft.evidenceShort.flatMap { supported($0) ? $0 : nil }
         out.workedOn = draft.workedOn.map { StoredDebrief.Line(app: $0.app, what: what($0)) }
         out.driftDetail = draft.driftDetail.flatMap { supported($0) ? $0 : nil }
-        out.tip = draft.tip.flatMap { supported($0) ? $0 : nil }
-        out.tipDetail = out.tip == nil ? nil : draft.tipDetail.flatMap { text in
-            let words = Self.words(Self.fold(text)).subtracting(Self.stopWords)
-            return supported(text) && !words.isDisjoint(with: activityWords.subtracting(Self.stopWords)) ? text : nil
-        }
         out.project = draft.project.flatMap { project($0) }
         return out
     }

@@ -19456,6 +19456,23 @@
         }
       }
     },
+    "It took %lld min of this one." : {
+      "comment" : "Of this session",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sessiyada %lld dəq aparıb."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das waren %lld Min. dieser Session."
+          }
+        }
+      }
+    },
     "It was all %@ of the drift %@." : {
       "comment" : "When: between 12:00 and 17:00, or in the last 4 weeks",
       "localizations" : {
@@ -19869,6 +19886,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gerade sortiert"
+          }
+        }
+      }
+    },
+    "Keep %@ closed next session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti sessiyada %@ bağlı qalsın"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass %@ in der nächsten Session zu"
           }
         }
       }

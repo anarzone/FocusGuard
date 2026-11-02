@@ -52,13 +52,11 @@ final class DebriefCheckTests: XCTestCase {
         let cleaned = DebriefCheck(facts: merged).clean(StoredDebrief(
             evidence: "Pull Request #49 was merged on github.com.", evidenceShort: "PR #49 merged",
             workedOn: [.init(app: "Xcode", what: "SessionNamer.swift")],
-            driftDetail: nil, tip: "Keep Xcode in view", tipDetail: "Xcode held the longest stretch.", project: "FocusGuard"
+            driftDetail: "x.com at 14:30.", project: "FocusGuard"
         ))
         XCTAssertEqual(cleaned.evidence, "Pull Request #49 was merged on github.com.")
         XCTAssertEqual(cleaned.evidenceShort, "PR #49 merged")
         XCTAssertEqual(cleaned.workedOn.first?.what, "SessionNamer.swift")
-        XCTAssertEqual(cleaned.tip, "Keep Xcode in view")
-        XCTAssertEqual(cleaned.tipDetail, "Xcode held the longest stretch.")
         XCTAssertEqual(cleaned.project, "FocusGuard")
     }
 
@@ -151,6 +149,15 @@ final class DebriefCheckTests: XCTestCase {
         XCTAssertNil(check.clean(StoredDebrief(project: "Launch prep")).project)
     }
 
+    // MARK: - The tip
+
+    func testTheTipComesFromTheBiggestDrift() {
+        let shown = SessionDebrief.written(StoredDebrief(), facts: catVideos, label: "x", verdict: nil)
+        XCTAssertEqual(shown.tip, "Keep youtube.com closed next session")
+        XCTAssertEqual(shown.tipDetail, "It took 30 min of this one.")
+        XCTAssertNil(SessionDebrief.written(StoredDebrief(), facts: slackAndMail, label: "x", verdict: nil).tip, "no drift, nothing to try")
+    }
+
     // MARK: - Shown later
 
     func testADebriefWrittenBeforeTheCheckIsHeldToItWhenShown() {
@@ -176,6 +183,7 @@ final class DebriefCheckTests: XCTestCase {
         let names = fields.map(\.name)
         XCTAssertFalse(names.contains("verdict"))
         XCTAssertFalse(names.contains("standup"))
+        XCTAssertFalse(names.contains("tip"))
         func descriptions(_ shape: AnswerShape) -> [String] {
             switch shape {
             case .object(let fields): return fields.flatMap { [$0.description] + descriptions($0.shape) }
