@@ -6,7 +6,7 @@ enum ProPricing {
     static let yearly = "$39"
     static let yearlyPerMonth = "$3.25"
     static let monthly = "$4.99"
-    static let yearlySaving = "Save 35%"
+    static let yearlySaving = String(localized: "Save 35%", comment: "Tag on the yearly plan")
     /// Flip once a payment provider is wired up.
     static let canBuy = false
 }
@@ -108,10 +108,10 @@ struct UpgradeSheet: View {
 
     private var plans: some View {
         HStack(spacing: 10) {
-            planOption(picked: yearly, title: "Yearly · \(ProPricing.yearly)",
-                       detail: "\(ProPricing.yearlyPerMonth) a month, billed yearly",
+            planOption(picked: yearly, title: String(localized: "Yearly · \(ProPricing.yearly)"),
+                       detail: String(localized: "\(ProPricing.yearlyPerMonth) a month, billed yearly"),
                        tag: ProPricing.yearlySaving) { yearly = true }
-            planOption(picked: !yearly, title: "Monthly · \(ProPricing.monthly)", detail: "Cancel any time", tag: nil) {
+            planOption(picked: !yearly, title: String(localized: "Monthly · \(ProPricing.monthly)"), detail: String(localized: "Cancel any time"), tag: nil) {
                 yearly = false
             }
         }
@@ -163,12 +163,12 @@ struct UpgradeSheet: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.secondaryText)
             } else {
-                Button("Buy Pro · \(yearly ? "\(ProPricing.yearly) a year" : "\(ProPricing.monthly) a month")") {
+                Button(yearly ? "Buy Pro · \(ProPricing.yearly) a year" : "Buy Pro · \(ProPricing.monthly) a month") {
                     showComingSoon = true
                 }
                 .buttonStyle(.capsule(.primary, height: 40, fullWidth: true))
                 if let days = entitlements.plan.daysLeft(at: .now) {
-                    Text("Your trial has \(WindowFormat.count(days, "day")) left.")
+                    Text("Your trial has \(days) days left.", comment: "Plural on days: 1 day / 2 days")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)
                 }
@@ -212,23 +212,23 @@ struct UpgradeFeature {
     var shipped = true
 
     static let all: [UpgradeFeature] = [
-        UpgradeFeature(title: "Block in the browser", body: "Pages never load. Block parts of sites, like Shorts.",
+        UpgradeFeature(title: String(localized: "Block in the browser"), body: String(localized: "Pages never load. Block parts of sites, like Shorts."),
                        symbol: "macwindow"),
-        UpgradeFeature(title: "Block on the whole Mac", body: "Every browser and app, private windows too.",
+        UpgradeFeature(title: String(localized: "Block on the whole Mac"), body: String(localized: "Every browser and app, private windows too."),
                        symbol: "shield", comingLater: true),
-        UpgradeFeature(title: "Smart categories", body: "Sorted on this Mac, YouTube one video at a time.",
+        UpgradeFeature(title: String(localized: "Smart categories"), body: String(localized: "Sorted on this Mac, YouTube one video at a time."),
                        symbol: "sparkle", ai: true, shipped: FeatureFlags.smartCategories),
-        UpgradeFeature(title: "Goals and debriefs", body: "A goal when you start, one click when you finish.",
+        UpgradeFeature(title: String(localized: "Goals and debriefs"), body: String(localized: "A goal when you start, one click when you finish."),
                        symbol: "scope", ai: true, shipped: FeatureFlags.debrief),
-        UpgradeFeature(title: "Work log", body: "A standup draft and a timesheet, ready to paste.",
+        UpgradeFeature(title: String(localized: "Work log"), body: String(localized: "A standup draft and a timesheet, ready to paste."),
                        symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
-        UpgradeFeature(title: "Weekly coach", body: FeatureFlags.monthlyReview
-                           ? "One thing to try each week, and your month in review." : "Three things to try, every Monday.",
+        UpgradeFeature(title: String(localized: "Weekly coach"), body: FeatureFlags.monthlyReview
+                           ? String(localized: "One thing to try each week, and your month in review.") : String(localized: "Three things to try, every Monday."),
                        symbol: "chart.bar", ai: true, shipped: FeatureFlags.coach),
-        UpgradeFeature(title: "Ask", body: "Questions about your focus, answered on this Mac.",
+        UpgradeFeature(title: String(localized: "Ask", comment: "The name of the Ask feature: questions about your focus"), body: String(localized: "Questions about your focus, answered on this Mac."),
                        symbol: "questionmark.bubble", ai: true, shipped: FeatureFlags.ask),
-        UpgradeFeature(title: "Daily limits for any site", body: "Free keeps one.", symbol: "hourglass"),
-        UpgradeFeature(title: "All your history", body: "Reports for every week you have tracked.",
+        UpgradeFeature(title: String(localized: "Daily limits for any site"), body: String(localized: "Free keeps one."), symbol: "hourglass"),
+        UpgradeFeature(title: String(localized: "All your history"), body: String(localized: "Reports for every week you have tracked."),
                        symbol: "clock.arrow.circlepath"),
     ]
 

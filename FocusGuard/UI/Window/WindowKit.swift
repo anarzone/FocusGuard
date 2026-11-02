@@ -88,14 +88,15 @@ enum WindowFormat {
     static func hm(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds)) / 60
         let h = total / 60, m = total % 60
-        if h == 0 { return "\(m)m" }
-        if m == 0 { return "\(h)h" }
-        return "\(h)h " + String(format: "%02dm", m)
+        if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+        if m == 0 { return String(localized: "\(h)h", comment: "Compact duration") }
+        let padded = String(format: "%02d", m)
+        return String(localized: "\(h)h \(padded)m", comment: "Compact duration, minutes with two digits: 4h 05m")
     }
 
     /// "41 min".
     static func minutes(_ seconds: TimeInterval) -> String {
-        "\(Int(max(0, seconds)) / 60) min"
+        String(localized: "\(Int(max(0, seconds)) / 60) min", comment: "Compact minutes")
     }
 
     /// "18:40", in the user's own clock style.
@@ -113,27 +114,26 @@ enum WindowFormat {
     static func percentChange(_ now: TimeInterval, _ before: TimeInterval) -> String? {
         guard before >= 60 else { return nil }
         let pct = Int(((now - before) / before * 100).rounded())
-        return "\(pct >= 0 ? "+" : "−")\(abs(pct))%"
+        let sign = pct >= 0 ? "+" : "−"
+        return String(localized: "\(sign)\(abs(pct))%", comment: "Percentage change: +12%")
     }
 
     /// "+2 pts", "−3 pts", "same".
     static func pointsChange(_ now: Double, _ before: Double) -> String {
         let pts = Int(((now - before) * 100).rounded())
-        if pts == 0 { return "same" }
-        return "\(pts > 0 ? "+" : "−")\(abs(pts)) pts"
+        if pts == 0 { return String(localized: "same", comment: "No change from the period before") }
+        let sign = pts > 0 ? "+" : "−"
+        return String(localized: "\(sign)\(abs(pts)) pts", comment: "Change in percentage points: +2 pts")
     }
 
     /// "+25m", "−8m", "new" for a distraction against the period before.
     static func minutesChange(_ now: TimeInterval, _ before: TimeInterval?) -> String {
-        guard let before, before >= 60 else { return "new" }
+        guard let before, before >= 60 else {
+            return String(localized: "new", comment: "A distraction that wasn't there in the period before")
+        }
         let delta = Int(((now - before) / 60).rounded())
-        if delta == 0 { return "same" }
+        if delta == 0 { return String(localized: "same", comment: "No change from the period before") }
         return "\(delta > 0 ? "+" : "−")\(hm(TimeInterval(abs(delta) * 60)))"
-    }
-
-    /// "1 day", "3 days".
-    static func count(_ n: Int, _ noun: String, plural: String? = nil) -> String {
-        "\(n) \(n == 1 ? noun : plural ?? noun + "s")"
     }
 }
 
@@ -259,10 +259,28 @@ struct HeaderCapsuleBackground: View {
 
 /// ‹ › stepper for days, weeks and months. `offset` counts back from now.
 struct PeriodStepper: View {
+    enum Unit { case day, week, month }
+
     @Binding var offset: Int
-    let unit: String
+    let unit: Unit
     /// How far back it may go; nil for no limit.
     var maxOffset: Int?
+
+    private var previous: String {
+        switch unit {
+        case .day:   return String(localized: "Previous day")
+        case .week:  return String(localized: "Previous week")
+        case .month: return String(localized: "Previous month")
+        }
+    }
+
+    private var next: String {
+        switch unit {
+        case .day:   return String(localized: "Next day")
+        case .week:  return String(localized: "Next week")
+        case .month: return String(localized: "Next month")
+        }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -270,15 +288,15 @@ struct PeriodStepper: View {
                 Image(systemName: "chevron.left").frame(width: 34, height: 32).contentShape(Rectangle())
             }
             .disabled(maxOffset.map { offset >= $0 } ?? false)
-            .help("Previous \(unit)")
-            .accessibilityLabel("Previous \(unit)")
+            .help(previous)
+            .accessibilityLabel(previous)
             Rectangle().fill(Theme.headerControlStroke).frame(width: 0.5, height: 16)
             Button { offset = max(0, offset - 1) } label: {
                 Image(systemName: "chevron.right").frame(width: 34, height: 32).contentShape(Rectangle())
             }
             .disabled(offset == 0)
-            .help("Next \(unit)")
-            .accessibilityLabel("Next \(unit)")
+            .help(next)
+            .accessibilityLabel(next)
         }
         .buttonStyle(.plain)
         .font(.system(size: 11, weight: .semibold))

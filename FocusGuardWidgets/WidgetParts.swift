@@ -126,7 +126,9 @@ struct WeekBars: View {
 
     private var letters: [String] {
         let calendar = Calendar.current
-        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        // Azerbaijani's narrowest day names are the digits 1 to 7.
+        let narrow = calendar.veryShortStandaloneWeekdaySymbols
+        let symbols = narrow.contains { $0.first?.isNumber == true } ? calendar.shortStandaloneWeekdaySymbols : narrow
         return (0..<7).map { symbols[(calendar.firstWeekday - 1 + $0) % 7] }
     }
 
@@ -190,7 +192,8 @@ struct WeekBars: View {
             let value = week.focused.indices.contains(day) ? week.focused[day] : 0
             return "\(name) \(SurfaceWords.duration(value))"
         }
-        return "Focus per day this week, against a \(SurfaceWords.duration(goal)) goal: " + days.joined(separator: ", ")
+        return String(localized: "Focus per day this week, against a \(SurfaceWords.duration(goal)) goal: \(days.joined(separator: ", "))",
+                      comment: "VoiceOver. The end is a list of weekdays with their focused time")
     }
 }
 

@@ -62,13 +62,18 @@ enum HabitFormat {
         switch items.count {
         case 0: return ""
         case 1: return items[0]
-        default: return items.dropLast().joined(separator: ", ") + " and " + (items.last ?? "")
+        default:
+            let head = items.dropLast().joined(separator: ", ")
+            let last = items.last ?? ""
+            return String(localized: "\(head) and \(last)", comment: "The end of a list; the first item is everything before the last, joined by commas: \"10:00, 14:00 and 17:30\"")
         }
     }
 
     /// "20 minutes" under an hour, "1h 20m" from there.
     static func amount(minutes: Int) -> String {
-        minutes < 60 ? NotificationPresenter.plural(minutes, "minute") : FocusGoal.format(minutes: minutes)
+        minutes < 60
+            ? String(localized: "\(minutes) minutes", comment: "Plural on minutes: 1 minute / 20 minutes")
+            : FocusGoal.format(minutes: minutes)
     }
 
     /// "yyyy-MM-dd" for the day `date` falls on, to remember what was sent when.

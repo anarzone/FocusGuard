@@ -56,16 +56,6 @@ final class AuditFixesTests: XCTestCase {
         XCTAssertTrue(Motion.isReduced(system: false, app: true))
     }
 
-    // MARK: - Plurals
-
-    func test_counted_usesSingularForOne() {
-        XCTAssertEqual(counted(1, "day"), "1 day")
-        XCTAssertEqual(counted(0, "day"), "0 days")
-        XCTAssertEqual(counted(3, "minute"), "3 minutes")
-        XCTAssertEqual(counted(1, "activity event"), "1 activity event")
-        XCTAssertEqual(counted(2, "child", plural: "children"), "2 children")
-    }
-
     // MARK: - Back to work
 
     func test_backToWork_returnsToTheLastFocusApp() {

@@ -14,7 +14,7 @@ enum DataExporter {
     @MainActor
     static func export(_ format: Format, container: ModelContainer, from: Date? = nil, to: Date? = nil) {
         let panel = NSSavePanel()
-        panel.title = "Export FocusGuard data"
+        panel.title = String(localized: "Export FocusGuard data")
         panel.nameFieldStringValue = defaultFilename(for: format, from: from, to: to)
         panel.allowedContentTypes = [format == .json ? .json : .commaSeparatedText]
         panel.canCreateDirectories = true
@@ -48,7 +48,7 @@ enum DataExporter {
             }
         } catch {
             let alert = NSAlert()
-            alert.messageText = "Export failed"
+            alert.messageText = String(localized: "Export failed")
             alert.informativeText = error.localizedDescription
             alert.alertStyle = .warning
             alert.runModal()

@@ -13,14 +13,13 @@ struct LimitCopy: Equatable {
     /// When it opens again: the start of tomorrow.
     let reopensAt: Date
 
-    var headline: String { "That's your \(name) time for today." }
-
-    private var reopens: String { "It opens again tomorrow at \(MomentText.time(reopensAt))." }
+    var headline: String { String(localized: "That's your \(name) time for today.") }
 
     var subtitle: String {
-        if !extraTime.isOffered { return "\(preset.title) is on, so there's no extra time. \(reopens)" }
-        if extraLeft == 0 { return "You've had today's extra time. \(reopens)" }
-        return "\(reopens) Everything else works as usual."
+        let time = MomentText.time(reopensAt)
+        if !extraTime.isOffered { return String(localized: "\(preset.title) is on, so there's no extra time. It opens again tomorrow at \(time).") }
+        if extraLeft == 0 { return String(localized: "You've had today's extra time. It opens again tomorrow at \(time).") }
+        return String(localized: "It opens again tomorrow at \(time). Everything else works as usual.")
     }
 
     var offersExtraTime: Bool { extraTime.isOffered && extraLeft > 0 }
@@ -29,22 +28,30 @@ struct LimitCopy: Equatable {
     var note: String? {
         if !extraTime.isOffered {
             return preset.overridePolicy.limitChangesWaitForTomorrow
-                ? "Want a different limit? In \(preset.title) you can change it for tomorrow." : nil
+                ? String(localized: "Want a different limit? In \(preset.title) you can change it for tomorrow.") : nil
         }
         guard extraLeft > 0 else { return nil }
-        let wait = extraTime.waitSeconds > 0 ? ", after a \(extraTime.waitSeconds)-second wait" : ""
+        let waits = extraTime.waitSeconds > 0
         if extraTime.timesPerDay == 1 {
-            return "\(preset.title) gives one extra \(extraTime.minutes) minutes a day\(wait)."
+            return waits
+                ? String(localized: "\(preset.title) gives one extra \(extraTime.minutes) minutes a day, after a \(extraTime.waitSeconds)-second wait.")
+                : String(localized: "\(preset.title) gives one extra \(extraTime.minutes) minutes a day.")
         }
-        return "\(preset.title) gives an extra \(extraTime.minutes) minutes up to \(extraTime.timesPerDay) times a day\(wait). "
-            + "\(extraLeft) left today."
+        return waits
+            ? String(localized: "\(preset.title) gives an extra \(extraTime.minutes) minutes up to \(extraTime.timesPerDay) times a day, after a \(extraTime.waitSeconds)-second wait. \(extraLeft) left today.",
+                     comment: "The last number counts the extra-time grants left")
+            : String(localized: "\(preset.title) gives an extra \(extraTime.minutes) minutes up to \(extraTime.timesPerDay) times a day. \(extraLeft) left today.",
+                     comment: "The last number counts the extra-time grants left")
     }
 
     var footer: String {
-        "\(preset.title) · \(name), \(MomentText.counted(minutesADay, "minute")) a day · resets at \(MomentText.time(reopensAt)) ·"
+        String(localized: "\(preset.title) · \(name), \(minutesADay) minutes a day · resets at \(MomentText.time(reopensAt)) ·",
+               comment: "Plural on minutesADay: 1 minute / 2 minutes")
     }
 
-    var editLink: String { preset.overridePolicy.limitChangesWaitForTomorrow ? "Change for tomorrow" : "Edit limit" }
+    var editLink: String {
+        preset.overridePolicy.limitChangesWaitForTomorrow ? String(localized: "Change for tomorrow") : String(localized: "Edit limit")
+    }
 }
 
 /// Full-screen pause when a daily limit runs out, in sessions and out. The
@@ -77,7 +84,7 @@ struct LimitOverlayView: View {
             VStack(spacing: 0) {
                 limitRing(used: status?.used)
 
-                MomentPlacePill(request: message.request, status: "Daily limit reached")
+                MomentPlacePill(request: message.request, status: String(localized: "Daily limit reached"))
                     .padding(.top, 26)
 
                 Text(copy.headline)
@@ -95,7 +102,8 @@ struct LimitOverlayView: View {
                     .padding(.horizontal, 40)
 
                 HStack(spacing: 12) {
-                    Button(message.host.map { "Close \($0)" } ?? message.backToAppName().map { "Back to \($0)" } ?? "Back to work",
+                    Button(message.host.map { String(localized: "Close \($0)", comment: "Button that leaves a site: Close youtube.com") }
+                           ?? message.backToAppName().map { String(localized: "Back to \($0)") } ?? String(localized: "Back to work"),
                            action: message.onBackToWork)
                         .buttonStyle(MomentButtonStyle(kind: .primary))
                         .keyboardShortcut(.cancelAction)
@@ -112,7 +120,7 @@ struct LimitOverlayView: View {
                     }
 
                     if copy.offersExtraTime {
-                        MomentWaitingButton(title: "\(limit.extraTime.minutes) more minutes", secondsLeft: extraLeft,
+                        MomentWaitingButton(title: String(localized: "\(limit.extraTime.minutes) more minutes"), secondsLeft: extraLeft,
                                       wait: limit.extraTime.waitSeconds, action: message.onExtraTime)
                             .keyboardShortcut(.defaultAction)
                     }
@@ -149,7 +157,7 @@ struct LimitOverlayView: View {
                 .stroke(Theme.distraction, style: StrokeStyle(lineWidth: 12, lineCap: .butt))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 2) {
-                Text("\(limit.minutesToday) min")
+                Text("\(limit.minutesToday) min", comment: "Compact minutes")
                     .font(.system(size: 34, weight: .semibold).monospacedDigit())
                     .kerning(-0.7)
                     .foregroundStyle(Theme.primaryText)

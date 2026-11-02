@@ -13,10 +13,14 @@
 
      Fields: id, host, url, state (paused | queued | over | limit), ends and
      start (Unix seconds), back (the app "Back to …" returns to), label (the
-     session's name), minutes (a daily limit's length). The "over" state can
-     also carry name, auto (1 for an automatic name), end, focus, drift and
-     other (minutes) and rate (the focus rate in percent). Every field but id
-     can be missing; the page says less then. -->
+     session's name), minutes (a daily limit's length), lang (the app's
+     language when it isn't English). The "over" state can also carry name,
+     auto (1 for an automatic name), end, focus, drift and other (minutes)
+     and rate (the focus rate in percent). Every field but id can be missing;
+     the page says less then.
+
+     The page's words are in STRINGS below, not in the app's string catalog,
+     and scripts/check-translations.py checks them too. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
 <style>
   :root {
@@ -170,7 +174,7 @@
   </div>
   <div class="chip" id="saved" hidden>
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>
-    <span>Saved for later</span><span class="where" id="saved-where"></span>
+    <span id="saved-label"></span><span class="where" id="saved-where"></span>
   </div>
   <div class="legend" id="legend" hidden>
     <div id="focused"><span class="dot" style="background: var(--accent)"></span><span class="what"></span></div>
@@ -187,6 +191,163 @@
 <script>
 (function () {
   "use strict";
+
+  // Whole sentences with {named} values, since word order differs. "minute"
+  // and "minutes" are the only plural: Azerbaijani has one form.
+  var STRINGS = {
+    en: {
+      savedForLater: "Saved for later",
+      thisSite: "This site",
+      backTo: "Back to {app}",
+      backToWork: "Back to work",
+      minute: "{n} minute",
+      minutes: "{n} minutes",
+      queuedTitleAt: "{host} reopens at {time}",
+      queuedTitle: "{host} reopens when your session ends",
+      queuedBodyNamed: "Right here in this tab, when {label} ends.",
+      queuedBody: "Right here in this tab, when your session ends.",
+      queuedBodyNamedLeft: "Right here in this tab, when {label} ends. {left} to go.",
+      queuedBodyLeft: "Right here in this tab, when your session ends. {left} to go.",
+      dontReopen: "Don’t reopen it",
+      footerPro: "Paused by FocusGuard. With Pro, distracting pages don’t load at all.",
+      sessionCompleteAt: "Session complete · {from}–{to}",
+      sessionComplete: "Session complete",
+      overTitleAuto: "That was a {name}",
+      overTitleNamed: "{name} is done",
+      overBodyRate: "{total}, {rate}% focused. {host} is still paused.",
+      overBodyTotal: "{total}. {host} is still paused.",
+      overBodyPlain: "{host} is still paused.",
+      overTitle: "Your session is over",
+      overBody: "{host} is still paused. Take a break first, or open it now.",
+      focused: "Focused {n} min",
+      drifted: "Drifted {n} min",
+      other: "Other {n} min",
+      takeBreak: "Take a 10-minute break",
+      reopen: "Reopen {host}",
+      overFooter: "The tab is yours again. FocusGuard only pauses tabs during a session.",
+      limitTitle: "{host} is paused for today",
+      limitBodyUsed: "You’ve used your {limit}. It opens again at midnight.",
+      limitBody: "It opens again at midnight.",
+      limitFooter: "Paused by FocusGuard. Daily limits reset at midnight.",
+      pausedTitle: "{host} is paused while you focus",
+      pausedLeftNamed: "{label} has {left} left.",
+      pausedLeft: "Your session has {left} left.",
+      pausedEndingNamed: "{label} is ending.",
+      pausedEnding: "Your session is ending.",
+      pausedHereNamed: "It’s here when {label} ends.",
+      pausedHere: "It’s here when your session ends.",
+      ends: "ends {time}",
+      progressLabel: "Session {from} to {to}",
+      note: "The address is kept, so {address} comes back where you left it.",
+      reopenAfter: "Reopen after the session",
+      titleOver: "Session complete · FocusGuard",
+      titlePaused: "Paused · FocusGuard"
+    },
+    de: {
+      savedForLater: "Für später gespeichert",
+      thisSite: "Diese Website",
+      backTo: "Zurück zu {app}",
+      backToWork: "Zurück zur Arbeit",
+      minute: "{n} Minute",
+      minutes: "{n} Minuten",
+      queuedTitleAt: "{host} öffnet sich um {time} wieder",
+      queuedTitle: "{host} öffnet sich wieder, wenn deine Session endet",
+      queuedBodyNamed: "Genau hier in diesem Tab, wenn „{label}“ endet.",
+      queuedBody: "Genau hier in diesem Tab, wenn deine Session endet.",
+      queuedBodyNamedLeft: "Genau hier in diesem Tab, wenn „{label}“ endet. Noch {left}.",
+      queuedBodyLeft: "Genau hier in diesem Tab, wenn deine Session endet. Noch {left}.",
+      dontReopen: "Nicht wieder öffnen",
+      footerPro: "Von FocusGuard pausiert. Mit Pro laden ablenkende Seiten gar nicht erst.",
+      sessionCompleteAt: "Session beendet · {from}–{to}",
+      sessionComplete: "Session beendet",
+      overTitleAuto: "Das war: {name}",
+      overTitleNamed: "„{name}“ ist beendet",
+      overBodyRate: "{total}, {rate} % fokussiert. {host} ist weiter pausiert.",
+      overBodyTotal: "{total}. {host} ist weiter pausiert.",
+      overBodyPlain: "{host} ist weiter pausiert.",
+      overTitle: "Deine Session ist vorbei",
+      overBody: "{host} ist weiter pausiert. Mach erst eine Pause oder öffne die Website jetzt.",
+      focused: "Fokussiert {n} Min",
+      drifted: "Abgeschweift {n} Min",
+      other: "Sonstiges {n} Min",
+      takeBreak: "10 Minuten Pause machen",
+      reopen: "{host} wieder öffnen",
+      overFooter: "Der Tab gehört wieder dir. FocusGuard pausiert Tabs nur während einer Session.",
+      limitTitle: "{host} ist für heute pausiert",
+      limitBodyUsed: "Du hast deine {limit} aufgebraucht. Um Mitternacht öffnet sich die Website wieder.",
+      limitBody: "Um Mitternacht öffnet sich die Website wieder.",
+      limitFooter: "Von FocusGuard pausiert. Tageslimits werden um Mitternacht zurückgesetzt.",
+      pausedTitle: "{host} ist pausiert, solange du dich fokussierst",
+      pausedLeftNamed: "„{label}“ läuft noch {left}.",
+      pausedLeft: "Deine Session läuft noch {left}.",
+      pausedEndingNamed: "„{label}“ endet gerade.",
+      pausedEnding: "Deine Session endet gerade.",
+      pausedHereNamed: "Die Seite ist wieder da, wenn „{label}“ endet.",
+      pausedHere: "Die Seite ist wieder da, wenn deine Session endet.",
+      ends: "endet um {time}",
+      progressLabel: "Session von {from} bis {to}",
+      note: "Die Adresse bleibt gespeichert, {address} kommt also dort zurück, wo du aufgehört hast.",
+      reopenAfter: "Nach der Session wieder öffnen",
+      titleOver: "Session beendet · FocusGuard",
+      titlePaused: "Pausiert · FocusGuard"
+    },
+    az: {
+      savedForLater: "Sonraya saxlanıldı",
+      thisSite: "Bu sayt",
+      backTo: "{app} tətbiqinə qayıt",
+      backToWork: "İşə qayıt",
+      minute: "{n} dəqiqə",
+      minutes: "{n} dəqiqə",
+      queuedTitleAt: "{host} saytı {time} saatında yenidən açılacaq",
+      queuedTitle: "{host} saytı sessiyanız bitəndə yenidən açılacaq",
+      queuedBodyNamed: "Elə bu tabda, “{label}” bitəndə.",
+      queuedBody: "Elə bu tabda, sessiyanız bitəndə.",
+      queuedBodyNamedLeft: "Elə bu tabda, “{label}” bitəndə. {left} qalıb.",
+      queuedBodyLeft: "Elə bu tabda, sessiyanız bitəndə. {left} qalıb.",
+      dontReopen: "Yenidən açılmasın",
+      footerPro: "FocusGuard tərəfindən dayandırılıb. Pro ilə yayındıran səhifələr ümumiyyətlə açılmır.",
+      sessionCompleteAt: "Sessiya bitdi · {from}–{to}",
+      sessionComplete: "Sessiya bitdi",
+      overTitleAuto: "Bitdi: {name}",
+      overTitleNamed: "“{name}” bitdi",
+      overBodyRate: "{total}, {rate}% fokusda. {host} saytı hələ də dayandırılıb.",
+      overBodyTotal: "{total}. {host} saytı hələ də dayandırılıb.",
+      overBodyPlain: "{host} saytı hələ də dayandırılıb.",
+      overTitle: "Sessiyanız bitdi",
+      overBody: "{host} saytı hələ də dayandırılıb. Əvvəlcə fasilə verin və ya indi açın.",
+      focused: "Fokusda {n} dəq",
+      drifted: "Yayınma {n} dəq",
+      other: "Digər {n} dəq",
+      takeBreak: "10 dəqiqə fasilə ver",
+      reopen: "{host} saytını yenidən aç",
+      overFooter: "Tab yenidən sizindir. FocusGuard tabları yalnız sessiya zamanı dayandırır.",
+      limitTitle: "{host} saytı bu gün üçün dayandırılıb",
+      limitBodyUsed: "{limit} limitinizi işlətmisiniz. Gecə yarısı yenidən açılacaq.",
+      limitBody: "Gecə yarısı yenidən açılacaq.",
+      limitFooter: "FocusGuard tərəfindən dayandırılıb. Gündəlik limitlər gecə yarısı sıfırlanır.",
+      pausedTitle: "Siz fokusda olanda {host} saytı dayandırılır",
+      pausedLeftNamed: "“{label}” bitməsinə {left} qalıb.",
+      pausedLeft: "Sessiyanızın bitməsinə {left} qalıb.",
+      pausedEndingNamed: "“{label}” bitir.",
+      pausedEnding: "Sessiyanız bitir.",
+      pausedHereNamed: "“{label}” bitəndə burada olacaq.",
+      pausedHere: "Sessiyanız bitəndə burada olacaq.",
+      ends: "bitir: {time}",
+      progressLabel: "Sessiya: {from}–{to}",
+      note: "Ünvan saxlanılır, ona görə də {address} qaldığınız yerdən açılacaq.",
+      reopenAfter: "Sessiyadan sonra yenidən aç",
+      titleOver: "Sessiya bitdi · FocusGuard",
+      titlePaused: "Dayandırılıb · FocusGuard"
+    }
+  };
+
+  var language = STRINGS.en;
+
+  function t(key, values) {
+    return (language[key] || STRINGS.en[key]).replace(/\{(\w+)\}/g, function (all, name) {
+      return values && values[name] !== undefined ? values[name] : all;
+    });
+  }
 
   function params() {
     var out = {};
@@ -236,10 +397,11 @@
   }
 
   function time(seconds) {
-    return new Date(seconds * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    var locales = language === STRINGS.en ? [] : [document.documentElement.lang];
+    return new Date(seconds * 1000).toLocaleTimeString(locales, { hour: "numeric", minute: "2-digit" });
   }
 
-  function minutes(n) { return n + (n === 1 ? " minute" : " minutes"); }
+  function minutes(n) { return t(n === 1 ? "minute" : "minutes", { n: n }); }
 
   /** Fills the shield from the bottom: 0 empty, 1 full. */
   function fillShield(share) {
@@ -247,18 +409,22 @@
     $("shield-fill").setAttribute("y", String(1.6 + (1 - s) * 12.8));
   }
 
-  function legend(id, label, value) {
+  function legend(id, key, value) {
     var el = $(id);
     el.hidden = !(value > 0);
-    el.querySelector(".what").textContent = label + " " + value + " min";
+    el.querySelector(".what").textContent = t(key, { n: value });
   }
 
   var timer = null;
 
   function render() {
     var p = params();
-    var host = p.host || "This site";
-    var back = p.back ? "Back to " + p.back : "Back to work";
+    if (Object.prototype.hasOwnProperty.call(STRINGS, p.lang)) {
+      language = STRINGS[p.lang];
+      document.documentElement.lang = p.lang;
+    }
+    var host = p.host || t("thisSite");
+    var back = p.back ? t("backTo", { app: p.back }) : t("backToWork");
     var label = p.label || "";
     var ends = Number(p.ends) || 0;
     var start = Number(p.start) || 0;
@@ -276,65 +442,71 @@
     var minutesLeft = left !== null ? Math.max(0, Math.ceil(left / 60)) : null;
 
     if (state === "queued") {
-      title = ends ? host + " reopens at " + time(ends) : host + " reopens when your session ends";
-      body = "Right here in this tab, when " + (label || "your session") + " ends." +
-        (minutesLeft ? " " + minutes(minutesLeft) + " to go." : "");
+      title = ends ? t("queuedTitleAt", { host: host, time: time(ends) }) : t("queuedTitle", { host: host });
+      if (minutesLeft) {
+        body = t(label ? "queuedBodyNamedLeft" : "queuedBodyLeft", { label: label, left: minutes(minutesLeft) });
+      } else {
+        body = t(label ? "queuedBodyNamed" : "queuedBody", { label: label });
+      }
       showSaved = !!address;
       setButton($("primary"), back, app("back"));
-      setButton($("secondary"), "Don’t reopen it", app("tab/keep-paused", p.id));
-      footer = "Paused by FocusGuard. With Pro, distracting pages don’t load at all.";
+      setButton($("secondary"), t("dontReopen"), app("tab/keep-paused", p.id));
+      footer = t("footerPro");
       pro = true;
     } else if (state === "over") {
       complete = true;
       var end = Number(p.end) || 0;
       var focus = Number(p.focus) || 0, drift = Number(p.drift) || 0, other = Number(p.other) || 0;
       var total = focus + drift + other;
-      eyebrow = start && end ? "Session complete · " + time(start) + "–" + time(end) : "Session complete";
+      eyebrow = start && end ? t("sessionCompleteAt", { from: time(start), to: time(end) }) : t("sessionComplete");
       if (p.name) {
-        title = p.auto === "1" ? "That was a " + p.name : p.name + " is done";
-        body = total ? minutes(total) + (p.rate ? ", " + p.rate + "% focused." : ".") : "";
-        body += (body ? " " : "") + host + " is still paused.";
+        title = t(p.auto === "1" ? "overTitleAuto" : "overTitleNamed", { name: p.name });
+        if (total) {
+          body = t(p.rate ? "overBodyRate" : "overBodyTotal", { total: minutes(total), rate: p.rate, host: host });
+        } else {
+          body = t("overBodyPlain", { host: host });
+        }
       } else {
-        title = "Your session is over";
-        body = host + " is still paused. Take a break first, or open it now.";
+        title = t("overTitle");
+        body = t("overBody", { host: host });
       }
       showLegend = total > 0;
       if (showLegend) {
-        legend("focused", "Focused", focus);
-        legend("drifted", "Drifted", drift);
-        legend("other", "Other", other);
+        legend("focused", "focused", focus);
+        legend("drifted", "drifted", drift);
+        legend("other", "other", other);
       }
-      setButton($("primary"), "Take a 10-minute break", "focusguard://break?minutes=10");
+      setButton($("primary"), t("takeBreak"), "focusguard://break?minutes=10");
       var reopen = safeWebURL(p.url);
-      setButton($("secondary"), reopen ? "Reopen " + host : null, reopen);
-      footer = "The tab is yours again. FocusGuard only pauses tabs during a session.";
+      setButton($("secondary"), reopen ? t("reopen", { host: host }) : null, reopen);
+      footer = t("overFooter");
     } else if (state === "limit") {
-      title = host + " is paused for today";
+      title = t("limitTitle", { host: host });
       var limit = Number(p.minutes) || 0;
-      body = (limit ? "You’ve used your " + minutes(limit) + ". " : "") + "It opens again at midnight.";
+      body = limit ? t("limitBodyUsed", { limit: minutes(limit) }) : t("limitBody");
       setButton($("primary"), back, app("back"));
       setButton($("secondary"), null, null);
-      footer = "Paused by FocusGuard. Daily limits reset at midnight.";
+      footer = t("limitFooter");
     } else {
-      title = host + " is paused while you focus";
+      title = t("pausedTitle", { host: host });
       if (minutesLeft !== null) {
         body = minutesLeft > 0
-          ? (label || "Your session") + " has " + minutes(minutesLeft) + " left."
-          : (label || "Your session") + " is ending.";
+          ? t(label ? "pausedLeftNamed" : "pausedLeft", { label: label, left: minutes(minutesLeft) })
+          : t(label ? "pausedEndingNamed" : "pausedEnding", { label: label });
       } else {
-        body = "It’s here when " + (label || "your session") + " ends.";
+        body = t(label ? "pausedHereNamed" : "pausedHere", { label: label });
       }
       showProgress = running !== null;
       if (showProgress) {
         $("bar").style.width = Math.round(Math.max(0, Math.min(1, running)) * 100) + "%";
         $("from").textContent = time(start);
-        $("to").textContent = "ends " + time(ends);
-        $("progress").setAttribute("aria-label", "Session " + time(start) + " to " + time(ends));
+        $("to").textContent = t("ends", { time: time(ends) });
+        $("progress").setAttribute("aria-label", t("progressLabel", { from: time(start), to: time(ends) }));
       }
-      note = address ? "The address is kept, so " + address + " comes back where you left it." : "";
+      note = address ? t("note", { address: address }) : "";
       setButton($("primary"), back, app("back"));
-      setButton($("secondary"), "Reopen after the session", app("tab/reopen-later", p.id));
-      footer = "Paused by FocusGuard. With Pro, distracting pages don’t load at all.";
+      setButton($("secondary"), t("reopenAfter"), app("tab/reopen-later", p.id));
+      footer = t("footerPro");
       pro = true;
     }
 
@@ -342,19 +514,20 @@
     fillShield(complete ? 1 : (state === "paused" || state === "queued") && running !== null ? running : 0);
     // An SVG element has no .hidden property; set the attribute itself.
     $("shield-check").toggleAttribute("hidden", !complete);
-    $("shield").setAttribute("aria-label", complete ? "Session complete" : "FocusGuard");
+    $("shield").setAttribute("aria-label", complete ? t("sessionComplete") : "FocusGuard");
 
     setText($("eyebrow"), eyebrow);
     $("title").textContent = title;
     setText($("body"), body);
     $("progress").hidden = !showProgress;
     $("saved").hidden = !showSaved;
+    $("saved-label").textContent = t("savedForLater");
     $("saved-where").textContent = address || "";
     $("legend").hidden = !showLegend;
     setText($("note"), note);
     $("footer-text").textContent = footer;
     $("footer-pro").hidden = !pro;
-    document.title = state === "over" ? "Session complete · FocusGuard" : "Paused · FocusGuard";
+    document.title = t(state === "over" ? "titleOver" : "titlePaused");
 
     clearTimeout(timer);
     if (ends && state !== "over") timer = setTimeout(render, 1000);

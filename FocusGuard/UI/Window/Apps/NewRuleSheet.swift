@@ -61,7 +61,10 @@ struct NewRuleSheet: View {
     }
 
     private static let kinds: [(RuleMatchKind, String)] = [
-        (.bundleId, "App"), (.host, "Site"), (.urlPrefix, "Part of a site"), (.titleRegex, "Window title"),
+        (.bundleId, String(localized: "App", comment: "An application, as opposed to a website")),
+        (.host, String(localized: "Site", comment: "A website, as opposed to an app")),
+        (.urlPrefix, String(localized: "Part of a site")),
+        (.titleRegex, String(localized: "Window title")),
     ]
 
     private var canLimit: Bool { kind == .bundleId || kind == .host }
@@ -75,7 +78,7 @@ struct NewRuleSheet: View {
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 6) {
-                label("Match")
+                label(String(localized: "Match", comment: "Noun: what kind of thing a rule matches"))
                 Picker("Match", selection: $kind) {
                     ForEach(Self.kinds, id: \.0) { Text($0.1).tag($0.0) }
                 }
@@ -106,7 +109,7 @@ struct NewRuleSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                label("Counts as")
+                label(String(localized: "Counts as"))
                 HStack(spacing: 8) {
                     ForEach([Classification.focus, .neutral, .distraction], id: \.self) { c in
                         countsAs(c)
@@ -118,7 +121,7 @@ struct NewRuleSheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 1) {
-                            label("Daily limit")
+                            label(String(localized: "Daily limit"))
                             Text(limitAllowed ? "Allow a little each day, then pause it" : "Free keeps one daily limit; this would be another, a Pro feature")
                                 .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                         }
@@ -130,8 +133,8 @@ struct NewRuleSheet: View {
                             .disabled(!limitAllowed)
                     }
                     if !limitAllowed && appState.sessionManager.currentSession == nil {
-                        LockedProRow(feature: .unlimitedLimits, title: "Daily limits for any site",
-                                     detail: "Pro sets a daily limit for every app and site.",
+                        LockedProRow(feature: .unlimitedLimits, title: String(localized: "Daily limits for any site"),
+                                     detail: String(localized: "Pro sets a daily limit for every app and site."),
                                      systemImage: "hourglass",
                                      onTrialStarted: { withLimit = true })
                     }
@@ -196,10 +199,10 @@ struct NewRuleSheet: View {
 
     private var fieldTitle: String {
         switch kind {
-        case .bundleId:   return "App"
-        case .host:       return "Site"
-        case .urlPrefix:  return "Address starts with"
-        case .titleRegex: return "Window title contains"
+        case .bundleId:   return String(localized: "App", comment: "An application, as opposed to a website")
+        case .host:       return String(localized: "Site", comment: "A website, as opposed to an app")
+        case .urlPrefix:  return String(localized: "Address starts with")
+        case .titleRegex: return String(localized: "Window title contains")
         }
     }
 
@@ -207,7 +210,7 @@ struct NewRuleSheet: View {
         switch kind {
         case .host:       return "x.com"
         case .urlPrefix:  return "youtube.com/shorts"
-        case .titleRegex: return "PR #"
+        case .titleRegex: return String(localized: "PR #", comment: "Placeholder: example text a window title might contain")
         case .bundleId:   return ""
         }
     }
@@ -215,14 +218,14 @@ struct NewRuleSheet: View {
     private var previewLine: String {
         guard let preview else {
             switch kind {
-            case .host:       return "Covers the site and its subdomains."
-            case .urlPrefix:  return "Wins over a rule for the whole site."
-            case .titleRegex: return "Any app whose window title has this text. Case doesn't matter."
-            case .bundleId:   return "Pick one you've used, or any app on this Mac."
+            case .host:       return String(localized: "Covers the site and its subdomains.")
+            case .urlPrefix:  return String(localized: "Wins over a rule for the whole site.")
+            case .titleRegex: return String(localized: "Any app whose window title has this text. Case doesn't matter.")
+            case .bundleId:   return String(localized: "Pick one you've used, or any app on this Mac.")
             }
         }
-        if preview.visits == 0 { return "No matches in the last 7 days yet." }
-        return "Matched \(WindowFormat.count(preview.visits, "visit")) in the last 7 days, \(WindowFormat.hm(preview.seconds)) in total."
+        if preview.visits == 0 { return String(localized: "No matches in the last 7 days yet.") }
+        return String(localized: "Matched \(preview.visits) visits in the last 7 days, \(WindowFormat.hm(preview.seconds)) in total.", comment: "Plural on visits: 1 visit / 2 visits")
     }
 
     private var appPicker: some View {
@@ -337,7 +340,7 @@ struct NewRuleSheet: View {
             classifier.invalidate()
         }
         guard saved else {
-            problem = "Strict keeps blocked apps and sites blocked until this session ends."
+            problem = String(localized: "Strict keeps blocked apps and sites blocked until this session ends.")
             return
         }
         onSaved()

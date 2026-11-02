@@ -20,25 +20,27 @@ enum LLMError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingCredential:
-            return "No API key is set for the selected provider."
+            return String(localized: "No API key is set for the selected provider.")
         case .badURL:
-            return "The provider endpoint URL is invalid."
+            return String(localized: "The provider endpoint URL is invalid.")
         case .http(let status, let body):
             // Give an actionable message for rate limiting rather than raw JSON.
             if status == 429 {
-                return "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again."
+                return String(localized: "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again.")
             }
             // Otherwise surface the provider's own error — usually actionable
             // (bad key, model not found). Trim so the UI stays sane.
             let detail = body.trimmingCharacters(in: .whitespacesAndNewlines)
             let snippet = detail.count > 300 ? String(detail.prefix(300)) + "…" : detail
-            return "Request failed (HTTP \(status)).\(snippet.isEmpty ? "" : " \(snippet)")"
+            return snippet.isEmpty
+                ? String(localized: "Request failed (HTTP \(status)).")
+                : String(localized: "Request failed (HTTP \(status)). \(snippet)", comment: "The last part is the provider's own error, in English")
         case .emptyResponse:
-            return "The model returned an empty response."
+            return String(localized: "The model returned an empty response.")
         case .decoding(let what):
-            return "Couldn't read the response (\(what))."
+            return String(localized: "Couldn't read the response (\(what)).", comment: "In brackets: a technical detail in English")
         case .network(let err):
-            return "Network error: \(err.localizedDescription)"
+            return String(localized: "Network error: \(err.localizedDescription)")
         }
     }
 }

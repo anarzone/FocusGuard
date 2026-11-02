@@ -481,7 +481,7 @@ final class ExtensionBridge {
         case .onBreak(let breakState):
             state.phase = .onBreak
             let after = appState.recap.map { recap in
-                recap.plannedMinutes.map { "\(recap.label) · \($0) min" } ?? recap.label
+                recap.plannedMinutes.map { String(localized: "\(recap.label) · \($0) min", comment: "A finished session and its length") } ?? recap.label
             }
             state.breakInfo = .init(
                 startedAt: BrowserProtocol.millis(breakState.startedAt),

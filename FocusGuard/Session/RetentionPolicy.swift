@@ -66,11 +66,11 @@ enum RetentionPolicy {
 
     /// Choices we expose in the Settings → Privacy picker.
     static let choices: [(label: String, days: Int)] = [
-        ("30 days", 30),
-        ("90 days", 90),
-        ("6 months", 180),
-        ("1 year", 365),
-        ("Keep all", 0),
+        (String(localized: "30 days", comment: "How long history is kept"), 30),
+        (String(localized: "90 days", comment: "How long history is kept"), 90),
+        (String(localized: "6 months", comment: "How long history is kept"), 180),
+        (String(localized: "1 year", comment: "How long history is kept"), 365),
+        (String(localized: "Keep all", comment: "How long history is kept"), 0),
     ]
 
     @MainActor

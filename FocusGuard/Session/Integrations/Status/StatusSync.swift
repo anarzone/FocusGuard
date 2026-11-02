@@ -228,9 +228,10 @@ final class StatusSync {
 
     /// The time left; open-ended, the time so far.
     nonisolated static func activity(for focus: Focus) -> DiscordIPC.Activity {
-        focus.isOpenEnded
-            ? DiscordIPC.Activity(details: "Focusing", start: focus.start)
-            : DiscordIPC.Activity(details: "Focusing", end: focus.end)
+        let details = String(localized: "Focusing", comment: "A session is running; also what Discord shows under the user's name")
+        return focus.isOpenEnded
+            ? DiscordIPC.Activity(details: details, start: focus.start)
+            : DiscordIPC.Activity(details: details, end: focus.end)
     }
 
     /// When a session started now would end, for the settings' preview.
@@ -256,7 +257,7 @@ enum StatusSettings {
     /// Discord shows "Focusing"; waits to be turned on.
     static let discord = "integrations.discord.enabled"
 
-    static let defaultText = "Focusing until {end}"
+    static let defaultText = String(localized: "Focusing until {end}", comment: "Slack status. Keep {end} as it is: it becomes the session's end time, as in 19:32")
     static let emoji = ":headphones:"
 
     static func isOn(_ key: String, _ defaults: UserDefaults = .standard) -> Bool {

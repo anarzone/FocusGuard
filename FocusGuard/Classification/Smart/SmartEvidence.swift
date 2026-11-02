@@ -127,7 +127,8 @@ enum SmartEvidenceBuilder {
     }
 
     /// "mostly 10:00 to 12:00" when two neighbouring hours hold at least
-    /// half the time; nil when it's spread out.
+    /// half the time; nil when it's spread out. In English: it goes in the
+    /// model's prompt. `shownHours` is the same phrase for the screen.
     static func busyHours(_ byHour: [TimeInterval]) -> String? {
         let total = byHour.reduce(0, +)
         guard total > 0 else { return nil }
@@ -139,6 +140,13 @@ enum SmartEvidenceBuilder {
         }
         guard bestSeconds / total >= 0.5 else { return nil }
         return String(format: "mostly %02d:00 to %02d:00", best, (best + 2) % 24)
+    }
+
+    /// `busyHours`' phrase in the person's language.
+    static func shownHours(_ hours: String) -> String {
+        guard let match = hours.wholeMatch(of: /mostly (\d\d):00 to (\d\d):00/) else { return hours }
+        let from = String(match.1), to = String(match.2)
+        return String(localized: "mostly \(from):00 to \(to):00", comment: "When an app or site is mostly used, e.g. mostly 10:00 to 12:00")
     }
 
     /// Short and tidy: no "(3)" unread count, no line breaks.

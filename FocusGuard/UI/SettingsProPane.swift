@@ -42,15 +42,15 @@ struct SettingsProPane: View {
             }
             if entitlements.plan != .pro {
                 HStack(spacing: 8) {
-                    priceOption(picked: yearly, title: "Yearly", price: ProPricing.yearly, note: "\(ProPricing.yearlyPerMonth) a month") { yearly = true }
-                    priceOption(picked: !yearly, title: "Monthly", price: ProPricing.monthly, note: "cancel any time") { yearly = false }
+                    priceOption(picked: yearly, title: String(localized: "Yearly"), price: ProPricing.yearly, note: String(localized: "\(ProPricing.yearlyPerMonth) a month")) { yearly = true }
+                    priceOption(picked: !yearly, title: String(localized: "Monthly"), price: ProPricing.monthly, note: String(localized: "cancel any time")) { yearly = false }
                 }
                 VStack(spacing: 8) {
                     if entitlements.canStartTrial {
                         Button("Try Pro free for \(Plan.trialDays) days") { openSheet(.upgrade(nil)) }
                             .buttonStyle(.capsule(.primary, height: 34, fullWidth: true))
                     } else {
-                        Button("Buy Pro, \(yearly ? "yearly" : "monthly")") { openSheet(.upgrade(nil)) }
+                        Button(yearly ? "Buy Pro, yearly" : "Buy Pro, monthly") { openSheet(.upgrade(nil)) }
                             .buttonStyle(.capsule(.primary, height: 34, fullWidth: true))
                     }
                     Button("Enter a licence key…") { openSheet(.licence) }.buttonStyle(.textLink)
@@ -76,7 +76,7 @@ struct SettingsProPane: View {
                     .stroke(Theme.focus, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 VStack(spacing: 0) {
                     Text("\(days)").font(.system(size: 18, weight: .bold).monospacedDigit())
-                    Text(days == 1 ? "day" : "days").font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
+                    Text(days == 1 ? "day" : "days", comment: "Under the number of trial days left").font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
                 }
                 .foregroundStyle(Theme.primaryText)
             } else {
@@ -87,13 +87,13 @@ struct SettingsProPane: View {
         }
         .frame(width: 60, height: 60)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(days.map { "Trial: \($0) of \(Plan.trialDays) days left" } ?? planTitle)
+        .accessibilityLabel(days.map { String(localized: "Trial: \($0) of \(Plan.trialDays) days left") } ?? planTitle)
     }
 
     private var planTitle: String {
         switch entitlements.plan {
-        case .free: return "Free"
-        case .trial: return "Pro trial"
+        case .free: return String(localized: "Free", comment: "Plan name")
+        case .trial: return String(localized: "Pro trial")
         case .pro: return "FocusGuard Pro"
         }
     }
@@ -102,12 +102,12 @@ struct SettingsProPane: View {
         switch entitlements.plan {
         case .free:
             return entitlements.canStartTrial
-                ? "Try Pro for \(Plan.trialDays) days, no card needed. It starts when you turn on a Pro feature."
-                : "Your trial has ended. Everything you tracked is still here."
+                ? String(localized: "Try Pro for \(Plan.trialDays) days, no card needed. It starts when you turn on a Pro feature.")
+                : String(localized: "Your trial has ended. Everything you tracked is still here.")
         case .trial(let endsAt):
-            return "Ends on \(endsAt.formatted(.dateTime.day().month(.wide))). No card needed, nothing renews on its own."
+            return String(localized: "Ends on \(endsAt.formatted(.dateTime.day().month(.wide))). No card needed, nothing renews on its own.")
         case .pro:
-            return "Thank you. Everything in Pro is on."
+            return String(localized: "Thank you. Everything in Pro is on.")
         }
     }
 
@@ -133,12 +133,12 @@ struct SettingsProPane: View {
     // MARK: - After the trial
 
     private var afterTrial: some View {
-        SettingsSection("If the trial ends without Pro") {
+        SettingsSection(String(localized: "If the trial ends without Pro")) {
             VStack(alignment: .leading, spacing: 8) {
-                line("Everything you tracked stays.")
-                line("Blocking goes back to Pause the tab.")
-                line("Daily limits you set stay; adding more needs Pro.")
-                line("Reports show the last \(Plan.freeHistoryDays) days. Older history waits for Pro.")
+                line(String(localized: "Everything you tracked stays."))
+                line(String(localized: "Blocking goes back to Pause the tab."))
+                line(String(localized: "Daily limits you set stay; adding more needs Pro."))
+                line(String(localized: "Reports show the last \(Plan.freeHistoryDays) days. Older history waits for Pro."))
             }
             .padding(14)
         }
@@ -154,7 +154,7 @@ struct SettingsProPane: View {
     // MARK: - Free and Pro
 
     private var comparison: some View {
-        SettingsSection("Free and Pro") {
+        SettingsSection(String(localized: "Free and Pro")) {
             HStack {
                 Text("Feature").frame(maxWidth: .infinity, alignment: .leading)
                 FreeBadge().frame(width: 72)
@@ -210,18 +210,18 @@ enum PlanComparison {
     }
 
     static let all: [Row] = [
-        Row(name: "Tracking, sessions, rings and breaks", free: .yes, pro: .yes),
-        Row(name: "Reports and highlights", free: .text("\(Plan.freeHistoryDays) days"), pro: .text("All")),
-        Row(name: "Pause the tab", free: .yes, pro: .yes),
-        Row(name: "Block in the browser, parts of sites too", free: .no, pro: .yes),
-        Row(name: "Block on the whole Mac", free: .no, pro: .text("Later")),
-        Row(name: "Smart categories, YouTube per video", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.smartCategories),
-        Row(name: "Session goals, debriefs and work log", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
-        Row(name: "Standup draft and timesheet", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
-        Row(name: "Weekly coach", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.coach),
-        Row(name: "Ask about your focus", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.ask),
-        Row(name: "Month in review", free: .no, pro: .yes, ai: true, shipped: FeatureFlags.monthlyReview),
-        Row(name: "Daily site limits", free: .text("\(Plan.freeDailyLimits)"), pro: .text("Any")),
+        Row(name: String(localized: "Tracking, sessions, rings and breaks"), free: .yes, pro: .yes),
+        Row(name: String(localized: "Reports and highlights"), free: .text(String(localized: "\(Plan.freeHistoryDays) days", comment: "Plural on n: 1 day / 2 days")), pro: .text(String(localized: "All", comment: "Plan table: all of your history"))),
+        Row(name: String(localized: "Pause the tab"), free: .yes, pro: .yes),
+        Row(name: String(localized: "Block in the browser, parts of sites too"), free: .no, pro: .yes),
+        Row(name: String(localized: "Block on the whole Mac"), free: .no, pro: .text(String(localized: "Later", comment: "Plan table: comes in a later version"))),
+        Row(name: String(localized: "Smart categories, YouTube per video"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.smartCategories),
+        Row(name: String(localized: "Session goals, debriefs and work log"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
+        Row(name: String(localized: "Standup draft and timesheet"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
+        Row(name: String(localized: "Weekly coach"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.coach),
+        Row(name: String(localized: "Ask about your focus"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.ask),
+        Row(name: String(localized: "Month in review"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.monthlyReview),
+        Row(name: String(localized: "Daily site limits"), free: .text("\(Plan.freeDailyLimits)"), pro: .text(String(localized: "Any", comment: "Plan table: as many daily limits as you like"))),
     ]
 
     static var rows: [Row] { all.filter(\.shipped) }

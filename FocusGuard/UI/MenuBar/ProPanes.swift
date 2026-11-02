@@ -77,7 +77,7 @@ struct CoachPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PaneTitle(title: "Weekly coach", close: close) { ProBadge() }
+            PaneTitle(title: String(localized: "Weekly coach"), close: close) { ProBadge() }
             if let note {
                 Text(note.weekLabel).font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                 Takeaway(text: note.headline)
@@ -98,7 +98,7 @@ struct CoachPane: View {
                     .paneCard()
                 }
             } else {
-                emptyState("No note yet", "After your first full week, the coach sums up what worked and suggests one thing to try.")
+                emptyState(String(localized: "No note yet"), String(localized: "After your first full week, the coach sums up what worked and suggests one thing to try."))
             }
             Spacer(minLength: 0)
             HStack {
@@ -121,11 +121,11 @@ struct SmartSuggestionsView: View {
 
     var body: some View {
         if !entitlements.isUnlocked(.smartCategories) {
-            LockedProRow(feature: .smartCategories, title: "Smart suggestions",
-                         detail: "Categories worked out on this Mac from how you use each app. Nothing changes until you accept.",
+            LockedProRow(feature: .smartCategories, title: String(localized: "Smart suggestions"),
+                         detail: String(localized: "Categories worked out on this Mac from how you use each app. Nothing changes until you accept."),
                          systemImage: "sparkles")
         } else if suggestions.isEmpty {
-            emptyState("No suggestions yet", "New suggestions arrive after each week of use.")
+            emptyState(String(localized: "No suggestions yet"), String(localized: "New suggestions arrive after each week of use."))
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Worked out on this Mac from how you use each one. Nothing changes until you accept.")
@@ -141,7 +141,7 @@ struct SmartSuggestionsView: View {
                             CategoryChip(classification: suggestion.suggested)
                         }
                         Text(suggestion.reason).font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
-                        Button("Make it \(categoryName(suggestion.suggested))") { onAccept(suggestion) }
+                        Button(MenuSmartView.makeItTitle(suggestion.suggested)) { onAccept(suggestion) }
                             .buttonStyle(.capsule(.secondary, height: 24))
                     }
                     .paneCard()

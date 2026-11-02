@@ -14,10 +14,10 @@ struct SettingsBlockingPane: View {
 
     var body: some View {
         SettingsColumns {
-            SettingsSection("How FocusGuard blocks") {
-                level(1, title: "Pause the tab", badge: AnyView(FreeBadge()),
-                      body: "When the pause screen shows, the tab switches to a calm FocusGuard page and any video stops.",
-                      foot: "Safari, Chrome, Arc, Brave and Edge · quicker with the free extension") {
+            SettingsSection(String(localized: "How FocusGuard blocks")) {
+                level(1, title: String(localized: "Pause the tab"), badge: AnyView(FreeBadge()),
+                      body: String(localized: "When the pause screen shows, the tab switches to a calm FocusGuard page and any video stops."),
+                      foot: String(localized: "Safari, Chrome, Arc, Brave and Edge · quicker with the free extension")) {
                     Toggle("Pause the tab", isOn: Binding(get: { pauseTab }, set: { on in
                         pauseTab = on
                         appState.tabPause.isEnabled = on
@@ -27,28 +27,28 @@ struct SettingsBlockingPane: View {
                 SettingsDivider()
                 browserLevel
                 SettingsDivider()
-                level(3, title: "Block on the whole Mac", badge: AnyView(HStack(spacing: 4) { ProBadge(); ComingLaterBadge() }),
-                      body: "Every browser and app, private windows and new browsers too. Whole sites only.",
-                      foot: "It needs a content filter signed by Apple, which comes in a later version") { EmptyView() }
+                level(3, title: String(localized: "Block on the whole Mac"), badge: AnyView(HStack(spacing: 4) { ProBadge(); ComingLaterBadge() }),
+                      body: String(localized: "Every browser and app, private windows and new browsers too. Whole sites only."),
+                      foot: String(localized: "It needs a content filter signed by Apple, which comes in a later version")) { EmptyView() }
             }
-            SettingsSection(title: "Browser extension", trailing: { FreeBadge() }) {
+            SettingsSection(title: String(localized: "Browser extension"), trailing: { FreeBadge() }) {
                 ExtensionStatusRows(appState: appState)
             }
-            SettingsNote(text: "Free: sharper tracking, and tabs pause straight away. Pro adds blocking before pages load. Adding it never starts a trial.")
+            SettingsNote(text: String(localized: "Free: sharper tracking, and tabs pause straight away. Pro adds blocking before pages load. Adding it never starts a trial."))
         } right: {
-            SettingsSection("When it blocks") {
-                SettingsRow("During focus sessions", detail: "After the pause screen appears, by your preset")
+            SettingsSection(String(localized: "When it blocks")) {
+                SettingsRow(String(localized: "During focus sessions"), detail: String(localized: "After the pause screen appears, by your preset"))
                 SettingsDivider()
-                SettingsRow("When a daily limit runs out", detail: "Any time of day, until midnight")
+                SettingsRow(String(localized: "When a daily limit runs out"), detail: String(localized: "Any time of day, until midnight"))
             }
-            SettingsSection("Letting yourself through") {
+            SettingsSection(String(localized: "Letting yourself through")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("“Let me through” follows your preset. Every pass lasts 2 minutes and counts as drift.")
                         .font(.system(size: 12)).foregroundStyle(Theme.bodyText)
                         .fixedSize(horizontal: false, vertical: true)
-                    presetLine(.gentle, "Right away")
-                    presetLine(.standard, "After a 5-second wait")
-                    presetLine(.strict, "Never. “It's for work” unlocks after 10 s")
+                    presetLine(.gentle, String(localized: "Right away"))
+                    presetLine(.standard, String(localized: "After a 5-second wait"))
+                    presetLine(.strict, String(localized: "Never. “It's for work” unlocks after 10 s"))
                     Button("Change preset") {
                         NotificationCenter.default.post(name: .selectSettingsPane, object: SettingsPane.sessions)
                     }
@@ -56,8 +56,8 @@ struct SettingsBlockingPane: View {
                 }
                 .padding(14)
             }
-            SettingsSection("What gets blocked") {
-                SettingsRow(title: "Everything marked Distracting") {
+            SettingsSection(String(localized: "What gets blocked")) {
+                SettingsRow(title: String(localized: "Everything marked Distracting")) {
                     Text("\(distractingCount)")
                         .font(.system(size: 12, weight: .semibold).monospacedDigit())
                         .foregroundStyle(Theme.primaryText)
@@ -87,22 +87,23 @@ struct SettingsBlockingPane: View {
         let unlocked = entitlements.isUnlocked(.blockInBrowser)
         let connected = !appState.extensionBridge.connectedBrowsers.isEmpty
         if unlocked {
-            level(2, title: "Block in the browser", badge: AnyView(ProBadge()),
-                  body: "Distracting pages never load. Block parts of sites too, like youtube.com/shorts.",
-                  foot: connected ? "On through the browser extension" : "Needs the browser extension") {
+            level(2, title: String(localized: "Block in the browser"), badge: AnyView(ProBadge()),
+                  body: String(localized: "Distracting pages never load. Block parts of sites too, like youtube.com/shorts."),
+                  foot: connected ? String(localized: "On through the browser extension") : String(localized: "Needs the browser extension")) {
                 if connected {
-                    Text("On").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.bodyText)
+                    Text("On", comment: "Status: this blocking level is on").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.bodyText)
                 } else {
                     Button("Add extension") { openSheet(.browserExtension) }
                         .buttonStyle(.capsule(.secondary, height: 26))
+                        .fixedSize()
                 }
             }
         } else if appState.sessionManager.currentSession != nil {
-            level(2, title: "Block in the browser", badge: AnyView(ProBadge()),
-                  body: "Distracting pages never load. Part of Pro.", foot: "Works through the browser extension") { EmptyView() }
+            level(2, title: String(localized: "Block in the browser"), badge: AnyView(ProBadge()),
+                  body: String(localized: "Distracting pages never load. Part of Pro."), foot: String(localized: "Works through the browser extension")) { EmptyView() }
         } else {
-            LockedProRow(feature: .blockInBrowser, title: "Block in the browser",
-                         detail: "Distracting pages never load, and parts of sites can be blocked too. Works through the browser extension.",
+            LockedProRow(feature: .blockInBrowser, title: String(localized: "Block in the browser"),
+                         detail: String(localized: "Distracting pages never load, and parts of sites can be blocked too. Works through the browser extension."),
                          onUpgrade: { openSheet(.upgrade(.blockInBrowser)) },
                          entitlements: entitlements)
                 .padding(10)
@@ -138,7 +139,7 @@ struct SettingsBlockingPane: View {
                 .frame(width: 70, alignment: .leading)
             Text(text).font(.system(size: 12)).foregroundStyle(Theme.bodyText)
             if appState.escalationEngine.preset == response {
-                Text("yours").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.link)
+                Text("yours", comment: "Marks the preset you have picked").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.link)
             }
         }
     }
@@ -162,9 +163,9 @@ struct SettingsLimitsPane: View {
 
     var body: some View {
         SettingsColumns {
-            SettingsSection("Today") {
+            SettingsSection(String(localized: "Today", comment: "Settings section: today's use of each daily limit")) {
                 if limits.statuses.isEmpty {
-                    SettingsRow("No daily limits yet", detail: "Pick a site or app you'd like a little of each day")
+                    SettingsRow(String(localized: "No daily limits yet"), detail: String(localized: "Pick a site or app you'd like a little of each day"))
                     SettingsDivider()
                 }
                 ForEach(limits.statuses) { status in
@@ -176,17 +177,17 @@ struct SettingsLimitsPane: View {
             planNote
             if let note { SettingsNote(text: note) }
         } right: {
-            SettingsSection("When a limit runs out") {
-                SettingsRow("The site pauses until midnight", detail: "In and out of sessions, with the pause screen")
+            SettingsSection(String(localized: "When a limit runs out")) {
+                SettingsRow(String(localized: "The site pauses until midnight"), detail: String(localized: "In and out of sessions, with the pause screen"))
             }
-            SettingsSection("Details") {
-                SettingsRow("You're warned 5 minutes before", detail: "If notifications are on")
+            SettingsSection(String(localized: "Details", comment: "Settings section: more about daily limits")) {
+                SettingsRow(String(localized: "You're warned 5 minutes before"), detail: String(localized: "If notifications are on"))
                 SettingsDivider()
-                SettingsRow(title: "Limits reset at midnight", detail: "They count in and out of sessions") {
+                SettingsRow(title: String(localized: "Limits reset at midnight"), detail: String(localized: "They count in and out of sessions")) {
                     Text("00:00").font(.system(size: 12).monospacedDigit()).foregroundStyle(Theme.bodyText)
                 }
             }
-            SettingsSection("Extra time") {
+            SettingsSection(String(localized: "Extra time")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("When a limit runs out, your preset decides if you can have a little more.")
                         .font(.system(size: 12)).foregroundStyle(Theme.bodyText)
@@ -216,10 +217,17 @@ struct SettingsLimitsPane: View {
 
     static func extra(_ policy: OverridePolicy) -> String {
         let extra = policy.extraTime
-        guard extra.isOffered else { return "None. Limits can only be changed for tomorrow" }
-        let times = extra.timesPerDay == 1 ? "once a day" : "up to \(extra.timesPerDay) times a day"
-        let wait = extra.waitSeconds > 0 ? " after a \(extra.waitSeconds)-second wait" : ""
-        return "\(extra.minutes) more minutes\(wait), \(times)"
+        guard extra.isOffered else { return String(localized: "None. Limits can only be changed for tomorrow") }
+        switch (extra.waitSeconds > 0, extra.timesPerDay == 1) {
+        case (true, true):
+            return String(localized: "\(extra.minutes) more minutes after a \(extra.waitSeconds)-second wait, once a day")
+        case (true, false):
+            return String(localized: "\(extra.minutes) more minutes after a \(extra.waitSeconds)-second wait, up to \(extra.timesPerDay) times a day")
+        case (false, true):
+            return String(localized: "\(extra.minutes) more minutes, once a day")
+        case (false, false):
+            return String(localized: "\(extra.minutes) more minutes, up to \(extra.timesPerDay) times a day")
+        }
     }
 
     private func limitRow(_ status: LimitStatus) -> some View {
@@ -293,7 +301,7 @@ struct SettingsLimitsPane: View {
                 }
                 if addingSite {
                     HStack(spacing: 8) {
-                        TextField("reddit.com", text: $newSite)
+                        TextField("reddit.com" as String, text: $newSite)
                             .textFieldStyle(.roundedBorder)
                             .onSubmit(addSite)
                         Button("Add", action: addSite)
@@ -304,10 +312,10 @@ struct SettingsLimitsPane: View {
             }
             .padding(14)
         } else if appState.sessionManager.currentSession != nil {
-            SettingsRow("Free keeps one daily limit", detail: "More are part of Pro")
+            SettingsRow(String(localized: "Free keeps one daily limit"), detail: String(localized: "More are part of Pro"))
         } else {
-            LockedProRow(feature: .unlimitedLimits, title: "Daily limits for any site",
-                         detail: "Free keeps one daily limit. Pro sets one for every app and site.",
+            LockedProRow(feature: .unlimitedLimits, title: String(localized: "Daily limits for any site"),
+                         detail: String(localized: "Free keeps one daily limit. Pro sets one for every app and site."),
                          systemImage: "hourglass",
                          onUpgrade: { openSheet(.upgrade(.unlimitedLimits)) },
                          entitlements: entitlements)
@@ -319,10 +327,10 @@ struct SettingsLimitsPane: View {
     private var planNote: some View {
         switch entitlements.plan {
         case .free:
-            SettingsNote(systemImage: "hourglass", text: "Free includes one daily limit. Pro sets one for every app and site.")
+            SettingsNote(systemImage: "hourglass", text: String(localized: "Free includes one daily limit. Pro sets one for every app and site."))
         case .trial(let endsAt):
             SettingsNote(systemImage: "hourglass",
-                         text: "Free includes one daily limit. You're on the Pro trial until \(endsAt.formatted(.dateTime.day().month(.wide))), so you can set as many as you like.")
+                         text: String(localized: "Free includes one daily limit. You're on the Pro trial until \(endsAt.formatted(.dateTime.day().month(.wide))), so you can set as many as you like."))
         case .pro:
             EmptyView()
         }
@@ -340,6 +348,6 @@ struct SettingsLimitsPane: View {
     }
 
     private func apply(_ change: LimitChange?) {
-        note = change == .fromTomorrow ? "Strict is on, so limit changes take effect tomorrow." : nil
+        note = change == .fromTomorrow ? String(localized: "Strict is on, so limit changes take effect tomorrow.") : nil
     }
 }

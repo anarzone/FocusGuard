@@ -18,12 +18,12 @@ enum MainTab: Hashable, CaseIterable {
 
     var title: String {
         switch self {
-        case .home:     return "Today"
-        case .reports:  return "Reports"
-        case .ask:      return "Ask"
-        case .workLog:  return "Work log"
-        case .apps:     return "Apps & Sites"
-        case .settings: return "Settings"
+        case .home:     return String(localized: "Today")
+        case .reports:  return String(localized: "Reports")
+        case .ask:      return String(localized: "Ask", comment: "Sidebar section where you ask questions about your own data")
+        case .workLog:  return String(localized: "Work log")
+        case .apps:     return String(localized: "Apps & Sites")
+        case .settings: return String(localized: "Settings")
         }
     }
 
@@ -261,9 +261,10 @@ private struct SidebarSessionCard: View {
                         .font(.system(size: 14))
                         .foregroundStyle(Theme.secondaryText)
                         .frame(width: 34, height: 34)
-                    lines("Break", "Back at \(WindowFormat.clock(now.addingTimeInterval(state.remaining(now: now))))")
+                    lines(String(localized: "Break", comment: "Noun: the rest between sessions"),
+                          String(localized: "Back at \(WindowFormat.clock(now.addingTimeInterval(state.remaining(now: now))))"))
                     if appState.breakManager.canEndEarly {
-                        roundButton("stop.fill", "End break") { appState.breakManager.skip() }
+                        roundButton("stop.fill", String(localized: "End break")) { appState.breakManager.skip() }
                     }
                 }
             } else if let session = appState.sessionManager.currentSession {
@@ -279,8 +280,11 @@ private struct SidebarSessionCard: View {
                         .padding(2)
                         .accessibilityHidden(true)
                     lines(session.displayName,
-                          paused ? "Paused" : (left.map { "\(AppState.minutesRoundedUp($0)) min left" } ?? "\(Int(elapsed / 60)) min in"))
-                    roundButton(paused ? "play.fill" : "pause.fill", paused ? "Resume session" : "Pause session") {
+                          paused ? String(localized: "Paused")
+                              : (left.map { String(localized: "\(AppState.minutesRoundedUp($0)) min left") }
+                                 ?? String(localized: "\(Int(elapsed / 60)) min in")))
+                    roundButton(paused ? "play.fill" : "pause.fill",
+                                paused ? String(localized: "Resume session") : String(localized: "Pause session")) {
                         if paused { appState.sessionManager.resumeSession() } else { appState.sessionManager.pauseSession() }
                     }
                 }
@@ -291,7 +295,8 @@ private struct SidebarSessionCard: View {
                     appState.sessionManager.startSession(label: defaultLabel.isEmpty ? nil : defaultLabel,
                                                          plannedDurationMinutes: minutes)
                 } label: {
-                    Label(minutes.map { "Start \($0) min focus" } ?? "Start focus", systemImage: "play.fill")
+                    Label(minutes.map { String(localized: "Start \($0) min focus") } ?? String(localized: "Start focus"),
+                          systemImage: "play.fill")
                 }
                 .buttonStyle(.capsule(.primary, height: 36, fullWidth: true))
             }
@@ -316,6 +321,7 @@ private struct SidebarSessionCard: View {
             Text(detail).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.secondaryText)
         }
         .lineLimit(1)
+        .minimumScaleFactor(0.85)
         .truncationMode(.tail)
         .frame(maxWidth: .infinity, alignment: .leading)
     }

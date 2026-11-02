@@ -65,7 +65,7 @@ struct NowPlaying: Equatable {
     }
 
     /// "Awake by Tycho", for VoiceOver and anywhere a line will do.
-    var summary: String { artist.isEmpty ? title : "\(title) by \(artist)" }
+    var summary: String { artist.isEmpty ? title : String(localized: "\(title) by \(artist)", comment: "A song and its artist") }
 
     /// Same track, for knowing when to fetch new artwork.
     var trackKey: String { "\(title)\t\(artist)\t\(album)" }

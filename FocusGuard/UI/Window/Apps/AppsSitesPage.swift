@@ -87,12 +87,13 @@ struct AppsSitesPage: View {
     // MARK: - Header
 
     private var header: some View {
-        PageHeader(title: "Apps & Sites",
+        PageHeader(title: String(localized: "Apps & Sites"),
                    subtitle: mode == .rules
-                    ? "Rules decide how new activity is sorted. Yours win over built-in ones."
-                    : "Decide what counts as focus. Changes also update past reports.") {
-            WindowSwitch(options: [(AppsMode.used, "Used"), (.rules, "Rules · \(rules.count)")],
-                         selection: $mode, label: "View")
+                    ? String(localized: "Rules decide how new activity is sorted. Yours win over built-in ones.")
+                    : String(localized: "Decide what counts as focus. Changes also update past reports.")) {
+            WindowSwitch(options: [(AppsMode.used, String(localized: "Used", comment: "Tab: the apps and sites that were used")),
+                                   (.rules, String(localized: "Rules · \(rules.count)", comment: "Tab with how many rules there are"))],
+                         selection: $mode, label: String(localized: "View", comment: "Noun, the name of the switch between Used and Rules"))
             Button { mode = .sort } label: {
                 Label("Sort your apps", systemImage: "rectangle.stack").labelStyle(.titleAndIcon)
             }
@@ -149,10 +150,10 @@ struct AppsSitesPage: View {
             .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
 
             HStack(spacing: 4) {
-                filterChip(nil, "All \(items.count)")
-                filterChip(.focus, "Focus \(counts[.focus] ?? 0)")
-                filterChip(.neutral, "Neutral \(counts[.neutral] ?? 0)")
-                filterChip(.distraction, "Distracting \(counts[.distraction] ?? 0)")
+                filterChip(nil, String(localized: "All \(items.count)", comment: "Filter chip with how many items it shows"))
+                filterChip(.focus, String(localized: "Focus \(counts[.focus] ?? 0)", comment: "Filter chip with how many items it shows"))
+                filterChip(.neutral, String(localized: "Neutral \(counts[.neutral] ?? 0)", comment: "Filter chip with how many items it shows"))
+                filterChip(.distraction, String(localized: "Distracting \(counts[.distraction] ?? 0)", comment: "Filter chip with how many items it shows"))
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Filter")
@@ -160,11 +161,11 @@ struct AppsSitesPage: View {
             Spacer(minLength: 8)
             Menu {
                 ForEach(AppsRange.allCases) { option in
-                    Button(option.rawValue) { range = option }
+                    Button(option.title) { range = option }
                 }
             } label: {
                 HStack(spacing: 5) {
-                    Text(range.rawValue)
+                    Text(range.title)
                     Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
                 }
                 .font(.system(size: 12))
@@ -202,7 +203,7 @@ struct AppsSitesPage: View {
                     Text("Name").frame(maxWidth: .infinity, alignment: .leading)
                     Text("Time").frame(width: 80, alignment: .leading)
                     Text("Counts as").frame(width: 204, alignment: .leading)
-                    Text("Limit").frame(width: 58, alignment: .leading)
+                    Text("Limit", comment: "Noun, column header: the daily limit").frame(width: 58, alignment: .leading)
                 }
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.secondaryText)
@@ -211,7 +212,7 @@ struct AppsSitesPage: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(Theme.moduleStroke).frame(height: 0.5) }
 
                 if shown.isEmpty {
-                    Text(items.isEmpty ? "Nothing tracked \(range.phrase) yet." : "Nothing matches.")
+                    Text(items.isEmpty ? range.nothingTracked : String(localized: "Nothing matches."))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.secondaryText)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -240,7 +241,7 @@ struct AppsSitesPage: View {
         return WindowCard(padding: EdgeInsets(top: 6, leading: 8, bottom: 8, trailing: 8)) {
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Text("Match").frame(width: 118, alignment: .leading)
+                    Text("Match", comment: "Noun: what kind of thing a rule matches").frame(width: 118, alignment: .leading)
                     Text("Pattern").frame(maxWidth: .infinity, alignment: .leading)
                     Text("Counts as").frame(width: 118, alignment: .leading)
                     Text("Daily limit").frame(width: 90, alignment: .leading)
@@ -284,7 +285,7 @@ struct AppsSitesPage: View {
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
             CategoryChip(classification: rule.classification).frame(width: 118, alignment: .leading)
-            Text(rule.limitMinutes.map { "\($0) min" } ?? "—")
+            Text(rule.limitMinutes.map { String(localized: "\($0) min", comment: "Compact minutes") } ?? "—")
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(rule.limitMinutes == nil ? Theme.tertiaryText : Theme.primaryText)
                 .frame(width: 90, alignment: .leading)
@@ -371,7 +372,7 @@ private struct AppsTableRow: View {
                 }
             }
             .frame(width: 204)
-            Text(limit.map { "\($0.minutes) min" } ?? "—")
+            Text(limit.map { String(localized: "\($0.minutes) min", comment: "Compact minutes") } ?? "—")
                 .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(limit == nil ? Theme.tertiaryText : Theme.primaryText)
                 .frame(width: 58, alignment: .leading)
@@ -464,7 +465,7 @@ private struct AppsInspector: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.primaryText)
                             .lineLimit(1).truncationMode(.middle)
-                        Text("\(item.isSite ? "Site" : "App") · \(WindowFormat.hm(item.row.seconds)) \(range.phrase)")
+                        Text([item.kindName, range.spent(WindowFormat.hm(item.row.seconds))].joined(separator: " · "))
                             .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                     }
                 }
@@ -522,7 +523,7 @@ private struct AppsInspector: View {
     @ViewBuilder private var smartNote: some View {
         if let suggestion = item.suggestion, item.source == .smart {
             VStack(alignment: .leading, spacing: 6) {
-                SmartReasonLine(lead: "Sorted for you.", reason: suggestion.reason)
+                SmartReasonLine(lead: String(localized: "Sorted for you."), reason: suggestion.reason)
                 Button("Undo") {
                     undoRefused = !appState.smartCategories.undo(suggestion)
                     onChange()
@@ -535,8 +536,8 @@ private struct AppsInspector: View {
             }
         } else if let suggestion = item.suggestion, item.source == .none {
             VStack(alignment: .leading, spacing: 6) {
-                SmartReasonLine(lead: "Looks like \(categoryName(suggestion.suggested).lowercased()).", reason: suggestion.reason)
-                Button("Make it \(categoryName(suggestion.suggested))") {
+                SmartReasonLine(lead: AppsCategoryWords.looksLike(suggestion.suggested), reason: suggestion.reason)
+                Button(AppsCategoryWords.makeIt(suggestion.suggested)) {
                     appState.smartCategories.accept(suggestion, as: suggestion.suggested)
                     onChange()
                 }
@@ -552,10 +553,10 @@ private struct AppsInspector: View {
 
     private var sourceLine: String {
         switch item.source {
-        case .none:    return "No rule yet, so it counts as neutral: neither for nor against you."
-        case .builtIn: return "Sorted by a built-in rule. Pick another to override it; your choice also updates past reports."
-        case .smart:   return "Sorted by smart categories. Pick another to make it yours."
-        case .user:    return "You sorted it. Your choice also updated past reports."
+        case .none:    return String(localized: "No rule yet, so it counts as neutral: neither for nor against you.")
+        case .builtIn: return String(localized: "Sorted by a built-in rule. Pick another to override it; your choice also updates past reports.")
+        case .smart:   return String(localized: "Sorted by smart categories. Pick another to make it yours.")
+        case .user:    return String(localized: "You sorted it. Your choice also updated past reports.")
         }
     }
 }

@@ -75,12 +75,12 @@ final class MonthReviewTests: XCTestCase {
     }
 
     func test_article() {
-        XCTAssertEqual(MonthFacts.withArticle("80%"), "an 80%")
-        XCTAssertEqual(MonthFacts.withArticle("8%"), "an 8%")
-        XCTAssertEqual(MonthFacts.withArticle("11%"), "an 11%")
-        XCTAssertEqual(MonthFacts.withArticle("18%"), "an 18%")
-        XCTAssertEqual(MonthFacts.withArticle("75%"), "a 75%")
-        XCTAssertEqual(MonthFacts.withArticle("1%"), "a 1%")
+        XCTAssertTrue(MonthFacts.takesAn("80%"))
+        XCTAssertTrue(MonthFacts.takesAn("8%"))
+        XCTAssertTrue(MonthFacts.takesAn("11%"))
+        XCTAssertTrue(MonthFacts.takesAn("18%"))
+        XCTAssertFalse(MonthFacts.takesAn("75%"))
+        XCTAssertFalse(MonthFacts.takesAn("1%"))
     }
 
     // MARK: - Suggestions

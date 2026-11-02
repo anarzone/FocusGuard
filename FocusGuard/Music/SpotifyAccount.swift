@@ -415,8 +415,9 @@ final class SpotifyAccount {
 
         var item: Item? {
             guard SpotifyLink.uri(from: uri) != nil else { return nil }
-            return Item(uri: uri, name: name, subtitle: owner?.display_name.map { "Playlist · \($0)" } ?? "Playlist",
-                        imageURL: images?.first?.url)
+            let subtitle = owner?.display_name.map { String(localized: "Playlist · \($0)", comment: "A playlist and who made it") }
+                ?? String(localized: "Playlist")
+            return Item(uri: uri, name: name, subtitle: subtitle, imageURL: images?.first?.url)
         }
     }
 
@@ -429,8 +430,9 @@ final class SpotifyAccount {
         var item: Item? {
             guard SpotifyLink.uri(from: uri) != nil else { return nil }
             let artist = artists?.map(\.name).joined(separator: ", ")
-            return Item(uri: uri, name: name, subtitle: artist.map { "Album · \($0)" } ?? "Album",
-                        imageURL: images?.first?.url)
+            let subtitle = artist.map { String(localized: "Album · \($0)", comment: "An album and its artist") }
+                ?? String(localized: "Album")
+            return Item(uri: uri, name: name, subtitle: subtitle, imageURL: images?.first?.url)
         }
     }
 
@@ -557,8 +559,8 @@ final class LoopbackReceiver: @unchecked Sendable {
             let line = request.components(separatedBy: "\r\n").first ?? ""
             let parameters = PKCE.callbackParameters(fromRequestLine: line)
             let body = parameters?["code"] != nil
-                ? "Signed in to Spotify. You can close this tab and go back to FocusGuard."
-                : "FocusGuard didn't get permission from Spotify. You can close this tab."
+                ? String(localized: "Signed in to Spotify. You can close this tab and go back to FocusGuard.")
+                : String(localized: "FocusGuard didn't get permission from Spotify. You can close this tab.")
             let html = "<!doctype html><meta charset=utf-8><title>FocusGuard</title>"
                 + "<body style=\"font:16px -apple-system;margin:4em;text-align:center\">\(body)</body>"
             let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.utf8.count)\r\nConnection: close\r\n\r\n\(html)"

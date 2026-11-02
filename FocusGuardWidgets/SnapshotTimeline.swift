@@ -1,3 +1,4 @@
+import Foundation
 import WidgetKit
 
 struct SnapshotEntry: TimelineEntry {
@@ -45,7 +46,8 @@ extension SurfaceSnapshot {
             today: Day(start: calendar.startOfDay(for: now), focused: 135 * 60, drifted: 22 * 60, other: 30 * 60,
                        sessions: 3, goalSeconds: 4 * 3600, streak: 5),
             week: Week(start: week, focused: [265, 190, 290, 245, 135, 0, 0].map { TimeInterval($0 * 60) }),
-            lastSession: Last(name: "Locked-in Deep Dive", endedAt: now.addingTimeInterval(-2 * 3600), minutes: 50, focusRate: 0.92),
+            lastSession: Last(name: String(localized: "Locked-in Deep Dive", comment: "Sample session name in the widget gallery"),
+                              endedAt: now.addingTimeInterval(-2 * 3600), minutes: 50, focusRate: 0.92),
             usualMinutes: 50
         )
     }

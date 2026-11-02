@@ -35,7 +35,8 @@ private struct AskView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            PageHeader(title: "Ask", subtitle: "About your own focus · answered on this Mac") {
+            PageHeader(title: String(localized: "Ask", comment: "The name of the Ask feature: questions about your focus"),
+                       subtitle: String(localized: "About your own focus · answered on this Mac")) {
                 if !conversation.turns.isEmpty {
                     Button("New question") {
                         conversation.clear()
@@ -476,7 +477,8 @@ private struct AskLocked: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PageHeader(title: "Ask", subtitle: "Part of FocusGuard Pro") { EmptyView() }
+            PageHeader(title: String(localized: "Ask", comment: "The name of the Ask feature: questions about your focus"),
+                       subtitle: String(localized: "Part of FocusGuard Pro")) { EmptyView() }
             ZStack(alignment: .top) {
                 AskSkeleton()
                     .opacity(0.45)
@@ -515,9 +517,9 @@ private struct AskLocked: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: 10) {
-                point("Plain answers", "With the numbers behind them and a small chart.")
-                point("One click to act", "Set a daily limit or plan a session from the answer.")
-                point("On this Mac", "Worked out here. Nothing leaves it.")
+                point(String(localized: "Plain answers"), String(localized: "With the numbers behind them and a small chart."))
+                point(String(localized: "One click to act"), String(localized: "Set a daily limit or plan a session from the answer."))
+                point(String(localized: "On this Mac"), String(localized: "Worked out here. Nothing leaves it."))
             }
             VStack(spacing: 8) {
                 if entitlements.canStartTrial {
@@ -550,8 +552,9 @@ private struct AskLocked: View {
     }
 
     private var footnote: String {
-        let price = "\(ProPricing.yearly) a year or \(ProPricing.monthly) a month"
-        return entitlements.canStartTrial ? "Then \(price)." : "\(price.prefix(1).uppercased())\(price.dropFirst())."
+        entitlements.canStartTrial
+            ? String(localized: "Then \(ProPricing.yearly) a year or \(ProPricing.monthly) a month.")
+            : String(localized: "\(ProPricing.yearly) a year or \(ProPricing.monthly) a month.")
     }
 
     private func point(_ title: String, _ detail: String) -> some View {

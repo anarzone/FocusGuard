@@ -84,20 +84,24 @@ enum FocusNumbers {
 
     /// One sentence for Siri and Spotlight.
     static func sentence(for summary: FocusSummary) -> String {
-        let when: String
-        switch summary.period {
-        case .today:     when = "Today so far"
-        case .yesterday: when = "Yesterday"
-        case .thisWeek:  when = "This week so far"
-        }
         guard summary.tracked >= 60 else {
             switch summary.period {
-            case .today:     return "Nothing tracked today yet."
-            case .yesterday: return "Nothing was tracked yesterday."
-            case .thisWeek:  return "Nothing tracked this week yet."
+            case .today:     return String(localized: "Nothing tracked today yet.")
+            case .yesterday: return String(localized: "Nothing was tracked yesterday.")
+            case .thisWeek:  return String(localized: "Nothing tracked this week yet.")
             }
         }
-        let sessions = summary.sessions == 1 ? "1 session" : "\(summary.sessions) sessions"
-        return "\(when): \(duration(summary.focused)) focused, \(summary.focusPercent)% focus rate, \(sessions)."
+        let focused = duration(summary.focused), percent = summary.focusPercent, sessions = summary.sessions
+        switch summary.period {
+        case .today:
+            return String(localized: "Today so far: \(focused) focused, \(percent)% focus rate, \(sessions) sessions.",
+                          comment: "Plural on sessions: 1 session / 2 sessions")
+        case .yesterday:
+            return String(localized: "Yesterday: \(focused) focused, \(percent)% focus rate, \(sessions) sessions.",
+                          comment: "Plural on sessions: 1 session / 2 sessions")
+        case .thisWeek:
+            return String(localized: "This week so far: \(focused) focused, \(percent)% focus rate, \(sessions) sessions.",
+                          comment: "Plural on sessions: 1 session / 2 sessions")
+        }
     }
 }

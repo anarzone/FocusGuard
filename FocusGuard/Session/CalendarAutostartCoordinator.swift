@@ -274,7 +274,7 @@ final class CalendarAutostartCoordinator {
         let remainingSeconds = event.endDate.timeIntervalSince(now)
         let minutes = max(1, Int(remainingSeconds / 60))
         sessionManager.startSession(
-            label: event.title ?? "Focus session",
+            label: event.title ?? String(localized: "Focus session", comment: "Name of a session started by a calendar event that has no title"),
             plannedDurationMinutes: minutes
         )
         activeAutostartEventId = event.eventIdentifier

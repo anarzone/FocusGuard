@@ -23,40 +23,58 @@ enum CoachExperiment: Codable, Hashable, Sendable {
     func title(locale: Locale = .current, calendar: Calendar = .current) -> String {
         switch self {
         case let .siteLimit(host, minutes):
-            return "A \(minutes)-minute daily limit on \(host)"
+            return String(localized: "A \(minutes)-minute daily limit on \(host)")
         case let .shorterSessions(hours, minutes):
-            return "\(minutes)-minute sessions \(hours.phrase(locale: locale, calendar: calendar))"
+            let when = hours.phrase(locale: locale, calendar: calendar)
+            return String(localized: "\(minutes)-minute sessions \(when)", comment: "When: after 17:00")
         case let .stricterPreset(hours, preset):
-            return "\(preset.title) \(hours.phrase(locale: locale, calendar: calendar))"
+            let when = hours.phrase(locale: locale, calendar: calendar)
+            return String(localized: "\(preset.title) \(when)", comment: "A preset's name, then when: Strict after 17:00")
         case let .earlierMorningPlan(hour):
-            return "The morning plan at \(Self.clock(hour, locale: locale, calendar: calendar))"
+            let time = Self.clock(hour, locale: locale, calendar: calendar)
+            return String(localized: "The morning plan at \(time)")
         case let .sessionLength(minutes):
-            return "\(minutes) minutes as your session length"
+            return String(localized: "\(minutes) minutes as your session length")
         case let .sessionBeforeFirstCall(minutes):
-            return "A \(minutes)-minute session before your first call"
+            return String(localized: "A \(minutes)-minute session before your first call")
         case let .weekdayGoal(weekday, minutes):
-            return "A \(Self.goalWords(minutes)) goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar))"
+            let days = Self.weekdays(weekday, locale: locale, calendar: calendar)
+            if minutes % 60 == 0 {
+                let hours = minutes / 60
+                return String(localized: "A \(hours)-hour goal on \(days)", comment: "Mondays")
+            }
+            let goal = FocusGoal.format(minutes: minutes)
+            return String(localized: "A \(goal) goal on \(days)", comment: "A compact duration such as 1h 30m, then Mondays")
         }
     }
 
     /// "shorter evening sessions", for "Last week's experiment, …: +9 pts".
+    /// A noun phrase that goes inside other sentences.
     func shortName(locale: Locale = .current, calendar: Calendar = .current) -> String {
         switch self {
         case let .siteLimit(host, minutes):
-            return "a \(minutes)-minute limit on \(host)"
+            return String(localized: "a \(minutes)-minute limit on \(host)", comment: "Goes inside a sentence: The experiment was ...")
         case let .shorterSessions(hours, _):
-            return hours.partOfDay.map { "shorter \($0) sessions" }
-                ?? "shorter sessions \(hours.phrase(locale: locale, calendar: calendar))"
+            switch hours {
+            case .morning:   return String(localized: "shorter morning sessions", comment: "Goes inside a sentence: The experiment was ...")
+            case .afternoon: return String(localized: "shorter afternoon sessions", comment: "Goes inside a sentence: The experiment was ...")
+            case .evening:   return String(localized: "shorter evening sessions", comment: "Goes inside a sentence: The experiment was ...")
+            default:
+                let when = hours.phrase(locale: locale, calendar: calendar)
+                return String(localized: "shorter sessions \(when)", comment: "Goes inside a sentence: The experiment was ... When: after 17:00")
+            }
         case let .stricterPreset(hours, preset):
-            return "\(preset.title) \(hours.phrase(locale: locale, calendar: calendar))"
+            let when = hours.phrase(locale: locale, calendar: calendar)
+            return String(localized: "\(preset.title) \(when)", comment: "A preset's name, then when: Strict after 17:00")
         case .earlierMorningPlan:
-            return "an earlier morning plan"
+            return String(localized: "an earlier morning plan", comment: "Goes inside a sentence: The experiment was ...")
         case let .sessionLength(minutes):
-            return "\(minutes)-minute sessions"
+            return String(localized: "\(minutes)-minute sessions", comment: "Goes inside a sentence: The experiment was ...")
         case .sessionBeforeFirstCall:
-            return "a session before the first call"
+            return String(localized: "a session before the first call", comment: "Goes inside a sentence: The experiment was ...")
         case let .weekdayGoal(weekday, _):
-            return "a lower goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar))"
+            let days = Self.weekdays(weekday, locale: locale, calendar: calendar)
+            return String(localized: "a lower goal on \(days)", comment: "Goes inside a sentence: The experiment was ... Mondays")
         }
     }
 
@@ -64,19 +82,24 @@ enum CoachExperiment: Codable, Hashable, Sendable {
     func effect(locale: Locale = .current, calendar: Calendar = .current) -> String {
         switch self {
         case let .siteLimit(host, minutes):
-            return "\(host) is blocked after \(minutes) minutes a day."
+            return String(localized: "\(host) is blocked after \(minutes) minutes a day.")
         case let .shorterSessions(hours, minutes):
-            return "Sessions \(hours.phrase(locale: locale, calendar: calendar)) start at \(minutes) minutes."
+            let when = hours.phrase(locale: locale, calendar: calendar)
+            return String(localized: "Sessions \(when) start at \(minutes) minutes.", comment: "When: after 17:00")
         case let .stricterPreset(hours, preset):
-            return "Sessions use \(preset.title) \(hours.phrase(locale: locale, calendar: calendar))."
+            let when = hours.phrase(locale: locale, calendar: calendar)
+            return String(localized: "Sessions use \(preset.title) \(when).", comment: "A preset's name, then when: Strict after 17:00")
         case let .earlierMorningPlan(hour):
-            return "The morning plan arrives at \(Self.clock(hour, locale: locale, calendar: calendar))."
+            let time = Self.clock(hour, locale: locale, calendar: calendar)
+            return String(localized: "The morning plan arrives at \(time).")
         case let .sessionLength(minutes):
-            return "Sessions start at \(minutes) minutes."
+            return String(localized: "Sessions start at \(minutes) minutes.")
         case let .sessionBeforeFirstCall(minutes):
-            return "The morning plan puts a \(minutes)-minute session before your first call."
+            return String(localized: "The morning plan puts a \(minutes)-minute session before your first call.")
         case let .weekdayGoal(weekday, minutes):
-            return "The goal on \(Self.weekdays(weekday, locale: locale, calendar: calendar)) is \(FocusGoal.format(minutes: minutes))."
+            let days = Self.weekdays(weekday, locale: locale, calendar: calendar)
+            let goal = FocusGoal.format(minutes: minutes)
+            return String(localized: "The goal on \(days) is \(goal).", comment: "Mondays, then a compact duration")
         }
     }
 
@@ -120,11 +143,6 @@ enum CoachExperiment: Codable, Hashable, Sendable {
     /// "Fridays", for a `Calendar` weekday.
     static func weekdays(_ number: Int, locale: Locale = .current, calendar: Calendar = .current) -> String {
         FocusGoal.pluralWeekday(number, locale: locale, calendar: calendar)
-    }
-
-    /// "2-hour", "1h 30m": a goal before "goal".
-    static func goalWords(_ minutes: Int) -> String {
-        minutes % 60 == 0 ? "\(minutes / 60)-hour" : FocusGoal.format(minutes: minutes)
     }
 }
 
@@ -206,24 +224,38 @@ enum CoachMetric: Codable, Hashable, Sendable {
         case .sessionRate:
             return Self.points(from: before, to: after)
         case .siteMinutes:
-            return "\(Int(before.rounded())) → \(Int(after.rounded())) min a day"
+            let then = Int(before.rounded()), now = Int(after.rounded())
+            return String(localized: "\(then) → \(now) min a day")
         case .firstSession:
             let minutes = Int((before - after).rounded())
-            if abs(minutes) < 5 { return "about the same start" }
+            if abs(minutes) < 5 { return String(localized: "about the same start") }
             let amount = HabitFormat.amount(minutes: abs(minutes))
-            return minutes > 0 ? "first session \(amount) earlier" : "first session \(amount) later"
+            return minutes > 0 ? String(localized: "first session \(amount) earlier") : String(localized: "first session \(amount) later")
         case .callDayFocus:
-            return "\(CoachDraft.duration(before)) → \(CoachDraft.duration(after)) focused on call-heavy days"
+            let then = CoachDraft.duration(before), now = CoachDraft.duration(after)
+            return String(localized: "\(then) → \(now) focused on call-heavy days")
         case .weekdayFocus(let weekday):
-            return "\(CoachDraft.duration(before)) → \(CoachDraft.duration(after)) focused on \(CoachExperiment.weekdays(weekday))"
+            let then = CoachDraft.duration(before), now = CoachDraft.duration(after)
+            let days = CoachExperiment.weekdays(weekday)
+            return String(localized: "\(then) → \(now) focused on \(days)", comment: "Two compact durations, then Mondays")
         }
     }
 
     /// A change in focus rate: "+9 pts", "−3 pts", "no change".
     static func points(from before: Double, to after: Double) -> String {
         let points = Int((after * 100).rounded()) - Int((before * 100).rounded())
-        if points == 0 { return "no change" }
-        return points > 0 ? "+\(points) pts" : "−\(-points) pts"
+        if points == 0 { return String(localized: "no change") }
+        let moved = abs(points)
+        return points > 0 ? String(localized: "+\(moved) pts", comment: "Focus rate points, compact") : String(localized: "−\(moved) pts", comment: "Focus rate points, compact")
+    }
+
+    /// `change` says nothing moved: the same rate, or about the same start.
+    func isUnchanged(from before: Double, to after: Double) -> Bool {
+        switch self {
+        case .sessionRate:  return Int((after * 100).rounded()) == Int((before * 100).rounded())
+        case .firstSession: return abs(Int((before - after).rounded())) < 5
+        case .siteMinutes, .callDayFocus, .weekdayFocus: return false
+        }
     }
 
     /// Whether `after` is better than `before`.

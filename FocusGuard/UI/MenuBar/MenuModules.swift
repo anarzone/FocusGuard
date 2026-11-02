@@ -110,7 +110,7 @@ struct DriftModule: View {
             .accessibilityElement(children: .combine)
 
             HStack(spacing: 6) {
-                CapsuleButton(title: backTo.map { "Back to \($0)" } ?? "Back to work", prominent: true,
+                CapsuleButton(title: backTo.map { String(localized: "Back to \($0)") } ?? String(localized: "Back to work"), prominent: true,
                               height: 30, action: onBack)
                 CapsuleButton(title: forWorkTitle(away: away), prominent: false, height: 30,
                               fill: MenuPalette.onTint, action: onForWork)
@@ -135,12 +135,14 @@ struct DriftModule: View {
     }
 
     private var caption: String {
-        let noun = drift.pausesTab ? "Tab" : "Screen"
         if let blocksAt = drift.blocksAt {
             let left = Int(blocksAt.timeIntervalSince(now).rounded(.up))
-            if left > 0 { return "\(drift.pausesTab ? "Tab pauses" : "Screen blocks")\nin \(left) s" }
+            if left > 0 {
+                return drift.pausesTab ? String(localized: "Tab pauses\nin \(left) s")
+                                       : String(localized: "Screen blocks\nin \(left) s")
+            }
         }
-        return "\(noun)\n\(drift.pausesTab ? "paused" : "blocked")"
+        return drift.pausesTab ? String(localized: "Tab\npaused") : String(localized: "Screen\nblocked")
     }
 
     /// Strict holds "It's for work" back for a few seconds.
@@ -150,7 +152,7 @@ struct DriftModule: View {
 
     private func forWorkTitle(away: Int) -> String {
         let wait = forWorkWait(away: away)
-        return wait > 0 ? "It's for work · \(wait) s" : "It's for work"
+        return wait > 0 ? String(localized: "It's for work · \(wait) s") : String(localized: "It's for work")
     }
 }
 
@@ -239,10 +241,12 @@ struct LimitModule: View {
         let left = AppState.minutesRoundedUp(status.remaining)
         if status.extraMinutes > 0 {
             let until = menuClock(now.addingTimeInterval(status.remaining))
-            return status.extraLeft == 0 ? "Open until \(until). That was today's extra time." : "Open until \(until)."
+            return status.extraLeft == 0 ? String(localized: "Open until \(until). That was today's extra time.")
+                                         : String(localized: "Open until \(until).")
         }
-        let after = pausesTab ? "the tab pauses" : "it's blocked"
-        return "\(counted(left, "min", plural: "min")) left today. After that \(after) until \(menuClock(midnight))."
+        return pausesTab
+            ? String(localized: "\(left) min left today. After that the tab pauses until \(menuClock(midnight)).")
+            : String(localized: "\(left) min left today. After that it's blocked until \(menuClock(midnight)).")
     }
 
     // Reached
@@ -269,13 +273,13 @@ struct LimitModule: View {
             HStack(spacing: 6) {
                 if offersExtra {
                     let wait = extraWait
-                    CapsuleButton(title: wait > 0 ? "\(policy.extraTime.minutes) more min · \(wait) s"
-                                                  : "\(policy.extraTime.minutes) more min",
+                    CapsuleButton(title: wait > 0 ? String(localized: "\(policy.extraTime.minutes) more min · \(wait) s")
+                                                  : String(localized: "\(policy.extraTime.minutes) more min"),
                                   prominent: false, height: 30, fill: MenuPalette.onTint, semibold: wait == 0,
                                   action: onExtraTime)
                         .disabled(wait > 0)
                 }
-                CapsuleButton(title: "Change limit", prominent: false, height: 30, fill: MenuPalette.onTint,
+                CapsuleButton(title: String(localized: "Change limit"), prominent: false, height: 30, fill: MenuPalette.onTint,
                               action: onChange)
             }
             Text(rulesLine)
@@ -301,13 +305,14 @@ struct LimitModule: View {
     /// What the preset allows, in one line.
     private var rulesLine: String {
         let extra = policy.extraTime
-        guard extra.isOffered else { return "Strict: no extra time. Changes to the limit start tomorrow." }
-        if status.extraLeft == 0 { return "That was today's extra time." }
+        guard extra.isOffered else { return String(localized: "Strict: no extra time. Changes to the limit start tomorrow.") }
+        if status.extraLeft == 0 { return String(localized: "That was today's extra time.") }
         if extra.timesPerDay == 1 {
-            let wait = extra.waitSeconds > 0 ? ", after a \(extra.waitSeconds)-second wait" : ""
-            return "\(extra.minutes) more minutes once a day\(wait)."
+            return extra.waitSeconds > 0
+                ? String(localized: "\(extra.minutes) more minutes once a day, after a \(extra.waitSeconds)-second wait.")
+                : String(localized: "\(extra.minutes) more minutes once a day.")
         }
-        return "\(extra.minutes) more minutes, up to \(extra.timesPerDay) times a day · \(status.extraLeft) left today."
+        return String(localized: "\(extra.minutes) more minutes, up to \(extra.timesPerDay) times a day · \(status.extraLeft) left today.")
     }
 
     private var glyph: some View {
@@ -360,7 +365,7 @@ struct AutoStartModule: View {
                 AppGlyph(kind: offer.bundleId.map { AppGlyph.kind(forBundleId: $0, name: offer.appNames.first) } ?? .generic,
                          bundleId: offer.bundleId, size: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(counted(offer.focusMinutes(now: now), "minute")) in \(offer.appList)")
+                    Text("\(offer.focusMinutes(now: now)) minutes in \(offer.appList)", comment: "Plural on minutes: 1 minute in Xcode / 12 minutes in Xcode")
                         .font(.system(size: 13, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     Text("Looks like focus. Make it a session?")
@@ -371,11 +376,11 @@ struct AutoStartModule: View {
             .accessibilityElement(children: .combine)
 
             VStack(spacing: 6) {
-                CapsuleButton(title: "Start \(minutes) min, counting these \(offer.focusMinutes(now: now))", prominent: true,
+                CapsuleButton(title: String(localized: "Start \(minutes) min, counting these \(offer.focusMinutes(now: now))"), prominent: true,
                               height: 32, action: onStart)
                 HStack(spacing: 6) {
-                    CapsuleButton(title: "Not now", prominent: false, height: 28, fill: MenuPalette.onTint, action: onNotNow)
-                    CapsuleButton(title: "Stop offering", prominent: false, height: 28, fill: MenuPalette.onTint, action: onStop)
+                    CapsuleButton(title: String(localized: "Not now"), prominent: false, height: 28, fill: MenuPalette.onTint, action: onNotNow)
+                    CapsuleButton(title: String(localized: "Stop offering"), prominent: false, height: 28, fill: MenuPalette.onTint, action: onStop)
                         .help("You can turn offers back on in Settings")
                 }
             }
@@ -423,7 +428,7 @@ struct CallModule: View {
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)
                 } else {
-                    PillButton(title: "Pause till it ends", action: onPause)
+                    PillButton(title: String(localized: "Pause till it ends"), action: onPause)
                 }
             }
         }

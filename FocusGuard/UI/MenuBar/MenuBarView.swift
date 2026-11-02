@@ -142,6 +142,7 @@ struct MenuBarView: View {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer(minLength: 4)
                 PaneButtons(open: $openPane)
             }
@@ -165,39 +166,39 @@ struct MenuBarView: View {
 
         case .onBreak(let state):
             let backAt = now.addingTimeInterval(state.remaining(now: now))
-            return (.onBreak, Theme.focus, "Break", "Back at \(menuClock(backAt)) · blocking paused")
+            return (.onBreak, Theme.focus, String(localized: "Break", comment: "Noun: menu title while on a break"),
+                    String(localized: "Back at \(menuClock(backAt)) · blocking paused"))
 
         case .recap(let recap):
             return (.complete, Theme.focus, recap.label,
-                    "Session complete · \(menuClock(recap.startedAt))–\(menuClock(recap.endedAt))")
+                    String(localized: "Session complete · \(menuClock(recap.startedAt))–\(menuClock(recap.endedAt))"))
 
         case .session(let session, let drift):
             let label = session.displayName
             let planned = session.plannedDurationMinutes
             let elapsed = appState.sessionManager.runningSeconds(for: session, now: now)
-            let length = planned.map { "\($0)-minute session" } ?? "Open-ended"
+            let length = planned.map { String(localized: "\($0)-minute session") } ?? String(localized: "Open-ended")
 
             if session.pausedAt != nil {
-                let left = planned.map {
-                    " · \(counted(AppState.minutesRoundedUp(Double($0 * 60) - elapsed), "min", plural: "min")) left"
-                } ?? ""
-                return (.paused, Theme.neutral, label, "Paused\(left)")
+                guard let planned else { return (.paused, Theme.neutral, label, String(localized: "Paused")) }
+                let left = AppState.minutesRoundedUp(Double(planned * 60) - elapsed)
+                return (.paused, Theme.neutral, label, String(localized: "Paused · \(left) min left"))
             }
             if let drift {
-                return (.drifted, Theme.distractionInk, label, "Drifted to \(drift.displayName) · \(length)")
+                return (.drifted, Theme.distractionInk, label, String(localized: "Drifted to \(drift.displayName) · \(length)"))
             }
             return (.focusing(elapsed: elapsed, planned: planned.map { Double($0 * 60) }),
-                    Theme.focus, label, "\(length) · started \(menuClock(session.startedAt))")
+                    Theme.focus, label, String(localized: "\(length) · started \(menuClock(session.startedAt))"))
         }
     }
 
     private var readySubtitle: String {
         let streak = appState.menuStats.streak
-        let streakText = streak >= 2 ? "\(streak)-day streak" : nil
+        let streakText = streak >= 2 ? String(localized: "\(streak)-day streak") : nil
         if goalMet {
-            return ["Goal met today", streakText].compactMap { $0 }.joined(separator: " · ")
+            return [String(localized: "Goal met today"), streakText].compactMap { $0 }.joined(separator: " · ")
         }
-        return streakText.map { "\($0) · ready when you are" } ?? "Ready when you are"
+        return streakText.map { String(localized: "\($0) · ready when you are") } ?? String(localized: "Ready when you are")
     }
 
     private var goalMet: Bool {
@@ -235,9 +236,9 @@ struct MenuBarView: View {
 
             if folded {
                 if offer != nil {
-                    MenuLinkRow(title: "Pick a length and start fresh") { pickingLength = true }
+                    MenuLinkRow(title: String(localized: "Pick a length and start fresh")) { pickingLength = true }
                 } else {
-                    CapsuleButton(title: "Start a session", prominent: false) { pickingLength = true }
+                    CapsuleButton(title: String(localized: "Start a session"), prominent: false) { pickingLength = true }
                         .padding(.horizontal, 4)
                 }
             } else {
@@ -246,8 +247,8 @@ struct MenuBarView: View {
                         SessionGoalField(goal: $sessionGoal, suggestions: goalSuggestions,
                                          onPick: { appState.integrations.goalPicked($0) }, onSubmit: start)
                     } else {
-                        LockedProRow(feature: .debrief, title: "Add a goal for this session",
-                                     detail: "Say what the session is for. When it ends, the debrief checks whether you got there.",
+                        LockedProRow(feature: .debrief, title: String(localized: "Add a goal for this session"),
+                                     detail: String(localized: "Say what the session is for. When it ends, the debrief checks whether you got there."),
                                      systemImage: "scope",
                                      onTrialStarted: { refreshGoalSuggestions() })
                     }
@@ -268,9 +269,9 @@ struct MenuBarView: View {
     private var startTitle: String {
         if let meeting = appState.integrations.nextMeeting, meeting.isShown(at: now),
            MeetingFit.endsBefore(minutes, now: now, meeting: meeting.start) {
-            return "Start \(lengthText(minutes)) · ends before \(meeting.shortTitle)"
+            return String(localized: "Start \(lengthText(minutes)) · ends before \(meeting.shortTitle)")
         }
-        return "Start \(lengthText(minutes)) of focus"
+        return String(localized: "Start \(lengthText(minutes)) of focus")
     }
 
     /// A session started now would run into the next meeting: the ruler
@@ -325,7 +326,8 @@ struct MenuBarView: View {
 
     /// "50 minutes", or "2h 30m" from two hours.
     private func lengthText(_ minutes: Int) -> String {
-        minutes < 120 ? "\(minutes) minutes" : FocusGoal.format(minutes: minutes)
+        minutes < 120 ? String(localized: "\(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes")
+                      : FocusGoal.format(minutes: minutes)
     }
 
     private func restoreLength() {
@@ -380,7 +382,7 @@ struct MenuBarView: View {
                     ringCenter(session: session, elapsed: elapsed, isPaused: isPaused)
                 }
                 RingLegend(trailing: timeline.focusCells + timeline.driftCells > 0
-                           ? "\(timeline.focusPercent)% focus rate" : nil)
+                           ? String(localized: "\(timeline.focusPercent)% focus rate") : nil)
             }
             .padding(.top, 2)
             .menuModule()
@@ -391,20 +393,20 @@ struct MenuBarView: View {
 
             HStack(spacing: 6) {
                 if isPaused {
-                    ControlPlatter(systemImage: "play.fill", title: "Resume", prominent: true) {
+                    ControlPlatter(systemImage: "play.fill", title: String(localized: "Resume", comment: "Verb: button that resumes the session"), prominent: true) {
                         appState.sessionManager.resumeSession()
                     }
                 } else {
-                    ControlPlatter(systemImage: "pause.fill", title: "Pause") {
+                    ControlPlatter(systemImage: "pause.fill", title: String(localized: "Pause", comment: "Verb: button that pauses the session")) {
                         appState.sessionManager.pauseSession()
                     }
                 }
                 if session.plannedDurationMinutes != nil {
-                    ControlPlatter(systemImage: "plus", title: "5 more min") {
+                    ControlPlatter(systemImage: "plus", title: String(localized: "5 more min")) {
                         appState.sessionManager.extendSession(byMinutes: 5)
                     }
                 }
-                ControlPlatter(systemImage: "stop.fill", title: "End") {
+                ControlPlatter(systemImage: "stop.fill", title: String(localized: "End", comment: "Verb: button that ends the session")) {
                     appState.sessionManager.stopSession()
                 }
             }
@@ -413,7 +415,7 @@ struct MenuBarView: View {
 
             if drift == nil && call == nil {
                 NowRow(snapshot: appState.tracker.currentSnapshot,
-                       note: isPaused ? "Counts outside the session" : nil)
+                       note: isPaused ? String(localized: "Counts outside the session") : nil)
             }
         }
     }
@@ -428,12 +430,13 @@ struct MenuBarView: View {
         if let planned = session.plannedDurationMinutes {
             let left = max(0, Double(planned * 60) - elapsed)
             big = SessionClock.format(left)
-            unit = isPaused ? "paused" : "left"
-            detail = isPaused ? pausedSince(session) : "ends \(menuClock(now.addingTimeInterval(left)))"
+            unit = isPaused ? String(localized: "paused")
+                            : String(localized: "left", comment: "Under a countdown: time remaining, not the direction")
+            detail = isPaused ? pausedSince(session) : String(localized: "ends \(menuClock(now.addingTimeInterval(left)))")
         } else {
             big = SessionClock.format(elapsed)
-            unit = isPaused ? "paused" : "elapsed"
-            detail = isPaused ? pausedSince(session) : "open-ended"
+            unit = isPaused ? String(localized: "paused") : String(localized: "elapsed")
+            detail = isPaused ? pausedSince(session) : String(localized: "open-ended")
         }
         return VStack(spacing: 0) {
             Text(big)
@@ -454,7 +457,7 @@ struct MenuBarView: View {
     }
 
     private func pausedSince(_ session: Session) -> String {
-        session.pausedAt.map { "since \(menuClock($0))" } ?? "paused"
+        session.pausedAt.map { String(localized: "since \(menuClock($0))") } ?? String(localized: "paused")
     }
 
     // MARK: - Recap
@@ -469,7 +472,7 @@ struct MenuBarView: View {
                                             events: recap.session.events)
                 }) {
                     VStack(spacing: 0) {
-                        Text("\(timeline.focusPercent)%")
+                        Text("\(timeline.focusPercent)%", comment: "Percentage")
                             .font(.system(size: 40, weight: .semibold).monospacedDigit())
                             .kerning(-1.2)
                         Text("focus rate")
@@ -487,11 +490,11 @@ struct MenuBarView: View {
             .menuModule(padding: EdgeInsets(top: 14, leading: 14, bottom: 12, trailing: 14))
 
             HStack(spacing: 0) {
-                stat("Longest in the zone") {
+                stat(String(localized: "Longest in the zone")) {
                     Text("\(Int(recap.longestZone / 60)) min")
                 }
                 Rectangle().fill(Theme.moduleStroke).frame(width: 0.5)
-                stat("Most drift") {
+                stat(String(localized: "Most drift")) {
                     if let top = recap.topDrift {
                         HStack(spacing: 6) {
                             Circle().fill(Theme.distraction).frame(width: 7, height: 7)
@@ -522,8 +525,8 @@ struct MenuBarView: View {
                         openPane = openPane == .debrief ? nil : .debrief
                     }
                 } else {
-                    LockedProRow(feature: .debrief, title: "Debrief this session",
-                                 detail: "What you did, where you drifted, and one thing to try next time.",
+                    LockedProRow(feature: .debrief, title: String(localized: "Debrief this session"),
+                                 detail: String(localized: "What you did, where you drifted, and one thing to try next time."),
                                  systemImage: "sparkles",
                                  onTrialStarted: {
                                      appState.debriefs.write(for: recap.session)
@@ -544,20 +547,20 @@ struct MenuBarView: View {
                 Spacer()
                 // Back to the ready screen and its ruler now, instead of
                 // waiting for the recap to go stale.
-                PillButton(title: "Done", height: 22) { appState.recap = nil }
+                PillButton(title: String(localized: "Done", comment: "Button: dismisses the finished session's recap"), height: 22) { appState.recap = nil }
             }
             .padding(.leading, 10)
             .padding(.trailing, 6)
             .padding(.top, 4)
 
             VStack(spacing: 6) {
-                CapsuleButton(title: "Take a \(recap.suggestedBreakMinutes)-minute break", prominent: true) {
+                CapsuleButton(title: String(localized: "Take a \(recap.suggestedBreakMinutes)-minute break"), prominent: true) {
                     appState.startBreak(durationMinutes: recap.suggestedBreakMinutes)
                 }
                 // Any length for the next one, on the same ruler as the ready screen.
                 VStack(spacing: 4) {
                     LengthRuler(minutes: $minutes)
-                    CapsuleButton(title: "Start \(lengthText(minutes))", prominent: false, height: 32, semibold: true) {
+                    CapsuleButton(title: String(localized: "Start \(lengthText(minutes))"), prominent: false, height: 32, semibold: true) {
                         lastSessionMinutes = minutes
                         appState.sessionManager.startSession(label: recap.session.label, plannedDurationMinutes: minutes)
                     }
@@ -624,7 +627,7 @@ struct MenuBarView: View {
                             .kerning(-1)
                             .contentTransition(.numericText(countsDown: true))
                             .animation(.snappy(duration: 0.25), value: Int(remaining))
-                        Text("left")
+                        Text("left", comment: "Under a countdown: time remaining, not the direction")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.secondaryText)
                             .padding(.top, 4)
@@ -654,15 +657,15 @@ struct MenuBarView: View {
             .menuModule(padding: EdgeInsets(top: 18, leading: 14, bottom: 16, trailing: 14))
 
             HStack(spacing: 6) {
-                ControlPlatter(systemImage: "wind", title: "Breathe") {
+                ControlPlatter(systemImage: "wind", title: String(localized: "Breathe")) {
                     appState.breakOverlay.present(breakManager: appState.breakManager)
                     dismiss()
                 }
-                ControlPlatter(systemImage: "plus", title: "5 more min") {
+                ControlPlatter(systemImage: "plus", title: String(localized: "5 more min")) {
                     appState.breakManager.extend(byMinutes: 5)
                 }
                 if appState.breakManager.canEndEarly {
-                    ControlPlatter(systemImage: "stop.fill", title: "End break") {
+                    ControlPlatter(systemImage: "stop.fill", title: String(localized: "End break")) {
                         appState.breakManager.skip()
                     }
                 }
@@ -681,7 +684,7 @@ struct MenuBarView: View {
                 }
                 Spacer(minLength: 0)
                 if appState.breakManager.canEndEarly {
-                    PillButton(title: "Start now") {
+                    PillButton(title: String(localized: "Start now")) {
                         appState.breakManager.skip()
                         lastSessionMinutes = next
                         appState.sessionManager.startSession(label: defaultLabel.isEmpty ? nil : defaultLabel,
@@ -702,11 +705,11 @@ struct MenuBarView: View {
                 .font(.system(size: 12))
                 .labelStyle(.titleAndIcon)
             HStack(spacing: 6) {
-                CapsuleButton(title: "Set up…", prominent: true, height: 28) {
+                CapsuleButton(title: String(localized: "Set up…"), prominent: true, height: 28) {
                     dismiss()
                     NotificationCenter.default.post(name: .showOnboarding, object: nil)
                 }
-                CapsuleButton(title: "Recheck", prominent: false, height: 28, fill: MenuPalette.onTint) {
+                CapsuleButton(title: String(localized: "Recheck"), prominent: false, height: 28, fill: MenuPalette.onTint) {
                     Task { await permissions.refresh() }
                 }
             }
@@ -720,23 +723,24 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             MenuSeparator().padding(.top, 2)
             if case .ready = phase {} else {
-                Text("Today · \(formatMinutes(appState.menuStats.today.focus)) focused\(goalMet ? " · goal met" : "")")
+                Text(goalMet ? "Today · \(formatMinutes(appState.menuStats.today.focus)) focused · goal met"
+                             : "Today · \(formatMinutes(appState.menuStats.today.focus)) focused")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.secondaryText)
                     .lineLimit(1)
                     .padding(.horizontal, 10)
                     .frame(height: 24)
             }
-            MenuItemRow(title: "Open FocusGuard") {
+            MenuItemRow(title: String(localized: "Open FocusGuard")) {
                 dismiss()
                 onOpenMain(.home)
             }
-            MenuItemRow(title: "Settings…", shortcut: "⌘,") {
+            MenuItemRow(title: String(localized: "Settings…"), shortcut: "⌘,") {
                 dismiss()
                 onOpenMain(.settings)
             }
             MenuSeparator()
-            MenuItemRow(title: "Quit FocusGuard", shortcut: "⌘Q") {
+            MenuItemRow(title: String(localized: "Quit FocusGuard"), shortcut: "⌘Q") {
                 appState.tracker.flush()
                 NSApplication.shared.terminate(nil)
             }
@@ -749,9 +753,9 @@ struct MenuBarView: View {
     private func formatMinutes(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds)) / 60
         let h = total / 60, m = total % 60
-        if h == 0 { return "\(m)m" }
-        if m == 0 { return "\(h)h" }
-        return "\(h)h \(m)m"
+        if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+        if m == 0 { return String(localized: "\(h)h", comment: "Compact duration") }
+        return String(localized: "\(h)h \(m)m", comment: "Compact duration")
     }
 }
 
@@ -759,11 +763,11 @@ struct MenuBarView: View {
 
 enum BreakTips {
     static let all = [
-        "Stand up and look out of a window for a minute.",
-        "Refill your water.",
-        "Roll your shoulders and stretch your back.",
-        "Step outside for a minute of daylight.",
-        "Close your eyes and take five slow breaths.",
+        String(localized: "Stand up and look out of a window for a minute."),
+        String(localized: "Refill your water."),
+        String(localized: "Roll your shoulders and stretch your back."),
+        String(localized: "Step outside for a minute of daylight."),
+        String(localized: "Close your eyes and take five slow breaths."),
     ]
 
     /// Stable for the length of one break.

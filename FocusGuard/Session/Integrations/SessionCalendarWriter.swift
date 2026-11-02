@@ -28,7 +28,7 @@ final class SessionCalendarWriter {
         var ref: OwnEventRef { OwnEventRef(id: eventID, key: key, start: start) }
     }
 
-    nonisolated static let plannedTitle = "Focus · planned"
+    nonisolated static let plannedTitle = String(localized: "Focus · planned", comment: "Calendar event title: time held for a planned focus session")
     /// A session this short when it ends is taken off again.
     nonisolated static let shortest: TimeInterval = 60
     /// A session started this long before a planned slot takes it over.
@@ -65,7 +65,9 @@ final class SessionCalendarWriter {
     /// "Focus · Write the Q4 report".
     nonisolated static func title(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Focus" : "Focus · \(trimmed)"
+        return trimmed.isEmpty
+            ? String(localized: "Focus", comment: "Noun: calendar event title for a focus session with no name")
+            : String(localized: "Focus · \(trimmed)", comment: "Calendar event title: a focus session and its goal or name")
     }
 
     nonisolated static func key(session id: UUID) -> String { "session-\(id.uuidString)" }

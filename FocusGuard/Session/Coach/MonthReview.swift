@@ -62,13 +62,9 @@ struct MonthFacts: Equatable, Sendable {
         let compares = then.focus + then.drift >= 3600
 
         let rate = FocusRate.of(focused: now.focus, drifted: now.drift)
-        var headline = "\(name): \(CoachDraft.duration(now.focus)) focused at \(withArticle(CoachDraft.percent(rate))) focus rate"
-        if compares {
-            let points = Int((rate * 100).rounded()) - Int((FocusRate.of(focused: then.focus, drifted: then.drift) * 100).rounded())
-            headline += points == 0 ? ", level with \(previous)"
-                : ", \(CoachDraft.counted(abs(points), "point")) \(points > 0 ? "up" : "down") on \(previous)"
-        }
-        headline += "."
+        let moved = compares ? Int((rate * 100).rounded()) - Int((FocusRate.of(focused: then.focus, drifted: then.drift) * 100).rounded()) : 0
+        let headline = headlineSentence(month: CoachDraft.capitalized(name), focused: CoachDraft.duration(now.focus),
+                                        rate: CoachDraft.percent(rate), previous: compares ? previous : nil, points: moved)
 
         var changes: [CoachPoint] = []
         if compares {
@@ -76,9 +72,10 @@ struct MonthFacts: Equatable, Sendable {
             if let sessions = sessionChange(month, before: before) { changes.append(sessions) }
             let delta = now.focus - then.focus
             if abs(delta) >= 30 * 60 {
+                let current = CoachDraft.duration(now.focus), earlier = CoachDraft.duration(then.focus)
                 changes.append(delta > 0
-                    ? CoachPoint(lead: "More focus overall.", rest: " \(CoachDraft.duration(now.focus)), up from \(CoachDraft.duration(then.focus)).", tone: .focus)
-                    : CoachPoint(lead: "Less focus overall.", rest: " \(CoachDraft.duration(now.focus)), down from \(CoachDraft.duration(then.focus)).", tone: .drift))
+                    ? CoachPoint(String(localized: "More focus overall.| \(current), up from \(earlier).", comment: "The | ends the bold start"), tone: .focus)
+                    : CoachPoint(String(localized: "Less focus overall.| \(current), down from \(earlier).", comment: "The | ends the bold start"), tone: .drift))
             }
         } else if let best = bestPart(month, locale: locale, calendar: calendar) {
             changes.append(best)
@@ -87,6 +84,30 @@ struct MonthFacts: Equatable, Sendable {
             changes.append(top)
         }
         return MonthFacts(headline: headline, changes: Array(changes.prefix(3)))
+    }
+
+    /// One whole sentence per case, since "a"/"an" and the comparison both
+    /// change it.
+    private static func headlineSentence(month: String, focused: String, rate: String, previous: String?, points: Int) -> String {
+        let an = takesAn(rate), moved = abs(points)
+        guard let previous else {
+            return an ? String(localized: "\(month): \(focused) focused at an \(rate) focus rate.")
+                : String(localized: "\(month): \(focused) focused at a \(rate) focus rate.")
+        }
+        if points == 0 {
+            return an ? String(localized: "\(month): \(focused) focused at an \(rate) focus rate, level with \(previous).")
+                : String(localized: "\(month): \(focused) focused at a \(rate) focus rate, level with \(previous).")
+        }
+        if points > 0 {
+            return an ? String(localized: "\(month): \(focused) focused at an \(rate) focus rate, \(moved) points up on \(previous).",
+                               comment: "Plural on points: 1 point / 2 points")
+                : String(localized: "\(month): \(focused) focused at a \(rate) focus rate, \(moved) points up on \(previous).",
+                         comment: "Plural on points: 1 point / 2 points")
+        }
+        return an ? String(localized: "\(month): \(focused) focused at an \(rate) focus rate, \(moved) points down on \(previous).",
+                           comment: "Plural on points: 1 point / 2 points")
+            : String(localized: "\(month): \(focused) focused at a \(rate) focus rate, \(moved) points down on \(previous).",
+                     comment: "Plural on points: 1 point / 2 points")
     }
 
     // MARK: - Parts of the day
@@ -126,25 +147,37 @@ struct MonthFacts: Equatable, Sendable {
         }
         var out: [CoachPoint] = []
         if let up = moved.max(by: { $0.change < $1.change }), up.change >= 0.05 {
-            out.append(CoachPoint(lead: "\(partsName(up.hours)) got stronger.",
-                                  rest: " \(CoachDraft.capitalized(up.hours.phrase(locale: locale, calendar: calendar))) rose from \(CoachDraft.percent(up.then.rate)) to \(CoachDraft.percent(up.now.rate)).",
-                                  tone: .focus))
+            let name = partsName(up.hours), phrase = CoachDraft.capitalized(up.hours.phrase(locale: locale, calendar: calendar))
+            let from = CoachDraft.percent(up.then.rate), to = CoachDraft.percent(up.now.rate)
+            out.append(CoachPoint(String(localized: "\(name) got stronger.| \(phrase) rose from \(from) to \(to).",
+                                         comment: "Mornings, then when: Before noon. The | ends the bold start"), tone: .focus))
         }
         if let down = moved.min(by: { $0.change < $1.change }), down.change <= -0.05 {
+            let name = partsName(down.hours)
             let phrase = down.hours.phrase(locale: locale, calendar: calendar)
             let more = down.now.drift - down.then.drift
-            let rest: String
+            let sentence: String
             if more >= 15 * 60 {
-                var line = " You drifted \(CoachDraft.duration(more)) more \(phrase)"
-                if let top = down.now.driftBy.max(by: { ($0.value.seconds, $1.key) < ($1.value.seconds, $0.key) }) {
-                    let share = top.value.seconds / max(1, down.now.drift)
-                    if share >= 0.5 { line += ", most of it on \(top.value.name)" } else if share >= 0.3 { line += ", much of it on \(top.value.name)" }
+                let extra = CoachDraft.duration(more)
+                let top = down.now.driftBy.max(by: { ($0.value.seconds, $1.key) < ($1.value.seconds, $0.key) })
+                let share = top.map { $0.value.seconds / max(1, down.now.drift) } ?? 0
+                if let top, share >= 0.5 {
+                    sentence = String(localized: "\(name) slipped.| You drifted \(extra) more \(phrase), most of it on \(top.value.name).",
+                                      comment: "Mornings, a compact duration, when (before noon), an app or site. The | ends the bold start")
+                } else if let top, share >= 0.3 {
+                    sentence = String(localized: "\(name) slipped.| You drifted \(extra) more \(phrase), much of it on \(top.value.name).",
+                                      comment: "Mornings, a compact duration, when (before noon), an app or site. The | ends the bold start")
+                } else {
+                    sentence = String(localized: "\(name) slipped.| You drifted \(extra) more \(phrase).",
+                                      comment: "Mornings, a compact duration, when (before noon). The | ends the bold start")
                 }
-                rest = line + "."
             } else {
-                rest = " \(CoachDraft.capitalized(phrase)) fell from \(CoachDraft.percent(down.then.rate)) to \(CoachDraft.percent(down.now.rate))."
+                let capital = CoachDraft.capitalized(phrase)
+                let from = CoachDraft.percent(down.then.rate), to = CoachDraft.percent(down.now.rate)
+                sentence = String(localized: "\(name) slipped.| \(capital) fell from \(from) to \(to).",
+                                  comment: "Mornings, then when: Before noon. The | ends the bold start")
             }
-            out.append(CoachPoint(lead: "\(partsName(down.hours)) slipped.", rest: rest, tone: .drift))
+            out.append(CoachPoint(sentence, tone: .drift))
         }
         return out
     }
@@ -153,14 +186,20 @@ struct MonthFacts: Equatable, Sendable {
     static func bestPart(_ month: CoachData, locale: Locale, calendar: Calendar) -> CoachPoint? {
         let rated = parts(month, calendar: calendar).filter { $0.value.rated }
         guard rated.count >= 2, let best = rated.max(by: { ($0.value.rate, $1.key.from) < ($1.value.rate, $0.key.from) }) else { return nil }
-        return CoachPoint(lead: "\(partsName(best.key)) were your strongest.",
-                          rest: " \(CoachDraft.capitalized(best.key.phrase(locale: locale, calendar: calendar))) ran at \(CoachDraft.percent(best.value.rate)).",
-                          tone: .focus)
+        let name = partsName(best.key), phrase = CoachDraft.capitalized(best.key.phrase(locale: locale, calendar: calendar))
+        let rate = CoachDraft.percent(best.value.rate)
+        return CoachPoint(String(localized: "\(name) were your strongest.| \(phrase) ran at \(rate).",
+                                 comment: "Mornings, then when: Before noon. The | ends the bold start"), tone: .focus)
     }
 
     /// "Mornings".
     static func partsName(_ hours: CoachHours) -> String {
-        hours.partOfDay.map { CoachDraft.capitalized($0) + "s" } ?? "Those hours"
+        switch hours {
+        case .morning:   return String(localized: "Mornings")
+        case .afternoon: return String(localized: "Afternoons")
+        case .evening:   return String(localized: "Evenings")
+        default:         return String(localized: "Those hours")
+        }
     }
 
     // MARK: - Sessions and distractions
@@ -171,12 +210,12 @@ struct MonthFacts: Equatable, Sendable {
         let now = Int((Double(month.sessions.reduce(0) { $0 + $1.minutes }) / Double(month.sessions.count)).rounded())
         let then = Int((Double(before.sessions.reduce(0) { $0 + $1.minutes }) / Double(before.sessions.count)).rounded())
         if now - then >= 3 {
-            return CoachPoint(lead: "Sessions got longer.", rest: " \(now) minutes on average, up from \(then).", tone: .focus)
+            return CoachPoint(String(localized: "Sessions got longer.| \(now) minutes on average, up from \(then).", comment: "The | ends the bold start"), tone: .focus)
         }
         if then - now >= 3 {
-            return CoachPoint(lead: "Sessions got shorter.", rest: " \(now) minutes on average, down from \(then).", tone: .other)
+            return CoachPoint(String(localized: "Sessions got shorter.| \(now) minutes on average, down from \(then).", comment: "The | ends the bold start"), tone: .other)
         }
-        return CoachPoint(lead: "Sessions held steady.", rest: " About \(now) minutes on average.", tone: .other)
+        return CoachPoint(String(localized: "Sessions held steady.| About \(now) minutes on average.", comment: "The | ends the bold start"), tone: .other)
     }
 
     /// The month's top distraction, with its time the month before.
@@ -188,9 +227,14 @@ struct MonthFacts: Equatable, Sendable {
         let earlier = before.map { data in
             data.events.filter { $0.kind == .distraction && $0.target == top.key }.reduce(0) { $0 + $1.duration }
         } ?? 0
-        let against = earlier >= 60 ? ", against \(CoachDraft.duration(earlier)) in \(previous)" : ""
-        return CoachPoint(lead: "\(name) was your top distraction.",
-                          rest: " \(CoachDraft.duration(top.value)) this month\(against).", tone: .drift)
+        let time = CoachDraft.duration(top.value)
+        if earlier >= 60 {
+            let then = CoachDraft.duration(earlier)
+            return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) this month, against \(then) in \(previous).",
+                                     comment: "An app or site, two compact durations, then a month: September. The | ends the bold start"), tone: .drift)
+        }
+        return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) this month.",
+                                 comment: "An app or site, then a compact duration. The | ends the bold start"), tone: .drift)
     }
 
     // MARK: - Words
@@ -204,10 +248,9 @@ struct MonthFacts: Equatable, Sendable {
         return date.formatted(style)
     }
 
-    /// "an 83%", "a 72%".
-    static func withArticle(_ percent: String) -> String {
-        let an = percent.hasPrefix("8") || percent.hasPrefix("11%") || percent.hasPrefix("18%")
-        return (an ? "an " : "a ") + percent
+    /// English only: whether a percentage is said "an 83%" rather than "a 72%".
+    static func takesAn(_ percent: String) -> Bool {
+        percent.hasPrefix("8") || percent.hasPrefix("11%") || percent.hasPrefix("18%")
     }
 }
 
@@ -238,7 +281,8 @@ enum MonthReviewBuilder {
             style.locale = locale
             style.calendar = calendar
             style.timeZone = calendar.timeZone
-            return "\(f.day.formatted(style)) drifted most, \(CoachDraft.duration(f.targetSeconds)) of it on \(f.name)."
+            let day = CoachDraft.capitalized(f.day.formatted(style)), time = CoachDraft.duration(f.targetSeconds)
+            return String(localized: "\(day) drifted most, \(time) of it on \(f.name).", comment: "A full date with its weekday, a compact duration, an app or site")
         }
         return CoachDraft.headline(for: finding, locale: locale, calendar: calendar)
     }
@@ -250,21 +294,23 @@ enum MonthReviewBuilder {
             .sorted { $0.appliedAt < $1.appliedAt }
             .map { trial in
                 let running = trial.week.end > now
-                var result = running ? "Still running" : (trial.change ?? "Too little to tell")
+                var result = running ? String(localized: "Still running") : (trial.change ?? String(localized: "Too little to tell"))
                 if !running, trial.isMeasured, case .sessionRate(let hours) = trial.experiment.metric, hours != .allDay {
-                    result += " \(hours.phrase(locale: locale, calendar: calendar))"
+                    let when = hours.phrase(locale: locale, calendar: calendar)
+                    result = String(localized: "\(result) \(when)", comment: "A change in focus rate, then when: +7 pts after 17:00")
                 }
                 let status: String
                 if kept.contains(trial.id) {
-                    status = "Kept on"
+                    status = String(localized: "Kept on")
                 } else if running {
                     var style = Date.FormatStyle().day().month(.wide)
                     style.locale = locale
                     style.calendar = calendar
                     style.timeZone = calendar.timeZone
-                    status = "On until \(trial.week.end.addingTimeInterval(-1).formatted(style))"
+                    let last = trial.week.end.addingTimeInterval(-1).formatted(style)
+                    status = String(localized: "On until \(last)", comment: "A date: 30 November")
                 } else {
-                    status = "Turned off"
+                    status = String(localized: "Turned off")
                 }
                 return MonthTrialLine(id: trial.id, title: trial.experiment.title(locale: locale, calendar: calendar),
                                       result: result, improved: !running && trial.improved, status: status)
@@ -286,7 +332,7 @@ final class MonthReviewer {
     let coach: WeeklyCoach
     /// The tracked data for a stretch of days; the coach's by default.
     @ObservationIgnored var reader: (DateInterval) async -> CoachData
-    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.model
+    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.writer
     @ObservationIgnored var isUnlocked: () -> Bool = { Entitlements.shared.isUnlocked(.monthlyReview) }
     @ObservationIgnored var now: () -> Date = { .now }
     @ObservationIgnored var locale: Locale = .current
@@ -319,10 +365,10 @@ final class MonthReviewer {
 
     /// "Try in November", or "Try through December" late in a month.
     var tryHeading: String {
-        guard let period = trialPeriod else { return "Try next" }
+        guard let period = trialPeriod else { return String(localized: "Try next") }
         let month = MonthFacts.monthName(period.end.addingTimeInterval(-1), locale: locale, calendar: calendar)
         return calendar.isDate(period.start, equalTo: period.end.addingTimeInterval(-1), toGranularity: .month)
-            ? "Try in \(month)" : "Try through \(month)"
+            ? String(localized: "Try in \(month)", comment: "A month: November") : String(localized: "Try through \(month)", comment: "A month: December")
     }
 
     func review(for month: DateInterval) -> MonthReview? { reviews[month.start] }

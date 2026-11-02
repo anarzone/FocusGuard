@@ -226,7 +226,8 @@ final class SmartCategories {
             let decision = SmartCategorizer.decide(verdict, evidence: item)
             made.append(SmartRecord(key: item.key, name: item.name, bundleId: item.bundleId, host: item.host,
                                     suggested: verdict.classification, sure: verdict.sure, reason: verdict.reason,
-                                    hours: item.hours, status: decision == .apply ? .applied : .needsYou,
+                                    hours: item.hours.map(SmartEvidenceBuilder.shownHours),
+                                    status: decision == .apply ? .applied : .needsYou,
                                     decidedAt: now()))
         }
         let applied = made.filter { $0.status == .applied }

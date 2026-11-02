@@ -116,12 +116,13 @@ struct SmartBanner: Equatable {
     }
 
     var text: String {
-        let things = total == 1 ? "new app or site" : "new apps and sites"
-        let head = sorted == total ? "Sorted \(total) \(things)" : "Sorted \(sorted) of \(total) \(things)"
-        switch needYou {
-        case 0:  return head
-        case 1:  return head + " · 1 needs you"
-        default: return head + " · \(needYou) need you"
-        }
+        let head = sorted == total
+            ? String(localized: "Sorted \(total) new apps and sites",
+                     comment: "Plural on total: Sorted 1 new app or site / Sorted 2 new apps and sites")
+            : String(localized: "Sorted \(sorted) of \(total) new apps and sites",
+                     comment: "Plural on total: Sorted 0 of 1 new app or site / Sorted 1 of 2 new apps and sites")
+        guard needYou > 0 else { return head }
+        return head + " · " + String(localized: "\(needYou) need you",
+                                     comment: "Plural on needYou: 1 needs you / 2 need you. Apps and sites waiting for the person to sort them")
     }
 }

@@ -11,7 +11,7 @@ struct ProBadge: View {
 /// "FREE", in grey, for what the free plan includes.
 struct FreeBadge: View {
     var body: some View {
-        PlanBadge(text: "FREE", fill: Theme.freeBadge, ink: Theme.freeBadgeText)
+        PlanBadge(text: String(localized: "FREE", comment: "Badge on what the free plan includes"), fill: Theme.freeBadge, ink: Theme.freeBadgeText)
             .accessibilityLabel("Free")
     }
 }

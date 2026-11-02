@@ -15,6 +15,6 @@ protocol LicenceVerifier {
 /// Turns every key down, so nothing unlocks Pro until real keys exist.
 struct PlaceholderLicenceVerifier: LicenceVerifier {
     func verify(_ key: String) async -> LicenceCheck {
-        .invalid(reason: "Licence keys aren't available yet.")
+        .invalid(reason: String(localized: "Licence keys aren't available yet."))
     }
 }

@@ -342,11 +342,11 @@ struct AppUsageEntry: Identifiable, Hashable {
 
     static func format(seconds: TimeInterval) -> String {
         let total = Int(seconds)
-        if total < 60 { return "\(total)s" }
+        if total < 60 { return String(localized: "\(total)s", comment: "Compact duration") }
         let h = total / 3600
         let m = (total % 3600) / 60
-        if h == 0 { return "\(m)m" }
-        return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+        if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+        return m == 0 ? String(localized: "\(h)h", comment: "Compact duration") : String(localized: "\(h)h \(m)m", comment: "Compact duration")
     }
 }
 
@@ -421,9 +421,9 @@ struct DistractionEntry: Identifiable, Hashable {
 
     var timeLabel: String {
         let total = Int(seconds)
-        if total < 60 { return "\(total)s" }
+        if total < 60 { return String(localized: "\(total)s", comment: "Compact duration") }
         let m = total / 60
         let s = total % 60
-        return s == 0 ? "\(m)m" : "\(m)m \(s)s"
+        return s == 0 ? String(localized: "\(m)m", comment: "Compact duration") : String(localized: "\(m)m \(s)s", comment: "Compact duration")
     }
 }

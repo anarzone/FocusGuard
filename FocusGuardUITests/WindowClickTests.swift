@@ -20,6 +20,9 @@ final class WindowClickTests: XCTestCase {
             "-FocusGuardUITesting",
             // Never start a session from the Mac's real calendar.
             "-calendarAutostart.enabled", "NO",
+            // These look for controls by their English labels.
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US",
         ]
         app.launch()
         XCTAssertTrue(window.waitForExistence(timeout: 15), "The window didn't open")

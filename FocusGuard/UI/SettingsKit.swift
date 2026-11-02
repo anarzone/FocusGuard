@@ -20,7 +20,13 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     case system, light, dark
 
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .system: return String(localized: "System", comment: "Appearance: follow the system setting")
+        case .light:  return String(localized: "Light", comment: "Appearance: light mode")
+        case .dark:   return String(localized: "Dark", comment: "Appearance: dark mode")
+        }
+    }
 
     static var stored: AppAppearance {
         parse(UserDefaults.standard.string(forKey: SettingsWindowKey.appearance))
@@ -112,6 +118,7 @@ struct SettingsRow<Trailing: View>: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13)).foregroundStyle(Theme.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let detail {
                     Text(detail)
                         .font(.system(size: 11))
@@ -120,7 +127,8 @@ struct SettingsRow<Trailing: View>: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            trailing()
+            // The title wraps before a longer translated button clips.
+            trailing().layoutPriority(1)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -221,13 +229,13 @@ struct ExtensionStatusRows: View {
             NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.bundleId) != nil
         }
         if installed.isEmpty {
-            SettingsRow(title: "Chrome, Arc, Brave, Edge", detail: "None of these browsers is on this Mac") {
+            SettingsRow(title: "Chrome, Arc, Brave, Edge", detail: String(localized: "None of these browsers is on this Mac")) {
                 Button("Add…") { openSheet(.browserExtension) }.buttonStyle(.capsule(.secondary, height: 26))
             }
         }
         ForEach(Array(installed.enumerated()), id: \.element.bundleId) { index, browser in
             if index > 0 { SettingsDivider() }
-            SettingsRow(title: browser.name, detail: connected.contains(browser.bundleId) ? nil : "Not added yet") {
+            SettingsRow(title: browser.name, detail: connected.contains(browser.bundleId) ? nil : String(localized: "Not added yet")) {
                 if connected.contains(browser.bundleId) {
                     Label("Connected", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 12))

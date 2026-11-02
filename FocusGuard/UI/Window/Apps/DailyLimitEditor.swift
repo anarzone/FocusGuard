@@ -14,25 +14,26 @@ enum LimitGate {
         let extra = policy.extraTime
         guard extra.isOffered else {
             return policy.limitChangesWaitForTomorrow
-                ? "When it runs out: no extra time, and changes wait for tomorrow (\(preset.title))."
-                : "When it runs out: no extra time (\(preset.title))."
+                ? String(localized: "When it runs out: no extra time, and changes wait for tomorrow (\(preset.title)).", comment: "A daily limit. In brackets: the blocking level's name")
+                : String(localized: "When it runs out: no extra time (\(preset.title)).", comment: "A daily limit. In brackets: the blocking level's name")
         }
-        let wait = extra.waitSeconds > 0 ? " after a \(extra.waitSeconds)-second wait" : ""
         let times: String
         switch extra.timesPerDay {
-        case 1: times = "once a day"
-        case 2: times = "twice a day"
-        default: times = "up to \(extra.timesPerDay) times a day"
+        case 1: times = String(localized: "once a day")
+        case 2: times = String(localized: "twice a day")
+        default: times = String(localized: "up to \(extra.timesPerDay) times a day")
         }
-        return "When it runs out: \(extra.minutes) more minutes\(wait), \(times) (\(preset.title))."
+        return extra.waitSeconds > 0
+            ? String(localized: "When it runs out: \(extra.minutes) more minutes after a \(extra.waitSeconds)-second wait, \(times) (\(preset.title)).", comment: "A daily limit. Before the brackets: once a day, twice a day or up to 3 times a day. In brackets: the blocking level's name")
+            : String(localized: "When it runs out: \(extra.minutes) more minutes, \(times) (\(preset.title)).", comment: "A daily limit. Before the brackets: once a day, twice a day or up to 3 times a day. In brackets: the blocking level's name")
     }
 
     /// "12 of 30 min today · resets at midnight", with any change that waits.
     static func usage(_ status: LimitStatus) -> String {
-        var line = "\(Int(status.used / 60)) of \(status.minutes + status.extraMinutes) min today · resets at midnight"
+        var line = String(localized: "\(Int(status.used / 60)) of \(status.minutes + status.extraMinutes) min today · resets at midnight")
         switch status.pending {
-        case .minutes(let m): line += " · \(m) min from tomorrow"
-        case .removal: line += " · goes away tomorrow"
+        case .minutes(let m): line += " · " + String(localized: "\(m) min from tomorrow")
+        case .removal: line += " · " + String(localized: "goes away tomorrow", comment: "A daily limit that was removed and ends tomorrow")
         case nil: break
         }
         return line
@@ -93,8 +94,9 @@ struct DailyLimitEditor: View {
                 Text("Free keeps one daily limit. More are part of Pro.")
                     .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
             } else {
-                LockedProRow(feature: .unlimitedLimits, title: "Daily limits for any \(isSite ? "site" : "app")",
-                             detail: "Free keeps one daily limit. Pro sets one for every app and site.",
+                LockedProRow(feature: .unlimitedLimits,
+                             title: isSite ? String(localized: "Daily limits for any site") : String(localized: "Daily limits for any app"),
+                             detail: String(localized: "Free keeps one daily limit. Pro sets one for every app and site."),
                              systemImage: "hourglass",
                              onTrialStarted: { add() },
                              onUpgrade: { openSheet(.upgrade(.unlimitedLimits)) },
@@ -111,7 +113,7 @@ struct DailyLimitEditor: View {
     }
 
     private func apply(_ change: LimitChange?) {
-        note = change == .fromTomorrow ? "Strict is on, so this takes effect tomorrow." : nil
+        note = change == .fromTomorrow ? String(localized: "Strict is on, so this takes effect tomorrow.") : nil
     }
 }
 

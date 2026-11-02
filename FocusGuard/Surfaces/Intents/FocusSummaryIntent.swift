@@ -64,7 +64,7 @@ struct FocusSummarySnippet: View {
                     .trim(from: 0, to: max(0.001, progress))
                     .stroke(Self.indigo, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                Text("\(Int((progress * 100).rounded()))%")
+                Text("\(Int((progress * 100).rounded()))%", comment: "Percentage")
                     .font(.system(size: 15, weight: .semibold))
                     .monospacedDigit()
             }
@@ -80,9 +80,11 @@ struct FocusSummarySnippet: View {
             }
             Spacer(minLength: 12)
             VStack(alignment: .leading, spacing: 4) {
-                row("Focus rate", "\(summary.focusPercent)%")
-                row("Sessions", "\(summary.sessions)")
-                if summary.bestStretch >= 60 { row("Best stretch", "\(Int(summary.bestStretch / 60)) min") }
+                row(String(localized: "Focus rate"), String(localized: "\(summary.focusPercent)%", comment: "Percentage"))
+                row(String(localized: "Sessions"), "\(summary.sessions)")
+                if summary.bestStretch >= 60 {
+                    row(String(localized: "Best stretch"), String(localized: "\(Int(summary.bestStretch / 60)) min", comment: "Compact minutes"))
+                }
             }
         }
         .padding(16)
@@ -90,9 +92,9 @@ struct FocusSummarySnippet: View {
 
     private var heading: String {
         switch summary.period {
-        case .today:     return "Today, so far"
-        case .yesterday: return "Yesterday"
-        case .thisWeek:  return "This week, so far"
+        case .today:     return String(localized: "Today, so far")
+        case .yesterday: return String(localized: "Yesterday")
+        case .thisWeek:  return String(localized: "This week, so far")
         }
     }
 
@@ -100,10 +102,10 @@ struct FocusSummarySnippet: View {
         guard showsGoal else { return nil }
         let left = goal - summary.focused
         let goalText = FocusNumbers.duration(goal)
-        if left <= 0 { return "\(goalText) goal reached" }
+        if left <= 0 { return String(localized: "\(goalText) goal reached") }
         return summary.period == .today
-            ? "\(FocusNumbers.duration(left)) to your \(goalText) goal"
-            : "\(FocusNumbers.duration(left)) short of the \(goalText) goal"
+            ? String(localized: "\(FocusNumbers.duration(left)) to your \(goalText) goal")
+            : String(localized: "\(FocusNumbers.duration(left)) short of the \(goalText) goal")
     }
 
     private func row(_ label: String, _ value: String) -> some View {

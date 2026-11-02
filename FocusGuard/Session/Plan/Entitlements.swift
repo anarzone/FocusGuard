@@ -123,7 +123,7 @@ final class Entitlements {
     /// Checks `key` and, if it's good, switches to Pro.
     func activateLicence(_ key: String) async -> LicenceCheck {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { return .invalid(reason: "Enter a licence key.") }
+        guard !key.isEmpty else { return .invalid(reason: String(localized: "Enter a licence key.")) }
         let result = await verifier.verify(key)
         if result == .valid {
             licenceKey = key

@@ -24,20 +24,18 @@ struct CoachHours: Codable, Hashable, Sendable {
             let date = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: Date(timeIntervalSince1970: 0)) ?? .now
             return HabitFormat.time(date, locale: locale, calendar: calendar)
         }
-        if from == 0 && to == 24 { return "all day" }
-        if from == 0 { return to == 12 ? "before noon" : "before \(clock(to))" }
-        if to == 24 { return "after \(clock(from))" }
-        return "between \(clock(from)) and \(clock(to))"
-    }
-
-    /// "morning", "afternoon" or "evening" for the three parts.
-    var partOfDay: String? {
-        switch self {
-        case .morning:   return "morning"
-        case .afternoon: return "afternoon"
-        case .evening:   return "evening"
-        default:         return nil
+        if from == 0 && to == 24 { return String(localized: "all day") }
+        if from == 0 {
+            if to == 12 { return String(localized: "before noon") }
+            let end = clock(to)
+            return String(localized: "before \(end)", comment: "A time in a sentence: Your sessions before 09:00 ...")
         }
+        if to == 24 {
+            let start = clock(from)
+            return String(localized: "after \(start)", comment: "A time in a sentence: Your sessions after 17:00 ...")
+        }
+        let start = clock(from), end = clock(to)
+        return String(localized: "between \(start) and \(end)", comment: "Times in a sentence: Your sessions between 12:00 and 17:00 ...")
     }
 }
 

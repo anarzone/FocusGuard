@@ -6,13 +6,16 @@ enum SurfaceWords {
     static func duration(_ seconds: TimeInterval) -> String {
         let minutes = Int(max(0, seconds) / 60)
         let h = minutes / 60, m = minutes % 60
-        if h == 0 { return "\(m)m" }
-        return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+        if h == 0 { return String(localized: "\(m)m", comment: "Compact duration") }
+        return m == 0
+            ? String(localized: "\(h)h", comment: "Compact duration")
+            : String(localized: "\(h)h \(m)m", comment: "Compact duration")
     }
 
     /// "18 min", rounded up so time left never reads 0 early.
     static func minutesLeft(_ seconds: TimeInterval) -> String {
-        "\(seconds <= 0 ? 0 : Int((seconds / 60).rounded(.up))) min"
+        let minutes = seconds <= 0 ? 0 : Int((seconds / 60).rounded(.up))
+        return String(localized: "\(minutes) min", comment: "Compact minutes")
     }
 
     static func clock(_ date: Date) -> String {
@@ -37,26 +40,28 @@ struct FocusControlValue: Equatable {
 
     static func from(_ snapshot: SurfaceSnapshot?, at date: Date) -> FocusControlValue {
         guard let snapshot else {
-            return FocusControlValue(isOn: false, title: "FocusGuard", detail: "Start 50 min", symbol: "shield")
+            let usualMinutes = 50
+            return FocusControlValue(isOn: false, title: "FocusGuard", detail: String(localized: "Start \(usualMinutes) min"), symbol: "shield")
         }
         switch snapshot.phase {
         case .ready:
-            return FocusControlValue(isOn: false, title: "FocusGuard", detail: "Start \(snapshot.usualMinutes) min",
+            return FocusControlValue(isOn: false, title: "FocusGuard", detail: String(localized: "Start \(snapshot.usualMinutes) min"),
                                      symbol: "shield")
         case .focusing, .paused:
             let detail: String
             if snapshot.phase == .paused {
-                detail = "Paused"
+                detail = String(localized: "Paused")
             } else if let left = snapshot.timeLeft(at: date) {
-                detail = "\(SurfaceWords.minutesLeft(left)) left"
+                detail = String(localized: "\(SurfaceWords.minutesLeft(left)) left", comment: "Time left in a session, as in 18 min left")
             } else {
-                detail = "\(Int(snapshot.running(at: date) / 60)) min so far"
+                detail = String(localized: "\(Int(snapshot.running(at: date) / 60)) min so far")
             }
-            return FocusControlValue(isOn: true, title: snapshot.session?.name ?? "Focusing", detail: detail,
+            return FocusControlValue(isOn: true, title: snapshot.session?.name ?? String(localized: "Focusing"), detail: detail,
                                      symbol: snapshot.phase == .paused ? "pause.circle" : "shield.lefthalf.filled")
         case .onBreak:
-            let detail = snapshot.onBreak.map { "back at \(SurfaceWords.clock($0.endsAt))" } ?? "On a break"
-            return FocusControlValue(isOn: true, title: "Break", detail: detail, symbol: "cup.and.saucer")
+            let detail = snapshot.onBreak.map { String(localized: "back at \(SurfaceWords.clock($0.endsAt))") } ?? String(localized: "On a break")
+            return FocusControlValue(isOn: true, title: String(localized: "Break", comment: "Noun: a break between sessions"), detail: detail,
+                                     symbol: "cup.and.saucer")
         }
     }
 }

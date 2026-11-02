@@ -23,46 +23,46 @@ struct SettingsPrivacyPane: View {
 
     var body: some View {
         SettingsColumns {
-            SettingsSection("Kept on this Mac") {
-                SettingsRow(title: stats.summary, detail: "In FocusGuard's folder in your Library") {
+            SettingsSection(String(localized: "Kept on this Mac")) {
+                SettingsRow(title: stats.summary, detail: String(localized: "In FocusGuard's folder in your Library")) {
                     Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([StoreStats.storeURL]) }
                         .buttonStyle(.capsule(.secondary, height: 26))
                 }
                 SettingsDivider()
                 VStack(alignment: .leading, spacing: 7) {
-                    bullet("checkmark", "Which app or site is in front, once a second")
-                    bullet("checkmark", "Window titles, except in the apps below")
-                    bullet("checkmark", "Your sessions and how they went")
-                    bullet("xmark", "Never keystrokes, screen contents, page text or passwords")
+                    bullet("checkmark", String(localized: "Which app or site is in front, once a second"))
+                    bullet("checkmark", String(localized: "Window titles, except in the apps below"))
+                    bullet("checkmark", String(localized: "Your sessions and how they went"))
+                    bullet("xmark", String(localized: "Never keystrokes, screen contents, page text or passwords"))
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
             titlesSection
-            SettingsSection("Something wrong?") {
-                SettingsRow(title: "Send diagnostics",
-                            detail: "App logs and settings only, never your activity, titles or sites. You see it all before it's sent.") {
+            SettingsSection(String(localized: "Something wrong?")) {
+                SettingsRow(title: String(localized: "Send diagnostics"),
+                            detail: String(localized: "App logs and settings only, never your activity, titles or sites. You see it all before it's sent.")) {
                     Button("Review and send…") { report = DiagnosticsReport.prepare(appState: appState) }
                         .buttonStyle(.capsule(.secondary, height: 26))
                 }
             }
         } right: {
-            SettingsSection("What leaves this Mac") {
-                SettingsRow("Update checks", detail: "Once a day; sends the app version")
+            SettingsSection(String(localized: "What leaves this Mac")) {
+                SettingsRow(String(localized: "Update checks"), detail: String(localized: "Once a day; sends the app version"))
                 SettingsDivider()
-                SettingsToggle(title: "Site icons", detail: "Each icon comes straight from its own site", isOn: $siteIcons)
+                SettingsToggle(title: String(localized: "Site icons"), detail: String(localized: "Each icon comes straight from its own site"), isOn: $siteIcons)
                 SettingsDivider()
-                SettingsRow("Licence check", detail: "Pro only, when you enter a key and when the app starts")
+                SettingsRow(String(localized: "Licence check"), detail: String(localized: "Pro only, when you enter a key and when the app starts"))
                 SettingsDivider()
-                SettingsRow("Spotify", detail: "Only if you sign in to search playlists")
+                SettingsRow("Spotify", detail: String(localized: "Only if you sign in to search playlists"))
                 SettingsDivider()
-                SettingsRow("Todoist and Linear", detail: "Only if you connect them: reads your tasks, and ticks off the one you finish")
+                SettingsRow(String(localized: "Todoist and Linear"), detail: String(localized: "Only if you connect them: reads your tasks, and ticks off the one you finish"))
             }
             SettingsNote(systemImage: "lock",
                          text: PrivacyNote.onThisMac)
-            SettingsSection("History") {
-                SettingsRow(title: "Keep history for",
-                            detail: entitlements.historyStart() == nil ? nil : "Reports past \(Plan.freeHistoryDays) days need Pro") {
+            SettingsSection(String(localized: "History", comment: "Settings section: how long activity is kept")) {
+                SettingsRow(title: String(localized: "Keep history for"),
+                            detail: entitlements.historyStart() == nil ? nil : String(localized: "Reports past \(Plan.freeHistoryDays) days need Pro")) {
                     Picker("Keep history for", selection: $retentionDays) {
                         ForEach(RetentionPolicy.choices, id: \.days) { Text($0.label).tag($0.days) }
                     }
@@ -72,8 +72,8 @@ struct SettingsPrivacyPane: View {
                     .onChange(of: retentionDays) { RetentionPolicy.prune(context: context); reload() }
                 }
             }
-            SettingsSection("Your data") {
-                SettingsRow(title: "Export everything") {
+            SettingsSection(String(localized: "Your data")) {
+                SettingsRow(title: String(localized: "Export everything")) {
                     HStack(spacing: 6) {
                         Button("JSON") { DataExporter.export(.json, container: appState.container) }
                         Button("CSV") { DataExporter.export(.csv, container: appState.container) }
@@ -81,12 +81,12 @@ struct SettingsPrivacyPane: View {
                     .buttonStyle(.capsule(.secondary, height: 26))
                 }
                 SettingsDivider()
-                SettingsRow(title: "Delete today's activity") {
+                SettingsRow(title: String(localized: "Delete today's activity")) {
                     Button("Delete…") { confirmDeleteToday = true }
                         .buttonStyle(.capsule(.secondary, height: 26))
                 }
                 SettingsDivider()
-                SettingsRow(title: "Erase all FocusGuard data", detail: "Activity, sessions, rules and settings") {
+                SettingsRow(title: String(localized: "Erase all FocusGuard data"), detail: String(localized: "Activity, sessions, rules and settings")) {
                     Button("Erase…") { confirmErase = true }
                         .buttonStyle(.capsule(.destructive, height: 26))
                 }
@@ -111,7 +111,7 @@ struct SettingsPrivacyPane: View {
     // MARK: - Titles
 
     private var titlesSection: some View {
-        SettingsSection("Don't record window titles in") {
+        SettingsSection(String(localized: "Don't record window titles in")) {
             VStack(alignment: .leading, spacing: 10) {
                 FlowLayout(spacing: 6) {
                     ForEach(optOuts, id: \.bundleIdentifier) { entry in
@@ -186,7 +186,9 @@ struct StoreStats: Equatable {
 
     var summary: String {
         let size = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
-        return "\(WindowFormat.count(days, "day")) · \(WindowFormat.count(sessions, "session")) · \(size)"
+        let dayCount = String(localized: "\(days) days", comment: "Plural on n: 1 day / 2 days")
+        let sessionCount = String(localized: "\(sessions) sessions", comment: "Plural on n: 1 session / 2 sessions")
+        return "\(dayCount) · \(sessionCount) · \(size)"
     }
 
     @MainActor
@@ -208,7 +210,8 @@ struct StoreStats: Equatable {
 /// permission states, settings that say how the app is set up, what this
 /// run has cost in CPU and wakeups (`EnergyUsage`), and this run's log
 /// lines with sites and paths taken out. No activity, no titles, no sites. Nothing is sent: the user reads it, then opens Mail or a
-/// GitHub issue themselves.
+/// GitHub issue themselves. It stays in English whatever the app's language,
+/// since support reads it.
 enum DiagnosticsReport {
     struct Prepared: Identifiable {
         let id = UUID()
@@ -241,7 +244,7 @@ enum DiagnosticsReport {
                      ("macOS", ProcessInfo.processInfo.operatingSystemVersionString),
                      ("Plan", plan)]),
             ("Permissions", [("All granted", permissions.allGranted ? "yes" : "no")]),
-            ("Settings", [("Drift preset", DriftResponse.current?.title ?? "tuned by hand"),
+            ("Settings", [("Drift preset", DriftResponse.current?.rawValue.capitalized ?? "tuned by hand"),
                           ("Nudge after", "\(Int(engine.notifyThreshold)) s"),
                           ("Pause screen after", "\(Int(engine.blockThreshold)) s"),
                           ("Strict", engine.strictMode ? "on" : "off"),
@@ -377,18 +380,23 @@ enum PrivacyStatement {
 
     /// - Parameter slack: Slack is built in, for the status while you focus.
     static func networkStatement(slack: Bool) -> String {
-        let services = slack ? "Spotify, Todoist, Linear and Slack when you use them" : "Spotify, Todoist and Linear when you use them"
-        let rest = AISettings.isAvailable
-            ? "for \(services), and for AI tips, which send a short summary (never window titles or full URLs) when you ask"
-            : "and for \(services)"
-        return "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, "
-            + "to fetch site icons from the sites themselves, \(rest)."
+        switch (slack, AISettings.isAvailable) {
+        case (true, true):
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist, Linear and Slack when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
+        case (false, true):
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, for Spotify, Todoist and Linear when you use them, and for AI tips, which send a short summary (never window titles or full URLs) when you ask.")
+        case (true, false):
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist, Linear and Slack when you use them.")
+        case (false, false):
+            return String(localized: "Your activity is stored on this Mac. FocusGuard goes online only to check for updates, to fetch site icons from the sites themselves, and for Spotify, Todoist and Linear when you use them.")
+        }
     }
 
     /// For onboarding's welcome step.
     static var short: String {
-        let base = "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them."
-        return AISettings.isAvailable ? base + " AI tips, if you turn them on, send a short summary." : base
+        AISettings.isAvailable
+            ? String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them. AI tips, if you turn them on, send a short summary.")
+            : String(localized: "It's recorded only here. FocusGuard goes online just for updates, site icons, and Spotify, Todoist or Linear if you use them.")
     }
 }
 
@@ -401,14 +409,15 @@ enum PrivacyNote {
 
     static func make(smartCategories: Bool, debrief: Bool, coach: Bool, ask: Bool = false,
                      monthlyReview: Bool = false) -> String {
-        var parts: [String] = []
-        if smartCategories { parts.append("smart categories") }
-        parts += ["highlights", "session names"]
-        if debrief { parts += ["debriefs", "the work log"] }
-        if coach { parts.append("the weekly coach") }
-        if ask { parts.append("answers in Ask") }
-        if monthlyReview { parts.append("the month in review") }
-        let list = parts.count > 1 ? parts.dropLast().joined(separator: ", ") + " and " + (parts.last ?? "") : parts.joined()
-        return list.prefix(1).uppercased() + list.dropFirst() + " are worked out on this Mac."
+        // The first item starts the sentence, so it has its own capitalised key.
+        var parts: [String] = smartCategories
+            ? [String(localized: "Smart categories", comment: "Starts a sentence: Smart categories, highlights and session names are worked out on this Mac"), String(localized: "highlights", comment: "In a list, not first: Smart categories, highlights and session names are worked out on this Mac")]
+            : [String(localized: "Highlights", comment: "Starts a sentence: Highlights and session names are worked out on this Mac")]
+        parts.append(String(localized: "session names", comment: "In a list of things worked out on this Mac"))
+        if debrief { parts += [String(localized: "debriefs", comment: "In a list of things worked out on this Mac"), String(localized: "the work log", comment: "In a list of things worked out on this Mac")] }
+        if coach { parts.append(String(localized: "the weekly coach", comment: "In a list of things worked out on this Mac")) }
+        if ask { parts.append(String(localized: "answers in Ask", comment: "In a list of things worked out on this Mac")) }
+        if monthlyReview { parts.append(String(localized: "the month in review", comment: "In a list of things worked out on this Mac")) }
+        return String(localized: "\(HabitFormat.list(parts)) are worked out on this Mac.", comment: "The list is features, like: Highlights and session names")
     }
 }

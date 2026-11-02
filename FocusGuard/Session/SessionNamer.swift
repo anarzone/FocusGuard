@@ -3,8 +3,13 @@ import Foundation
 /// Names a session from how it went: a word for the focus pattern and a
 /// word for the length — "Locked-in Deep Dive", "Comeback Run". A session
 /// that's still running can't be judged yet, so it goes by the time of day.
+///
+/// `Session.autoName` keeps the English name whatever the language, since
+/// `ReportsModelBuilder.pattern(of:)` reads the pattern back out of it.
+/// `localizedName(stored:)` turns it into the name people see.
 enum SessionNamer {
     /// How the focus went, judged on the focus rate and where the drift fell.
+    /// The raw value is the word inside a stored name; `title` is what's shown.
     enum Pattern: String, CaseIterable {
         case lockedIn = "Locked-in"
         case slowStart = "Slow-start"
@@ -16,6 +21,19 @@ enum SessionNamer {
         /// Nothing counted either way: away from the Mac, or only in
         /// neutral apps.
         case quiet = "Quiet"
+
+        var title: String {
+            switch self {
+            case .lockedIn:   return String(localized: "Locked-in", comment: "How a session went, as a label")
+            case .slowStart:  return String(localized: "Slow-start", comment: "How a session went, as a label")
+            case .comeback:   return String(localized: "Comeback", comment: "How a session went, as a label")
+            case .fading:     return String(localized: "Fading", comment: "How a session went, as a label")
+            case .steady:     return String(localized: "Steady", comment: "How a session went, as a label")
+            case .bumpy:      return String(localized: "Bumpy", comment: "How a session went, as a label")
+            case .wandering:  return String(localized: "Wandering", comment: "How a session went, as a label")
+            case .quiet:      return String(localized: "Quiet", comment: "How a session went, as a label")
+            }
+        }
     }
 
     /// How long it ran, pauses excluded.
@@ -40,6 +58,7 @@ enum SessionNamer {
     /// Drift share in a third of the session that still counts as clean.
     static let cleanThird = 0.10
 
+    /// The name to store: always English.
     static func name(segments: [SessionTimeline.Segment], runningSeconds: TimeInterval) -> String {
         "\(pattern(of: segments).rawValue) \(Length(minutes: runningSeconds / 60).rawValue)"
     }
@@ -48,6 +67,55 @@ enum SessionNamer {
         let end = endedAt ?? session.endedAt ?? .now
         let running = max(0, end.timeIntervalSince(session.startedAt) - session.pausedSeconds)
         return name(segments: SessionTimeline.segments(from: session.events), runningSeconds: running)
+    }
+
+    /// A stored name in the user's language; a name it can't read stays as it is.
+    static func localizedName(stored: String) -> String {
+        for word in Pattern.allCases where stored.hasPrefix(word.rawValue + " ") {
+            if let length = Length(rawValue: String(stored.dropFirst(word.rawValue.count + 1))) {
+                return localizedName(word, length)
+            }
+        }
+        return stored
+    }
+
+    /// Each name is a key of its own: the two words agree differently in
+    /// each language, and can't be put together from parts.
+    private static func localizedName(_ word: Pattern, _ length: Length) -> String {
+        switch (word, length) {
+        case (.lockedIn, .sprint):    return String(localized: "Locked-in Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.lockedIn, .run):       return String(localized: "Locked-in Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.lockedIn, .deepDive):  return String(localized: "Locked-in Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.lockedIn, .marathon):  return String(localized: "Locked-in Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.slowStart, .sprint):   return String(localized: "Slow-start Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.slowStart, .run):      return String(localized: "Slow-start Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.slowStart, .deepDive): return String(localized: "Slow-start Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.slowStart, .marathon): return String(localized: "Slow-start Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.comeback, .sprint):    return String(localized: "Comeback Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.comeback, .run):       return String(localized: "Comeback Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.comeback, .deepDive):  return String(localized: "Comeback Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.comeback, .marathon):  return String(localized: "Comeback Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.fading, .sprint):      return String(localized: "Fading Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.fading, .run):         return String(localized: "Fading Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.fading, .deepDive):    return String(localized: "Fading Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.fading, .marathon):    return String(localized: "Fading Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.steady, .sprint):      return String(localized: "Steady Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.steady, .run):         return String(localized: "Steady Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.steady, .deepDive):    return String(localized: "Steady Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.steady, .marathon):    return String(localized: "Steady Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.bumpy, .sprint):       return String(localized: "Bumpy Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.bumpy, .run):          return String(localized: "Bumpy Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.bumpy, .deepDive):     return String(localized: "Bumpy Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.bumpy, .marathon):     return String(localized: "Bumpy Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.wandering, .sprint):   return String(localized: "Wandering Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.wandering, .run):      return String(localized: "Wandering Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.wandering, .deepDive): return String(localized: "Wandering Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.wandering, .marathon): return String(localized: "Wandering Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        case (.quiet, .sprint):       return String(localized: "Quiet Sprint", comment: "Automatic session name, shown alone and inside sentences")
+        case (.quiet, .run):          return String(localized: "Quiet Run", comment: "Automatic session name, shown alone and inside sentences")
+        case (.quiet, .deepDive):     return String(localized: "Quiet Deep Dive", comment: "Automatic session name, shown alone and inside sentences")
+        case (.quiet, .marathon):     return String(localized: "Quiet Marathon", comment: "Automatic session name, shown alone and inside sentences")
+        }
     }
 
     /// Patterns about *when* the drifting happened come first: they say
@@ -96,10 +164,10 @@ enum SessionNamer {
     /// "Morning focus", "Late-night focus" — for a session still running.
     static func liveName(startedAt: Date, calendar: Calendar = .current) -> String {
         switch calendar.component(.hour, from: startedAt) {
-        case 5..<12: return "Morning focus"
-        case 12..<17: return "Afternoon focus"
-        case 17..<22: return "Evening focus"
-        default: return "Late-night focus"
+        case 5..<12: return String(localized: "Morning focus", comment: "Name of a session still running, shown alone and inside sentences")
+        case 12..<17: return String(localized: "Afternoon focus", comment: "Name of a session still running, shown alone and inside sentences")
+        case 17..<22: return String(localized: "Evening focus", comment: "Name of a session still running, shown alone and inside sentences")
+        default: return String(localized: "Late-night focus", comment: "Name of a session still running, shown alone and inside sentences")
         }
     }
 }
@@ -108,6 +176,6 @@ extension Session {
     /// What to call this session: the user's own label, else the name it
     /// earned when it ended, else the time of day while it runs.
     var displayName: String {
-        label ?? autoName ?? SessionNamer.liveName(startedAt: startedAt)
+        label ?? autoName.map(SessionNamer.localizedName(stored:)) ?? SessionNamer.liveName(startedAt: startedAt)
     }
 }

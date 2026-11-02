@@ -147,6 +147,10 @@ enum SmartCategorizer {
     /// it's used (the evidence's). "Design tool you open next to Linear",
     /// "Chat app, mostly 21:00 to 23:00".
     static func reason(what: String, evidence: SmartEvidence) -> String {
+        // Asked in English, the model says what something is in English, even
+        // when told to answer in the app's language. That word doesn't belong
+        // in a translated sentence, so other languages get the facts alone.
+        guard OnDeviceAI.appLanguage == "en" else { return fallbackReason(evidence) }
         var kind = what.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         kind = kind.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'.,"))
         for article in ["a ", "an ", "the "] where kind.lowercased().hasPrefix(article) {
@@ -160,26 +164,45 @@ enum SmartCategorizer {
         }
         kind = kind.prefix(1).uppercased() + kind.dropFirst()
         if let next = evidence.alongside.first?.name, evidence.sessionShare >= 0.5 {
-            return "\(kind) you open next to \(next)"
+            return String(localized: "\(kind) you open next to \(next)",
+                          comment: "What an app is (the model's English words), and the app it's used with")
         }
-        if evidence.sessionShare >= 0.6 { return "\(kind), mostly during sessions" }
-        if let hours = evidence.hours { return "\(kind), \(hours)" }
-        if evidence.sessionShare <= 0.2 { return "\(kind), mostly outside sessions" }
-        if let next = evidence.alongside.first?.name { return "\(kind) you use next to \(next)" }
+        if evidence.sessionShare >= 0.6 {
+            return String(localized: "\(kind), mostly during sessions", comment: "What an app is, in the model's English words")
+        }
+        if let hours = evidence.hours { return "\(kind), \(SmartEvidenceBuilder.shownHours(hours))" }
+        if evidence.sessionShare <= 0.2 {
+            return String(localized: "\(kind), mostly outside sessions", comment: "What an app is, in the model's English words")
+        }
+        if let next = evidence.alongside.first?.name {
+            return String(localized: "\(kind) you use next to \(next)",
+                          comment: "What an app is (the model's English words), and the app it's used with")
+        }
         return kind
     }
 
     static func fallbackReason(_ evidence: SmartEvidence) -> String {
-        let time = spoken(evidence.seconds)
-        if evidence.sessionShare >= 0.6 { return "\(time) this week, mostly in sessions" }
-        if evidence.sessionShare <= 0.2 { return "\(time) this week, mostly outside sessions" }
-        return "\(time) this week"
+        let time = shownTime(evidence.seconds)
+        if evidence.sessionShare >= 0.6 { return String(localized: "\(time) this week, mostly in sessions") }
+        if evidence.sessionShare <= 0.2 { return String(localized: "\(time) this week, mostly outside sessions") }
+        return String(localized: "\(time) this week")
     }
 
-    /// "1h 10m", "42 min".
+    /// "1h 10m", "42 min". In English: it goes in the model's prompt.
     static func spoken(_ seconds: TimeInterval) -> String {
         let minutes = Int((seconds / 60).rounded())
         if minutes < 60 { return "\(max(1, minutes)) min" }
         return String(format: "%dh %02dm", minutes / 60, minutes % 60)
+    }
+
+    /// `spoken` in the person's language, for the line on screen.
+    private static func shownTime(_ seconds: TimeInterval) -> String {
+        let total = Int((seconds / 60).rounded())
+        if total < 60 {
+            let minutes = max(1, total)
+            return String(localized: "\(minutes) min", comment: "Compact minutes")
+        }
+        let hours = total / 60, minutes = String(format: "%02d", total % 60)
+        return String(localized: "\(hours)h \(minutes)m", comment: "Compact duration; the minutes always have two digits, as in 1h 05m")
     }
 }

@@ -79,7 +79,10 @@ enum EventKitAccess {
 /// (`SessionCalendarWriter`). Only those are ever changed or removed.
 enum OwnEvents {
     static let host = "session"
+    /// Events already on the calendar are told apart by this, so it stays as it is.
     static let note = "Added by FocusGuard."
+    /// The note new events carry.
+    static let shownNote = String(localized: "Added by FocusGuard.", comment: "Note on a calendar event FocusGuard wrote")
 
     /// `focusguard://session?id=<key>`.
     static func link(key: String) -> URL? {
@@ -98,7 +101,7 @@ enum OwnEvents {
 
     static func isOwn(_ event: EKEvent, ids: Set<String>) -> Bool {
         if let id = event.eventIdentifier, ids.contains(id) { return true }
-        return key(in: event.url) != nil || event.notes?.hasPrefix(note) == true
+        return key(in: event.url) != nil || event.notes?.hasPrefix(note) == true || event.notes?.hasPrefix(shownNote) == true
     }
 
     /// Kept by `SessionCalendarWriter`; read here so the calendar readers

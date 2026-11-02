@@ -208,7 +208,7 @@ struct NowRow: View {
                     HStack(spacing: 5) {
                         Circle().fill(reachedLimit == nil ? kindColor(snapshot.classification) : Theme.distraction)
                             .frame(width: 7, height: 7)
-                        Text(reachedLimit == nil ? categoryName(snapshot.classification) : "Limit reached")
+                        Text(reachedLimit == nil ? categoryName(snapshot.classification) : String(localized: "Limit reached"))
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.primaryText.opacity(0.85))
                     }
@@ -235,7 +235,7 @@ struct NowRow: View {
 
     private var detail: String? {
         guard let snapshot else { return nil }
-        if reachedLimit != nil { return "Paused by FocusGuard" }
+        if reachedLimit != nil { return String(localized: "Paused by FocusGuard") }
         if host != nil {
             let title = snapshot.windowTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
             return title?.isEmpty == false ? title : nil
@@ -367,8 +367,7 @@ struct SessionRingView<Center: View>: View {
 
     private var accessibilitySummary: String {
         let m = timeline.minutesPerCell
-        return "Session ring: \(timeline.focusCells * m) minutes focused, "
-            + "\(timeline.driftCells * m) drifted, \(timeline.otherCells * m) in other apps"
+        return String(localized: "Session ring: \(timeline.focusCells * m) minutes focused, \(timeline.driftCells * m) drifted, \(timeline.otherCells * m) in other apps")
     }
 }
 
@@ -427,21 +426,21 @@ struct StretchSummary: View {
 
     private var kindName: String {
         switch stretch.kind {
-        case .focus: return "Focused"
-        case .drift: return "Drifted"
-        case .other: return "Other"
+        case .focus: return String(localized: "Focused", comment: "Kind of time in a session")
+        case .drift: return String(localized: "Drifted", comment: "Kind of time in a session")
+        case .other: return String(localized: "Other", comment: "Kind of time in a session: neither focused nor drifted, such as calls or mail")
         }
     }
 
     private var timeRange: String {
         let start = stretch.start.formatted(date: .omitted, time: .shortened)
-        if stretch.includesNow { return "\(start) – now" }
+        if stretch.includesNow { return String(localized: "\(start) – now") }
         return "\(start)–\(stretch.end.formatted(date: .omitted, time: .shortened))"
     }
 
     static func duration(_ seconds: TimeInterval) -> String {
         let s = Int(seconds.rounded())
-        return s < 60 ? "\(s)s" : "\(s / 60)m"
+        return s < 60 ? String(localized: "\(s)s", comment: "Compact duration") : String(localized: "\(s / 60)m", comment: "Compact duration")
     }
 }
 
@@ -454,9 +453,9 @@ struct RingLegend: View {
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: counts == nil ? 12 : 14) {
-                swatch(Theme.focus, "Focused", counts?.focus)
-                swatch(Theme.distraction, "Drifted", counts?.drift)
-                swatch(Theme.other, "Other", counts?.other)
+                swatch(Theme.focus, String(localized: "Focused", comment: "Kind of time in a session"), counts?.focus)
+                swatch(Theme.distraction, String(localized: "Drifted", comment: "Kind of time in a session"), counts?.drift)
+                swatch(Theme.other, String(localized: "Other", comment: "Kind of time in a session: neither focused nor drifted, such as calls or mail"), counts?.other)
                 if counts != nil {
                     Text("min").foregroundStyle(Theme.secondaryText)
                 }
@@ -523,9 +522,9 @@ struct ZoneModule: View {
 
             VStack(alignment: .trailing, spacing: 6) {
                 if drifting {
-                    note("Restarts when\nyou're back")
+                    note(String(localized: "Restarts when\nyou're back"))
                 } else if paused {
-                    note("Picks up from here\nwhen you resume")
+                    note(String(localized: "Picks up from here\nwhen you resume"))
                 } else if active, currentMinutes >= bestMinutes, currentMinutes >= 1 {
                     Text("New best today")
                         .font(.system(size: 11, weight: .semibold))

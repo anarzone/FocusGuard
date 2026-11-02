@@ -189,14 +189,14 @@ enum TodayModelBuilder {
     /// How it went, in a few words, for the strip's tooltip.
     static func shape(of pattern: SessionNamer.Pattern) -> String {
         switch pattern {
-        case .lockedIn:  return "focused the whole way"
-        case .slowStart: return "slow to start, then steady"
-        case .comeback:  return "drifted early, finished strong"
-        case .fading:    return "strong start, faded at the end"
-        case .steady:    return "steady, with a few drifts"
-        case .bumpy:     return "on and off"
-        case .wandering: return "mostly drifting"
-        case .quiet:     return "little to go on"
+        case .lockedIn:  return String(localized: "focused the whole way")
+        case .slowStart: return String(localized: "slow to start, then steady")
+        case .comeback:  return String(localized: "drifted early, finished strong")
+        case .fading:    return String(localized: "strong start, faded at the end")
+        case .steady:    return String(localized: "steady, with a few drifts")
+        case .bumpy:     return String(localized: "on and off", comment: "How a session went: focus came and went")
+        case .wandering: return String(localized: "mostly drifting")
+        case .quiet:     return String(localized: "little to go on", comment: "How a session went: too little activity to judge it")
         }
     }
 
@@ -237,44 +237,49 @@ enum TodayHeadline {
     }
 
     static func make(_ c: Context) -> (lead: String, rest: String) {
-        if c.isFirstDay { return ("Day one.", "Start a session and this page fills in as you work.") }
+        if c.isFirstDay {
+            return (String(localized: "Day one."), String(localized: "Start a session and this page fills in as you work."))
+        }
         if !c.isToday {
-            guard c.hasActivity else { return ("Nothing was tracked this day.", "") }
-            if c.focused >= c.goal { return ("Goal met: \(WindowFormat.hm(c.focused)) focused.", "") }
-            return ("\(WindowFormat.hm(c.focused)) focused.", "\(WindowFormat.hm(c.goal - c.focused)) short of the goal.")
+            guard c.hasActivity else { return (String(localized: "Nothing was tracked this day."), "") }
+            if c.focused >= c.goal { return (String(localized: "Goal met: \(WindowFormat.hm(c.focused)) focused."), "") }
+            return (String(localized: "\(WindowFormat.hm(c.focused)) focused."),
+                    String(localized: "\(WindowFormat.hm(c.goal - c.focused)) short of the goal."))
         }
         if c.focused >= c.goal {
-            return ("Goal met: \(WindowFormat.hm(c.focused)) focused today.", "Anything more is a bonus.")
+            return (String(localized: "Goal met: \(WindowFormat.hm(c.focused)) focused today."), String(localized: "Anything more is a bonus."))
         }
         let remaining = c.goal - c.focused
-        let lead = "\(gap(remaining)) to your \(goalName(c.goal))."
+        let lead = String(localized: "\(gap(remaining)) to your \(goalName(c.goal)).", comment: "37 minutes to your 4-hour goal.")
         if c.inSession {
-            guard let left = c.sessionLeft else { return (lead, "This session counts as you go.") }
-            if left >= remaining { return (lead, "This session can cover it.") }
-            if left >= remaining * 0.5 { return (lead, "This session can cover most of it.") }
-            return (lead, "This session gets you closer.")
+            guard let left = c.sessionLeft else { return (lead, String(localized: "This session counts as you go.")) }
+            if left >= remaining { return (lead, String(localized: "This session can cover it.")) }
+            if left >= remaining * 0.5 { return (lead, String(localized: "This session can cover most of it.")) }
+            return (lead, String(localized: "This session gets you closer."))
         }
-        if c.onBreak { return (lead, "Back to it after the break.") }
+        if c.onBreak { return (lead, String(localized: "Back to it after the break.")) }
         let next = TimeInterval(max(1, c.nextLength) * 60)
-        if next >= remaining { return (lead, "One \(c.nextLength)-minute session now gets you there.") }
-        if next >= remaining * 0.75 { return (lead, "One \(c.nextLength)-minute session now gets you nearly there.") }
+        if next >= remaining { return (lead, String(localized: "One \(c.nextLength)-minute session now gets you there.")) }
+        if next >= remaining * 0.75 { return (lead, String(localized: "One \(c.nextLength)-minute session now gets you nearly there.")) }
         let count = Int((remaining / next).rounded(.up))
-        return (lead, "About \(count) sessions of \(c.nextLength) minutes would do it.")
+        return (lead, String(localized: "About \(count) sessions of \(c.nextLength) minutes would do it."))
     }
 
     /// "37 minutes", "An hour", "2h 10m".
     static func gap(_ seconds: TimeInterval) -> String {
         let minutes = Int((seconds / 60).rounded(.up))
-        if minutes < 55 { return WindowFormat.count(minutes, "minute") }
-        if minutes <= 65 { return "An hour" }
+        if minutes < 55 { return String(localized: "\(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes") }
+        if minutes <= 65 { return String(localized: "An hour", comment: "Starts the sentence: An hour to your 4-hour goal.") }
         return WindowFormat.hm(TimeInterval(minutes * 60))
     }
 
     /// "4-hour goal", "3h 30m goal".
     static func goalName(_ goal: TimeInterval) -> String {
         let minutes = Int(goal / 60)
-        if minutes % 60 == 0 { return "\(minutes / 60)-hour goal" }
-        return "\(WindowFormat.hm(goal)) goal"
+        if minutes % 60 == 0 {
+            return String(localized: "\(minutes / 60)-hour goal", comment: "Goes into: 37 minutes to your 4-hour goal.")
+        }
+        return String(localized: "\(WindowFormat.hm(goal)) goal", comment: "Goes into: 37 minutes to your 3h 30m goal.")
     }
 }
 
@@ -299,19 +304,22 @@ enum StreakWords {
 
     static func detail(count: Int, now: Date, weekendsCount: Bool, calendar: Calendar = .current) -> String {
         let days = days(count: count, now: now, weekendsCount: weekendsCount, calendar: calendar)
-        guard let last = days.first, let first = days.last else { return "meet today's goal to start one" }
+        guard let last = days.first, let first = days.last else {
+            return String(localized: "meet today's goal to start one", comment: "Under the streak, when there is none: start a streak")
+        }
         let weekday = Date.FormatStyle(locale: calendar.locale ?? .current, calendar: calendar,
                                        timeZone: calendar.timeZone).weekday(.wide)
         if days.count == 1 {
             let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-            return "goal met \(calendar.isDate(last, inSameDayAs: yesterday) ? "yesterday" : last.formatted(weekday))"
+            if calendar.isDate(last, inSameDayAs: yesterday) { return String(localized: "goal met yesterday") }
+            return String(localized: "goal met \(last.formatted(weekday))", comment: "Under the streak, with a weekday: goal met Monday")
         }
         let spanDays = calendar.dateComponents([.day], from: first, to: last).day ?? 0
         if spanDays < 7 {
-            return "goal met \(first.formatted(weekday)) to \(last.formatted(weekday))"
+            return String(localized: "goal met \(first.formatted(weekday)) to \(last.formatted(weekday))", comment: "Under the streak: goal met Monday to Thursday")
         }
         let date = Date.FormatStyle(locale: calendar.locale ?? .current, calendar: calendar,
                                     timeZone: calendar.timeZone).day().month(.wide)
-        return "goal met since \(first.formatted(date))"
+        return String(localized: "goal met since \(first.formatted(date))", comment: "Under the streak: goal met since 5 October")
     }
 }

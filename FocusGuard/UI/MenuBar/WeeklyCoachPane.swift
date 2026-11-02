@@ -12,7 +12,7 @@ struct WeeklyCoachPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                PaneTitle(title: "Weekly coach", close: close) { ProBadge() }
+                PaneTitle(title: String(localized: "Weekly coach"), close: close) { ProBadge() }
                 if entitlements.isUnlocked(.coach), let note = coach.note {
                     Text("Last week · \(CoachWords.range(note.about))")
                         .font(.system(size: 12))
@@ -21,7 +21,7 @@ struct WeeklyCoachPane: View {
             }
 
             if !entitlements.isUnlocked(.coach) {
-                LockedProRow(feature: .coach, title: "Weekly coach", detail: CoachWords.pitch, systemImage: "sparkles",
+                LockedProRow(feature: .coach, title: String(localized: "Weekly coach"), detail: CoachWords.pitch, systemImage: "sparkles",
                              onTrialStarted: { Task { await coach.refresh() } })
             } else if let note = coach.note {
                 Text(note.headline)
@@ -80,12 +80,14 @@ struct WeeklyCoachPane: View {
 
     private func tiles(_ stats: CoachWeekStats) -> some View {
         HStack(spacing: 6) {
-            CoachTile(label: "Focused", value: formatDuration(stats.focused),
-                      detail: stats.focusedBefore.map { CoachWords.timeChange(stats.focused - $0) } ?? "first week")
-            CoachTile(label: "Focus rate", value: "\(Int((stats.rate * 100).rounded()))%",
-                      detail: stats.rateBefore.map { CoachWords.pointsChange(from: $0, to: stats.rate) } ?? "first week")
-            CoachTile(label: "Goal met", value: "\(stats.goalDays) of \(stats.goalOf)",
-                      detail: stats.weekendsCount ? "days" : "weekdays")
+            CoachTile(label: String(localized: "Focused"), value: formatDuration(stats.focused),
+                      detail: stats.focusedBefore.map { CoachWords.timeChange(stats.focused - $0) } ?? String(localized: "first week"))
+            CoachTile(label: String(localized: "Focus rate"),
+                      value: String(localized: "\(Int((stats.rate * 100).rounded()))%", comment: "Percentage"),
+                      detail: stats.rateBefore.map { CoachWords.pointsChange(from: $0, to: stats.rate) } ?? String(localized: "first week"))
+            CoachTile(label: String(localized: "Goal met"), value: String(localized: "\(stats.goalDays) of \(stats.goalOf)"),
+                      detail: stats.weekendsCount ? String(localized: "days", comment: "Under a count such as 5 of 7")
+                                                  : String(localized: "weekdays", comment: "Under a count such as 3 of 5"))
         }
     }
 
@@ -93,7 +95,7 @@ struct WeeklyCoachPane: View {
 
     private var kept: some View {
         VStack(alignment: .leading, spacing: 6) {
-            paneHeading("Kept on", note: "from earlier weeks")
+            paneHeading(String(localized: "Kept on"), note: String(localized: "from earlier weeks"))
             ForEach(coach.state.kept) { trial in
                 HStack(spacing: 8) {
                     Text(trial.experiment.title())
@@ -267,8 +269,8 @@ private struct CoachTile: View {
 
 /// The coach's words that the menu and the window share.
 enum CoachWords {
-    static let pitch = "Each week, one pattern from your own week and one experiment FocusGuard can set up for you."
-    static let waiting = "After your first full week, the coach finds one pattern in it and suggests one thing to try."
+    static let pitch = String(localized: "Each week, one pattern from your own week and one experiment FocusGuard can set up for you.")
+    static let waiting = String(localized: "After your first full week, the coach finds one pattern in it and suggests one thing to try.")
 
     /// "19–25 Oct".
     static func range(_ week: DateInterval) -> String {
@@ -277,29 +279,38 @@ enum CoachWords {
 
     /// "On until Sunday."
     static func until(_ week: DateInterval) -> String {
-        "On until \(week.end.addingTimeInterval(-1).formatted(.dateTime.weekday(.wide)))."
+        String(localized: "On until \(week.end.addingTimeInterval(-1).formatted(.dateTime.weekday(.wide))).")
     }
 
     /// "Last week's experiment, shorter evening sessions: +9 pts." Under a
     /// heading that already says so, just "Shorter evening sessions: +9 pts."
     static func result(_ trial: CoachTrial, underHeading: Bool = false) -> CoachPoint {
         let name = underHeading ? CoachDraft.capitalized(trial.experiment.shortName())
-            : "Last week's experiment, \(trial.experiment.shortName())"
-        let rest = trial.kept ? " It stays on." : " It's off again."
+            : String(localized: "Last week's experiment, \(trial.experiment.shortName())")
+        let after = trial.kept ? String(localized: "It stays on.") : String(localized: "It's off again.")
         guard let change = trial.change else {
-            return CoachPoint(lead: "\(name):", rest: " too little data to tell." + rest, tone: .other)
+            let sentence = boldStart(String(localized: "\(name):| too little data to tell.",
+                                            comment: "The part before | is bold; keep the |. First value: an experiment's name"))
+            return CoachPoint(lead: sentence.lead, rest: sentence.rest + " " + after, tone: .other)
         }
-        return CoachPoint(lead: "\(name): \(change).", rest: rest, tone: trial.improved ? .focus : .other)
+        return CoachPoint(lead: String(localized: "\(name): \(change).", comment: "An experiment's name and how it changed things: A 15-minute limit on x.com: 24 → 8 min a day."),
+                          rest: " " + after, tone: trial.improved ? .focus : .other)
+    }
+
+    /// One sentence with a bold start: `|` marks where the bold part ends.
+    private static func boldStart(_ sentence: String) -> (lead: String, rest: String) {
+        let parts = sentence.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+        return (String(parts[0]), parts.count > 1 ? String(parts[1]) : "")
     }
 
     /// What the Insights row says about the coach.
     @MainActor static func rowDetail(_ coach: WeeklyCoach) -> String {
-        guard let note = coach.note else { return "One pattern, and one thing to try" }
+        guard let note = coach.note else { return String(localized: "One pattern, and one thing to try") }
         if coach.state.choice == .trying, let experiment = note.experiment {
-            return "Trying \(experiment.shortName()) this week"
+            return String(localized: "Trying \(experiment.shortName()) this week")
         }
         return note.experiment != nil && coach.state.choice == .open
-            ? "\(range(note.about)) · one thing to try" : note.headline
+            ? String(localized: "\(range(note.about)) · one thing to try") : note.headline
     }
 
     /// "+1h 44m", "−20m".

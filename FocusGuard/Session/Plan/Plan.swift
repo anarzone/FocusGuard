@@ -51,20 +51,20 @@ enum ProFeature: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .blockInBrowser:  return "Block in the browser"
-        case .macWideBlock:    return "Block on the whole Mac"
-        case .partsOfSites:    return "Parts of sites"
-        case .youtubePerVideo: return "YouTube video by video"
-        case .unlimitedLimits: return "Unlimited daily limits"
-        case .smartCategories: return "Smart categories"
-        case .debrief:         return "Session debrief"
-        case .workLog:         return "Work log"
-        case .coach:           return "Weekly coach"
-        case .taskGoals:       return "Tasks as session goals"
-        case .ask:             return "Ask"
-        case .monthlyReview:   return "Month in review"
-        case .statusSync:      return "Status in Slack and Discord"
-        case .fullHistory:     return "Full history"
+        case .blockInBrowser:  return String(localized: "Block in the browser")
+        case .macWideBlock:    return String(localized: "Block on the whole Mac")
+        case .partsOfSites:    return String(localized: "Parts of sites")
+        case .youtubePerVideo: return String(localized: "YouTube video by video")
+        case .unlimitedLimits: return String(localized: "Unlimited daily limits")
+        case .smartCategories: return String(localized: "Smart categories")
+        case .debrief:         return String(localized: "Session debrief")
+        case .workLog:         return String(localized: "Work log")
+        case .coach:           return String(localized: "Weekly coach")
+        case .taskGoals:       return String(localized: "Tasks as session goals")
+        case .ask:             return String(localized: "Ask", comment: "A Pro feature: asking questions about your own focus")
+        case .monthlyReview:   return String(localized: "Month in review")
+        case .statusSync:      return String(localized: "Status in Slack and Discord")
+        case .fullHistory:     return String(localized: "Full history")
         }
     }
 }

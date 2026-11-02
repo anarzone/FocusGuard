@@ -13,7 +13,11 @@ struct StarterShortcut: Identifiable, Hashable {
     let id: String
     /// What the shortcut should be named in the user's library. We pick names
     /// matching what FocusGuard will look for in the start/end pickers.
+    /// In the user's language, except with an `iCloudURL`: a shared shortcut
+    /// imports under the name it was shared with.
     let shortcutName: String
+    /// The name in English: what shortcuts set up in English are called.
+    let englishName: String
     /// One-line label for the catalog row.
     let title: String
     /// Slightly longer copy to set expectations.
@@ -28,6 +32,11 @@ struct StarterShortcut: Identifiable, Hashable {
     let role: Role
 
     enum Role: String { case start, end }
+
+    /// Whether it's among the shortcuts in the user's library, under either name.
+    func isInstalled(in installed: [String]) -> Bool {
+        installed.contains(shortcutName) || installed.contains(englishName)
+    }
 }
 
 enum StarterShortcuts {
@@ -39,25 +48,27 @@ enum StarterShortcuts {
         StarterShortcut(
             id: "work.start",
             shortcutName: "FocusGuard · Start Work",
-            title: "Start Work focus",
-            summary: "Turns on Apple's built-in Work focus mode for the duration of your session.",
+            englishName: "FocusGuard · Start Work",
+            title: String(localized: "Start Work focus"),
+            summary: String(localized: "Turns on Apple's built-in Work focus mode for the duration of your session."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → choose Work",
-                "Tap Until → Off (we'll turn it off when the session ends)",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → choose Work", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap Until → Off (we'll turn it off when the session ends)", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: URL(string: "https://www.icloud.com/shortcuts/c91a832d529342beb5046e4596c0cc5c"),
             role: .start
         ),
         StarterShortcut(
             id: "work.end",
-            shortcutName: "FocusGuard · End Work",
-            title: "End Work focus",
-            summary: "Turns off any active Focus when the session ends.",
+            shortcutName: String(localized: "FocusGuard · End Work", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · End Work",
+            title: String(localized: "End Work focus"),
+            summary: String(localized: "Turns off any active Focus when the session ends."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → choose Do Not Disturb (or any)",
-                "Tap the toggle → Turn Off",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → choose Do Not Disturb (or any)", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the toggle → Turn Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .end
@@ -66,26 +77,28 @@ enum StarterShortcuts {
         // MARK: Do Not Disturb
         StarterShortcut(
             id: "dnd.start",
-            shortcutName: "FocusGuard · Start DND",
-            title: "Start Do Not Disturb",
-            summary: "Quietest option — silences all notifications until the session ends.",
+            shortcutName: String(localized: "FocusGuard · Start DND", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · Start DND",
+            title: String(localized: "Start Do Not Disturb"),
+            summary: String(localized: "Quietest option — silences all notifications until the session ends."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → choose Do Not Disturb",
-                "Tap Until → Off",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → choose Do Not Disturb", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap Until → Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .start
         ),
         StarterShortcut(
             id: "dnd.end",
-            shortcutName: "FocusGuard · End DND",
-            title: "End Do Not Disturb",
-            summary: "Clears Do Not Disturb when the session ends.",
+            shortcutName: String(localized: "FocusGuard · End DND", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · End DND",
+            title: String(localized: "End Do Not Disturb"),
+            summary: String(localized: "Clears Do Not Disturb when the session ends."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → Do Not Disturb",
-                "Tap the toggle → Turn Off",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → Do Not Disturb", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the toggle → Turn Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .end
@@ -94,26 +107,28 @@ enum StarterShortcuts {
         // MARK: Reading
         StarterShortcut(
             id: "reading.start",
-            shortcutName: "FocusGuard · Start Reading",
-            title: "Start Reading focus",
-            summary: "Uses Apple's Reading focus — softer than DND, good for shallow reading sessions.",
+            shortcutName: String(localized: "FocusGuard · Start Reading", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · Start Reading",
+            title: String(localized: "Start Reading focus"),
+            summary: String(localized: "Uses Apple's Reading focus — softer than DND, good for shallow reading sessions."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → choose Reading",
-                "Tap Until → Off",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → choose Reading", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap Until → Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .start
         ),
         StarterShortcut(
             id: "reading.end",
-            shortcutName: "FocusGuard · End Reading",
-            title: "End Reading focus",
-            summary: "Clears the Reading focus when the session ends.",
+            shortcutName: String(localized: "FocusGuard · End Reading", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · End Reading",
+            title: String(localized: "End Reading focus"),
+            summary: String(localized: "Clears the Reading focus when the session ends."),
             recipe: [
-                "Add action: Set Focus",
-                "Tap the focus name → Reading",
-                "Tap the toggle → Turn Off",
+                String(localized: "Add action: Set Focus", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the focus name → Reading", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Tap the toggle → Turn Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .end
@@ -122,26 +137,28 @@ enum StarterShortcuts {
         // MARK: Deep Work — Work focus + close distracting apps
         StarterShortcut(
             id: "deep.start",
-            shortcutName: "FocusGuard · Start Deep Work",
-            title: "Start Deep Work",
-            summary: "Combines Work focus with quitting Slack, Mail, and Messages so they can't ping you.",
+            shortcutName: String(localized: "FocusGuard · Start Deep Work", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · Start Deep Work",
+            title: String(localized: "Start Deep Work"),
+            summary: String(localized: "Combines Work focus with quitting Slack, Mail, and Messages so they can't ping you."),
             recipe: [
-                "Add action: Set Focus → Work, Until Off",
-                "Add action: Quit App → Slack",
-                "Add action: Quit App → Mail",
-                "Add action: Quit App → Messages",
+                String(localized: "Add action: Set Focus → Work, Until Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Add action: Quit App → Slack", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Add action: Quit App → Mail", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Add action: Quit App → Messages", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .start
         ),
         StarterShortcut(
             id: "deep.end",
-            shortcutName: "FocusGuard · End Deep Work",
-            title: "End Deep Work",
-            summary: "Turns Work focus off and reopens the apps you were using.",
+            shortcutName: String(localized: "FocusGuard · End Deep Work", comment: "A shortcut's name in the Shortcuts app"),
+            englishName: "FocusGuard · End Deep Work",
+            title: String(localized: "End Deep Work"),
+            summary: String(localized: "Turns Work focus off and reopens the apps you were using."),
             recipe: [
-                "Add action: Set Focus → Work, Turn Off",
-                "Add action: Open App → Slack (optional, only if you want it back)",
+                String(localized: "Add action: Set Focus → Work, Turn Off", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
+                String(localized: "Add action: Open App → Slack (optional, only if you want it back)", comment: "A step in Apple's Shortcuts app: use the names macOS shows in this language"),
             ],
             iCloudURL: nil,
             role: .end

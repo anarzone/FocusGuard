@@ -7,7 +7,7 @@ struct FinishedSession: Equatable {
     let focusPercent: Int
 
     /// "· 50 min · 92% focused"
-    var detail: String { "· \(minutes) min · \(focusPercent)% focused" }
+    var detail: String { String(localized: "· \(minutes) min · \(focusPercent)% focused", comment: "Follows the session's name; compact minutes") }
 }
 
 /// Calm full-screen view shown when a break starts, the opposite of the
@@ -33,12 +33,12 @@ struct BreakOverlayView: View {
     }
 
     static let tips: [Tip] = [
-        Tip(symbol: "sun.max", text: "Stand up and look at something across the room."),
-        Tip(symbol: "drop", text: "Drink some water."),
-        Tip(symbol: "figure.cooldown", text: "Roll your shoulders. Unclench your jaw."),
-        Tip(symbol: "figure.walk", text: "Walk to another room and back."),
-        Tip(symbol: "figure.arms.open", text: "Stretch your arms over your head for a few breaths."),
-        Tip(symbol: "moon", text: "Close your eyes. Just for a moment."),
+        Tip(symbol: "sun.max", text: String(localized: "Stand up and look at something across the room.")),
+        Tip(symbol: "drop", text: String(localized: "Drink some water.")),
+        Tip(symbol: "figure.cooldown", text: String(localized: "Roll your shoulders. Unclench your jaw.")),
+        Tip(symbol: "figure.walk", text: String(localized: "Walk to another room and back.")),
+        Tip(symbol: "figure.arms.open", text: String(localized: "Stretch your arms over your head for a few breaths.")),
+        Tip(symbol: "moon", text: String(localized: "Close your eyes. Just for a moment.")),
     ]
 
     /// One breath: 4 s in, 6 s out.
@@ -47,8 +47,8 @@ struct BreakOverlayView: View {
 
     /// The line under "Break": a long session gets a firmer nudge to rest.
     static func headline(after finished: FinishedSession?) -> String {
-        guard let finished else { return "Time to rest. Let your eyes wander." }
-        return finished.minutes >= 80 ? "That was a long one. Rest properly." : "Nice work. Let your eyes rest."
+        guard let finished else { return String(localized: "Time to rest. Let your eyes wander.") }
+        return finished.minutes >= 80 ? String(localized: "That was a long one. Rest properly.") : String(localized: "Nice work. Let your eyes rest.")
     }
 
     /// A new suggestion every 20 seconds.
@@ -225,18 +225,18 @@ struct BreakOverlayView: View {
     @ViewBuilder private var controls: some View {
         if strictMode {
             VStack(spacing: 12) {
-                pill("+5 minutes") { onExtend(5) }
+                pill(String(localized: "+5 minutes")) { onExtend(5) }
                 Label("Strict breaks are on, so this one runs to the end.", systemImage: "lock")
                     .font(.system(size: 13))
                     .foregroundStyle(inkSecondary)
             }
         } else {
             HStack(spacing: 10) {
-                pill("+5 minutes") { onExtend(5) }
-                pill("End break", action: onSkip)
+                pill(String(localized: "+5 minutes")) { onExtend(5) }
+                pill(String(localized: "End break"), action: onSkip)
                 Button(action: onClose) {
                     HStack(spacing: 8) {
-                        Text("esc")
+                        Text("esc", comment: "Name of the Escape key")
                             .font(.system(size: 12))
                             .foregroundStyle(ink)
                             .padding(.horizontal, 6)

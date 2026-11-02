@@ -70,25 +70,25 @@ struct TaskSourceRows: View {
         VStack(alignment: .leading, spacing: 0) {
             if thingsInstalled {
                 SettingsDivider()
-                TaskSourceRow(source: .things, detail: "Your Today list, while Things is open") {
+                TaskSourceRow(source: .things, detail: String(localized: "Your Today list, while Things is open")) {
                     sourceSwitch(.things, isOn: $thingsOn)
                 }
                 if thingsOn && unlocked && integrations.taskProblems[.things] == .notAllowed {
                     SettingsDivider()
-                    SettingsRow(title: "Access to Things is off",
-                                detail: "Turn it on in System Settings › Privacy & Security › Automation") {
+                    SettingsRow(title: String(localized: "Access to Things is off"),
+                                detail: String(localized: "Turn it on in System Settings › Privacy & Security › Automation")) {
                         Button("Open Settings") { SettingsIntegrationsPane.openPrivacy("Automation") }
                             .buttonStyle(.capsule(.secondary, height: 26))
                     }
                 }
             }
             SettingsDivider()
-            TaskSourceRow(source: .todoist, detail: "Tasks due today or overdue") {
+            TaskSourceRow(source: .todoist, detail: String(localized: "Tasks due today or overdue")) {
                 sourceSwitch(.todoist, isOn: $todoistOn)
             }
             if todoistOn && unlocked { tokenRow(.todoist) }
             SettingsDivider()
-            TaskSourceRow(source: .linear, detail: "Issues assigned to you, moved to done when you finish") {
+            TaskSourceRow(source: .linear, detail: String(localized: "Issues assigned to you, moved to done when you finish")) {
                 sourceSwitch(.linear, isOn: $linearOn)
             }
             if linearOn && unlocked { tokenRow(.linear) }
@@ -222,14 +222,14 @@ struct TaskSourceRows: View {
     // MARK: - Copy
 
     static func placeholder(_ source: TaskSource) -> String {
-        source == .linear ? "Paste your API key" : "Paste your API token"
+        source == .linear ? String(localized: "Paste your API key") : String(localized: "Paste your API token")
     }
 
     /// Where to get the token.
     static func hint(_ source: TaskSource) -> String {
         switch source {
-        case .todoist: return "From Todoist › Settings › Integrations › Developer. Kept in your Keychain."
-        case .linear:  return "From Linear › Settings › Security & access › Personal API keys. Kept in your Keychain."
+        case .todoist: return String(localized: "From Todoist › Settings › Integrations › Developer. Kept in your Keychain.")
+        case .linear:  return String(localized: "From Linear › Settings › Security & access › Personal API keys. Kept in your Keychain.")
         default:       return ""
         }
     }
@@ -237,8 +237,11 @@ struct TaskSourceRows: View {
     /// The line under the field after Connect, when it didn't work.
     static func failure(_ check: TokenCheck?, source: TaskSource) -> String? {
         switch check {
-        case .rejected:    return "\(source.name) didn't take that \(source == .linear ? "key" : "token"). Check it and try again."
-        case .unreachable: return "Couldn't reach \(source.name). Check your connection and try again."
+        case .rejected:
+            return source == .linear
+                ? String(localized: "\(source.name) didn't take that key. Check it and try again.")
+                : String(localized: "\(source.name) didn't take that token. Check it and try again.")
+        case .unreachable: return String(localized: "Couldn't reach \(source.name). Check your connection and try again.")
         default:           return nil
         }
     }

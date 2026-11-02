@@ -54,7 +54,7 @@ struct FocusWeek: Equatable {
             longestZone: FocusRuns.compute(FocusRuns.spans(from: events.filter { $0.session != nil }), now: now).longest,
             sessions: sessions.count,
             goalMinutes: FocusGoal.dailyMinutes,
-            names: names(sessions.compactMap(\.autoName)),
+            names: names(sessions.compactMap(\.autoName).map(SessionNamer.localizedName(stored:))),
             places: places(events, in: interval)
         )
     }
@@ -90,18 +90,13 @@ struct FocusWeek: Equatable {
         }
         let first = calendar.component(.day, from: interval.start), lastDay = calendar.component(.day, from: last)
         if calendar.isDate(interval.start, equalTo: last, toGranularity: .month) {
-            return "\(first)–\(lastDay) \(month(last))"
+            return String(localized: "\(first)–\(lastDay) \(month(last))", comment: "Dates within one month: 12–18 Oct")
         }
-        return "\(first) \(month(interval.start)) – \(lastDay) \(month(last))"
+        return String(localized: "\(first) \(month(interval.start)) – \(lastDay) \(month(last))", comment: "Dates across two months: 28 Sep – 4 Oct")
     }
 
     /// "21h 35m", "45m".
     static func duration(_ seconds: TimeInterval) -> String {
         FocusGoal.format(minutes: Int(seconds / 60))
-    }
-
-    /// "1 day", "23 sessions".
-    static func counted(_ n: Int, _ word: String) -> String {
-        "\(n) \(word)\(n == 1 ? "" : "s")"
     }
 }

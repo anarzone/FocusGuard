@@ -47,7 +47,8 @@ struct GoalSuggestion: Equatable, Identifiable {
         add(calendarTitle, .calendar, calendarStart.flatMap { $0 > now ? HabitFormat.time($0, calendar: calendar) : nil })
         if let git { add(git.branch, .git(repo: git.repo)) }
         if lastVerdict != .done {
-            add(lastGoal, .lastGoal, lastVerdict == .partly ? "partly done" : (lastVerdict == .notYet ? "not yet" : nil))
+            add(lastGoal, .lastGoal, lastVerdict == .partly ? String(localized: "partly done", comment: "How the last session's goal ended, beside it in a list")
+                : (lastVerdict == .notYet ? String(localized: "not yet", comment: "How the last session's goal ended, beside it in a list") : nil))
         }
         return out
     }
@@ -57,9 +58,9 @@ struct GoalSuggestion: Equatable, Identifiable {
     var group: String {
         switch source {
         case .task(let from, _, let list): return list.isEmpty ? from.name : "\(from.name) · \(list)"
-        case .calendar:                    return "Calendar"
+        case .calendar:                    return String(localized: "Calendar", comment: "Heading over goals suggested from the calendar")
         case .git(let repo):               return "Git · \(repo)"
-        case .lastGoal:                    return "Last time"
+        case .lastGoal:                    return String(localized: "Last time", comment: "Heading over the last session's unfinished goal")
         }
     }
 

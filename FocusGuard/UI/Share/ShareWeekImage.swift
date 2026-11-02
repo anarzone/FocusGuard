@@ -7,6 +7,13 @@ struct ShareOptions: Equatable {
         case portrait = "Portrait", square = "Square"
         var id: String { rawValue }
 
+        var title: String {
+            switch self {
+            case .portrait: return String(localized: "Portrait", comment: "Shape of the share image")
+            case .square:   return String(localized: "Square", comment: "Shape of the share image")
+            }
+        }
+
         var pixels: CGSize {
             switch self {
             case .portrait: return CGSize(width: 1080, height: 1350)
@@ -18,6 +25,13 @@ struct ShareOptions: Equatable {
     enum Look: String, CaseIterable, Identifiable {
         case light = "Light", dark = "Dark"
         var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .light: return String(localized: "Light", comment: "Appearance of the share image")
+            case .dark:  return String(localized: "Dark", comment: "Appearance of the share image")
+            }
+        }
     }
 
     var size: Size = .portrait
@@ -57,7 +71,7 @@ struct ShareWeekImage: View {
             }
             tiles.padding(.top, square ? 40 : 48)
             if options.sessionNames, !week.names.isEmpty {
-                chips(week.names.map { "\($0.name) ×\($0.count)" })
+                chips(week.names.map { String(localized: "\($0.name) ×\($0.count)", comment: "A session name and how many times it came up: Steady Sprint ×11") })
                     .padding(.top, square ? 22 : 26)
             }
             if options.topPlaces, !week.places.isEmpty {
@@ -85,7 +99,7 @@ struct ShareWeekImage: View {
                     .resizable()
                     .frame(width: square ? 56 : 64, height: square ? 56 : 64)
             }
-            Text("FocusGuard")
+            Text(verbatim: "FocusGuard")
                 .font(.system(size: square ? 26 : 28, weight: .semibold))
                 .foregroundStyle(palette.text)
             Spacer(minLength: 0)
@@ -104,18 +118,17 @@ struct ShareWeekImage: View {
             .foregroundStyle(palette.accent)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-        let sessions = FocusWeek.counted(week.sessions, "session")
         return Group {
             if square {
                 HStack(alignment: .firstTextBaseline, spacing: 22) {
                     number
-                    Text("focused").font(.system(size: 30)).foregroundStyle(palette.secondary)
+                    Text("focused", comment: "Follows a large duration: 21h 35m focused").font(.system(size: 30)).foregroundStyle(palette.secondary)
                 }
                 .padding(.top, 8)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     number
-                    Text("focused, across \(sessions)")
+                    Text("focused, across \(week.sessions) sessions", comment: "Plural on sessions: 1 session / 2 sessions")
                         .font(.system(size: 32))
                         .foregroundStyle(palette.secondary)
                 }
@@ -170,24 +183,33 @@ struct ShareWeekImage: View {
 
     /// "Most focused in Xcode, github.com and Terminal".
     private var places: some View {
-        week.places.enumerated().reduce(Text("Most focused in ")) { text, item in
-            let joiner = item.offset == 0 ? "" : (item.offset == week.places.count - 1 ? " and " : ", ")
-            return text + Text(joiner) + Text(item.element).fontWeight(.semibold).foregroundColor(palette.text)
+        placesLine
+            .font(.system(size: 26 * unit))
+            .foregroundStyle(palette.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    /// One whole sentence per count, the names in bold. `FocusWeek.places`
+    /// gives at most three.
+    private var placesLine: Text {
+        let bold = week.places.map { Text($0).fontWeight(.semibold).foregroundColor(palette.text) }
+        switch bold.count {
+        case 0:  return Text(verbatim: "")
+        case 1:  return Text("Most focused in \(bold[0])")
+        case 2:  return Text("Most focused in \(bold[0]) and \(bold[1])")
+        default: return Text("Most focused in \(bold[0]), \(bold[1]) and \(bold[2])")
         }
-        .font(.system(size: 26 * unit))
-        .foregroundStyle(palette.secondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
     }
 
     private var tiles: some View {
         HStack(spacing: square ? 16 : 18) {
-            tile("Focus rate", "\(week.focusPercent)%")
-            tile("Longest in the zone", FocusWeek.duration(week.longestZone))
+            tile(String(localized: "Focus rate"), String(localized: "\(week.focusPercent)%", comment: "Percentage"))
+            tile(String(localized: "Longest in the zone"), FocusWeek.duration(week.longestZone))
             if square {
-                tile("Sessions", "\(week.sessions)")
+                tile(String(localized: "Sessions"), "\(week.sessions)")
             } else {
-                tile("Goal met", FocusWeek.counted(week.goalDays, "day"))
+                tile(String(localized: "Goal met"), String(localized: "\(week.goalDays) days", comment: "Plural on days: 1 day / 2 days"))
             }
         }
     }

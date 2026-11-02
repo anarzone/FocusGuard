@@ -23,8 +23,8 @@ struct SortAppsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PageHeader(title: "Sort your apps",
-                       subtitle: "One at a time, most used first. Every choice also fixes past reports.") {
+            PageHeader(title: String(localized: "Sort your apps"),
+                       subtitle: String(localized: "One at a time, most used first. Every choice also fixes past reports.")) {
                 Button("Done") { finish() }
                     .buttonStyle(.capsule(.primary, height: 32))
             }
@@ -67,7 +67,7 @@ struct SortAppsView: View {
     // MARK: - Columns
 
     private var upNext: some View {
-        sideCard(title: "Up next", trailing: AnyView(
+        sideCard(title: String(localized: "Up next"), trailing: AnyView(
             Text(queue.count > 1 ? "\(queue.count - 1) more" : "")
                 .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
         )) {
@@ -86,7 +86,7 @@ struct SortAppsView: View {
     }
 
     private var justSorted: some View {
-        sideCard(title: "Just sorted", trailing: AnyView(
+        sideCard(title: String(localized: "Just sorted"), trailing: AnyView(
             Button("Undo last", action: undo).buttonStyle(.textLink).disabled(done.isEmpty).opacity(done.isEmpty ? 0 : 1)
         )) {
             ForEach(Array(done.reversed().prefix(12).enumerated()), id: \.offset) { _, entry in
@@ -173,7 +173,7 @@ struct SortAppsView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .accessibilityAddTraits(.isHeader)
-                Text(([item.isSite ? "Site" : "App", "\(WindowFormat.hm(item.row.seconds)) \(range.phrase)"]
+                Text(([item.kindName, range.spent(WindowFormat.hm(item.row.seconds))]
                       + [item.suggestion?.hours].compactMap { $0 }).joined(separator: " · "))
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.secondaryText)
@@ -181,8 +181,8 @@ struct SortAppsView: View {
             if let suggestion = item.suggestion {
                 HStack(spacing: 8) {
                     SmartReasonLine(lead: item.source == .smart
-                                        ? "Sorted as \(categoryName(suggestion.suggested).lowercased()) for you."
-                                        : "Looks like \(categoryName(suggestion.suggested).lowercased()).",
+                                        ? AppsCategoryWords.sortedForYou(suggestion.suggested)
+                                        : AppsCategoryWords.looksLike(suggestion.suggested),
                                     reason: suggestion.reason)
                     ProBadge()
                 }
@@ -193,8 +193,8 @@ struct SortAppsView: View {
             } else if item.source == .builtIn {
                 HStack(spacing: 8) {
                     Image(systemName: "lightbulb").foregroundStyle(Theme.focus)
-                    (Text("FocusGuard guessed \(categoryName(item.row.classification).lowercased()).").fontWeight(.semibold)
-                     + Text(" Keep it or pick another."))
+                    Text("\(Text(AppsCategoryWords.guessed(item.row.classification)).fontWeight(.semibold)) Keep it or pick another.",
+                         comment: "The bold first part is: FocusGuard guessed focus.")
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.primaryText)
@@ -214,7 +214,7 @@ struct SortAppsView: View {
                 Button(action: skip) {
                     HStack(spacing: 6) {
                         Text("Skip")
-                        Text("space").font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
+                        Text("space", comment: "The space bar: the key that skips").font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
                     }
                 }
                 .buttonStyle(.capsule(.secondary))
@@ -275,15 +275,15 @@ struct SortAppsView: View {
     private var footnote: String {
         if FeatureFlags.smartCategories, Entitlements.shared.isUnlocked(.smartCategories),
            !appState.smartCategories.isModelAvailable {
-            return "Smart suggestions: \(OnDeviceAI.unavailableNote). Unsure? Leave it neutral."
+            return String(localized: "Smart suggestions: \(OnDeviceAI.unavailableNote). Unsure? Leave it neutral.")
         }
-        return "Unsure? Leave it neutral. Neutral time is not counted for or against you."
+        return String(localized: "Unsure? Leave it neutral. Neutral time is not counted for or against you.")
     }
 
     private var timeLeft: String {
         guard !queue.isEmpty else { return "" }
         let minutes = Int((Double(queue.count) * 4 / 60).rounded(.up))
-        return minutes <= 1 ? "about a minute left" : "about \(minutes) minutes left"
+        return minutes <= 1 ? String(localized: "about a minute left") : String(localized: "about \(minutes) minutes left")
     }
 
     // MARK: - Actions

@@ -143,7 +143,7 @@ struct NextTaskRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .combine)
-            PillButton(title: "Start \(minutes) min", height: 28, fill: Theme.focusTint, action: onStart)
+            PillButton(title: String(localized: "Start \(minutes) min", comment: "Button: start a session of this length on the next task"), height: 28, fill: Theme.focusTint, action: onStart)
         }
         .menuModule(padding: EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 10))
     }

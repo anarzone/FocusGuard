@@ -106,7 +106,7 @@ struct YouTubePerVideoSection: View {
                             ProBadge()
                         }
                         Text(smart.isModelAvailable || smart.perVideo
-                             ? "Each video's title is compared with what you're working on, on this Mac. Talks and tutorials count as focus, the rest as distracting."
+                             ? String(localized: "Each video's title is compared with what you're working on, on this Mac. Talks and tutorials count as focus, the rest as distracting.")
                              : OnDeviceAI.unavailableNote)
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.secondaryText)
@@ -126,8 +126,8 @@ struct YouTubePerVideoSection: View {
                 }
             }
         } else {
-            LockedProRow(feature: .youtubePerVideo, title: "Decide video by video",
-                         detail: "Each video judged by its title on this Mac: talks and tutorials count as focus, the rest as distracting.",
+            LockedProRow(feature: .youtubePerVideo, title: String(localized: "Decide video by video"),
+                         detail: String(localized: "Each video judged by its title on this Mac: talks and tutorials count as focus, the rest as distracting."),
                          systemImage: "play.rectangle",
                          onTrialStarted: { smart.setPerVideo(true); onChange() },
                          onUpgrade: { openSheet(.upgrade(.youtubePerVideo)) })
@@ -148,7 +148,7 @@ struct YouTubePerVideoSection: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(video.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.primaryText)
                                 .lineLimit(1).truncationMode(.tail)
-                            Text(video.byUser ? "\(video.kind) · you corrected it" : video.kind)
+                            Text(video.byUser ? String(localized: "\(video.kind) · you corrected it", comment: "The first part is what kind of video it is, like: coding tutorial") : video.kind)
                                 .font(.system(size: 11)).foregroundStyle(Theme.secondaryText).lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)

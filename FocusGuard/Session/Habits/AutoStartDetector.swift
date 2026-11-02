@@ -113,14 +113,19 @@ struct AutoStartOffer: Equatable {
     /// "You've been in Xcode 5 minutes", or "You've been focused for 5
     /// minutes" across several apps.
     func title(now: Date = .now) -> String {
-        let length = NotificationPresenter.plural(Int(focusSeconds(now: now) / 60), "minute")
-        guard appNames.count == 1, let app = appNames.first else { return "You've been focused for \(length)" }
-        return "You've been in \(app) \(length)"
+        let minutes = Int(focusSeconds(now: now) / 60)
+        guard appNames.count == 1, let app = appNames.first else {
+            return String(localized: "You've been focused for \(minutes) minutes", comment: "Plural on minutes: You've been focused for 1 minute")
+        }
+        return String(localized: "You've been in \(app) \(minutes) minutes", comment: "Plural on minutes: You've been in Xcode 1 minute")
     }
 
     /// "Start a session? It counts from 10:02, when you opened Xcode."
     func body(locale: Locale = .current, calendar: Calendar = .current) -> String {
         let time = HabitFormat.time(since, locale: locale, calendar: calendar)
-        return "Start a session? It counts from \(time), when you opened \(appNames.first ?? "it")."
+        guard let app = appNames.first else {
+            return String(localized: "Start a session? It counts from \(time), when you opened it.")
+        }
+        return String(localized: "Start a session? It counts from \(time), when you opened \(app).")
     }
 }

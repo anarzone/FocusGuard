@@ -69,6 +69,12 @@ struct CoachTrial: Codable, Equatable, Identifiable, Sendable {
         return experiment.metric.change(from: before, to: after)
     }
 
+    /// It ran, and nothing moved.
+    var madeNoDifference: Bool {
+        guard let before, let after else { return false }
+        return experiment.metric.isUnchanged(from: before, to: after)
+    }
+
     var improved: Bool {
         guard let before, let after else { return false }
         return experiment.metric.improved(from: before, to: after)
@@ -123,7 +129,7 @@ final class WeeklyCoach {
     @ObservationIgnored var applier: CoachApplying?
     /// Apple's on-device model, or nil without Apple Intelligence (the note
     /// keeps its template words then).
-    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.model
+    @ObservationIgnored var model: () -> (any OnDeviceModel)? = OnDeviceAI.writer
     @ObservationIgnored var isUnlocked: () -> Bool = { Entitlements.shared.isUnlocked(.coach) }
     /// A free user's first use: starts the 14-day trial.
     @ObservationIgnored var startTrial: () -> Void = { Entitlements.shared.startTrialIfNeeded(for: .coach) }
@@ -362,7 +368,7 @@ final class WeeklyCoach {
         if !isUnlocked() { startTrial() }
         guard isUnlocked() else { return }
         guard let undo = applier.apply(experiment, until: note.week.end) else {
-            problem = "That's already set up, so there's nothing to try."
+            problem = String(localized: "That's already set up, so there's nothing to try.")
             return
         }
         state.running = CoachTrial(experiment: experiment, before: note.baseline, week: note.week,
@@ -422,11 +428,11 @@ final class WeeklyCoach {
         if !isUnlocked() { startTrial() }
         guard isUnlocked() else { return false }
         guard !inPlace.contains(where: { $0.overlaps(experiment) }) else {
-            monthProblem = "Something like this is already on."
+            monthProblem = String(localized: "Something like this is already on.")
             return false
         }
         guard let undo = applier.apply(experiment, until: period.end) else {
-            monthProblem = "That's already set up, so there's nothing to try."
+            monthProblem = String(localized: "That's already set up, so there's nothing to try.")
             return false
         }
         state.monthTrials = monthTrials + [CoachTrial(experiment: experiment, before: baseline, week: period,

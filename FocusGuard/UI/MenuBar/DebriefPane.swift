@@ -122,10 +122,10 @@ private struct GoalSuggestionRow: View {
 
     private var help: String {
         switch suggestion.source {
-        case .task(let from, _, _): return "From \(from.name), ticked off when you get it done"
-        case .calendar:             return "From your calendar"
-        case .git:                  return "The branch you're on"
-        case .lastGoal:             return "Your last goal, not done yet"
+        case .task(let from, _, _): return String(localized: "From \(from.name), ticked off when you get it done")
+        case .calendar:             return String(localized: "From your calendar")
+        case .git:                  return String(localized: "The branch you're on")
+        case .lastGoal:             return String(localized: "Your last goal, not done yet")
         }
     }
 }
@@ -165,24 +165,29 @@ struct DebriefRow: View {
 
     private var title: String {
         switch status {
-        case .written: return "Debrief is ready"
-        case .writing: return "Writing the debrief…"
-        case .plain:   return "Session summary"
+        case .written: return String(localized: "Debrief is ready")
+        case .writing: return String(localized: "Writing the debrief…")
+        case .plain:   return String(localized: "Session summary")
         }
     }
 
     private var detail: String {
         switch status {
         case .writing:
-            return "On this Mac, in a few seconds"
+            return String(localized: "On this Mac, in a few seconds")
         case .written:
             guard session.goal != nil, let verdict = session.goalVerdict else {
-                return "What you did, where you drifted, a tip"
+                return String(localized: "What you did, where you drifted, a tip")
             }
-            let short = session.storedDebrief?.evidenceShort.map { " · \($0)" } ?? ""
-            return "Goal \(verdict.debriefText.lowercased())\(short)"
+            let line: String
+            switch verdict {
+            case .done:   line = String(localized: "Goal looks done")
+            case .partly: line = String(localized: "Goal partly done")
+            case .notYet: line = String(localized: "Goal not yet")
+            }
+            return session.storedDebrief?.evidenceShort.map { "\(line) · \($0)" } ?? line
         case .plain:
-            return session.goal == nil ? "Time, focus rate and top apps" : "Say how the goal went"
+            return session.goal == nil ? String(localized: "Time, focus rate and top apps") : String(localized: "Say how the goal went")
         }
     }
 }
@@ -243,7 +248,7 @@ struct DebriefPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
-                PaneTitle(title: "Debrief", close: close) { ProBadge() }
+                PaneTitle(title: String(localized: "Debrief"), close: close) { ProBadge() }
                 if let debrief {
                     Text("\(debrief.sessionLabel) · \(menuClock(debrief.start))–\(menuClock(debrief.end))")
                         .font(.system(size: 12))
@@ -259,9 +264,9 @@ struct DebriefPane: View {
                 if debrief.drift != nil || debrief.tip != nil {
                     HStack(alignment: .top, spacing: 6) {
                         if let drift = debrief.drift {
-                            note("Where you drifted", drift, debrief.driftDetail, dot: Theme.distraction)
+                            note(String(localized: "Where you drifted"), drift, debrief.driftDetail, dot: Theme.distraction)
                         }
-                        if let tip = debrief.tip { note("Next time", tip, debrief.tipDetail) }
+                        if let tip = debrief.tip { note(String(localized: "Next time"), tip, debrief.tipDetail) }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -375,9 +380,9 @@ struct DebriefPane: View {
     /// The plain summary's numbers: time and focus rate.
     private func numbers(_ debrief: SessionDebrief) -> some View {
         HStack(spacing: 0) {
-            stat("Focused", formatDuration(debrief.focused))
+            stat(String(localized: "Focused"), formatDuration(debrief.focused))
             Rectangle().fill(Theme.moduleStroke).frame(width: 0.5)
-            stat("Focus rate", debrief.focused > 0 ? "\(debrief.focusPercent)%" : "–")
+            stat(String(localized: "Focus rate"), debrief.focused > 0 ? String(localized: "\(debrief.focusPercent)%", comment: "Percentage") : "–")
         }
         .fixedSize(horizontal: false, vertical: true)
         .paneCard(padding: EdgeInsets())
@@ -469,9 +474,9 @@ struct DebriefPane: View {
         if let standup = debrief.standup { return standup }
         guard let goal = debrief.goal else { return nil }
         switch debrief.verdict {
-        case .done:   return "Done: \(goal)."
-        case .partly: return "Partly done: \(goal)."
-        default:      return "Worked on: \(goal)."
+        case .done:   return String(localized: "Done: \(goal).")
+        case .partly: return String(localized: "Partly done: \(goal).")
+        default:      return String(localized: "Worked on: \(goal).")
         }
     }
 }
