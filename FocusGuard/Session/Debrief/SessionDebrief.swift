@@ -1,20 +1,11 @@
 import Foundation
 
-/// Whether a session reached its goal. Stored on the session as its raw
-/// value; the user can correct the debrief's call.
+/// Whether a session reached its goal: the person's own pick, stored on the
+/// session as its raw value. The model never decides this.
 enum GoalVerdict: String, Codable, CaseIterable {
     case done, partly, notYet
 
-    /// "Looks done": the debrief's own call reads as a guess.
-    var debriefText: String {
-        switch self {
-        case .done:   return String(localized: "Looks done", comment: "The debrief's guess at whether a session's goal was reached")
-        case .partly: return String(localized: "Partly done", comment: "The debrief's guess at whether a session's goal was reached")
-        case .notYet: return String(localized: "Not yet", comment: "Whether a session's goal was reached")
-        }
-    }
-
-    /// The work log's chip.
+    /// The goal card's and the work log's chip.
     var chipText: String {
         switch self {
         case .done:   return String(localized: "goalVerdict.done", defaultValue: "Done", comment: "Whether a session's goal was reached: it was. Not the button that closes a sheet")
@@ -31,25 +22,19 @@ struct StoredDebrief: Codable, Equatable {
     struct Line: Codable, Equatable {
         /// An app or site from the session, as `DebriefFacts` names it.
         let app: String
-        /// "SessionNamer.swift and its 13 tests"
+        /// Words from that app's window titles; empty when it has none.
         let what: String
     }
 
-    /// The model's call on the goal; the session's `goalVerdictRaw` starts
-    /// out as this and follows the user's correction after that.
-    var verdict: GoalVerdict?
-    /// "PR #49 was merged on github.com at 19:41."
+    /// What a window title shows about the goal, and when.
     var evidence: String?
-    /// "PR #49 merged", for the menu's debrief row.
+    /// The same in a few words, for the menu's debrief row.
     var evidenceShort: String?
     var workedOn: [Line] = []
-    /// "At 19:23, while a build was running."
     var driftDetail: String?
-    /// "Keep the build log in view", and why.
     var tip: String?
     var tipDetail: String?
     var project: String?
-    var standup: String?
     var writtenAt: Date = .now
 }
 
@@ -71,7 +56,7 @@ struct SessionDebrief: Equatable {
     struct Item: Equatable, Identifiable {
         var id: String { app }
         let app: String
-        /// "SessionNamer.swift and its 13 tests"; empty in a plain summary.
+        /// Words from its window titles; empty when there are none, and in a plain summary.
         let what: String
         let seconds: TimeInterval
     }
@@ -80,7 +65,7 @@ struct SessionDebrief: Equatable {
     let start: Date
     let end: Date
     let goal: String?
-    /// Nil when there's no goal, or nothing to judge it with.
+    /// The person's own pick. Nil when there's no goal, or they haven't said.
     var verdict: GoalVerdict?
     let evidence: String?
     let evidenceShort: String?
@@ -90,7 +75,6 @@ struct SessionDebrief: Equatable {
     let driftDetail: String?
     let tip: String?
     let tipDetail: String?
-    let standup: String?
     let project: String?
     let focused: TimeInterval
     let focusRate: Double
@@ -113,15 +97,17 @@ struct SessionDebrief: Equatable {
             workedOn: Array(items),
             drift: top.map(Self.driftText),
             driftDetail: facts.drifts.first(where: { $0.name == top?.name }).map { String(localized: "At \(Self.clock($0.start)).", comment: "When a drift happened") },
-            tip: nil, tipDetail: nil, standup: nil, project: nil,
+            tip: nil, tipDetail: nil, project: nil,
             focused: facts.focused, focusRate: facts.focusRate, isWritten: false
         )
     }
 
-    /// The model's write-up over the facts. Names it gave that aren't in
-    /// the session are dropped, and times always come from the facts.
-    static func written(_ stored: StoredDebrief, facts: DebriefFacts, label: String,
+    /// The model's write-up over the facts. What the session doesn't back up
+    /// is dropped (`DebriefCheck`), even from a debrief written before that
+    /// check, and times always come from the facts.
+    static func written(_ written: StoredDebrief, facts: DebriefFacts, label: String,
                         verdict: GoalVerdict?) -> SessionDebrief {
+        let stored = DebriefCheck(facts: facts).clean(written)
         let plain = plain(facts, label: label)
         let seconds = Dictionary(facts.apps.map { ($0.name.lowercased(), $0.seconds) }, uniquingKeysWith: +)
         var seen = Set<String>()
@@ -138,7 +124,7 @@ struct SessionDebrief: Equatable {
             workedOn: items.isEmpty ? plain.workedOn : items,
             drift: plain.drift,
             driftDetail: plain.drift == nil ? nil : (stored.driftDetail ?? plain.driftDetail),
-            tip: stored.tip, tipDetail: stored.tipDetail, standup: stored.standup,
+            tip: stored.tip, tipDetail: stored.tipDetail,
             project: stored.project,
             focused: facts.focused, focusRate: facts.focusRate, isWritten: true
         )
