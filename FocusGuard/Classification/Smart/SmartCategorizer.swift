@@ -147,18 +147,19 @@ enum SmartCategorizer {
     /// it's used (the evidence's). "Design tool you open next to Linear",
     /// "Chat app, mostly 21:00 to 23:00".
     static func reason(what: String, evidence: SmartEvidence) -> String {
-        // The model's words stay in English when it can't write the app's
-        // language, and an English word doesn't belong in that sentence.
-        guard OnDeviceAI.writesAppLanguage else { return fallbackReason(evidence) }
+        // Asked in English, the model says what something is in English, even
+        // when told to answer in the app's language. That word doesn't belong
+        // in a translated sentence, so other languages get the facts alone.
+        guard OnDeviceAI.appLanguage == "en" else { return fallbackReason(evidence) }
         var kind = what.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         kind = kind.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”'.,"))
-        for article in ["a ", "an ", "the ", "ein ", "eine ", "der ", "die ", "das "] where kind.lowercased().hasPrefix(article) {
+        for article in ["a ", "an ", "the "] where kind.lowercased().hasPrefix(article) {
             kind = String(kind.dropFirst(article.count))
         }
         // Too long to be a kind, its own name back, or the category again.
         let lower = kind.lowercased()
         guard (2...32).contains(kind.count), lower != evidence.name.lowercased(),
-              !["focus", "neutral", "distract", "fokus", "ablenk"].contains(where: lower.contains) else {
+              !["focus", "neutral", "distract"].contains(where: lower.contains) else {
             return fallbackReason(evidence)
         }
         kind = kind.prefix(1).uppercased() + kind.dropFirst()

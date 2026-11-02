@@ -126,7 +126,9 @@ struct WeekBars: View {
 
     private var letters: [String] {
         let calendar = Calendar.current
-        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        // Azerbaijani's narrowest day names are the digits 1 to 7.
+        let narrow = calendar.veryShortStandaloneWeekdaySymbols
+        let symbols = narrow.contains { $0.first?.isNumber == true } ? calendar.shortStandaloneWeekdaySymbols : narrow
         return (0..<7).map { symbols[(calendar.firstWeekday - 1 + $0) % 7] }
     }
 

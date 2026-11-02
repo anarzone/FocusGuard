@@ -735,7 +735,7 @@ private struct ReadyNow: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "shield").font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
-                Text(driftLine).font(.system(size: 12)).foregroundStyle(Theme.bodyText).lineLimit(1)
+                Text(driftLine).font(.system(size: 12)).foregroundStyle(Theme.bodyText).lineLimit(1).minimumScaleFactor(0.85)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)

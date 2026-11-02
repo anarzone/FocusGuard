@@ -2891,13 +2891,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · %2$@ saatında başlayıb"
+            "value" : "%1$@, saat %2$@"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · gestartet um %2$@"
+            "value" : "%1$@ · seit %2$@"
           }
         },
         "en" : {
@@ -8988,13 +8988,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Genişləndirmə əlavə et"
+            "value" : "Əlavə et"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erweiterung hinzufügen"
+            "value" : "Hinzufügen"
           }
         }
       }
@@ -10585,7 +10585,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ən yaxşı tam fokus"
+            "value" : "Ən uzun fokus"
           }
         },
         "de" : {
@@ -13358,13 +13358,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nəyin fokus sayıldığını seçin. Dəyişikliklər keçmiş hesabatları da yeniləyir."
+            "value" : "Fokus sayılanı seçin; keçmiş hesabatlar da yenilənir."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Entscheide, was als Fokus zählt. Änderungen aktualisieren auch frühere Berichte."
+            "value" : "Entscheide, was als Fokus zählt. Gilt auch für frühere Berichte."
           }
         }
       }
@@ -13733,7 +13733,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hat das Experiment von letzter Woche funktioniert?"
+            "value" : "Hat das Experiment letzte Woche gewirkt?"
           }
         }
       }
@@ -16365,7 +16365,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FocusGuard braucht ein paar Berechtigungen, um zu sehen, woran du arbeitest."
+            "value" : "FocusGuard braucht Berechtigungen, um deine Arbeit zu erkennen."
           }
         }
       }
@@ -18632,7 +18632,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu həftə keçən həftə ilə müqayisədə necə keçdi?"
+            "value" : "Bu həftə keçən həftədən nə ilə fərqləndi?"
           }
         },
         "de" : {
@@ -18936,13 +18936,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tam fokusda %1$@ · bu günün ən yaxşısı %2$lld"
+            "value" : "Tam fokusda %1$@ · rekord %2$lld"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Im Flow %1$@ · Bestwert heute %2$lld"
+            "value" : "Im Flow %1$@ · Rekord %2$lld"
           }
         },
         "en" : {
@@ -22335,13 +22335,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heç vaxt. “İş üçündür” 10 saniyə sonra açılır"
+            "value" : "Heç vaxt. “İş üçündür” 10 san sonra"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nie. „Ist für die Arbeit“ wird nach 10 s freigeschaltet"
+            "value" : "Nie. „Ist für die Arbeit“ erst nach 10 s"
           }
         }
       }
@@ -26725,7 +26725,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Məxfilik və məlumatlar"
+            "value" : "Məxfilik və məlumat"
           }
         },
         "de" : {
@@ -30909,13 +30909,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sprint, 20 dəqiqədən az · Qaçış, 45-dən az · Dərin dalış, 90-a qədər · Marafon"
+            "value" : "Sprint <20 dəq · Qaçış <45 · Dərin dalış ≤90 · Marafon"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sprint, unter 20 Min · Lauf, unter 45 · Deep Dive, bis 90 · Marathon"
+            "value" : "Sprint <20 Min · Lauf <45 · Deep Dive ≤90 · Marathon"
           }
         }
       }
@@ -37040,13 +37040,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yayındıqda: %1$@ · %2$@ sonra xatırlatma, %3$@ sonra dayandırma"
+            "value" : "%1$@ · %2$@ xatırlatma, %3$@ dayandırma"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beim Abschweifen: %1$@ · Hinweis nach %2$@, pausieren nach %3$@"
+            "value" : "%1$@ · Hinweis nach %2$@, Stopp nach %3$@"
           }
         },
         "en" : {
@@ -37062,13 +37062,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yayındıqda: %@ · dərhal dayandırma ekranı"
+            "value" : "%@ · dərhal dayandırma ekranı"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beim Abschweifen: %@ · sofort Pausierbildschirm"
+            "value" : "Beim Abschweifen: %@ · sofort Stopp"
           }
         }
       }
@@ -37116,7 +37116,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "An welchem Tag schweife ich am meisten ab, und warum?"
+            "value" : "An welchem Tag schweife ich am meisten ab?"
           }
         }
       }
@@ -39688,7 +39688,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "zurück um %@"
+            "value" : "bis %@"
           }
         }
       }
@@ -40285,13 +40285,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "fokus və yayınma; digər tətbiqlər sayılmır"
+            "value" : "fokus və yayınma; qalanı sayılmır"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fokus vs. Ablenkung; andere Apps zählen nicht"
+            "value" : "Fokus vs. Ablenkung; nur diese zählen"
           }
         }
       }
@@ -40987,13 +40987,13 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "başlamaq üçün bu günün hədəfinə çatın"
+            "value" : "hədəfə çatıb başlayın"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "erreiche heute dein Ziel, um eine zu starten"
+            "value" : "starte sie mit dem Tagesziel"
           }
         }
       }
@@ -41385,7 +41385,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "bu gün %lld dəqiqədən istifadə olunub"
+            "value" : "bu gün limit %lld"
           }
         },
         "de" : {

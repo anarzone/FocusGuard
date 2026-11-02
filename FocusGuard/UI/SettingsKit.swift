@@ -118,6 +118,7 @@ struct SettingsRow<Trailing: View>: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13)).foregroundStyle(Theme.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let detail {
                     Text(detail)
                         .font(.system(size: 11))
@@ -126,7 +127,8 @@ struct SettingsRow<Trailing: View>: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            trailing()
+            // The title wraps before a longer translated button clips.
+            trailing().layoutPriority(1)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

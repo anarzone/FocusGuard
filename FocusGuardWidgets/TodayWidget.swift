@@ -66,6 +66,7 @@ struct TodayWidgetView: View {
                         .font(.system(size: size > 100 ? 20 : 16, weight: .semibold)).monospacedDigit()
                     Text("of \(SurfaceWords.duration(s.today.goalSeconds))").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
+                .modifier(RingLabel(inset: lineWidth))
             }
             .frame(width: size, height: size)
             .accessibilityElement(children: .ignore)
@@ -80,6 +81,7 @@ struct TodayWidgetView: View {
                          comment: "Under the session's clock. Left: the time remaining")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
+                .modifier(RingLabel(inset: lineWidth))
             }
             .frame(width: size, height: size)
             .accessibilityElement(children: .ignore)
@@ -94,6 +96,7 @@ struct TodayWidgetView: View {
                         Text("back at \(SurfaceWords.clock(end))").font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }
+                .modifier(RingLabel(inset: lineWidth))
             }
             .frame(width: size, height: size)
             .accessibilityElement(children: .ignore)
@@ -281,6 +284,18 @@ struct TodayWidgetView: View {
 }
 
 // MARK: - Pieces
+
+/// Keeps what's inside a ring off the ring: longer translations shrink.
+private struct RingLabel: ViewModifier {
+    let inset: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.horizontal, inset + 4)
+    }
+}
 
 private struct Header: View {
     let title: String

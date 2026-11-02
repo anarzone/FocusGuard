@@ -95,6 +95,7 @@ struct SettingsBlockingPane: View {
                 } else {
                     Button("Add extension") { openSheet(.browserExtension) }
                         .buttonStyle(.capsule(.secondary, height: 26))
+                        .fixedSize()
                 }
             }
         } else if appState.sessionManager.currentSession != nil {

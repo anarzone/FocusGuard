@@ -142,6 +142,7 @@ struct MenuBarView: View {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer(minLength: 4)
                 PaneButtons(open: $openPane)
             }

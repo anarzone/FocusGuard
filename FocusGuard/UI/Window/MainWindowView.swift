@@ -321,6 +321,7 @@ private struct SidebarSessionCard: View {
             Text(detail).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.secondaryText)
         }
         .lineLimit(1)
+        .minimumScaleFactor(0.85)
         .truncationMode(.tail)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
