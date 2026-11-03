@@ -40,8 +40,8 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(one.hasSuffix("1 Session"), one)
         XCTAssertTrue(three.hasSuffix("3 Sessions"), three)
 
-        let sentence = "Focused in all of last week: %@, %lld sessions."
-        let german = try text(sentence, "de", "3 Std" as NSString, 1)
+        let sentence = "%lld sessions, %@ focused this week."
+        let german = try text(sentence, "de", 1, "3 Std" as NSString)
         XCTAssertTrue(german.contains("3 Std"), german)
         XCTAssertTrue(german.contains("1 Session"), german)
     }
@@ -96,7 +96,10 @@ final class LocalizationTests: XCTestCase {
         XCTAssertFalse(CoachMetric.sessionRate(.allDay).isUnchanged(from: 0.8, to: 0.9))
         XCTAssertTrue(CoachMetric.firstSession.isUnchanged(from: 540, to: 543))
         XCTAssertFalse(CoachMetric.firstSession.isUnchanged(from: 540, to: 560))
-        XCTAssertFalse(CoachMetric.siteMinutes("x.com").isUnchanged(from: 20, to: 20))
+        XCTAssertTrue(CoachMetric.siteMinutes("x.com").isUnchanged(from: 20.2, to: 20.1))
+        XCTAssertFalse(CoachMetric.siteMinutes("x.com").isUnchanged(from: 20, to: 18))
+        XCTAssertTrue(CoachMetric.weekdayFocus(2).isUnchanged(from: 3600, to: 3610))
+        XCTAssertFalse(CoachMetric.callDayFocus.isUnchanged(from: 3600, to: 5400))
     }
 
     func testAnUntitledMeetingIsJustTheMeeting() {

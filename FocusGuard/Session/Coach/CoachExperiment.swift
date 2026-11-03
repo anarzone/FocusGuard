@@ -249,12 +249,14 @@ enum CoachMetric: Codable, Hashable, Sendable {
         return points > 0 ? String(localized: "+\(moved) pts", comment: "Focus rate points, compact") : String(localized: "−\(moved) pts", comment: "Focus rate points, compact")
     }
 
-    /// `change` says nothing moved: the same rate, or about the same start.
+    /// `change` says nothing moved: the same rate, about the same start, or
+    /// the same figure on both sides of the arrow.
     func isUnchanged(from before: Double, to after: Double) -> Bool {
         switch self {
         case .sessionRate:  return Int((after * 100).rounded()) == Int((before * 100).rounded())
         case .firstSession: return abs(Int((before - after).rounded())) < 5
-        case .siteMinutes, .callDayFocus, .weekdayFocus: return false
+        case .siteMinutes:  return Int(before.rounded()) == Int(after.rounded())
+        case .callDayFocus, .weekdayFocus: return CoachDraft.duration(before) == CoachDraft.duration(after)
         }
     }
 

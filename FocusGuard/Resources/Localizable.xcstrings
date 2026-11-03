@@ -3375,6 +3375,40 @@
         }
       }
     },
+    "%@, at %@, against %@ on %@." : {
+      "comment" : "Mondays, at 79%, against 66% on Fridays.",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@, %4$@ isə %3$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ mit %2$@, gegenüber %3$@ %4$@."
+          }
+        }
+      }
+    },
+    "%@, at %@." : {
+      "comment" : "Tuesdays, at 81%.",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, mit %2$@."
+          }
+        }
+      }
+    },
     "%@, Pro" : {
       "shouldTranslate" : false
     },
@@ -8245,6 +8279,22 @@
         }
       }
     },
+    "About the same: %@ on %@, %@ on %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Təxminən eyni: %2$@ %1$@, %4$@ %3$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwa gleich: %1$@ %2$@, %3$@ %4$@."
+          }
+        }
+      }
+    },
     "AI tips" : {
       "localizations" : {
         "az" : {
@@ -10550,50 +10600,6 @@
         }
       }
     },
-    "Before: %@. During it: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Əvvəl: %1$@. Eksperiment zamanı: %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorher: %1$@. Währenddessen: %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Before: %1$@. During it: %2$@."
-          }
-        }
-      }
-    },
-    "Best day of the week: %@, with a focus rate of %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Həftənin ən yaxşı günü: %1$@, fokus dərəcəsi %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bester Wochentag: %1$@, mit einer Fokusrate von %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Best day of the week: %1$@, with a focus rate of %2$@."
-          }
-        }
-      }
-    },
     "Best hours" : {
       "localizations" : {
         "az" : {
@@ -10606,28 +10612,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beste Stunden"
-          }
-        }
-      }
-    },
-    "Best hours: %@, with a focus rate of %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ən yaxşı saatlar: %1$@, fokus dərəcəsi %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beste Stunden: %1$@, mit einer Fokusrate von %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Best hours: %1$@, with a focus rate of %2$@."
           }
         }
       }
@@ -10747,51 +10731,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zwischen Sessions"
-          }
-        }
-      }
-    },
-    "Biggest distraction %@: %@, %@, on %lld of those days." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ən böyük yayınma %1$@: %2$@, %3$@, həmin günlərin %4$lld günündə."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Größte Ablenkung %1$@: %2$@, %3$@, an %4$lld dieser Tage."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Biggest distraction %1$@: %2$@, %3$@, on %4$lld of those days."
-          }
-        }
-      }
-    },
-    "Biggest distraction on %@: %@, %@ on an average one." : {
-      "comment" : "Mondays",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ən böyük yayınma %1$@: %2$@, orta hesabla %3$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Größte Ablenkung %1$@: %2$@, durchschnittlich %3$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Biggest distraction on %1$@: %2$@, %3$@ on an average one."
           }
         }
       }
@@ -11803,22 +11742,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voreinstellung ändern"
-          }
-        }
-      }
-    },
-    "Change: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dəyişiklik: %@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Änderung: %@."
           }
         }
       }
@@ -13313,28 +13236,6 @@
         }
       }
     },
-    "Days used in the last 4 weeks: %lld, about %@ on each." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Son 4 həftədə istifadə günləri: %1$lld, hər birində təxminən %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Genutzte Tage in den letzten 4 Wochen: %1$lld, je etwa %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Days used in the last 4 weeks: %1$lld, about %2$@ on each."
-          }
-        }
-      }
-    },
     "Days with %lld hours of calls kept %@ of your usual focus." : {
       "localizations" : {
         "az" : {
@@ -14281,91 +14182,18 @@
         }
       }
     },
-    "Drift %@: %@ in all, over %lld days tracked." : {
-      "comment" : "Plural on the number of days: 1 day / 2 days",
+    "Drift runs about %@ a day, whatever the day." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yayınma %1$@: cəmi %2$@, %3$lld izlənilən gün ərzində."
+            "value" : "Yayınma, gündən asılı olmayaraq, gündə təxminən %@ olur."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ablenkung %1$@: insgesamt %2$@, an %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg erfassten Tag"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg erfassten Tagen"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drift %1$@: %2$@ in all, over %3$#@arg3@ tracked."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg day"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg days"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Drift %@: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yayınma %1$@: %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ablenkung %1$@: %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Drift %1$@: %2$@."
+            "value" : "Die Ablenkung liegt bei etwa %@ am Tag, egal an welchem Tag."
           }
         }
       }
@@ -14389,28 +14217,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Drift runs about %1$@ a day, whatever the day. %2$@ are a little higher, at %3$@."
-          }
-        }
-      }
-    },
-    "Drift this week so far: %@; by this point last week: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu həftə indiyədək yayınma: %1$@; keçən həftə bu vaxta qədər: %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ablenkung diese Woche bisher: %1$@; letzte Woche um diese Zeit: %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Drift this week so far: %1$@; by this point last week: %2$@."
           }
         }
       }
@@ -15651,6 +15457,22 @@
     "FG-XXXX-XXXX-XXXX-XXXX" : {
       "shouldTranslate" : false
     },
+    "Focus rate on those days in the last 4 weeks." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son 4 həftədə həmin günlər üzrə fokus dərəcəsi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusrate an diesen Tagen in den letzten 4 Wochen."
+          }
+        }
+      }
+    },
     "FREE" : {
       "comment" : "Badge on what the free plan includes",
       "localizations" : {
@@ -16132,22 +15954,6 @@
         }
       }
     },
-    "Focus rate across all hours: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bütün saatlar üzrə fokus dərəcəsi: %@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokusrate über alle Stunden: %@."
-          }
-        }
-      }
-    },
     "Focus rate before %@, during it %@." : {
       "localizations" : {
         "az" : {
@@ -16204,22 +16010,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokusrate nach Session-Länge: %@"
-          }
-        }
-      }
-    },
-    "Focus rate is focused time against focused plus drifted time." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fokus dərəcəsi fokus vaxtının fokus və yayınma vaxtlarının cəminə nisbətidir."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Fokusrate ist das Verhältnis von fokussierter Zeit zu fokussierter plus abgeschweifter Zeit."
           }
         }
       }
@@ -16901,28 +16691,6 @@
         }
       }
     },
-    "Focused by this point last week: %@, focus rate %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keçən həftə bu vaxta qədər fokusda: %1$@, fokus dərəcəsi %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Letzte Woche um diese Zeit fokussiert: %1$@, Fokusrate %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Focused by this point last week: %1$@, focus rate %2$@."
-          }
-        }
-      }
-    },
     "Focused hours per project and day show here." : {
       "localizations" : {
         "az" : {
@@ -16973,156 +16741,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Focused hours per week for the last %1$lld weeks: %2$@"
-          }
-        }
-      }
-    },
-    "Focused in all of last week: %@, %lld sessions." : {
-      "comment" : "Plural on sessions: 1 session / 2 sessions",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bütün keçən həftə fokusda: %1$@, %2$lld sessiya."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die ganze letzte Woche fokussiert: %1$@, %2$#@arg2@."
-          },
-          "substitutions" : {
-            "arg2" : {
-              "argNum" : 2,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focused in all of last week: %1$@, %2$#@arg2@."
-          },
-          "substitutions" : {
-            "arg2" : {
-              "argNum" : 2,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Focused this week so far: %@, focus rate %@, %lld sessions." : {
-      "comment" : "Plural on sessions: 1 session / 2 sessions",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu həftə indiyədək fokusda: %1$@, fokus dərəcəsi %2$@, %3$lld sessiya."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Woche bisher fokussiert: %1$@, Fokusrate %2$@, %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focused this week so far: %1$@, focus rate %2$@, %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Focused this week so far: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu həftə indiyədək fokusda: %@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Woche bisher fokussiert: %@."
           }
         }
       }
@@ -17781,6 +17399,22 @@
         }
       }
     },
+    "From last week" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keçən həftə üzrə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus der letzten Woche"
+          }
+        }
+      }
+    },
     "From Linear › Settings › Security & access › Personal API keys. Kept in your Keychain." : {
       "localizations" : {
         "az" : {
@@ -17793,6 +17427,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aus Linear › Settings › Security & access › Personal API keys. Wird in deinem Schlüsselbund aufbewahrt."
+          }
+        }
+      }
+    },
+    "From this week so far" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə indiyədək"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus dieser Woche bisher"
+          }
+        }
+      }
+    },
+    "From today" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün üzrə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von heute"
           }
         }
       }
@@ -17953,6 +17619,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "From yesterday" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dünən üzrə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von gestern"
           }
         }
       }
@@ -19293,18 +18975,18 @@
         }
       }
     },
-    "It ended with its week." : {
+    "It can only narrow this to today, yesterday, this week or last week." : {
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öz həftəsi ilə bitdi."
+            "value" : "Bunu yalnız bu gün, dünən, bu həftə və ya keçən həftə üçün daralda bilir."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Es endete mit seiner Woche."
+            "value" : "Genauer geht es nur für heute, gestern, diese oder letzte Woche."
           }
         }
       }
@@ -19427,7 +19109,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%3$@ %2$@ yayınmanın %1$@ hissəsini bu tutdu. Sonra %5$@ ilə %4$@ gəlir."
+            "value" : "Bu, %3$@ %2$@ yayınmanın %1$@ hissəsini tutdu. Sonra %5$@ ilə %4$@ gəlir."
           }
         },
         "de" : {
@@ -19467,7 +19149,7 @@
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%2$@ bütün %1$@ yayınma buna düşür."
+            "value" : "Bu, %2$@ bütün %1$@ yayınmadır."
           }
         },
         "de" : {
@@ -19480,22 +19162,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "It was all %1$@ of the drift %2$@."
-          }
-        }
-      }
-    },
-    "It was kept on." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktiv saxlanıldı."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Es wurde beibehalten."
           }
         }
       }
@@ -20262,22 +19928,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Letzte Woche, gleiche Tage"
-          }
-        }
-      }
-    },
-    "Last week: nothing tracked." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keçən həftə: heç nə izlənilməyib."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Letzte Woche: nichts erfasst."
           }
         }
       }
@@ -21910,73 +21560,6 @@
         }
       }
     },
-    "Most drift: %@, %@ on an average one, over %lld days." : {
-      "comment" : "Mondays. Plural on days: 1 day / 2 days",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ən çox yayınma: %1$@, orta hesabla %2$@, %3$lld gün ərzində."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Größte Ablenkung: %1$@, durchschnittlich %2$@, über %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Tag"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Tage"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Most drift: %1$@, %2$@ on an average one, over %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg day"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg days"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Most focused in %@" : {
       "localizations" : {
         "az" : {
@@ -22325,23 +21908,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hauptsächlich %@"
-          }
-        }
-      }
-    },
-    "Mostly counted as %@." : {
-      "comment" : "Focus, drift or neutral time",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Əsasən %@ kimi sayılıb."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meist als %@ gezählt."
           }
         }
       }
@@ -22980,6 +22546,22 @@
         }
       }
     },
+    "Nights" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gecələr"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachts"
+          }
+        }
+      }
+    },
     "No API key is set for the selected provider." : {
       "localizations" : {
         "az" : {
@@ -23008,6 +22590,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kein Zugriff auf Bedienungshilfen nötig. Du kannst das alles später in den Einstellungen ändern."
+          }
+        }
+      }
+    },
+    "No hours stand out." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç bir saat seçilmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Stunden stechen heraus."
           }
         }
       }
@@ -23655,6 +23253,22 @@
         }
       }
     },
+    "Not enough of those lengths to compare." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müqayisə üçün bu uzunluqlarda sessiya azdır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Von diesen Längen gibt es zu wenig zum Vergleichen."
+          }
+        }
+      }
+    },
     "Not in the Chrome Web Store yet; the guide shows how" : {
       "localizations" : {
         "az" : {
@@ -24022,6 +23636,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nichts erfasst"
+          }
+        }
+      }
+    },
+    "Nothing tracked at that time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O vaxt heç nə izlənilməyib."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu dieser Zeit wurde nichts erfasst."
           }
         }
       }
@@ -24571,6 +24201,23 @@
         }
       }
     },
+    "on %@" : {
+      "comment" : "Goes inside a sentence: You drifted 3h on Mondays. The name: Mondays",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
     "On a break" : {
       "localizations" : {
         "az" : {
@@ -24904,6 +24551,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bisher gibt es nur eine Session-Länge."
+          }
+        }
+      }
+    },
+    "Only one time of day to go on." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müqayisə üçün yalnız bir vaxt var."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur eine Tageszeit zum Vergleichen."
           }
         }
       }
@@ -25518,22 +25181,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Andere App…"
-          }
-        }
-      }
-    },
-    "Other days average %@ of drift." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Digər günlərdə orta hesabla %@ yayınma."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An anderen Tagen durchschnittlich %@ Ablenkung."
           }
         }
       }
@@ -28702,28 +28349,6 @@
         }
       }
     },
-    "Second distraction %@: %@, %@, on %lld of those days." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "İkinci yayınma %1$@: %2$@, %3$@, həmin günlərin %4$lld günündə."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zweitgrößte Ablenkung %1$@: %2$@, %3$@, an %4$lld dieser Tage."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Second distraction %1$@: %2$@, %3$@, on %4$lld of those days."
-          }
-        }
-      }
-    },
     "See Free and Pro" : {
       "localizations" : {
         "az" : {
@@ -29309,73 +28934,6 @@
         }
       }
     },
-    "Sessions %@: focus rate %@, %lld sessions." : {
-      "comment" : "Plural on the last number: 1 session / 2 sessions. The phrase: of 25 to 44 minutes",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ sessiyalar: fokus dərəcəsi %2$@, %3$lld sessiya."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessions %1$@: Fokusrate %2$@, %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg Sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessions %1$@: focus rate %2$@, %3$#@arg3@."
-          },
-          "substitutions" : {
-            "arg3" : {
-              "argNum" : 3,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "one" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg session"
-                    }
-                  },
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg sessions"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "Sessions at %@ would add %@ toward your %@ goal." : {
       "localizations" : {
         "az" : {
@@ -29764,22 +29322,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einstellungen …"
-          }
-        }
-      }
-    },
-    "Share of all focused time in those hours: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu saatların bütün fokus vaxtındakı payı: %@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anteil dieser Stunden an der gesamten Fokuszeit: %@."
           }
         }
       }
@@ -33531,6 +33073,22 @@
         }
       }
     },
+    "That's against %@ across all your days." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bütün günləriniz üzrə isə %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Über alle Tage sind es %@."
+          }
+        }
+      }
+    },
     "That's against %@ on other days." : {
       "localizations" : {
         "az" : {
@@ -33789,28 +33347,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Experiment war %@. Du hast es beibehalten."
-          }
-        }
-      }
-    },
-    "The experiment: %@, in the week of %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eksperiment: %1$@, %2$@ həftəsində."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Experiment: %1$@, in der Woche vom %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "The experiment: %1$@, in the week of %2$@."
           }
         }
       }
@@ -34543,28 +34079,6 @@
         }
       }
     },
-    "Third distraction %@: %@, %@, on %lld of those days." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Üçüncü yayınma %1$@: %2$@, %3$@, həmin günlərin %4$lld günündə."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drittgrößte Ablenkung %1$@: %2$@, %3$@, an %4$lld dieser Tage."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Third distraction %1$@: %2$@, %3$@, on %4$lld of those days."
-          }
-        }
-      }
-    },
     "This is everything in the report. Nothing has been sent. Mail opens with it attached; for a GitHub issue it's copied so you can paste it in." : {
       "localizations" : {
         "az" : {
@@ -34776,22 +34290,6 @@
         }
       }
     },
-    "This week's experiment: %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu həftənin eksperimenti: %@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das Experiment dieser Woche: %@."
-          }
-        }
-      }
-    },
     "This week's session shows up here as soon as Pro is on." : {
       "localizations" : {
         "az" : {
@@ -34981,29 +34479,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zeit für deine Session um %@"
-          }
-        }
-      }
-    },
-    "Time on %@ %@: %@." : {
-      "comment" : "An app or site, when (today), a compact duration",
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ üçün vaxt %2$@: %3$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeit mit %1$@ %2$@: %3$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Time on %1$@ %2$@: %3$@."
           }
         }
       }
@@ -35558,6 +35033,38 @@
         }
       }
     },
+    "Too little tracked on those days to compare." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müqayisə üçün həmin günlərdə çox az məlumat izlənilib."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An diesen Tagen zu wenig erfasst zum Vergleichen."
+          }
+        }
+      }
+    },
+    "Too little tracked then to tell." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O vaxt üçün çox az məlumat izlənilib."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diese Zeit zu wenig erfasst."
+          }
+        }
+      }
+    },
     "Too little tracked to tell yet." : {
       "localizations" : {
         "az" : {
@@ -35832,6 +35339,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Trial: %1$lld of %2$lld days left"
+          }
+        }
+      }
+    },
+    "Try a wider question, such as the last 4 weeks." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha geniş soruşun, məsələn, son 4 həftə haqqında."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frag breiter, zum Beispiel nach den letzten 4 Wochen."
           }
         }
       }
@@ -36891,28 +36414,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Möchtest du ein anderes Limit? Bei %@ kannst du es für morgen ändern."
-          }
-        }
-      }
-    },
-    "Weakest hours: %@, with a focus rate of %@." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ən zəif saatlar: %1$@, fokus dərəcəsi %2$@."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schwächste Stunden: %1$@, mit einer Fokusrate von %2$@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Weakest hours: %1$@, with a focus rate of %2$@."
           }
         }
       }
@@ -38216,6 +37717,23 @@
         }
       }
     },
+    "yesterday" : {
+      "comment" : "Goes inside a sentence: Slack: 2h yesterday.",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dünən"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gestern"
+          }
+        }
+      }
+    },
     "Yesterday: %@ focused, %lld%% focus rate, %lld sessions." : {
       "comment" : "Plural on sessions: 1 session / 2 sessions",
       "localizations" : {
@@ -38465,6 +37983,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du hast es in den letzten 4 Wochen nicht genutzt."
+          }
+        }
+      }
+    },
+    "You only focus around %@. Try a session at another time to compare." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yalnız %@ aralığında fokuslanırsınız. Müqayisə üçün başqa vaxt sessiya sınayın."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du fokussierst nur %@. Probier zum Vergleich eine Session zu einer anderen Zeit."
           }
         }
       }
@@ -39011,6 +38545,38 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Your focus rate holds at about %@ whenever you work." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus dərəcəniz nə vaxt işləməyinizdən asılı olmayaraq təxminən %@ olur."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Fokusrate liegt bei etwa %@, egal wann du arbeitest."
+          }
+        }
+      }
+    },
+    "Your focus rate runs about %@ whichever the day." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus dərəcəniz hansı gün olmasından asılı olmayaraq təxminən %@ olur."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Fokusrate liegt an jedem Tag bei etwa %@."
           }
         }
       }

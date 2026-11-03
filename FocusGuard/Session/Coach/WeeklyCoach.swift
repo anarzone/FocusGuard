@@ -76,7 +76,7 @@ struct CoachTrial: Codable, Equatable, Identifiable, Sendable {
     }
 
     var improved: Bool {
-        guard let before, let after else { return false }
+        guard let before, let after, !madeNoDifference else { return false }
         return experiment.metric.improved(from: before, to: after)
     }
 }
