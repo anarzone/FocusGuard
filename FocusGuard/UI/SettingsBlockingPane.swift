@@ -239,11 +239,22 @@ struct SettingsLimitsPane: View {
                     Text(status.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.primaryText)
                         .lineLimit(1).truncationMode(.middle)
                     Spacer()
-                    Text("\(Int(status.used / 60)) of \(status.minutes + status.extraMinutes) min")
-                        .font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.secondaryText)
+                    if !status.isPaused {
+                        Text("\(Int(status.used / 60)) of \(status.minutes + status.extraMinutes) min")
+                            .font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.secondaryText)
+                    }
                 }
-                WindowBar(fraction: status.allowance > 0 ? status.used / status.allowance : 0,
-                          color: status.isUsedUp ? Theme.distraction : Theme.focus, height: 4)
+                if status.isPaused {
+                    HStack(spacing: 8) {
+                        Text(String(localized: "Paused: Free keeps one daily limit.", comment: "A daily limit that's off because the Free plan keeps only one"))
+                            .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                        Button(entitlements.canStartTrial ? "Try Pro free" : "See Pro") { openSheet(.upgrade(.unlimitedLimits)) }
+                            .buttonStyle(.textLink)
+                    }
+                } else {
+                    WindowBar(fraction: status.allowance > 0 ? status.used / status.allowance : 0,
+                              color: status.isUsedUp ? Theme.distraction : Theme.focus, height: 4)
+                }
                 if let pending = status.pending {
                     Text(pending == .removal ? "Goes away tomorrow" : "Changes tomorrow")
                         .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
@@ -348,6 +359,9 @@ struct SettingsLimitsPane: View {
     }
 
     private func apply(_ change: LimitChange?) {
-        note = change == .fromTomorrow ? String(localized: "Strict is on, so limit changes take effect tomorrow.") : nil
+        guard change == .fromTomorrow else { return note = nil }
+        note = appState.escalationEngine.policy.limitChangesWaitForTomorrow
+            ? String(localized: "Strict is on, so limit changes take effect tomorrow.")
+            : String(localized: "Strict was on today, so limit changes take effect tomorrow.")
     }
 }

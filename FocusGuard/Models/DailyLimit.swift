@@ -22,6 +22,9 @@ final class DailyLimit {
     var extraGrants: Int = 0
     /// Start of the day `extraGrants` belong to.
     var extraDay: Date?
+    /// Start of a day Strict was on: leaving Strict doesn't open up that day's
+    /// limit, which goes by Strict's rules until the next one.
+    var strictDay: Date?
     var createdAt: Date
 
     /// A change waiting for tomorrow, as the UI shows it.

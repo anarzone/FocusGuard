@@ -25,6 +25,11 @@ struct LimitStatus: Equatable, Identifiable {
     let extraLeft: Int
     /// A change that waits for tomorrow.
     let pending: DailyLimit.PendingChange?
+    /// Off for now: beyond what the plan keeps. It isn't counted and doesn't block.
+    var isPaused = false
+    /// Strict was on today, so it goes by Strict's rules until tomorrow,
+    /// whichever preset is on now.
+    var changesWaitForTomorrow = false
 
     /// Today's allowance in seconds, extra time included.
     var allowance: TimeInterval { TimeInterval((minutes + extraMinutes) * 60) }
@@ -50,8 +55,12 @@ enum LimitChange: Equatable {
 /// - A warning goes out 5 minutes before a limit runs out.
 /// - Extra time and same-day changes follow the preset (`OverridePolicy`).
 ///
-/// The engine doesn't check the plan: Free allows one limit, which the UI
-/// enforces through `Entitlements`.
+/// Free keeps one limit, the oldest, in force (`activeCap`). The others stay,
+/// paused, and come back with Pro; if the one in force goes, the next oldest
+/// takes over. Adding more is the UI's to refuse, through `LimitGate`.
+///
+/// Strict's rules hold for the rest of a day Strict was on at any point, so
+/// switching preset doesn't get round "only for tomorrow".
 @MainActor
 @Observable
 final class DailyLimitsEngine {
@@ -68,6 +77,8 @@ final class DailyLimitsEngine {
     private let notifier: LimitNotifying
     private let overlay: BlockOverlayPresenting
     private let policy: () -> OverridePolicy
+    /// How many limits are in force, oldest first; nil means all.
+    private let activeCap: () -> Int?
     private let calendar: Calendar
 
     /// Start of the day being counted.
@@ -80,11 +91,13 @@ final class DailyLimitsEngine {
     @ObservationIgnored private var lastMatched: Set<UUID> = []
 
     init(context: ModelContext, notifier: LimitNotifying, overlay: BlockOverlayPresenting,
-         policy: @escaping () -> OverridePolicy, calendar: Calendar = .current, now: Date = .now) {
+         policy: @escaping () -> OverridePolicy, activeCap: @escaping () -> Int? = { nil },
+         calendar: Calendar = .current, now: Date = .now) {
         self.context = context
         self.notifier = notifier
         self.overlay = overlay
         self.policy = policy
+        self.activeCap = activeCap
         self.calendar = calendar
         self.day = calendar.startOfDay(for: now)
         overlay.onExtraTime = { [weak self] id in self?.takeExtraTime(for: id) }
@@ -137,7 +150,18 @@ final class DailyLimitsEngine {
 
     private func block(for status: LimitStatus) -> LimitBlock {
         LimitBlock(limitID: status.id, name: status.name, minutesToday: status.minutes + status.extraMinutes,
-                   extraTime: policy().extraTime, extraLeft: status.extraLeft)
+                   extraTime: policy(for: status).extraTime, extraLeft: status.extraLeft)
+    }
+
+    /// The plan changed: limits beyond it have just gone off or come back.
+    func planChanged(now: Date = .now) {
+        // Time on a limit that was off wasn't counted.
+        used = usageToday(of: limits, now: now)
+        lastMatched.formIntersection(active.map(\.id))
+        refreshStatuses()
+        if case .dailyLimit(let block) = overlay.current?.reason, status(for: block.limitID)?.isPaused == true {
+            overlay.dismiss()
+        }
     }
 
     /// At 00:00: usage, extra time and warnings start over, changes saved
@@ -160,6 +184,34 @@ final class DailyLimitsEngine {
         statuses.first { $0.id == id }
     }
 
+    /// The limits in force now.
+    var activeStatuses: [LimitStatus] { statuses.filter { !$0.isPaused } }
+
+    /// The rules for this limit today: Strict's, for the rest of a day Strict was on.
+    func policy(for status: LimitStatus) -> OverridePolicy {
+        status.changesWaitForTomorrow ? .strict : policy()
+    }
+
+    /// The limits in force, oldest first.
+    private var active: [DailyLimit] {
+        activeCap().map { Array(limits.prefix(max(0, $0))) } ?? limits
+    }
+
+    private func policy(for limit: DailyLimit) -> OverridePolicy {
+        limit.strictDay == day ? .strict : policy()
+    }
+
+    /// Notes that Strict is on today, on each limit, for the rest of the day.
+    private func noteStrict() {
+        guard policy().limitChangesWaitForTomorrow else { return }
+        var changed = false
+        for limit in limits where limit.strictDay != day {
+            limit.strictDay = day
+            changed = true
+        }
+        if changed { Persistence.save(context) }
+    }
+
     /// The limit on what this snapshot shows, if any (a site's first, then the app's).
     func status(for snapshot: ActivitySnapshot) -> LimitStatus? {
         limits(matching: snapshot).first.flatMap { status(for: $0.id) }
@@ -167,8 +219,9 @@ final class DailyLimitsEngine {
 
     private func limits(matching snapshot: ActivitySnapshot) -> [DailyLimit] {
         let host = snapshot.url.flatMap { URL(string: $0)?.host?.lowercased() }
-        let sites = limits.filter { limit in limit.isSite && host.map { Classifier.host($0, matches: limit.target) } == true }
-        let apps = limits.filter { !$0.isSite && $0.target == snapshot.bundleIdentifier }
+        let inForce = active
+        let sites = inForce.filter { limit in limit.isSite && host.map { Classifier.host($0, matches: limit.target) } == true }
+        let apps = inForce.filter { !$0.isSite && $0.target == snapshot.bundleIdentifier }
         return sites + apps
     }
 
@@ -177,13 +230,16 @@ final class DailyLimitsEngine {
     }
 
     private func refreshStatuses() {
-        let extra = policy().extraTime
+        noteStrict()
+        let inForce = Set(active.map(\.id))
         let next = limits.map { limit in
             let taken = extraTaken(limit)
+            let extra = policy(for: limit).extraTime
             return LimitStatus(id: limit.id, target: limit.target, isSite: limit.isSite, name: limit.name,
                                minutes: limit.minutes, extraMinutes: taken * extra.minutes,
                                used: used[limit.id] ?? 0, extraLeft: max(0, extra.timesPerDay - taken),
-                               pending: limit.pendingChange)
+                               pending: limit.pendingChange, isPaused: !inForce.contains(limit.id),
+                               changesWaitForTomorrow: limit.strictDay == day)
         }
         if next != statuses { statuses = next }
     }
@@ -209,11 +265,12 @@ final class DailyLimitsEngine {
         return limit
     }
 
-    /// Changes a limit's minutes: now, or from tomorrow on Strict.
+    /// Changes a limit's minutes: now, or from tomorrow on a day Strict was on.
     @discardableResult
     func setMinutes(_ minutes: Int, for id: UUID) -> LimitChange? {
         guard minutes > 0, let limit = limits.first(where: { $0.id == id }) else { return nil }
-        if policy().limitChangesWaitForTomorrow {
+        noteStrict()
+        if policy(for: limit).limitChangesWaitForTomorrow {
             limit.pendingMinutes = minutes
             limit.pendingFrom = tomorrow
             Persistence.save(context)
@@ -228,12 +285,13 @@ final class DailyLimitsEngine {
         return .now
     }
 
-    /// Removes a limit: now, or from tomorrow on Strict. `evenOnStrict`
+    /// Removes a limit: now, or from tomorrow on a day Strict was on. `evenOnStrict`
     /// removes it now on any preset (the weekly coach's limit, once its week is over).
     @discardableResult
     func removeLimit(_ id: UUID, evenOnStrict: Bool = false) -> LimitChange? {
         guard let limit = limits.first(where: { $0.id == id }) else { return nil }
-        if policy().limitChangesWaitForTomorrow && !evenOnStrict {
+        noteStrict()
+        if policy(for: limit).limitChangesWaitForTomorrow && !evenOnStrict {
             limit.pendingMinutes = 0
             limit.pendingFrom = tomorrow
             Persistence.save(context)
@@ -245,6 +303,8 @@ final class DailyLimitsEngine {
         if case .dailyLimit(let block) = overlay.current?.reason, block.limitID == id { overlay.dismiss() }
         reload()
         used[id] = nil
+        // On Free the next oldest has just come into force, with today's time on it.
+        used = usageToday(of: limits, now: .now).merging(used) { max($0, $1) }
         refreshStatuses()
         return .now
     }
@@ -252,9 +312,10 @@ final class DailyLimitsEngine {
     /// "5 more minutes" on a limit that ran out, while the preset allows it.
     @discardableResult
     func takeExtraTime(for id: UUID) -> Bool {
-        guard let limit = limits.first(where: { $0.id == id }) else { return false }
+        guard let limit = active.first(where: { $0.id == id }) else { return false }
+        noteStrict()
         let taken = extraTaken(limit)
-        guard taken < policy().extraTime.timesPerDay else { return false }
+        guard taken < policy(for: limit).extraTime.timesPerDay else { return false }
         limit.extraGrants = taken + 1
         limit.extraDay = day
         Persistence.save(context)

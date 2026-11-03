@@ -93,7 +93,8 @@ final class AppState {
         let blockOverlay = BlockOverlayController()
         let engine = EscalationEngine(presenter: presenter, overlay: blockOverlay)
         let limits = DailyLimitsEngine(context: context, notifier: presenter, overlay: blockOverlay,
-                                       policy: { [weak engine] in engine?.policy ?? .standard })
+                                       policy: { [weak engine] in engine?.policy ?? .standard },
+                                       activeCap: { Entitlements.shared.dailyLimitCap })
         let bridge = ExtensionBridge()
 
         self.permissions = PermissionsCoordinator()
@@ -242,7 +243,7 @@ final class AppState {
         tracker.extensionTab = { [weak bridge] id in bridge?.tab(forBrowser: id) }
         bridge.onTabChange = { [weak tracker] in tracker?.lookSoon() }
         bridge.presetProvider = { [weak engine] in engine?.presetInForce() ?? .standard }
-        bridge.limitsProvider = { [weak limits] in limits?.statuses ?? [] }
+        bridge.limitsProvider = { [weak limits] in limits?.activeStatuses ?? [] }
         bridge.extraTimeHandler = { [weak limits] id in limits?.takeExtraTime(for: id) ?? false }
         bridge.grantEnginePass = { [weak engine] snapshot in engine?.takePass(for: snapshot) }
 
@@ -257,6 +258,7 @@ final class AppState {
             bridge.start(appState: self)
         }
         setupAutoPauseObservers()
+        watchPlan()
 
         // One-time cleanup of pre-fix idle events (loginwindow / screensaver)
         // that the old tracker counted as activity.
@@ -284,6 +286,22 @@ final class AppState {
         SurfaceHost.attach(self)
         // The weekly coach's experiments act through the limits and settings.
         WeeklyCoach.shared.attach(self)
+    }
+
+    /// The plan changing (a trial starting or ending, a licence) turns limits
+    /// beyond Free's on or off straight away.
+    private func watchPlan() {
+        withObservationTracking {
+            _ = Entitlements.shared.plan
+        } onChange: { [weak self] in
+            // Called before the change lands: read it on the next turn.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    self?.limits.planChanged()
+                    self?.watchPlan()
+                }
+            }
+        }
     }
 
     /// Refreshes `menuStats` in the background, at most every 5 s (the
@@ -580,6 +598,8 @@ final class AppState {
         guard autoPausedAt != nil,
               let session = sessionManager.currentSession,
               session.pausedAt != nil else { return }
+        // Gone too long: it ends where it paused rather than picking up.
+        if sessionManager.endIfPausedTooLong() { return }
         sessionManager.resumeSession()
         autoPausedAt = nil
     }

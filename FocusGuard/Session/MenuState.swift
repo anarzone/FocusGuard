@@ -236,7 +236,7 @@ extension AppState {
         guard let snapshot = tracker.currentSnapshot else { return nil }
         if let status = limits.status(for: snapshot) { return status }
         guard let host = snapshot.url.flatMap(Self.pausedPageHost) else { return nil }
-        return limits.statuses.first { $0.isSite && Classifier.host(host, matches: $0.target) }
+        return limits.activeStatuses.first { $0.isSite && Classifier.host(host, matches: $0.target) }
     }
 
     /// The site a paused-tab page stands in for, from its fragment

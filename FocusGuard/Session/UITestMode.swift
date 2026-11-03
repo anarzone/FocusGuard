@@ -14,11 +14,17 @@ enum UITestMode {
 
     /// A week of mornings and today's last few hours, with a session each
     /// day, so every page has something to show. `-FocusGuardUITestSeed`
-    /// asks for another state: `empty`, or `big` (years of data, long names).
+    /// asks for another state: `empty`, `big` (years of data, long names) or
+    /// `limits` (three daily limits).
     static func seed(_ context: ModelContext, now: Date = .now, calendar: Calendar = .current) {
         switch UserDefaults.standard.string(forKey: "FocusGuardUITestSeed") {
         case "empty": return
         case "big": return seedBig(context, now: now, calendar: calendar)
+        case "limits":
+            for (index, site) in ["first.example", "second.example", "third.example"].enumerated() {
+                context.insert(DailyLimit(target: site, isSite: true, name: site, minutes: 30,
+                                          createdAt: now.addingTimeInterval(TimeInterval(index - 10))))
+            }
         default: break
         }
         let today = calendar.startOfDay(for: now)

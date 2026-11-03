@@ -325,11 +325,25 @@ struct QuickSettingsPane: View {
                             .font(.system(size: 13, weight: .semibold))
                             .lineLimit(1)
                         Spacer(minLength: 4)
-                        Text("\(min(status.minutes + status.extraMinutes, Int(status.used / 60))) of \(status.minutes + status.extraMinutes) min")
-                            .font(.system(size: 11).monospacedDigit())
-                            .foregroundStyle(Theme.primaryText.opacity(0.85))
+                        if !status.isPaused {
+                            Text("\(min(status.minutes + status.extraMinutes, Int(status.used / 60))) of \(status.minutes + status.extraMinutes) min")
+                                .font(.system(size: 11).monospacedDigit())
+                                .foregroundStyle(Theme.primaryText.opacity(0.85))
+                        }
                     }
-                    LimitBar(fraction: status.allowance > 0 ? status.used / status.allowance : 1, height: 4)
+                    if status.isPaused {
+                        Button {
+                            trialFor = trialFor == .unlimitedLimits ? nil : .unlimitedLimits
+                        } label: {
+                            Text(String(localized: "Paused: Free keeps one daily limit.", comment: "A daily limit that's off because the Free plan keeps only one"))
+                                .font(.system(size: 11))
+                                .foregroundStyle(Theme.secondaryText)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        LimitBar(fraction: status.allowance > 0 ? status.used / status.allowance : 1, height: 4)
+                    }
                 }
                 PillButton(title: editing ? String(localized: "Done", comment: "Button: finish editing this limit") : String(localized: "Edit"), height: 22) {
                     editingLimit = editing ? nil : status.id
@@ -359,7 +373,7 @@ struct QuickSettingsPane: View {
                     .buttonStyle(.capsule(.destructive, height: 22))
                 }
                 .padding(.leading, 32)
-                if appState.escalationEngine.policy.limitChangesWaitForTomorrow {
+                if appState.limits.policy(for: status).limitChangesWaitForTomorrow {
                     Text("Strict: changes start tomorrow.")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.secondaryText)

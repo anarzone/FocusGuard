@@ -237,7 +237,7 @@ struct AppsSitesPage: View {
     // MARK: - Rules
 
     private var rulesList: some View {
-        let list = RuleItemBuilder.items(rules: rules, limits: appState.limits.statuses)
+        let list = RuleItemBuilder.items(rules: rules, limits: appState.limits.activeStatuses)
         return WindowCard(padding: EdgeInsets(top: 6, leading: 8, bottom: 8, trailing: 8)) {
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
@@ -372,9 +372,9 @@ private struct AppsTableRow: View {
                 }
             }
             .frame(width: 204)
-            Text(limit.map { String(localized: "\($0.minutes) min", comment: "Compact minutes") } ?? "—")
+            Text(limit.map { $0.isPaused ? String(localized: "Paused") : String(localized: "\($0.minutes) min", comment: "Compact minutes") } ?? "—")
                 .font(.system(size: 12).monospacedDigit())
-                .foregroundStyle(limit == nil ? Theme.tertiaryText : Theme.primaryText)
+                .foregroundStyle(limit == nil || limit?.isPaused == true ? Theme.tertiaryText : Theme.primaryText)
                 .frame(width: 58, alignment: .leading)
         }
         .padding(.horizontal, 10)

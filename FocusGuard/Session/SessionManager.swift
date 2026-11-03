@@ -151,6 +151,17 @@ final class SessionManager {
         Persistence.save(context)
     }
 
+    /// A session that paused by itself and stayed paused this long (the Mac
+    /// slept, or nobody came back) doesn't pick up again: it ends where it
+    /// paused, as a relaunch ends one gone too long. Returns whether it did.
+    @discardableResult
+    func endIfPausedTooLong(now: Date = .now, window: TimeInterval = Constants.SessionDurations.resumeAfterQuitWindow) -> Bool {
+        guard let session = currentSession, let pausedAt = session.pausedAt,
+              now.timeIntervalSince(pausedAt) > window else { return false }
+        stopSession(status: .abandoned, at: pausedAt)
+        return true
+    }
+
     /// "5 more min": push the planned end out. No-op for open-ended sessions.
     func extendSession(byMinutes minutes: Int) {
         guard let session = currentSession, let planned = session.plannedDurationMinutes else { return }
