@@ -140,6 +140,7 @@ struct MonthReviewSheet: View {
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.secondaryText)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .frame(width: 120, alignment: .trailing)
                 }
                 .accessibilityElement(children: .combine)

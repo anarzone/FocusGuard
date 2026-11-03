@@ -357,6 +357,8 @@ private struct AppsTableRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 4) {
                 Text(WindowFormat.hm(item.row.seconds)).font(.system(size: 12).monospacedDigit()).foregroundStyle(Theme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 WindowBar(fraction: item.row.seconds / peak, color: CategoryChip.dot(item.row.classification), height: 3)
             }
             .frame(width: 80, alignment: .leading)

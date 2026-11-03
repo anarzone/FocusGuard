@@ -166,6 +166,10 @@ struct TodayPage: View {
                             .font(.system(size: 30, weight: .bold).monospacedDigit())
                             .kerning(-0.9)
                             .foregroundStyle(Theme.primaryText)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.7)
+                            .padding(.horizontal, 26)
                         Text("of \(FocusGoal.format(minutes: Int(model.goal / 60))) goal")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.secondaryText)
@@ -346,20 +350,25 @@ private struct TopAppRow: View {
     let onChange: (Classification) -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        // The time is always whole, however long it runs in any language; the
+        // bar gives way first, then the name.
+        HStack(spacing: 8) {
             WindowItemIcon(name: row.name, bundleId: row.bundleId, host: row.host)
             Text(row.name)
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .frame(width: 86, alignment: .leading)
+                .frame(minWidth: 44, maxWidth: 110, alignment: .leading)
+                .layoutPriority(1)
             WindowBar(fraction: row.seconds / max(1, maxSeconds), color: CategoryChip.dot(row.classification), height: 6)
-                .frame(minWidth: 40, maxWidth: 110)
+                .frame(minWidth: 0, maxWidth: 110)
             Text(WindowFormat.hm(row.seconds))
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(Theme.secondaryText)
-                .frame(width: 44, alignment: .trailing)
+                .lineLimit(1)
+                .fixedSize()
+                .layoutPriority(2)
             Spacer(minLength: 4)
             WindowCategoryPicker(name: row.name, current: row.classification, onChange: onChange)
                 .frame(width: 104, alignment: .trailing)
@@ -841,6 +850,10 @@ private struct SetupCard: View {
                         Text(WindowFormat.hm(model.focused))
                             .font(.system(size: 28, weight: .bold).monospacedDigit())
                             .kerning(-0.84)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.7)
+                            .padding(.horizontal, 24)
                         Text("of \(FocusGoal.format(minutes: Int(model.goal / 60))) goal")
                             .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                     }

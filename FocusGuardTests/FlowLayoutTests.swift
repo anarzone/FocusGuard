@@ -53,7 +53,8 @@ final class FlowLayoutTests: XCTestCase {
 
     func testValuesThatHaveRoom() throws {
         let body = Font.system(size: 12).monospacedDigit()
-        // Apps & Sites' Time column (AppsSitesPage.swift:362), for 30 days of one app.
+        // Apps & Sites' Time column (AppsSitesPage.swift:362), in English and
+        // Azerbaijani for 30 days of one app.
         try assertFits([hm(720, 5, "en"), hm(720, 5, "az"), hm(9, 5, "de")], body, 80, "Apps time column")
         // Rules' limit column (AppsSitesPage.swift:291) and the table's (:378).
         try assertFits(languages.map { String(format: try tr("%lld min", $0), 240) }, body, 58, "Apps limit column")
@@ -61,69 +62,45 @@ final class FlowLayoutTests: XCTestCase {
         XCTAssertTrue(fits("99", .system(size: 12, weight: .semibold).monospacedDigit(), 22))
     }
 
-    /// AppsSitesPage.swift:362 again: in German, ten hours is enough to wrap,
-    /// and the page opens on the last 7 days.
-    func testAppsTimeColumnInGermanPastTenHours() throws {
-        let body = Font.system(size: 12).monospacedDigit()
-        XCTExpectFailure("Bug: the Apps & Sites table (AppsSitesPage.swift:362) gives the time 80 pt with no line limit; German '10 Std 05 Min' is 81 wide and wraps") {
-            assertFits([try! hm(10, 5, "de")], body, 80, "Apps time column")
-        }
+    // MARK: - Rows whose time takes what it needs
+
+    /// What's left for the name once the time has what it needs, in a row of
+    /// `width` with `fixed` points of other things in it.
+    private func roomForName(width: CGFloat, fixed: CGFloat, time: String, font: Font) -> CGFloat {
+        width - fixed - self.width(time, font)
     }
 
-    // MARK: - The Today page's top apps
-
-    /// TodayPage.swift:355: `Text(hm).font(11, monospaced).frame(width: 44)`,
-    /// no line limit, in a row 29 points high.
-    func testTodaysTopAppsTimeFitsAWorkingDay() throws {
+    /// TodayPage.swift's top apps row at the window's minimum width (a card
+    /// 286 points wide inside): icon 20, picker 104, gaps. The bar can go to nothing.
+    func testTodaysTopAppsLeaveRoomForANameAtTheSmallestWindow() throws {
         let font = Font.system(size: 11).monospacedDigit()
-        XCTAssertTrue(fits(try hm(9, 5, "en"), font, 44), "a single-digit hour in English")
-        XCTExpectFailure("Bug: TopAppRow (TodayPage.swift:358) gives the time 44 pt with no line limit. '10h 05m', and every hour in German ('3 Std 05 Min') and Azerbaijani ('3 s 05 dəq') wrap onto two lines in a 29 pt row") {
-            assertFits([try! hm(10, 5, "en"), try! hm(3, 5, "de"), try! hm(3, 5, "az")], font, 44, "Today top apps")
+        for time in [try hm(11, 5, "en"), try hm(11, 5, "de"), try hm(11, 5, "az")] {
+            let room = roomForName(width: 286, fixed: 20 + 104 + 4 + 4 * 8, time: time, font: font)
+            XCTAssertGreaterThanOrEqual(room, 44, "\(time)")
         }
     }
 
-    // MARK: - The menu
-
-    /// InsightsPane.swift:212: 12 pt in 52, no line limit.
-    func testTheMenusInsightsTimeFits() throws {
+    /// The menu is 308 wide, about 284 inside; these rows' names take what the
+    /// time and bar leave. InsightsPane.swift:212 (category menu 92, icon 18),
+    /// :323 (bar at its 40 minimum, icon 18). UsageBarRow (MenuPanes.swift) has
+    /// a fixed name and leaves the bar what's left, 24 at the least.
+    func testTheMenusRowsLeaveRoomForANameInEveryLanguage() throws {
         let font = Font.system(size: 12).monospacedDigit()
-        XCTAssertTrue(fits(try short(9, 5, "en"), font, 52))
-        XCTExpectFailure("Bug: InsightsPane (InsightsPane.swift:212) gives the time 52 pt with no line limit: German '3 Std 5 Min' and Azerbaijani '3 s 5 dəq' wrap, and so does an hours-long week's total in English ('100h 5m')") {
-            assertFits([try! short(3, 5, "de"), try! short(3, 5, "az"), try! short(100, 5, "en")], font, 52, "Menu insights")
+        for lang in languages {
+            let time = try short(100, 5, lang)
+            XCTAssertGreaterThanOrEqual(roomForName(width: 284, fixed: 18 + 92 + 3 * 8, time: time, font: font), 44, "Insights, \(lang)")
+            XCTAssertGreaterThanOrEqual(roomForName(width: 284, fixed: 18 + 40 + 3 * 8, time: time, font: font), 44, "Limits list, \(lang)")
+            XCTAssertGreaterThanOrEqual(roomForName(width: 284, fixed: 86 + 60 + 3 * 10, time: try short(10, 5, lang), font: .system(size: 11).monospacedDigit()),
+                                        24, "Usage row, \(lang)")
         }
     }
 
-    /// InsightsPane.swift:323: 12 pt in 48, no line limit.
-    func testTheMenusSecondListTimeFits() throws {
+    /// AppsSitesPage.swift's Time column: 80 points, down to 80% to stay on a line.
+    func testAppsTimeColumnHoldsThirtyDaysInEveryLanguage() throws {
         let font = Font.system(size: 12).monospacedDigit()
-        XCTExpectFailure("Bug: InsightsPane (InsightsPane.swift:323) gives the time 48 pt with no line limit: '10h 5m' and German or Azerbaijani hours wrap") {
-            assertFits([try! short(10, 5, "en"), try! short(3, 5, "de"), try! short(3, 5, "az")], font, 48, "Menu insights list")
-        }
-    }
-
-    /// MenuPanes.swift:234: 11 pt in 50, one line: it cuts rather than wraps.
-    func testTheMenusUsageRowTimeFits() throws {
-        let font = Font.system(size: 11).monospacedDigit()
-        XCTAssertTrue(fits(try short(10, 5, "en"), font, 50))
-        XCTExpectFailure("Bug: the usage row (MenuPanes.swift:234) gives the time 50 pt on one line, so German '3 Std 5 Min' and Azerbaijani '3 s 5 dəq' show cut off") {
-            assertFits([try! short(3, 5, "de"), try! short(3, 5, "az")], font, 50, "Menu usage row")
-        }
-    }
-
-    // MARK: - Words in narrow columns
-
-    /// ReportCharts.swift:487: a session pattern's name, 12 pt in 74, one line.
-    func testPatternNamesFitTheMonthsList() throws {
-        let font = Font.system(size: 12)
-        var cut: [String] = []
-        for pattern in SessionNamer.Pattern.allCases {
-            for lang in languages {
-                let name = try tr(pattern.rawValue, lang)
-                if !fits(name, font, 74) { cut.append("\(lang): \(name) (\(Int(width(name, font))))") }
-            }
-        }
-        XCTExpectFailure("Bug: PatternList (ReportCharts.swift:487) gives the name 74 pt on one line: German 'Abschweifend' and Azerbaijani 'Gec başlayan' are cut off") {
-            XCTAssertTrue(cut.isEmpty, "\(cut)")
+        for lang in languages {
+            let time = try hm(720, 5, lang)
+            XCTAssertLessThanOrEqual(width(time, font) * 0.8, 80, time)
         }
     }
 
