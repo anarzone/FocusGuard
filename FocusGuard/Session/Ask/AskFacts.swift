@@ -53,15 +53,13 @@ struct AskAction: Equatable, Sendable {
     let doneTitle: String
 }
 
-/// Everything an answer says, worked out by rules from the store. `lead`
-/// and `detail` are the template words; the model may reword them, from
-/// `facts` alone.
+/// Everything an answer says, worked out by rules from the store and worded
+/// by template. The model only sorts the question: when it reworded answers it
+/// kept the numbers but turned the meaning round ("Focused less this week"
+/// beside a rise, "Tuesdays drift most" for "No day stands out").
 struct AskFacts: Equatable, Sendable {
     var lead: String
     var detail: String
-    /// Plain statements the words may draw on, and nothing else. Empty when
-    /// there was nothing to work from, and the model isn't asked then.
-    var facts: [String] = []
     var visual: AskVisual?
     /// "From the last 4 weeks · 36 sessions".
     var basis: String
@@ -100,7 +98,7 @@ struct AskCoachInput: Equatable, Sendable {
 // MARK: - The rules
 
 /// Works out each kind of answer from day summaries and sessions, by rules.
-/// Every number an answer shows comes from here; the model only rewords.
+/// Every number and word an answer shows comes from here.
 struct AskFactsBuilder {
     let now: Date
     var calendar: Calendar = .current
@@ -118,8 +116,13 @@ struct AskFactsBuilder {
 
     // MARK: Best hours
 
-    func bestHours(_ days: [DaySummary], sessionCount: Int) -> AskFacts {
-        let basis = basisLine(days, sessions: sessionCount)
+    /// - Parameters:
+    ///   - within: only these hours, when the question names some.
+    ///   - narrowed: the days were cut down to what the question names, so a
+    ///     few are enough and "too little" means that stretch, not in general.
+    func bestHours(_ days: [DaySummary], sessionCount: Int, within: AskHours? = nil, narrowed: Bool = false) -> AskFacts {
+        let isNarrow = narrowed || within != nil
+        let basis = isNarrow ? (scopeBasis ?? basisLine(days, sessions: sessionCount)) : basisLine(days, sessions: sessionCount)
         var focus = [TimeInterval](repeating: 0, count: 24), drift = focus
         for day in days {
             for hour in 0..<24 {
@@ -127,8 +130,19 @@ struct AskFactsBuilder {
                 drift[hour] += day.driftByHour[hour]
             }
         }
-        let active = Set((0..<24).filter { focus[$0] + drift[$0] >= Self.activeHour })
-        guard activeDays(days) >= 3, active.count >= 2, focus.reduce(0, +) > 0 else { return tooLittle(basis) }
+        let allActive = Set((0..<24).filter { focus[$0] + drift[$0] >= Self.activeHour })
+        let active = allActive.filter { within?.contains($0) ?? true }
+        guard focus.reduce(0, +) > 0, activeDays(days) >= (isNarrow ? 1 : 3) else {
+            return isNarrow ? tooNarrow(basis) : tooLittle(basis)
+        }
+        guard !active.isEmpty else { return tooNarrow(basis) }
+        // One daily session at the same time: waiting won't change that.
+        guard isNarrow || active.count >= 2 else {
+            let around = span((active.min() ?? 0)..<((active.max() ?? 0) + 1))
+            return AskFacts(lead: String(localized: "Only one time of day to go on."),
+                            detail: String(localized: "You only focus around \(around). Try a session at another time to compare."),
+                            basis: basis)
+        }
 
         func sum(_ values: [TimeInterval], _ hours: Range<Int>) -> TimeInterval { hours.reduce(0) { $0 + values[$1] } }
         func rate(_ hours: Range<Int>) -> Double { FocusRate.of(focused: sum(focus, hours), drifted: sum(drift, hours)) }
@@ -139,12 +153,24 @@ struct AskFactsBuilder {
             windows = (0...(24 - length)).map { $0..<($0 + length) }.filter { $0.allSatisfy(active.contains) }
             if !windows.isEmpty { break }
         }
-        guard let best = windows.max(by: { (rate($0), sum(focus, $0)) < (rate($1), sum(focus, $1)) }) else {
-            return tooLittle(basis)
+        // Hours that were all drift aren't anyone's best.
+        guard let best = windows.max(by: { (rate($0), sum(focus, $0)) < (rate($1), sum(focus, $1)) }), rate(best) > 0 else {
+            return tooNarrow(basis)
         }
         let weakest = windows.filter { !$0.overlaps(best) }.min { rate($0) < rate($1) }
         let share = sum(focus, best) / max(1, focus.reduce(0, +))
         let overall = FocusRate.of(focused: focus.reduce(0, +), drifted: drift.reduce(0, +))
+
+        // Nothing to choose between the hours: naming some would be arbitrary.
+        let others = rate(0..<24) - rate(best)
+        let flat = allActive.count > best.count && abs(others) < Self.sameRate
+            && (weakest.map { rate(best) - rate($0) < Self.sameRate } ?? true)
+        if flat, within == nil {
+            let about = percent(overall)
+            return AskFacts(lead: String(localized: "No hours stand out."),
+                            detail: String(localized: "Your focus rate holds at about \(about) whenever you work."),
+                            basis: basis)
+        }
 
         let bestRate = percent(rate(best)), bestSpan = span(best), held = percent(share)
         let detail: String
@@ -156,22 +182,6 @@ struct AskFactsBuilder {
             detail = String(localized: "Your focus rate then is \(bestRate). Those hours hold \(held) of all the time you focused.")
         }
 
-        let overallRate = percent(overall)
-        var facts = [
-            String(localized: "Best hours: \(bestSpan), with a focus rate of \(bestRate)."),
-            String(localized: "Share of all focused time in those hours: \(held)."),
-            String(localized: "Focus rate across all hours: \(overallRate)."),
-        ]
-        if let weakest {
-            let weakRate = percent(rate(weakest)), weakSpan = span(weakest)
-            facts.append(String(localized: "Weakest hours: \(weakSpan), with a focus rate of \(weakRate)."))
-        }
-        if let day = bestWeekday(days, overall: overall) {
-            let name = weekdayName(day.weekday), dayRate = percent(day.rate)
-            facts.append(String(localized: "Best day of the week: \(name), with a focus rate of \(dayRate)."))
-        }
-        facts.append(Self.rateMeaning)
-
         let shown = (active.min() ?? 0)...(active.max() ?? 23)
         let shownFrom = clock(shown.lowerBound), shownTo = clock(shown.upperBound + 1), part = partOfDay(best.lowerBound)
         let bars = shown.map { hour in
@@ -182,12 +192,71 @@ struct AskFactsBuilder {
         return AskFacts(
             lead: String(localized: "\(part): \(bestSpan).", comment: "Mornings: 09:00 to 12:00."),
             detail: detail,
-            facts: facts + [basis],
             visual: .bars(bars, tone: .focus,
                           summary: String(localized: "Focus rate by hour, \(shownFrom) to \(shownTo): highest from \(bestSpan), at \(bestRate).")),
             basis: basis,
             action: bestHoursAction(best)
         )
+    }
+
+    /// Focus rates this close are the same thing.
+    static let sameRate = 0.03
+
+    // MARK: Days against each other
+
+    /// "Do I focus better on Mondays or Fridays?"
+    func weekdayCompare(_ days: [DaySummary], first: Int, second: Int) -> AskFacts {
+        let basis = Self.period
+        let tallies = weekdayRates(days, minimumDays: 1, minimumSeconds: 60)
+        guard let a = tallies[first], let b = tallies[second] else {
+            return AskFacts(lead: String(localized: "Too little tracked on those days to compare."),
+                            detail: String(localized: "Ask again after a few more days of work with FocusGuard running."), basis: basis)
+        }
+        let aName = weekdayName(first, plural: true), bName = weekdayName(second, plural: true)
+        let aRate = percent(a), bRate = percent(b)
+        let lead: String
+        if abs(a - b) < Self.sameRate {
+            lead = String(localized: "About the same: \(aRate) on \(aName), \(bRate) on \(bName).")
+        } else if a > b {
+            let name = CoachDraft.capitalized(aName)
+            lead = String(localized: "\(name), at \(aRate), against \(bRate) on \(bName).", comment: "Mondays, at 79%, against 66% on Fridays.")
+        } else {
+            let name = CoachDraft.capitalized(bName)
+            lead = String(localized: "\(name), at \(bRate), against \(aRate) on \(aName).", comment: "Mondays, at 79%, against 66% on Fridays.")
+        }
+        return AskFacts(lead: lead, detail: String(localized: "Focus rate on those days in the last 4 weeks."), basis: basis)
+    }
+
+    /// "What's my most productive day of the week?"
+    func bestDay(_ days: [DaySummary], sessionCount: Int) -> AskFacts {
+        let basis = basisLine(days, sessions: sessionCount)
+        let tallies = weekdayRates(days, minimumDays: 2, minimumSeconds: 3600).sorted { ($0.value, $1.key) > ($1.value, $0.key) }
+        guard let best = tallies.first, tallies.count >= 2 else { return tooLittle(basis) }
+        let overall = FocusRate.of(focused: days.reduce(0) { $0 + $1.breakdown.focus },
+                                   drifted: days.reduce(0) { $0 + $1.breakdown.distraction })
+        guard best.value - tallies[1].value >= Self.sameRate else {
+            let about = percent(overall)
+            return AskFacts(lead: String(localized: "No day stands out."),
+                            detail: String(localized: "Your focus rate runs about \(about) whichever the day."), basis: basis)
+        }
+        let name = CoachDraft.capitalized(weekdayName(best.key, plural: true)), rate = percent(best.value), all = percent(overall)
+        return AskFacts(lead: String(localized: "\(name), at \(rate).", comment: "Tuesdays, at 81%."),
+                        detail: String(localized: "That's against \(all) across all your days."), basis: basis)
+    }
+
+    /// Focus rate by `Calendar` weekday, for weekdays with enough behind them.
+    private func weekdayRates(_ days: [DaySummary], minimumDays: Int, minimumSeconds: TimeInterval) -> [Int: Double] {
+        var tallies: [Int: (focus: TimeInterval, drift: TimeInterval, days: Int)] = [:]
+        for day in days where tracked(day) >= Self.activeDay {
+            let weekday = calendar.component(.weekday, from: day.day)
+            var tally = tallies[weekday] ?? (0, 0, 0)
+            tally.focus += day.breakdown.focus
+            tally.drift += day.breakdown.distraction
+            tally.days += 1
+            tallies[weekday] = tally
+        }
+        return tallies.filter { $0.value.days >= minimumDays && $0.value.focus + $0.value.drift >= minimumSeconds }
+            .mapValues { FocusRate.of(focused: $0.focus, drifted: $0.drift) }
     }
 
     /// Start now inside the best hours; otherwise plan one for when they next come.
@@ -202,7 +271,8 @@ struct AskFactsBuilder {
         guard let at = tomorrow ? calendar.date(byAdding: .day, value: 1, to: start) : start else { return nil }
         let time = clock(best.lowerBound)
         let title: String
-        switch (tomorrow, best.lowerBound < 12) {
+        // Midnight to 2 isn't "tomorrow's first session" in anybody's day.
+        switch (tomorrow, (Self.morningStart..<12).contains(best.lowerBound)) {
         case (true, true):  title = String(localized: "Plan tomorrow's first session at \(time)")
         case (true, false): title = String(localized: "Plan a session at \(time) tomorrow")
         default:            title = String(localized: "Plan a session at \(time) today")
@@ -211,30 +281,16 @@ struct AskFactsBuilder {
                          doneTitle: String(localized: "Planned. A reminder comes at \(time)"))
     }
 
-    private func bestWeekday(_ days: [DaySummary], overall: Double) -> (weekday: Int, rate: Double)? {
-        var tallies: [Int: (focus: TimeInterval, drift: TimeInterval, days: Int)] = [:]
-        for day in days where tracked(day) >= Self.activeDay {
-            let weekday = calendar.component(.weekday, from: day.day)
-            var tally = tallies[weekday] ?? (0, 0, 0)
-            tally.focus += day.breakdown.focus
-            tally.drift += day.breakdown.distraction
-            tally.days += 1
-            tallies[weekday] = tally
-        }
-        let rated = tallies.filter { $0.value.days >= 2 && $0.value.focus + $0.value.drift >= 3600 }
-            .map { (weekday: $0.key, rate: FocusRate.of(focused: $0.value.focus, drifted: $0.value.drift)) }
-        guard let best = rated.max(by: { $0.rate < $1.rate }), best.rate >= overall + 0.05 else { return nil }
-        return best
-    }
-
     // MARK: What pulls you away
 
-    func pullsAway(_ days: [DaySummary], hours: AskHours?, sessionCount: Int) -> AskFacts {
+    /// - Parameter phrase: how a sentence says the days, when the question
+    ///   narrowed them: "today", "on Mondays".
+    func pullsAway(_ days: [DaySummary], hours: AskHours?, sessionCount: Int, phrase: String? = nil) -> AskFacts {
         let basis = hours.map { hours -> String in
-            let period = Self.period, from = clock(hours.from), to = clock(hours.to)
+            let period = scopeBasis ?? Self.period, from = clock(hours.from), to = clock(hours.to)
             return String(localized: "\(period) · \(from) to \(to)", comment: "From the last 4 weeks · 09:00 to 12:00")
-        } ?? basisLine(days, sessions: sessionCount)
-        guard activeDays(days) >= 3 else { return tooLittle(basis) }
+        } ?? scopeBasis ?? basisLine(days, sessions: sessionCount)
+        guard activeDays(days) >= (phrase == nil ? 3 : 1) else { return phrase == nil ? tooLittle(basis) : tooNarrow(basis) }
 
         var seconds: [String: TimeInterval] = [:]
         var daysWith: [String: Int] = [:]
@@ -263,13 +319,17 @@ struct AskFactsBuilder {
         let when = hours.map { hours -> String in
             let from = clock(hours.from), to = clock(hours.to)
             return String(localized: "between \(from) and \(to)", comment: "Times in a sentence: Your sessions between 12:00 and 17:00 ...")
-        } ?? String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ...")
+        } ?? phrase ?? String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ...")
         let totalText = WindowFormat.hm(total)
+        guard counted > 0 else {
+            return AskFacts(lead: String(localized: "Nothing tracked at that time."),
+                            detail: String(localized: "Try a wider question, such as the last 4 weeks."), basis: basis)
+        }
         guard total >= 5 * 60 else {
             return AskFacts(lead: String(localized: "Hardly anything."),
                             detail: String(localized: "You drifted \(totalText) \(when), on \(counted) days tracked.",
                                            comment: "Plural on the number of days: 1 day / 2 days. When: between 12:00 and 17:00, or in the last 4 weeks"),
-                            facts: [String(localized: "Drift \(when): \(totalText)."), basis], basis: basis)
+                            basis: basis)
         }
 
         let top = seconds.sorted { $0.value > $1.value }.prefix(3)
@@ -277,7 +337,7 @@ struct AskFactsBuilder {
         guard let first = top.first else { return tooLittle(basis) }
         let firstDays = daysWith[first.key] ?? 0
         let lead: String
-        switch firstDays {
+        switch counted == 1 ? 0 : firstDays {
         case 0:       lead = String(localized: "\(first.name), most of all.")
         case counted: lead = String(localized: "\(first.name), on all \(counted) days.", comment: "Plural on days: 1 day / 2 days")
         default:      lead = String(localized: "\(first.name), on \(firstDays) of the \(counted) days.", comment: "Plural on the last number: 1 day / 2 days")
@@ -292,21 +352,10 @@ struct AskFactsBuilder {
             detail = String(localized: "It was all \(totalText) of the drift \(when).", comment: "When: between 12:00 and 17:00, or in the last 4 weeks")
         }
 
-        var facts = [String(localized: "Drift \(when): \(totalText) in all, over \(counted) days tracked.", comment: "Plural on the number of days: 1 day / 2 days")]
-        for (index, item) in top.enumerated() {
-            let time = WindowFormat.hm(item.seconds), onDays = daysWith[item.key] ?? 0
-            switch index {
-            case 0:  facts.append(String(localized: "Biggest distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
-            case 1:  facts.append(String(localized: "Second distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
-            default: facts.append(String(localized: "Third distraction \(when): \(item.name), \(time), on \(onDays) of those days."))
-            }
-        }
-
         let widest = max(1, first.seconds)
         return AskFacts(
             lead: lead,
             detail: detail,
-            facts: facts + [basis],
             visual: .rows(top.map { AskRow(name: $0.name, value: $0.seconds / widest, text: WindowFormat.hm($0.seconds)) },
                           tone: .drift,
                           summary: String(localized: "Drift \(when): \(Self.nameList(top.map { ($0.name, WindowFormat.hm($0.seconds)) }))")),
@@ -332,7 +381,6 @@ struct AskFactsBuilder {
         guard lastTracked >= 60 else {
             return AskFacts(lead: String(localized: "Nothing to compare with yet."),
                             detail: String(localized: "Last week had nothing tracked. This week you've focused \(thisFocus) so far."),
-                            facts: [String(localized: "Focused this week so far: \(thisFocus)."), String(localized: "Last week: nothing tracked.")],
                             basis: basis)
         }
 
@@ -365,24 +413,12 @@ struct AskFactsBuilder {
             detail = String(localized: "You've focused \(thisFocus) so far, against \(thenFocus) by this point last week.")
         }
 
-        let lastFocus = WindowFormat.hm(lastWeek.focus)
-        let driftNow = WindowFormat.hm(thisWeek.distraction), driftThen = WindowFormat.hm(sameDaysLast.distraction)
-        let facts = [
-            String(localized: "Focused this week so far: \(thisFocus), focus rate \(nowRate), \(sessionsThisWeek) sessions.",
-                   comment: "Plural on sessions: 1 session / 2 sessions"),
-            String(localized: "Focused by this point last week: \(thenFocus), focus rate \(thenRate)."),
-            String(localized: "Focused in all of last week: \(lastFocus), \(sessionsLastWeek) sessions.",
-                   comment: "Plural on sessions: 1 session / 2 sessions"),
-            String(localized: "Drift this week so far: \(driftNow); by this point last week: \(driftThen)."),
-            Self.rateMeaning,
-        ]
         let rows = [(String(localized: "This week"), thisWeek.focus), (String(localized: "Last week, same days"), sameDaysLast.focus),
                     (String(localized: "All of last week"), lastWeek.focus)]
         let widest = max(1, rows.map(\.1).max() ?? 1)
         return AskFacts(
             lead: lead,
             detail: detail,
-            facts: facts,
             visual: .rows(rows.map { AskRow(name: $0.0, value: $0.1 / widest, text: WindowFormat.hm($0.1)) }, tone: .focus,
                           summary: String(localized: "Focused time: \(Self.nameList(rows.map { ($0.0, WindowFormat.hm($0.1)) }))")),
             basis: basis,
@@ -407,10 +443,13 @@ struct AskFactsBuilder {
 
         let average = Dictionary(uniqueKeysWithValues: seen.map { ($0.key, (drift[$0.key] ?? 0) / Double($0.value)) })
         let candidates = average.filter { (seen[$0.key] ?? 0) >= 2 }
-        guard let worst = (candidates.isEmpty ? average : candidates).max(by: { $0.value < $1.value }) else { return tooLittle(basis) }
+        // On a tie, always the same day: the first of the week's.
+        guard let worst = (candidates.isEmpty ? average : candidates).max(by: { ($0.value, $1.key) < ($1.value, $0.key) }) else { return tooLittle(basis) }
         let otherDays = seen.values.reduce(0, +) - (seen[worst.key] ?? 0)
         let others = otherDays > 0 ? (drift.values.reduce(0, +) - (drift[worst.key] ?? 0)) / Double(otherDays) : 0
-        let standsOut = worst.value >= others * 1.2 && worst.value - others >= 10 * 60
+        // Days within a minute of each other are the same; none of them is the worst.
+        let tied = (candidates.isEmpty ? average : candidates).filter { worst.value - $0.value < 60 }.count > 1
+        let standsOut = !tied && worst.value >= others * 1.2 && worst.value - others >= 10 * 60
 
         // What took the time on that day.
         var groups: [String: ReportBuilder.DistractionGroup] = [:]
@@ -436,16 +475,8 @@ struct AskFactsBuilder {
         } else {
             let all = WindowFormat.hm(drift.values.reduce(0, +) / Double(max(1, seen.values.reduce(0, +))))
             lead = String(localized: "No day stands out.")
-            detail = String(localized: "Drift runs about \(all) a day, whatever the day. \(capitalName) are a little higher, at \(worstText).", comment: "Mondays")
-        }
-
-        let worstDays = seen[worst.key] ?? 0
-        var facts = [
-            String(localized: "Most drift: \(name), \(worstText) on an average one, over \(worstDays) days.", comment: "Mondays. Plural on days: 1 day / 2 days"),
-            String(localized: "Other days average \(othersText) of drift."),
-        ]
-        if let top, topPerDay >= 60 {
-            facts.append(String(localized: "Biggest distraction on \(name): \(top.value.name), \(topText) on an average one.", comment: "Mondays"))
+            detail = tied ? String(localized: "Drift runs about \(all) a day, whatever the day.")
+                : String(localized: "Drift runs about \(all) a day, whatever the day. \(capitalName) are a little higher, at \(worstText).", comment: "Mondays")
         }
 
         let order = (0..<7).map { (calendar.firstWeekday - 1 + $0) % 7 + 1 }
@@ -459,7 +490,6 @@ struct AskFactsBuilder {
         return AskFacts(
             lead: lead,
             detail: detail,
-            facts: facts + [basis],
             visual: .bars(bars, tone: .drift,
                           summary: String(localized: "Average drift by day of the week: most on \(name), \(worstText).", comment: "Mondays")),
             basis: basis,
@@ -477,13 +507,15 @@ struct AskFactsBuilder {
         (String(localized: "75 min or more"), String(localized: "of 75 minutes or more", comment: "Goes inside a sentence: Sessions of 75 minutes or more"), 75..<Int.max),
     ]
 
-    func sessionLength(_ sessions: [AskSession]) -> AskFacts {
+    /// - Parameter named: minutes a question names, as in "25 minute sessions":
+    ///   those lengths are the ones compared.
+    func sessionLength(_ sessions: [AskSession], named: [Int] = []) -> AskFacts {
         let counted = sessions.filter { $0.minutes >= 5 }
         let basis = basisLine(sessions: counted.count)
         guard counted.count >= 3 else {
             return AskFacts(lead: String(localized: "Too few sessions to tell yet."),
                             detail: String(localized: "After a few more sessions, this compares how different lengths went."),
-                            facts: [], basis: basis)
+                            basis: basis)
         }
 
         struct Group { let index: Int; let sessions: [AskSession]; let rate: Double; let counted: TimeInterval }
@@ -493,19 +525,24 @@ struct AskFactsBuilder {
             let focus = inside.reduce(0) { $0 + $1.focus }, drift = inside.reduce(0) { $0 + $1.drift }
             return Group(index: index, sessions: inside, rate: FocusRate.of(focused: focus, drifted: drift), counted: focus + drift)
         }
-        let rated = groups.filter { $0.sessions.count >= 2 && $0.counted >= 10 * 60 }
+        var rated = groups.filter { $0.sessions.count >= 2 && $0.counted >= 10 * 60 }
+        let namedGroups = Set(named.compactMap { minutes in Self.lengths.firstIndex { $0.minutes.contains(minutes) } })
+        if namedGroups.count >= 2 {
+            rated = rated.filter { namedGroups.contains($0.index) }
+            guard rated.count >= 2 else {
+                return AskFacts(lead: String(localized: "Not enough of those lengths to compare."),
+                                detail: String(localized: "After a few more sessions, this compares how different lengths went."),
+                                basis: basis)
+            }
+        }
         guard let best = rated.max(by: { ($0.rate, $0.sessions.count) < ($1.rate, $1.sessions.count) }) else {
             return AskFacts(lead: String(localized: "Too few sessions to tell yet."),
                             detail: String(localized: "After a few more sessions, this compares how different lengths went."),
-                            facts: [], basis: basis)
+                            basis: basis)
         }
 
         let bestPhrase = Self.lengths[best.index].phrase, bestRate = percent(best.rate), bestCount = best.sessions.count
-        func fact(_ phrase: String, _ rate: String, _ sessions: Int) -> String {
-            String(localized: "Sessions \(phrase): focus rate \(rate), \(sessions) sessions.", comment: "Plural on the last number: 1 session / 2 sessions. The phrase: of 25 to 44 minutes")
-        }
         let lead: String, detail: String
-        var facts = [fact(bestPhrase, bestRate, bestCount)]
         if rated.count == 1 {
             lead = String(localized: "Only one length to go on so far.")
             detail = String(localized: "Your sessions \(bestPhrase) run at \(bestRate) focus rate across \(bestCount) sessions. Try a few shorter or longer ones to compare.",
@@ -520,11 +557,7 @@ struct AskFactsBuilder {
                 detail = String(localized: "Your focus rate in those is \(bestRate) across \(bestCount) sessions.",
                                 comment: "Plural on sessions: 1 session / 2 sessions")
             }
-            for group in rated where group.index != best.index {
-                facts.append(fact(Self.lengths[group.index].phrase, percent(group.rate), group.sessions.count))
-            }
         }
-        facts.append(Self.rateMeaning)
 
         let minutes = best.sessions.map(\.minutes).sorted()
         let median = minutes[minutes.count / 2]
@@ -532,7 +565,6 @@ struct AskFactsBuilder {
         return AskFacts(
             lead: lead,
             detail: detail,
-            facts: facts + [basis],
             visual: .rows(groups.map { AskRow(name: Self.lengths[$0.index].name, value: $0.rate, text: percent($0.rate)) },
                           tone: .focus,
                           summary: String(localized: "Focus rate by session length: \(Self.nameList(groups.map { (Self.lengths[$0.index].name, percent($0.rate)) }))")),
@@ -548,14 +580,14 @@ struct AskFactsBuilder {
         let today = calendar.startOfDay(for: now)
         let monthStart = calendar.date(byAdding: .day, value: -(Self.lookbackDays - 1), to: today) ?? today
         let month = days.filter { $0.day >= monthStart }
-        let basis = basisLine(daysTracked: activeDays(month))
         let seen = Self.targets(in: month)
         guard let target = Self.match(question, in: seen) else {
             let names = seen.sorted { $0.seconds > $1.seconds }.prefix(3).map(\.name)
             let list = HabitFormat.list(names)
             let detail = names.isEmpty ? String(localized: "FocusGuard sees which app or site you used, when, and for how long.")
                 : String(localized: "FocusGuard sees which app or site you used, when, and for how long. Your most used lately are \(list).")
-            return AskFacts(lead: String(localized: "Nothing by that name was tracked."), detail: detail, basis: basis,
+            return AskFacts(lead: String(localized: "Nothing by that name was tracked."), detail: detail,
+                            basis: basisLine(daysTracked: activeDays(month)),
                             suggestion: names.first.map { AskSuggestions.timeOn($0) })
         }
 
@@ -582,13 +614,19 @@ struct AskFactsBuilder {
             monthTally.add(tally)
             if tally.total >= 60 { daysUsed += 1 }
         }
+        // A day it was used counts as tracked, however short.
+        let basis = basisLine(daysTracked: max(activeDays(month), daysUsed))
 
         let asked: (seconds: TimeInterval, phrase: String)
         switch period {
         case .today:    asked = (month.filter { $0.day == today }.reduce(0) { $0 + usage($1).total }, String(localized: "today", comment: "Goes inside a sentence: Slack: 2h today."))
+        case .yesterday:
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+            asked = (month.filter { $0.day == yesterday }.reduce(0) { $0 + usage($1).total }, String(localized: "yesterday", comment: "Goes inside a sentence: Slack: 2h yesterday."))
         case .thisWeek: asked = (week(0), String(localized: "this week", comment: "Goes inside a sentence: Slack: 2h this week."))
         case .lastWeek: asked = (week(1), String(localized: "last week", comment: "Goes inside a sentence: Slack: 2h last week."))
-        case .recent:   asked = (monthTally.total, String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ..."))
+        case .recent, .unsupported:
+            asked = (monthTally.total, String(localized: "in the last 4 weeks", comment: "Goes inside a sentence: You drifted 3h ..."))
         }
         let perDay = monthTally.total / Double(max(1, daysUsed))
         let kind: String
@@ -601,27 +639,22 @@ struct AskFactsBuilder {
         let askedText = WindowFormat.hm(asked.seconds), perDayText = WindowFormat.hm(perDay), askedPhrase = asked.phrase
         let lead = asked.seconds >= 60 ? String(localized: "\(target.name): \(askedText) \(askedPhrase).", comment: "An app or site, a compact duration, then when: today")
             : String(localized: "\(target.name): none \(askedPhrase).", comment: "An app or site, then when: today")
-        let detail = daysUsed > 0
+        var detail = daysUsed > 0
             ? String(localized: "About \(perDayText) a day on the \(daysUsed) days you used it lately, mostly counted as \(kind).",
                      comment: "Plural on days: 1 day / 2 days. The last part is focus, drift or neutral time")
             : String(localized: "You haven't used it in the last 4 weeks.")
+        // Said plainly, so four weeks' total isn't read as the month asked about.
+        if period == .unsupported {
+            detail = String(localized: "It can only narrow this to today, yesterday, this week or last week.")
+        }
         let weeks = [(String(localized: "This week"), week(0)), (String(localized: "Last week"), week(1)),
                      (String(localized: "2 weeks ago"), week(2)), (String(localized: "3 weeks ago"), week(3))]
         let widest = max(1, weeks.map(\.1).max() ?? 1)
-        let facts = [
-            String(localized: "Time on \(target.name) \(askedPhrase): \(askedText).", comment: "An app or site, when (today), a compact duration"),
-            String(localized: "Days used in the last 4 weeks: \(daysUsed), about \(perDayText) on each."),
-            String(localized: "Mostly counted as \(kind).", comment: "Focus, drift or neutral time"),
-        ] + weeks.map { week -> String in
-            let time = WindowFormat.hm(week.1)
-            return String(localized: "\(week.0): \(time).", comment: "A fact: This week: 2h.")
-        }
         let action = target.isSite && monthTally.dominant == .distraction
             ? limitAction(dailySeconds: monthTally.total / Double(max(1, activeDays(month))), host: target.key) : nil
         return AskFacts(
             lead: lead,
             detail: detail,
-            facts: facts + [basis],
             visual: .rows(weeks.map { AskRow(name: $0.0, value: $0.1 / widest, text: WindowFormat.hm($0.1)) },
                           tone: monthTally.dominant == .distraction ? .drift : .focus,
                           summary: String(localized: "Time on \(target.name) by week: \(Self.nameList(weeks.map { ($0.0, WindowFormat.hm($0.1)) }))")),
@@ -629,6 +662,26 @@ struct AskFactsBuilder {
             action: action
         )
     }
+
+    /// What people call things, when it isn't their name here.
+    static let aliases: [String: [String]] = [
+        "x.com": ["twitter", "tweets"],
+        "twitter.com": ["twitter", "tweets"],
+        "youtube.com": ["yt"],
+        "instagram.com": ["insta", "ig"],
+        "facebook.com": ["fb"],
+        "linkedin.com": ["linked in"],
+        "web.whatsapp.com": ["whatsapp"],
+        "mail.google.com": ["gmail"],
+        "docs.google.com": ["google docs"],
+        "calendar.google.com": ["google calendar"],
+        "meet.google.com": ["google meet"],
+        "news.ycombinator.com": ["hacker news", "hackernews", "hn"],
+        "chatgpt.com": ["chatgpt", "chat gpt"],
+        "visual studio code": ["vs code", "vscode"],
+        "google chrome": ["chrome"],
+        "zoom.us": ["zoom"],
+    ]
 
     /// An app or a site seen in the days, by what a question may call it.
     struct Target: Equatable {
@@ -652,12 +705,12 @@ struct AskFactsBuilder {
         }
         let appTargets = apps.map { key, value in
             Target(key: key, name: value.name, isSite: false, seconds: value.seconds,
-                   names: [value.name.lowercased()].filter { $0.count >= 3 })
+                   names: [value.name.lowercased()].filter { $0.count >= 3 } + (aliases[value.name.lowercased()] ?? []))
         }
         let siteTargets = sites.map { host, seconds -> Target in
             let label = host.split(separator: ".").first.map(String.init) ?? host
             return Target(key: host, name: host, isSite: true, seconds: seconds,
-                          names: [host] + (label.count >= 4 && label != host ? [label] : []))
+                          names: [host] + (label.count >= 4 && label != host ? [label] : []) + (aliases[host] ?? []))
         }
         return appTargets + siteTargets
     }
@@ -702,10 +755,10 @@ struct AskFactsBuilder {
                             detail: String(localized: "There wasn't enough tracked that week to measure \(name)."), basis: basis)
         }
         let lead: String
-        if trial.improved {
-            lead = String(localized: "Yes: \(change).", comment: "A change: +9 pts")
-        } else if trial.madeNoDifference {
+        if trial.madeNoDifference {
             lead = String(localized: "It made no difference.")
+        } else if trial.improved {
+            lead = String(localized: "Yes: \(change).", comment: "A change: +9 pts")
         } else {
             lead = String(localized: "Not this time: \(change).", comment: "A change: -3 pts")
         }
@@ -714,14 +767,6 @@ struct AskFactsBuilder {
 
         let metric = trial.experiment.metric
         let beforeText = metricText(metric, before), afterText = metricText(metric, after)
-        var facts = [String(localized: "The experiment: \(name), in the week of \(weekOf)."),
-                     String(localized: "Before: \(beforeText). During it: \(afterText)."),
-                     String(localized: "Change: \(change)."),
-                     trial.kept ? String(localized: "It was kept on.") : String(localized: "It ended with its week.")]
-        if let running = input.running {
-            let current = running.experiment.shortName(locale: locale, calendar: calendar)
-            facts.append(String(localized: "This week's experiment: \(current)."))
-        }
 
         var visual: AskVisual?
         let beforeName = String(localized: "Before"), duringName = String(localized: "During it")
@@ -746,7 +791,7 @@ struct AskFactsBuilder {
                             AskRow(name: duringName, value: after / widest, text: afterText)],
                            tone: .focus, summary: String(localized: "Focused \(then) a day before, \(now) during it."))
         }
-        return AskFacts(lead: lead, detail: detail, facts: facts + [basis], visual: visual, basis: basis)
+        return AskFacts(lead: lead, detail: detail, visual: visual, basis: basis)
     }
 
     private func metricText(_ metric: CoachMetric, _ value: Double) -> String {
@@ -773,7 +818,16 @@ struct AskFactsBuilder {
 
     // MARK: - Pieces
 
-    static let rateMeaning = String(localized: "Focus rate is focused time against focused plus drifted time.")
+    /// "From today", when the question cut the days down.
+    var scope: AskScope?
+
+    private var scopeBasis: String? { scope?.basis }
+
+    /// Too little in the stretch the question named.
+    private func tooNarrow(_ basis: String) -> AskFacts {
+        AskFacts(lead: String(localized: "Too little tracked then to tell."),
+                 detail: String(localized: "Try a wider question, such as the last 4 weeks."), basis: basis)
+    }
 
     private func tooLittle(_ basis: String) -> AskFacts {
         AskFacts(lead: String(localized: "Too little tracked to tell yet."),
@@ -841,9 +895,11 @@ struct AskFactsBuilder {
         clock(minutes: hour * 60)
     }
 
+    /// Set on a fixed date, not counted from today's midnight: on the day the
+    /// clocks change, 540 minutes after midnight isn't 09:00.
     private func clock(minutes: Int) -> String {
-        let base = calendar.startOfDay(for: now)
-        let date = calendar.date(byAdding: .minute, value: minutes, to: base) ?? base
+        let reference = Date(timeIntervalSince1970: 0)
+        let date = calendar.date(bySettingHour: (minutes / 60) % 24, minute: minutes % 60, second: 0, of: reference) ?? reference
         return HabitFormat.time(date, locale: locale, calendar: calendar)
     }
 
@@ -853,8 +909,12 @@ struct AskFactsBuilder {
         return String(localized: "\(from) to \(to)", comment: "Two times: 09:00 to 12:00")
     }
 
+    /// Before this it's still the night before.
+    static let morningStart = 5
+
     private func partOfDay(_ hour: Int) -> String {
-        hour < 12 ? String(localized: "Mornings") : hour < 17 ? String(localized: "Afternoons") : String(localized: "Evenings")
+        if hour < Self.morningStart || hour >= 22 { return String(localized: "Nights") }
+        return hour < 12 ? String(localized: "Mornings") : hour < 17 ? String(localized: "Afternoons") : String(localized: "Evenings")
     }
 
     private var localizedCalendar: Calendar {
@@ -864,7 +924,7 @@ struct AskFactsBuilder {
     }
 
     /// "Friday", or "Fridays".
-    private func weekdayName(_ weekday: Int, plural: Bool = false) -> String {
+    func weekdayName(_ weekday: Int, plural: Bool = false) -> String {
         if plural { return FocusGoal.pluralWeekday(weekday, locale: locale, calendar: calendar) }
         let symbols = localizedCalendar.weekdaySymbols
         return symbols.indices.contains(weekday - 1) ? symbols[weekday - 1] : String(localized: "That day")
@@ -876,6 +936,79 @@ struct AskFactsBuilder {
         style.calendar = calendar
         style.timeZone = calendar.timeZone
         return style
+    }
+}
+
+/// The stretch a question cut an answer down to.
+struct AskScope: Equatable, Sendable {
+    /// "From today".
+    let basis: String
+    /// How a sentence says it: "today", "on Mondays".
+    let phrase: String
+}
+
+extension AskFactsBuilder {
+    /// The days a question names, and how to say so. Nil scope: it named none.
+    func narrowed(_ days: [DaySummary], to question: AskQuestion) -> (days: [DaySummary], scope: AskScope?) {
+        var kept = days
+        var scope: AskScope?
+        let today = calendar.startOfDay(for: now)
+        switch question.period {
+        case .today:
+            kept = kept.filter { $0.day == today }
+            scope = AskScope(basis: String(localized: "From today"), phrase: String(localized: "today", comment: "Goes inside a sentence: Slack: 2h today."))
+        case .yesterday:
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+            kept = kept.filter { $0.day == yesterday }
+            scope = AskScope(basis: String(localized: "From yesterday"), phrase: String(localized: "yesterday", comment: "Goes inside a sentence: Slack: 2h yesterday."))
+        case .thisWeek:
+            let start = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? today
+            kept = kept.filter { $0.day >= start }
+            scope = AskScope(basis: String(localized: "From this week so far"), phrase: String(localized: "this week", comment: "Goes inside a sentence: Slack: 2h this week."))
+        case .lastWeek:
+            let start = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? today
+            let last = calendar.date(byAdding: .weekOfYear, value: -1, to: start) ?? start
+            kept = kept.filter { $0.day >= last && $0.day < start }
+            scope = AskScope(basis: String(localized: "From last week"), phrase: String(localized: "last week", comment: "Goes inside a sentence: Slack: 2h last week."))
+        case .recent, .unsupported:
+            break
+        }
+        if question.weekdays.count == 1, let weekday = question.weekdays.first {
+            kept = kept.filter { calendar.component(.weekday, from: $0.day) == weekday }
+            let name = weekdayName(weekday, plural: true), period = scope?.basis ?? Self.period
+            scope = AskScope(basis: String(localized: "\(period) · \(name)", comment: "From the last 4 weeks · Mondays"),
+                             phrase: String(localized: "on \(name)", comment: "Goes inside a sentence: You drifted 3h on Mondays. The name: Mondays"))
+        }
+        return (kept, scope)
+    }
+
+    /// The sessions a question names: by day, and by the hours they started.
+    func narrowed(_ sessions: [AskSession], to question: AskQuestion) -> [AskSession] {
+        let today = calendar.startOfDay(for: now)
+        let week = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? today
+        return sessions.filter { session in
+            let day = calendar.startOfDay(for: session.start)
+            if let hours = question.hours, !hours.contains(calendar.component(.hour, from: session.start)) { return false }
+            if question.weekdays.count == 1, calendar.component(.weekday, from: day) != question.weekdays[0] { return false }
+            switch question.period {
+            case .today:     return day == today
+            case .yesterday: return day == calendar.date(byAdding: .day, value: -1, to: today)
+            case .thisWeek:  return day >= week
+            case .lastWeek:
+                let last = calendar.date(byAdding: .weekOfYear, value: -1, to: week) ?? week
+                return day >= last && day < week
+            case .recent, .unsupported: return true
+            }
+        }
+    }
+
+    /// A month it can't be cut down to: says so, rather than letting four
+    /// weeks pass for what was asked.
+    func saysItCantNarrow(_ question: AskQuestion, _ facts: AskFacts) -> AskFacts {
+        guard question.period == .unsupported else { return facts }
+        var out = facts
+        out.detail = String(localized: "It can only narrow this to today, yesterday, this week or last week.")
+        return out
     }
 }
 

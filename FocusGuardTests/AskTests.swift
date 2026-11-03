@@ -150,6 +150,7 @@ final class AskTests: XCTestCase {
         XCTAssertEqual(AskPeriod.parse("Time on YouTube this week?"), .thisWeek)
         XCTAssertEqual(AskPeriod.parse("Time on YouTube last week?"), .lastWeek)
         XCTAssertEqual(AskPeriod.parse("Time on YouTube?"), .recent)
+        XCTAssertEqual(AskPeriod.parse("Time on YouTube yesterday?"), .yesterday)
     }
 
     func testSuggestionsSkipQuestionsAlreadyAsked() {
@@ -275,7 +276,6 @@ final class AskTests: XCTestCase {
         let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
         let facts = builder.sessionLength([AskSession(start: now, minutes: 50, focus: 3000, drift: 0)])
         XCTAssertEqual(facts.lead, "Too few sessions to tell yet.")
-        XCTAssertTrue(facts.facts.isEmpty)
         XCTAssertNil(facts.action)
     }
 
@@ -297,7 +297,6 @@ final class AskTests: XCTestCase {
         let facts = try await askFacts("How much time on Figma?", intent: .appTime)
         XCTAssertEqual(facts.lead, "Nothing by that name was tracked.")
         XCTAssertEqual(facts.suggestion, "How much time on Xcode this week?")
-        XCTAssertTrue(facts.facts.isEmpty)
     }
 
     func testTargetsMatchWholeWordsAndPreferSites() {
@@ -335,7 +334,6 @@ final class AskTests: XCTestCase {
         let facts = await store.askFacts(AskQuestion(text: "When do I focus best?", intent: .bestHours), settings: AskContext(),
                                          now: now, calendar: calendar, locale: locale)
         XCTAssertEqual(facts.lead, "Too little tracked to tell yet.")
-        XCTAssertTrue(facts.facts.isEmpty)
     }
 
     // MARK: - Day summaries
@@ -358,38 +356,266 @@ final class AskTests: XCTestCase {
 
     // MARK: - Words
 
-    func testTheModelsWordsAreKeptWhenTheyStickToTheFacts() async throws {
-        let facts = try await askFacts("When do I focus best?", intent: .bestHours)
-        let lead = "Your best hours are \(clock(9)) to \(clock(12))."
-        let detail = "Your focus rate then is 94%, against 83% from \(clock(13)) to \(clock(16))."
-        let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["lead": lead, "detail": detail]) }
-        let answer = await AskWriter(model: model).write(facts, question: "When do I focus best?")
-        XCTAssertTrue(answer.onDevice)
-        XCTAssertEqual(answer.lead, lead)
-        XCTAssertEqual(answer.visual, facts.visual)
-        XCTAssertEqual(answer.action, facts.action)
-        XCTAssertTrue(model.requests.first?.prompt.contains("Best hours: \(clock(9)) to \(clock(12))") == true)
-    }
-
-    func testInventedNumbersFallBackToTheTemplate() async throws {
-        let facts = try await askFacts("When do I focus best?", intent: .bestHours)
-        let lead = "Your best hours are \(clock(9)) to \(clock(12))."
-        let model = FakeOnDeviceModel { _ in
-            FakeOnDeviceModel.json(["lead": lead, "detail": "Your focus rate then is 97%, the best on record."])
+    func testTheWordsAreTheTemplatesAndTheModelOnlySorts() async throws {
+        try seed()
+        let model = FakeOnDeviceModel { request in
+            FakeOnDeviceModel.json(["kind": "weekCompare", "lead": "Focused less this week.", "detail": "Nothing else."])
         }
-        let answer = await AskWriter(model: model).write(facts, question: "When do I focus best?")
-        XCTAssertFalse(answer.onDevice)
-        XCTAssertEqual(answer.lead, facts.lead)
-        XCTAssertEqual(answer.detail, facts.detail)
+        let engine = AskEngine(stats: StatsStore(container: container), model: model, now: now, calendar: calendar, locale: locale)
+        let answer = await engine.answer("Did I focus more this week?")
+        XCTAssertEqual(model.requests.count, 1, "asked to sort, not to word")
+        XCTAssertNotEqual(answer.lead, "Focused less this week.")
     }
 
-    func testNothingToWorkFromNeverAsksTheModel() async {
-        let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["lead": "x", "detail": "y"]) }
-        let facts = AskFactsBuilder(now: now).cantAnswer(suggestion: "When do I focus best?")
-        let answer = await AskWriter(model: model).write(facts, question: "What did I type?")
+    func testThePagesOwnQuestionsNeedNoSorting() async {
+        let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["kind": "unknown"]) }
+        let sorted = await AskClassifier(model: model).classify("When do I focus best?")
+        XCTAssertEqual(sorted.intent, .bestHours)
         XCTAssertTrue(model.requests.isEmpty)
-        XCTAssertEqual(answer.lead, "That's not something FocusGuard can see.")
-        XCTAssertEqual(answer.suggestion, "When do I focus best?")
+    }
+
+    // MARK: - Questions narrower than four weeks
+
+    private func answer(_ text: String, _ intent: AskIntent) async throws -> AskFacts {
+        try await askFacts(text, intent: intent)
+    }
+
+    func testBestHoursInTheAfternoon() async throws {
+        let facts = try await answer("When do I focus best in the afternoon?", .bestHours)
+        XCTAssertEqual(facts.lead, "Afternoons: \(clock(13)) to \(clock(16)).")
+        XCTAssertTrue(facts.detail.contains("83%"), facts.detail)
+    }
+
+    func testBestHoursWhenNothingWasTrackedThenSaysSo() async throws {
+        let facts = try await answer("When do I focus best in the evening?", .bestHours)
+        XCTAssertEqual(facts.lead, "Too little tracked then to tell.")
+    }
+
+    func testWhatPulledMeAwayYesterday() async throws {
+        let facts = try await answer("What pulled me away yesterday?", .pullsAway)
+        XCTAssertEqual(facts.lead, "x.com, most of all.")
+        XCTAssertEqual(facts.detail, "It took 30m of the 40m you drifted yesterday. youtube.com comes next, at 10m.")
+        XCTAssertEqual(facts.basis, "From yesterday")
+    }
+
+    func testWhatPulledMeAwayTodayWithNothingToday() async throws {
+        let facts = try await answer("What pulled me away today?", .pullsAway)
+        XCTAssertEqual(facts.lead, "Too little tracked then to tell.")
+    }
+
+    func testWhatDistractedMeLastWeek() async throws {
+        let facts = try await answer("What distracted me last week?", .pullsAway)
+        XCTAssertEqual(facts.lead, "x.com, on all 7 days.")
+        XCTAssertEqual(facts.detail, "It took 3h 30m of the 5h 40m you drifted last week. youtube.com comes next, at 1h 10m.")
+    }
+
+    func testWhatDistractsMeOnMondays() async throws {
+        let facts = try await answer("What distracts me on Mondays?", .pullsAway)
+        XCTAssertEqual(facts.lead, "x.com, on all 4 days.")
+        XCTAssertEqual(facts.detail, "It took 2h of the 2h 40m you drifted on Mondays. youtube.com comes next, at 40m.")
+    }
+
+    func testMondaysAgainstFridays() async throws {
+        let facts = try await answer("Do I focus better on Mondays or Fridays?", .bestHours)
+        XCTAssertEqual(facts.lead, "Mondays, at 89%, against 76% on Fridays.")
+        let reversed = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
+        XCTAssertEqual(reversed.weekdayCompare([], first: 2, second: 6).lead, "Too little tracked on those days to compare.")
+    }
+
+    func testTheBestDayWhenNoneStandsOut() async throws {
+        let facts = try await answer("What's my most productive day of the week?", .bestHours)
+        XCTAssertEqual(facts.lead, "No day stands out.")
+        XCTAssertEqual(facts.detail, "Your focus rate runs about 87% whichever the day.")
+    }
+
+    func testMorningSessions() async throws {
+        let facts = try await answer("How long should my morning sessions be?", .sessionLength)
+        XCTAssertEqual(facts.lead, "Only one length to go on so far.")
+        XCTAssertTrue(facts.detail.contains("of 45 to 74 minutes"), facts.detail)
+    }
+
+    func testTwoLengthsItNames() async throws {
+        let facts = try await answer("Are 25 minute sessions better than 50 minute ones?", .sessionLength)
+        XCTAssertEqual(facts.lead, "Sessions of 45 to 74 minutes.")
+        XCTAssertTrue(facts.detail.contains("in sessions of 25 to 44 minutes"), facts.detail)
+    }
+
+    func testAMonthItCantNarrowToIsSaidPlainly() async throws {
+        let facts = try await answer("How much time on YouTube in September?", .appTime)
+        XCTAssertEqual(facts.lead, "youtube.com: 4h 30m in the last 4 weeks.")
+        XCTAssertEqual(facts.detail, "It can only narrow this to today, yesterday, this week or last week.")
+        XCTAssertEqual(AskPeriod.parse("How much time on YouTube last month?"), .unsupported)
+    }
+
+    func testYesterdaysTimeOnASite() async throws {
+        let facts = try await answer("How much time on YouTube yesterday?", .appTime)
+        XCTAssertEqual(facts.lead, "youtube.com: 10m yesterday.")
+    }
+
+    // MARK: - What the words mean
+
+    func testMinutesIntoSomethingArentAClockTime() {
+        XCTAssertNil(AskHours.parse("What pulls me away after 15 minutes in a session?"))
+        XCTAssertNil(AskHours.parse("Do I drift after 25 min?"))
+        XCTAssertNil(AskHours.parse("Am I better after 2 hours?"))
+        XCTAssertEqual(AskHours.parse("What distracts me after 15?"), AskHours(from: 15, to: 17))
+        XCTAssertEqual(AskHours.parse("What distracts me after 2?"), AskHours(from: 14, to: 16))
+    }
+
+    func testWhichSiteWastesMyTimeNamesNoSite() async {
+        for question in ["Which site wastes most of my time?", "Which app eats my time?", "What app takes up my day?"] {
+            XCTAssertEqual(AskIntentMatcher.match(question), .pullsAway, question)
+            let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["kind": "appTime"]) }
+            let sorted = await AskClassifier(model: model).classify(question)
+            XCTAssertEqual(sorted.intent, .pullsAway, question)
+        }
+    }
+
+    func testADayItNamesIsntAQuestionOfWhichDay() async {
+        let model = FakeOnDeviceModel { _ in FakeOnDeviceModel.json(["kind": "driftDay"]) }
+        let classifier = AskClassifier(model: model)
+        let named = await classifier.classify("What distracts me on Mondays?")
+        XCTAssertEqual(named.intent, .pullsAway)
+        let why = await classifier.classify("Why do I drift on Fridays?")
+        XCTAssertEqual(why.intent, .pullsAway)
+        let worst = await classifier.classify("Are Mondays my worst day?")
+        XCTAssertEqual(worst.intent, .driftDay)
+    }
+
+    func testThingsItCantSeeDontBecomeATimeQuestion() {
+        XCTAssertEqual(AskIntentMatcher.match("How much did I sleep?"), .unknown)
+        XCTAssertEqual(AskIntentMatcher.match("How much did I spend this month?"), .unknown)
+        XCTAssertEqual(AskIntentMatcher.match("Is my focus rate going up?"), .weekCompare)
+        XCTAssertEqual(AskIntentMatcher.match("Am I a morning person or a night owl?"), .bestHours)
+    }
+
+    func testWhatPeopleCallThings() {
+        let x = AskFactsBuilder.Target(key: "x.com", name: "x.com", isSite: true, seconds: 60, names: ["x.com", "twitter", "tweets"])
+        XCTAssertEqual(AskFactsBuilder.match("Did I use Twitter a lot?", in: [x])?.key, "x.com")
+        XCTAssertEqual(AskFactsBuilder.aliases["x.com"]?.contains("twitter"), true)
+    }
+
+    func testWeekdaysInAQuestion() {
+        XCTAssertEqual(AskWeekdays.parse("Do I focus better on Mondays or Fridays?"), [2, 6])
+        XCTAssertEqual(AskWeekdays.parse("Bin ich freitags oder montags besser?"), [6, 2])
+        XCTAssertEqual(AskWeekdays.parse("What distracts me?"), [])
+        XCTAssertTrue(AskWeekdays.asksWhichDay("What's my most productive day of the week?"))
+        XCTAssertFalse(AskWeekdays.asksWhichDay("What time of day am I most productive?"))
+    }
+
+    // MARK: - Flat data
+
+    private func flatDays(_ count: Int = 14, drift: TimeInterval) -> [DaySummary] {
+        (1...count).map { back in
+            var day = DaySummary(day: calendar.date(byAdding: .day, value: -back, to: calendar.startOfDay(for: now))!)
+            day.breakdown.add(4 * 3600, .focus)
+            day.breakdown.add(drift, .distraction)
+            for hour in 9..<13 { day.focusByHour[hour] = 3600 * 0.8; day.driftByHour[hour] = 3600 * 0.2 }
+            return day
+        }
+    }
+
+    func testATieIsntALittleHigher() {
+        let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
+        let facts = builder.driftDay(flatDays(drift: 120), sessionCount: 14)
+        XCTAssertEqual(facts.lead, "No day stands out.")
+        XCTAssertEqual(facts.detail, "Drift runs about 2m a day, whatever the day.")
+    }
+
+    func testHoursThatDontDifferDontStandOut() {
+        let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
+        let facts = builder.bestHours(flatDays(drift: 120), sessionCount: 14)
+        XCTAssertEqual(facts.lead, "No hours stand out.")
+        XCTAssertEqual(facts.detail, "Your focus rate holds at about 80% whenever you work.")
+        XCTAssertNil(facts.action)
+    }
+
+    func testOneTimeOfDayIsNotTooLittle() {
+        var days: [DaySummary] = []
+        for back in 1...10 {
+            var day = DaySummary(day: calendar.date(byAdding: .day, value: -back, to: calendar.startOfDay(for: now))!)
+            day.breakdown.add(20 * 60, .focus)
+            day.focusByHour[9] = 20 * 60
+            days.append(day)
+        }
+        let facts = AskFactsBuilder(now: now, calendar: calendar, locale: locale).bestHours(days, sessionCount: 10)
+        XCTAssertEqual(facts.lead, "Only one time of day to go on.")
+        XCTAssertEqual(facts.detail, "You only focus around \(clock(9)) to \(clock(10)). Try a session at another time to compare.")
+    }
+
+    // MARK: - Clocks
+
+    func testMidnightToTwoIsntMorning() {
+        var days: [DaySummary] = []
+        for back in 1...10 {
+            var day = DaySummary(day: calendar.date(byAdding: .day, value: -back, to: calendar.startOfDay(for: now))!)
+            day.breakdown.add(4 * 3600, .focus)
+            for hour in [0, 1] { day.focusByHour[hour] = 3600 * 0.9; day.driftByHour[hour] = 3600 * 0.1 }
+            for hour in [22, 23] { day.focusByHour[hour] = 3600 * 0.6; day.driftByHour[hour] = 3600 * 0.4 }
+            days.append(day)
+        }
+        let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
+        let facts = builder.bestHours(days, sessionCount: 10)
+        XCTAssertEqual(facts.lead, "Nights: \(clock(0)) to \(clock(2)).")
+        XCTAssertEqual(facts.action?.title, "Plan a session at \(clock(0)) tomorrow")
+    }
+
+    func testHoursStayRightOnTheDaysTheClocksChange() {
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = TimeZone(identifier: "America/New_York")!
+        let us = Locale(identifier: "en_US")
+        func nine(on day: DateComponents) -> Date { newYork.date(from: day)! }
+        let plain = HabitFormat.time(nine(on: DateComponents(year: 2026, month: 6, day: 1, hour: 9)), locale: us, calendar: newYork)
+        for (month, day) in [(11, 1), (3, 8)] {
+            let now = nine(on: DateComponents(year: 2026, month: month, day: day, hour: 20))
+            XCTAssertEqual(AskFactsBuilder(now: now, calendar: newYork, locale: us).clock(9), plain)
+        }
+    }
+
+    // MARK: - Experiments where nothing moved
+
+    func testNothingMovedIsNeverAYes() {
+        let builder = AskFactsBuilder(now: now, calendar: calendar, locale: locale)
+        let week = DateInterval(start: date(2026, 10, 19, 0), end: date(2026, 10, 26, 0))
+        func lead(_ experiment: CoachExperiment, _ before: Double, _ after: Double) -> String {
+            builder.coach(AskCoachInput(finished: CoachTrial(experiment: experiment, before: before, after: after, week: week,
+                                                             appliedAt: week.start, kept: false, undo: .rule(UUID()))), shipped: true).lead
+        }
+        let none = "It made no difference."
+        XCTAssertEqual(lead(.shorterSessions(.evening, minutes: 25), 0.80, 0.804), none)
+        XCTAssertEqual(lead(.earlierMorningPlan(hour: 8), 600, 598), none)
+        XCTAssertEqual(lead(.siteLimit(host: "x.com", minutes: 20), 41.2, 41.1), none)
+        XCTAssertEqual(lead(.siteLimit(host: "x.com", minutes: 20), 41, 41), none)
+        XCTAssertEqual(lead(.weekdayGoal(weekday: 2, minutes: 60), 3600, 3600), none)
+        XCTAssertEqual(lead(.sessionBeforeFirstCall(minutes: 25), 3000, 3010), none)
+        XCTAssertEqual(lead(.siteLimit(host: "x.com", minutes: 20), 41, 18), "Yes: 41 → 18 min a day.")
+        XCTAssertEqual(lead(.shorterSessions(.evening, minutes: 25), 0.80, 0.75), "Not this time: −5 pts.")
+    }
+
+    // MARK: - The time limit
+
+    private struct NeverAnswers: OnDeviceModel {
+        func respond(instructions: String, prompt: String, shape: AnswerShape) async throws -> String {
+            // Ignores being cancelled, as a stuck model might.
+            await withCheckedContinuation { (_: CheckedContinuation<Void, Never>) in }
+            return "{}"
+        }
+    }
+
+    func testAModelThatNeverAnswersIsGivenUpOn() async {
+        let timed = TimedOnDeviceModel(base: NeverAnswers(), limit: 0.05)
+        do {
+            _ = try await timed.respond(instructions: "", prompt: "", shape: .text)
+            XCTFail("it can't have answered")
+        } catch {
+            XCTAssertEqual(error as? OnDeviceAIError, .timedOut)
+        }
+    }
+
+    func testAnAnswerInTimeGetsThrough() async throws {
+        let timed = TimedOnDeviceModel(base: FakeOnDeviceModel { _ in "{\"kind\":\"driftDay\"}" }, limit: 5)
+        let reply = try await timed.respond(instructions: "", prompt: "", shape: .text)
+        XCTAssertEqual(reply, "{\"kind\":\"driftDay\"}")
     }
 
     func testTheEngineAnswersWhatItCantSeeWithASuggestion() async {

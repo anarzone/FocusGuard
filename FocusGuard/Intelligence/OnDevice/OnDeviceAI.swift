@@ -37,6 +37,9 @@ enum OnDeviceAI {
 
     static var isAvailable: Bool { availability == .available }
 
+    /// Past this nothing's coming: a feature falls back as if the model had failed.
+    static let timeLimit: TimeInterval = 60
+
     /// What a feature shows while the model isn't available.
     static var unavailableNote: String {
         isAvailable && !writesAppLanguage ? String(localized: "Apple Intelligence doesn't write in this language yet")
@@ -47,7 +50,7 @@ enum OnDeviceAI {
     /// needs no words from it; anything people read goes through `writer`.
     static func model() -> (any OnDeviceModel)? {
         #if canImport(FoundationModels)
-        if #available(macOS 26, *), isAvailable { return SystemOnDeviceModel() }
+        if #available(macOS 26, *), isAvailable { return TimedOnDeviceModel(base: SystemOnDeviceModel(), limit: timeLimit) }
         #endif
         return nil
     }
@@ -105,6 +108,49 @@ extension OnDeviceModel {
 
 enum OnDeviceAIError: Error {
     case unreadableAnswer
+    case timedOut
+}
+
+/// A model with a time limit, so nothing waits on one for ever. The waiting
+/// ends at the limit even if the model doesn't stop when it's cancelled.
+struct TimedOnDeviceModel: OnDeviceModel {
+    let base: any OnDeviceModel
+    let limit: TimeInterval
+
+    func respond(instructions: String, prompt: String, shape: AnswerShape) async throws -> String {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+            let finish = FinishOnce(continuation)
+            let base = self.base, limit = self.limit
+            let work = Task {
+                do {
+                    finish(.success(try await base.respond(instructions: instructions, prompt: prompt, shape: shape)))
+                } catch {
+                    finish(.failure(error))
+                }
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(limit))
+                finish(.failure(OnDeviceAIError.timedOut))
+                work.cancel()
+            }
+        }
+    }
+
+    /// Resumes a continuation with whichever result comes first.
+    private final class FinishOnce: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<String, Error>?
+
+        init(_ continuation: CheckedContinuation<String, Error>) { self.continuation = continuation }
+
+        func callAsFunction(_ result: Result<String, Error>) {
+            lock.lock()
+            let waiting = continuation
+            continuation = nil
+            lock.unlock()
+            waiting?.resume(with: result)
+        }
+    }
 }
 
 /// What the answer looks like. The model fills it in (guided generation)
