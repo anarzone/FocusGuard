@@ -160,6 +160,30 @@ final class FlowLayoutTests: XCTestCase {
         }
     }
 
+    // MARK: - The window on small screens
+
+    func testTheWindowOpensToFitTheScreen() {
+        // A big screen: the usual size.
+        XCTAssertEqual(MainWindowSize.fitting(visible: NSRect(x: 0, y: 0, width: 2560, height: 1400)), MainWindowSize.usual)
+        // No screen to go by.
+        XCTAssertEqual(MainWindowSize.fitting(visible: nil), MainWindowSize.usual)
+        // The runners', and a MacBook Air on its largest text.
+        XCTAssertEqual(MainWindowSize.fitting(visible: NSRect(x: 0, y: 70, width: 1024, height: 668)),
+                       NSSize(width: 1024, height: 668))
+        // Under the minimum, the minimum: AppKit then keeps it on the screen.
+        XCTAssertEqual(MainWindowSize.fitting(visible: NSRect(x: 0, y: 0, width: 800, height: 500)), MainWindowSize.minimum)
+    }
+
+    /// Why a short window can happen without anyone asking for it: AppKit
+    /// won't keep a window taller than the screen it's on.
+    func testAppKitCutsATallWindowToItsScreen() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+                              styleMask: [.titled, .resizable], backing: .buffered, defer: true)
+        let tall = NSRect(x: 0, y: 0, width: 400, height: screen.frame.height * 3)
+        XCTAssertLessThanOrEqual(window.constrainFrameRect(tall, to: screen).height, screen.frame.height)
+    }
+
     // MARK: - Formats at their extremes
 
     func testDurationsAreReadableAtTheExtremes() {

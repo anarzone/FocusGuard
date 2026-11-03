@@ -42,11 +42,6 @@ final class FlowClickTests: XCTestCase {
         XCTAssertTrue(element.waitForExistence(timeout: 5), "\(element) is missing", file: file, line: line)
         let screenWidth = NSScreen.main?.frame.width ?? .greatestFiniteMagnitude
         try XCTSkipIf(element.frame.midX > screenWidth, "\(element.label) is past the edge of this \(Int(screenWidth))-point screen")
-        // The window is taller than a 768-point screen leaves above the Dock.
-        if let screen = NSScreen.main {
-            let bottom = screen.frame.height - screen.visibleFrame.minY
-            try XCTSkipIf(element.frame.midY > bottom, "\(element.label) is under the Dock on this \(Int(screen.frame.height))-point screen")
-        }
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
     }
 
@@ -515,6 +510,33 @@ final class FlowClickTests: XCTestCase {
             // Back as it was, for the tests after this one.
             flip(toggle(item.title))
         }
+    }
+
+    // MARK: - A short window
+
+    /// The runners' screen leaves about 670 points above the Dock, under what
+    /// the pages' content used to insist on: opening at all crashed. Every
+    /// test here runs in that window; this one drags its bottom edge up to the
+    /// minimum height as well, and goes round the pages there. The window's
+    /// edges sit against the Dock and the screen's edge here, so a drag may not
+    /// catch: it says so rather than passing. `FlowAppStateTests` sizes the real
+    /// window directly, whatever happens here.
+    func testTheWindowOpensToFitAndDragsToItsMinimum() throws {
+        launch()
+        let visible = try XCTUnwrap(NSScreen.main?.visibleFrame)
+        XCTAssertLessThanOrEqual(window.frame.height, max(visible.height, 640) + 1, "It should fit above the Dock")
+        XCTAssertLessThanOrEqual(window.frame.maxX, visible.maxX + 1, "It should fit the screen")
+
+        let before = window.frame.height
+        let edge = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1)).withOffset(CGVector(dx: 0, dy: -1))
+        edge.press(forDuration: 0.3, thenDragTo: edge.withOffset(CGVector(dx: 0, dy: -300)))
+        try XCTSkipIf(abs(window.frame.height - before) < 1, "The drag didn't catch the window's edge on this screen")
+        XCTAssertEqual(window.frame.height, 640, accuracy: 2, "The window's minimum height")
+        for page in ["Reports", "Apps & Sites", "Settings", "Today"] {
+            try open(page)
+            shoot("minimum-\(page)")
+        }
+        waitForText("Your day", "Today should still show at the minimum")
     }
 
     // MARK: - First run

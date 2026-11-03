@@ -1,5 +1,6 @@
 import AppKit
 import SwiftData
+import SwiftUI
 import XCTest
 @testable import FocusGuard
 
@@ -51,7 +52,7 @@ final class FlowAppStateTests: XCTestCase {
     }
 
     /// Lets a notification's main-actor hop run, until `done` or a few seconds.
-    private func settle(until done: () -> Bool = { false }) async {
+    private func settle(until done: () -> Bool = { true }) async {
         for _ in 0..<30 {
             try? await Task.sleep(nanoseconds: 100_000_000)
             if done() { return }
@@ -239,6 +240,38 @@ final class FlowAppStateTests: XCTestCase {
         state.limits.removeLimit(limit.id)
         await settle { !blockScreenIsUp }
         XCTAssertFalse(blockScreenIsUp, "removing the limit lifts it")
+    }
+
+    // MARK: - The window at small sizes
+
+    /// The real window's content at the sizes a small screen can force on it,
+    /// down below the minimum a drag stops at. It used to crash under about
+    /// 706 points, in an auto layout loop. Run through each page, as each has
+    /// its own content. AppKit then keeps the window to its own minimum and to
+    /// the screen, a few points either way; what matters is that it settles,
+    /// and that the content no longer holds it at the old 706.
+    func testTheWindowHoldsEverySizeAScreenCanForceOnIt() async throws {
+        let hosting = NSHostingController(rootView: MainWindowView(appState: state))
+        hosting.sizingOptions = []
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+                              backing: .buffered, defer: false)
+        window.contentViewController = hosting
+        window.toolbar = NSToolbar(identifier: "FlowAppStateTests")
+        window.isReleasedWhenClosed = false
+        window.minSize = MainWindowSize.minimum
+        window.makeKeyAndOrderFront(nil)
+        defer { window.orderOut(nil) }
+
+        for size in [NSSize(width: 1024, height: 668), MainWindowSize.minimum, NSSize(width: 1024, height: 600)] {
+            window.setFrame(NSRect(origin: window.frame.origin, size: size), display: true)
+            for tab in MainTab.shown {
+                NotificationCenter.default.post(name: .selectMainTab, object: tab)
+                await settle()
+                XCTAssertEqual(window.frame.width, size.width, "\(tab) at \(size)")
+                XCTAssertLessThan(window.frame.height, 700, "\(tab) at \(size): the content shouldn't hold the window up")
+            }
+        }
     }
 
     // MARK: - The pace

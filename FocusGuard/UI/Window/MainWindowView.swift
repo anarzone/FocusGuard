@@ -77,6 +77,26 @@ extension EnvironmentValues {
     }
 }
 
+/// How big the main window opens: its usual size, cut to what the screen
+/// shows, so all of it can be reached on a small screen (a 1024 × 640 scaled
+/// display, a 720p monitor). Never under the minimum the user can drag it to.
+enum MainWindowSize {
+    static let usual = NSSize(width: 1200, height: 720)
+    static let minimum = NSSize(width: 980, height: 640)
+
+    static func fitting(visible: NSRect?) -> NSSize {
+        var size = usual
+        if let visible {
+            size.width = max(minimum.width, min(usual.width, visible.width))
+            size.height = max(minimum.height, min(usual.height, visible.height))
+        }
+        // `-FocusGuardUITestUsualHeight YES`: the click test about pages that
+        // fit needs the usual height, on a screen with a Dock in the way.
+        if UITestMode.isOn, UserDefaults.standard.bool(forKey: "FocusGuardUITestUsualHeight") { size.height = usual.height }
+        return size
+    }
+}
+
 /// The main window: an inset glass sidebar with the sections and a live
 /// session card, and the selected page beside it.
 struct MainWindowView: View {
@@ -105,7 +125,6 @@ struct MainWindowView: View {
         }
         .background(Theme.windowBackground)
         .ignoresSafeArea()
-        .frame(minWidth: 980, minHeight: 640)
         .environment(\.openWindowSheet, WindowSheetAction { sheet = $0 })
         // Closed, minimised or covered: the pages' clocks and reloads stop.
         .environment(\.isOnScreen, OnScreen.shared.window)
