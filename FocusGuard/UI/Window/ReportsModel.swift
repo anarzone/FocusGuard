@@ -149,7 +149,10 @@ enum ReportsModelBuilder {
         }
 
         let days = data.buckets.filter { !$0.isLocked }
-        let goalDays = goalDays(days, now: now, calendar: calendar, weekendsCount: weekendsCount, goal: goal)
+        var earliest = FetchDescriptor<ActivityEvent>(sortBy: [SortDescriptor(\.startedAt)])
+        earliest.fetchLimit = 1
+        let tracked = Persistence.fetch(context, earliest).first?.startedAt ?? now
+        let goalDays = goalDays(days, now: now, calendar: calendar, weekendsCount: weekendsCount, since: tracked, goal: goal)
 
         var heat = data.heat
         var heatWeeks = 1
@@ -297,13 +300,17 @@ enum ReportsModelBuilder {
     }
 
     /// Each day measured against its own goal (a weekday can have one).
+    /// Days before `since`, the first tracked day, aren't missed goals: the
+    /// app wasn't there yet.
     static func goalDays(_ days: [ReportBucket], now: Date, calendar: Calendar, weekendsCount: Bool,
-                         goal: (Date) -> TimeInterval) -> GoalDays {
+                         since: Date = .distantPast, goal: (Date) -> TimeInterval) -> GoalDays {
         var met = 0, counted = 0
         var misses: [Date] = []
         let today = calendar.startOfDay(for: now)
+        let firstDay = calendar.startOfDay(for: since)
         for day in days where !day.isFuture {
             let date = day.interval.start
+            if date < firstDay { continue }
             let weekday = calendar.component(.weekday, from: date)
             if !weekendsCount && (weekday == 1 || weekday == 7) { continue }
             let isToday = calendar.isDate(date, inSameDayAs: today)
