@@ -46,6 +46,7 @@ enum ProFeature: String, CaseIterable {
     case taskGoals
     case ask
     case monthlyReview
+    case analyzer
     case statusSync
     case fullHistory
 
@@ -63,6 +64,7 @@ enum ProFeature: String, CaseIterable {
         case .taskGoals:       return String(localized: "Tasks as session goals")
         case .ask:             return String(localized: "Ask", comment: "A Pro feature: asking questions about your own focus")
         case .monthlyReview:   return String(localized: "Month in review")
+        case .analyzer:        return String(localized: "Analyzer", comment: "A Pro feature: why focus gets lost, and fair tests of fixes")
         case .statusSync:      return String(localized: "Status in Slack and Discord")
         case .fullHistory:     return String(localized: "Full history")
         }

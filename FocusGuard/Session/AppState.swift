@@ -194,6 +194,7 @@ final class AppState {
         manager.onSessionStarted = { [weak self, weak manager] in
             self?.recap = nil
             self?.debriefs.sessionStarted(manager?.currentSession)
+            self?.analyzerSessionStarted(manager?.currentSession)
             self?.integrationsSessionStarted(manager?.currentSession)
             SystemFocusBridge.onSessionStarted()
             self?.music.sessionStarted()
@@ -298,6 +299,8 @@ final class AppState {
         SurfaceHost.attach(self)
         // The weekly coach's experiments act through the limits and settings.
         WeeklyCoach.shared.attach(self)
+        // So do the Analyzer's, on their On days.
+        FocusAnalyzer.shared.attach(self)
     }
 
     /// The plan changing (a trial starting or ending, a licence) turns limits

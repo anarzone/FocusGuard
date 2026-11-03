@@ -20,13 +20,15 @@ final class CalendarBusyTimes {
     }
 
     /// Timed events in the range that block time: all-day events, ones
-    /// marked free and ones the user declined don't. Nil without access.
-    func busy(from start: Date, to end: Date) -> [DateInterval]? {
+    /// marked free and ones the user declined don't, nor do ones in `excluding`.
+    /// Nil without access.
+    func busy(from start: Date, to end: Date, excluding: Set<String> = []) -> [DateInterval]? {
         guard canRead, end > start else { return nil }
         let predicate = store.predicateForEvents(withStart: start, end: end,
                                                  calendars: IntegrationSettings.readCalendars(in: store))
         return store.events(matching: predicate).compactMap { event in
             guard !event.isAllDay, event.availability != .free, !Self.declined(event),
+                  !excluding.contains(event.eventIdentifier ?? ""),
                   let from = event.startDate, let to = event.endDate, to > from else { return nil }
             return DateInterval(start: from, end: to)
         }

@@ -230,7 +230,7 @@ final class WeeklyCoach {
 
     /// Whether last week's experiment can be kept on now.
     var canKeepLastResult: Bool {
-        guard let trial = lastResult, !trial.kept else { return false }
+        guard let trial = lastResult, !trial.kept, !AnalyzerGate.analyzerRunning(defaults) else { return false }
         let offered = state.choice == .open ? [note?.experiment].compactMap { $0 } : []
         return !(inPlace + offered).contains { $0.overlaps(trial.experiment) }
     }
@@ -361,12 +361,21 @@ final class WeeklyCoach {
 
     // MARK: - Choices
 
+    /// Why nothing can start while the Analyzer tests a fix.
+    private static var analyzerBusy: String {
+        String(localized: "The Analyzer has an experiment on. One at a time keeps both fair.")
+    }
+
     /// "Try it this week": applies the experiment until the week ends.
     func tryIt() {
         problem = nil
         guard let note, let experiment = note.experiment, state.choice != .trying, let applier else { return }
         if !isUnlocked() { startTrial() }
         guard isUnlocked() else { return }
+        guard !AnalyzerGate.analyzerRunning(defaults) else {
+            problem = Self.analyzerBusy
+            return
+        }
         guard let undo = applier.apply(experiment, until: note.week.end) else {
             problem = String(localized: "That's already set up, so there's nothing to try.")
             return
@@ -427,6 +436,10 @@ final class WeeklyCoach {
         guard let applier else { return false }
         if !isUnlocked() { startTrial() }
         guard isUnlocked() else { return false }
+        guard !AnalyzerGate.analyzerRunning(defaults) else {
+            monthProblem = Self.analyzerBusy
+            return false
+        }
         guard !inPlace.contains(where: { $0.overlaps(experiment) }) else {
             monthProblem = String(localized: "Something like this is already on.")
             return false

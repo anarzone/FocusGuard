@@ -11,15 +11,18 @@ extension Notification.Name {
 }
 
 enum MainTab: Hashable, CaseIterable {
-    case home, reports, ask, workLog, apps, settings
+    case home, reports, analyzer, ask, workLog, apps, settings
 
-    /// The sidebar's sections: Ask only once it has shipped.
-    static var shown: [MainTab] { allCases.filter { $0 != .ask || FeatureFlags.ask } }
+    /// The sidebar's sections: Ask and the Analyzer only once they've shipped.
+    static var shown: [MainTab] {
+        allCases.filter { ($0 != .ask || FeatureFlags.ask) && ($0 != .analyzer || FeatureFlags.analyzer) }
+    }
 
     var title: String {
         switch self {
         case .home:     return String(localized: "Today")
         case .reports:  return String(localized: "Reports")
+        case .analyzer: return String(localized: "Analyzer", comment: "Sidebar section: why focus gets lost, and fair tests of fixes")
         case .ask:      return String(localized: "Ask", comment: "Sidebar section where you ask questions about your own data")
         case .workLog:  return String(localized: "Work log")
         case .apps:     return String(localized: "Apps & Sites")
@@ -31,6 +34,7 @@ enum MainTab: Hashable, CaseIterable {
         switch self {
         case .home:     return "clock"
         case .reports:  return "chart.bar"
+        case .analyzer: return "waveform.path.ecg"
         case .ask:      return "sparkle"
         case .workLog:  return "doc.text"
         case .apps:     return "square.grid.2x2"
@@ -47,6 +51,8 @@ enum WindowSheet: Identifiable, Equatable {
     case browserExtension
     /// The month in review (Pro), for the month starting at this date.
     case monthReview(Date)
+    /// An Analyzer test's On day: one line for the session that just started.
+    case analyzerGoal
 
     var id: String {
         switch self {
@@ -54,6 +60,7 @@ enum WindowSheet: Identifiable, Equatable {
         case .licence:          return "licence"
         case .browserExtension: return "extension"
         case .monthReview(let start): return "monthReview-\(start.timeIntervalSinceReferenceDate)"
+        case .analyzerGoal:     return "analyzerGoal"
         }
     }
 }
@@ -156,6 +163,8 @@ struct MainWindowView: View {
             TodayPage(appState: appState) { tab = $0 }
         case .reports:
             ReportsPage(appState: appState)
+        case .analyzer:
+            AnalyzerPage(appState: appState)
         case .ask:
             AskPage(appState: appState, conversation: ask)
         case .workLog:
@@ -178,6 +187,8 @@ struct MainWindowView: View {
             ExtensionSheet(appState: appState)
         case .monthReview(let start):
             MonthReviewSheet(monthStart: start)
+        case .analyzerGoal:
+            AnalyzerGoalSheet(appState: appState)
         }
     }
 }
@@ -240,6 +251,7 @@ private struct WindowSidebar: View {
         switch item {
         case .workLog: return !WorkLogAccess.isOpen(shipped: FeatureFlags.debrief, unlocked: entitlements.isUnlocked(.workLog))
         case .ask:     return !AskAccess.isOpen(shipped: FeatureFlags.ask, unlocked: entitlements.isUnlocked(.ask))
+        case .analyzer: return !AnalyzerAccess.isOpen(shipped: FeatureFlags.analyzer, unlocked: entitlements.isUnlocked(.analyzer))
         default:       return false
         }
     }
