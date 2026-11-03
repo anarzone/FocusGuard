@@ -168,6 +168,21 @@ final class WindowModelTests: XCTestCase {
         XCTAssertTrue(goal.misses.isEmpty)
     }
 
+    func testDaysBeforeTheFirstTrackedDayArentMissedGoals() {
+        let week = ReportPeriod.week.interval(offset: 0, now: friday, calendar: calendar)
+        let empty = ReportDataBuilder.bucketIntervals(period: .week, interval: week, events: [], now: friday, calendar: calendar)
+        let installedToday = ReportsModelBuilder.goalDays(empty, now: friday, calendar: calendar, weekendsCount: false,
+                                                          since: friday, goal: { _ in 4 * 3600 })
+        XCTAssertEqual(installedToday.counted, 0, "a new user hasn't missed anything")
+        XCTAssertTrue(installedToday.misses.isEmpty)
+
+        let wednesday = calendar.date(byAdding: .day, value: -2, to: friday) ?? friday
+        let sinceWednesday = ReportsModelBuilder.goalDays(empty, now: friday, calendar: calendar, weekendsCount: false,
+                                                          since: wednesday, goal: { _ in 4 * 3600 })
+        XCTAssertEqual(sinceWednesday.counted, 2, "Wednesday and Thursday; today isn't over")
+        XCTAssertEqual(sinceWednesday.misses.count, 2)
+    }
+
     func testGoalHeadlineNamesWhatTheMissesShare() {
         let fridays = [date(2026, 10, 2), date(2026, 10, 9), date(2026, 10, 16)]
         let words = ReportWords.goalHeadline(GoalDays(met: 13, counted: 16, misses: fridays), period: .month,

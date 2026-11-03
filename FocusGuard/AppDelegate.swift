@@ -177,10 +177,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if mainWindow == nil {
             let view = MainWindowView(appState: appState, initialTab: tab ?? .home)
             let hosting = NSHostingController(rootView: view)
-            hosting.preferredContentSize = NSSize(width: 1200, height: 720)
+            let size = UITestMode.windowSize(usual: NSSize(width: 1200, height: 720))
+            hosting.preferredContentSize = size
 
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 1200, height: 720),
+                contentRect: NSRect(origin: .zero, size: size),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
