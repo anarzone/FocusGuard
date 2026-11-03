@@ -144,7 +144,11 @@ final class PickUpCoordinator {
 
     private func lastPlaces(now: Date) async -> [PickUpPlace] {
         let events = await readEvents(now.addingTimeInterval(-PickUpPlaces.keptFor), now, true)
-        return PickUpPlaces.choose(events, optedOut: optedOut(), forgetBefore: PickUpSettings.forgottenBefore(defaults), now: now)
+        let places = PickUpPlaces.choose(events, optedOut: optedOut(), forgetBefore: PickUpSettings.forgottenBefore(defaults), now: now)
+        // The app in front isn't a place to go back to: picking it would do nothing.
+        let moment = currentMoment()
+        let inFront = moment.frontIsSelf ? nil : moment.front?.bundleIdentifier
+        return places.filter { $0.bundleId != inFront }
     }
 
     /// The menu's "Where you left off", or the shortcut with no card up.

@@ -607,6 +607,22 @@ final class PickUpTests: XCTestCase {
         XCTAssertEqual(rig.opener.calls.filter { $0.hasPrefix("front") }, ["front \(terminal)"])
     }
 
+    func testTheAppInFrontIsntOffered() async throws {
+        let (rig, _) = try rig()
+        rig.coordinator.currentMoment = { self.moment(at: 500, front: self.snapshot(self.xcode)) }
+        await rig.coordinator.showLastPlaces(now: now)
+        XCTAssertEqual(rig.coordinator.card?.places.map(\.appName), ["Terminal"])
+
+        // FocusGuard's own window hides what's behind it, so nothing's left out.
+        rig.coordinator.currentMoment = {
+            var moment = self.moment(at: 500, front: self.snapshot(self.xcode))
+            moment.frontIsSelf = true
+            return moment
+        }
+        await rig.coordinator.refreshMenuPlaces(now: now, force: true)
+        XCTAssertEqual(rig.coordinator.menuPlaces.map(\.appName), ["Xcode", "Terminal"])
+    }
+
     func testForgettingEmptiesTheMenu() async throws {
         let (rig, _) = try rig()
         await rig.coordinator.refreshMenuPlaces(now: now, force: true)
