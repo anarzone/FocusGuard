@@ -293,10 +293,10 @@ final class ActivityTracker {
         lastLookAt = now
         let bundleId = front.bundleId
 
-        // Suspended outside a session or break: nothing to record. (Sessions
-        // and breaks keep their every-second ticks, and the away check below
-        // ends the record at the last input, as it always has.)
-        if suspendedAt != nil, !secondTicks {
+        // Suspended: nothing to record, in a session or out of one, until
+        // `leaveSuspension`. (Sessions and breaks keep their every-second
+        // ticks, for their clocks.)
+        if suspendedAt != nil {
             setAway(true)
             setFrontmostSelf(false)
             needsPolling = false

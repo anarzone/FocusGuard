@@ -43,16 +43,34 @@ final class SessionManager {
     }
 
     /// Events from `start` on that belong to no session become this one's.
+    /// An event already under way at `start` counts too: the offer's start is
+    /// read just after the tracker began the event holding that work. If it
+    /// began noticeably earlier, only its part from `start` on joins.
     private func claimEvents(since start: Date, for session: Session) {
         let events = Persistence.fetch(context, FetchDescriptor<ActivityEvent>(
-            predicate: #Predicate { $0.startedAt >= start }
+            predicate: #Predicate { $0.endedAt >= start }
         ))
-        for event in events where event.session == nil { event.session = session }
+        for event in events where event.session == nil {
+            if start.timeIntervalSince(event.startedAt) < Self.claimSlack {
+                event.session = session
+            } else {
+                let part = ActivityEvent(startedAt: start, endedAt: event.endedAt, bundleIdentifier: event.bundleIdentifier,
+                                         appName: event.appName, windowTitle: event.windowTitle, url: event.url, session: session)
+                part.classification = event.classification
+                context.insert(part)
+                event.endedAt = start
+            }
+        }
     }
 
-    func stopSession(status: SessionStatus = .completed) {
+    /// An event starting this soon before the session is simply in it.
+    private static let claimSlack: TimeInterval = 1
+
+    /// - Parameter date: when it ended; earlier than now for one whose planned
+    ///   length ran out while the Mac slept.
+    func stopSession(status: SessionStatus = .completed, at date: Date = .now) {
         guard let session = currentSession else { return }
-        close(session, at: .now, status: status)
+        close(session, at: date, status: status)
         Persistence.save(context)
         currentSession = nil
         tracker.currentSession = nil
@@ -152,8 +170,10 @@ final class SessionManager {
             return false
         }
         let elapsed = now.timeIntervalSince(session.startedAt) - session.pausedSeconds
-        if elapsed >= TimeInterval(planned * 60) {
-            stopSession()
+        let length = TimeInterval(planned * 60)
+        if elapsed >= length {
+            // A Mac asleep through the end wakes long after it.
+            stopSession(at: session.startedAt.addingTimeInterval(session.pausedSeconds + length))
             return true
         }
         return false

@@ -49,6 +49,9 @@ final class CalendarAutostartCoordinator {
 
     private let eventStore = EKEventStore()
     private weak var sessionManager: SessionManager?
+    /// Set by AppState. An event doesn't interrupt a break: its session
+    /// starts when the break ends, if the event's still on.
+    @ObservationIgnored var isOnBreak: () -> Bool = { false }
     /// One-shot, for the next look (`nextCheck`).
     private var timer: Timer?
     private var changeObserver: NSObjectProtocol?
@@ -267,9 +270,19 @@ final class CalendarAutostartCoordinator {
         self.timer = timer
     }
 
+    /// Looks again now: a break just ended.
+    func reevaluate() {
+        evaluate()
+    }
+
+    /// Whether an event on now should start a session.
+    nonisolated static func shouldStart(hasSession: Bool, onBreak: Bool, startedEventID: String?, eventID: String?) -> Bool {
+        !hasSession && !onBreak && startedEventID != eventID
+    }
+
     private func startSessionIfNeeded(for event: EKEvent, now: Date, sessionManager: SessionManager) {
-        guard sessionManager.currentSession == nil else { return }
-        guard activeAutostartEventId != event.eventIdentifier else { return }
+        guard Self.shouldStart(hasSession: sessionManager.currentSession != nil, onBreak: isOnBreak(),
+                               startedEventID: activeAutostartEventId, eventID: event.eventIdentifier) else { return }
 
         let remainingSeconds = event.endDate.timeIntervalSince(now)
         let minutes = max(1, Int(remainingSeconds / 60))
