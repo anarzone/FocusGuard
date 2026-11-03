@@ -158,15 +158,27 @@ final class SessionCalendarWriter {
     /// "Plan them" in the morning plan: each slot is held as busy time.
     func planned(_ slots: [Date], minutes: Int, now: Date = .now) async {
         guard isOn, minutes > 0 else { return }
-        let calendarID = defaults.string(forKey: IntegrationSettings.sessionsCalendar)
         for slot in slots where slot > now {
-            let key = Self.key(slot: slot)
-            guard !entries.contains(where: { $0.key == key }) else { continue }
-            let end = slot.addingTimeInterval(TimeInterval(minutes * 60))
-            let draft = SessionEventDraft(title: Self.plannedTitle, start: slot, end: end, key: key)
-            guard let eventID = await store.create(draft, calendarID: calendarID?.isEmpty == false ? calendarID : nil) else { continue }
-            keep(Entry(key: key, eventID: eventID, start: slot, end: end, sessionID: nil))
+            _ = await hold(slot, minutes: minutes)
         }
+    }
+
+    /// The Analyzer's Focus block: held like a planned slot, with the person's
+    /// OK for that test rather than the switch in Settings. True when it's held.
+    func protect(_ slot: Date, minutes: Int, now: Date = .now) async -> Bool {
+        guard slot > now, minutes > 0 else { return false }
+        return await hold(slot, minutes: minutes)
+    }
+
+    private func hold(_ slot: Date, minutes: Int) async -> Bool {
+        let key = Self.key(slot: slot)
+        guard !entries.contains(where: { $0.key == key }) else { return true }
+        let calendarID = defaults.string(forKey: IntegrationSettings.sessionsCalendar)
+        let end = slot.addingTimeInterval(TimeInterval(minutes * 60))
+        let draft = SessionEventDraft(title: Self.plannedTitle, start: slot, end: end, key: key)
+        guard let eventID = await store.create(draft, calendarID: calendarID?.isEmpty == false ? calendarID : nil) else { return false }
+        keep(Entry(key: key, eventID: eventID, start: slot, end: end, sessionID: nil))
+        return true
     }
 
     /// "Skip this one": the slot comes off the calendar.

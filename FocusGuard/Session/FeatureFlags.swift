@@ -31,6 +31,10 @@ enum FeatureFlags {
     /// drift, and the menu's last places. Free.
     static let pickUp = true
 
+    /// The Analyzer: why focus gets lost, one fix, and a fair test of it. Fixed
+    /// rules, no model.
+    static let analyzer = true
+
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
     static var proAI: Bool { smartCategories || debrief || coach || ask || monthlyReview }

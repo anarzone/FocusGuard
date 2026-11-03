@@ -74,6 +74,22 @@
         }
       }
     },
+    "%@ a day" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gündə %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ pro Tag"
+          }
+        }
+      }
+    },
     "%@ are back" : {
       "comment" : "Two or three apps were brought back to the front",
       "localizations" : {
@@ -176,6 +192,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ist zurück"
+          }
+        }
+      }
+    },
+    "%@ is blocked after %lld minutes" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$lld dəqiqədən sonra bloklanır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wird nach %2$lld Minuten blockiert"
           }
         }
       }
@@ -2535,6 +2567,22 @@
     "%@ · %@" : {
       "shouldTranslate" : false
     },
+    "%@ · %@ a month ago" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · bir ay əvvəl %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · vor einem Monat %2$@"
+          }
+        }
+      }
+    },
     "%@ · %@ drift" : {
       "localizations" : {
         "az" : {
@@ -3477,6 +3525,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@, playing"
+          }
+        }
+      }
+    },
+    "%@, about %@ a day" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, gündə təxminən %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, etwa %2$@ pro Tag"
           }
         }
       }
@@ -7159,6 +7223,38 @@
         }
       }
     },
+    "%lld switches" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld keçid"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wechsel"
+          }
+        }
+      }
+    },
+    "%lld working days so far · worked out on this Mac" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İndiyədək %lld iş günü · bu Mac-də hazırlanıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisher %lld Arbeitstage · auf diesem Mac berechnet"
+          }
+        }
+      }
+    },
     "%lld → %lld min a day" : {
       "localizations" : {
         "az" : {
@@ -7614,6 +7710,22 @@
     "00:00" : {
       "shouldTranslate" : false
     },
+    "1 working day so far · worked out on this Mac" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İndiyədək 1 iş günü · bu Mac-də hazırlanıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisher 1 Arbeitstag · auf diesem Mac berechnet"
+          }
+        }
+      }
+    },
     "1 year" : {
       "comment" : "How long history is kept",
       "localizations" : {
@@ -7676,6 +7788,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "25 Min"
+          }
+        }
+      }
+    },
+    "25 min or more, unbroken" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "25 dəq və ya daha çox, fasiləsiz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "25 Min. oder mehr am Stück"
           }
         }
       }
@@ -8025,6 +8153,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine %lld-Minuten-Session vor deinem ersten Call"
+          }
+        }
+      }
+    },
+    "A fair test" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ədalətli test"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein fairer Test"
+          }
+        }
+      }
+    },
+    "A fair test on your own days, so you can see whether it helped you." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öz günlərinizdə ədalətli test ki, sizə kömək edib-etmədiyini görəsiniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein fairer Test an deinen eigenen Tagen, damit du siehst, ob es dir geholfen hat."
+          }
+        }
+      }
+    },
+    "A few days could just be an unusual week, so it won't guess yet. Work as you normally do; there's nothing to set up." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir neçə gün sadəcə qeyri-adi həftə ola bilər, ona görə hələ təxmin etmir. Həmişəki kimi işləyin; heç nə qurmaq lazım deyil."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein paar Tage könnten einfach eine ungewöhnliche Woche sein, deshalb rät es noch nicht. Arbeite wie immer; du musst nichts einrichten."
           }
         }
       }
@@ -8425,6 +8601,38 @@
         }
       }
     },
+    "a typical day" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "adi gündə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "an einem typischen Tag"
+          }
+        }
+      }
+    },
+    "About %@ a day, over %lld working days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld iş günü ərzində gündə təxminən %1$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwa %1$@ pro Tag, über %2$lld Arbeitstage"
+          }
+        }
+      }
+    },
     "About the same: %@ on %@, %@ on %@." : {
       "localizations" : {
         "az" : {
@@ -8505,6 +8713,22 @@
         }
       }
     },
+    "after losing focus, typically" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "fokusu itirdikdən sonra, adətən"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nach Fokusverlust, typischerweise"
+          }
+        }
+      }
+    },
     "AI tips" : {
       "localizations" : {
         "az" : {
@@ -8549,6 +8773,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "KI-Tipps sind ausgeschaltet. Schalte sie unter Einstellungen → KI-Tipps ein."
+          }
+        }
+      }
+    },
+    "Analyzer" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analizator"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyzer"
           }
         }
       }
@@ -11728,6 +11968,22 @@
         }
       }
     },
+    "Chat and mail" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çat və poçt"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat und Mail"
+          }
+        }
+      }
+    },
     "Choose what to exclude" : {
       "localizations" : {
         "az" : {
@@ -11744,6 +12000,22 @@
         }
       }
     },
+    "Coming back" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri dönmə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückkommen"
+          }
+        }
+      }
+    },
     "Control Option R" : {
       "localizations" : {
         "az" : {
@@ -11756,6 +12028,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Control Wahltaste R"
+          }
+        }
+      }
+    },
+    "Couldn't tell" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müəyyən edilmədi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht erkennbar"
           }
         }
       }
@@ -13455,6 +13743,22 @@
         }
       }
     },
+    "Day %lld of %lld" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gün %1$lld / %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag %1$lld von %2$lld"
+          }
+        }
+      }
+    },
     "Day done: %@ of %@" : {
       "localizations" : {
         "az" : {
@@ -13722,6 +14026,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro Video entschieden"
+          }
+        }
+      }
+    },
+    "Deep blocks" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dərin bloklar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deep-Work-Blöcke"
+          }
+        }
+      }
+    },
+    "Deep blocks, each day in order" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dərin bloklar, gün-gün"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deep-Work-Blöcke, Tag für Tag"
           }
         }
       }
@@ -14305,6 +14641,22 @@
         }
       }
     },
+    "Don't say" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demək istəmirəm"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Angabe"
+          }
+        }
+      }
+    },
     "Don't start a session" : {
       "localizations" : {
         "az" : {
@@ -14714,6 +15066,22 @@
         }
       }
     },
+    "Drop it" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İmtina et"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwerfen"
+          }
+        }
+      }
+    },
     "During a session" : {
       "localizations" : {
         "az" : {
@@ -14758,6 +15126,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Währenddessen"
+          }
+        }
+      }
+    },
+    "Earlier hours" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əvvəlki saatlar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frühere Stunden"
           }
         }
       }
@@ -15861,6 +16245,54 @@
     "FG-XXXX-XXXX-XXXX-XXXX" : {
       "shouldTranslate" : false
     },
+    "Finished" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitdi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fertig"
+          }
+        }
+      }
+    },
+    "Focus often ends in or right after a message app. Of what FocusGuard can see, this takes the most time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus çox vaxt mesaj tətbiqində və ya ondan dərhal sonra itir. FocusGuard-ın gördüklərindən ən çox vaxtı bu aparır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus endet oft in einer Nachrichten-App oder direkt danach. Von dem, was FocusGuard sehen kann, kostet das am meisten Zeit."
+          }
+        }
+      }
+    },
+    "Focus often ends on a distracting site or app, with no message just before it. Of what FocusGuard can see, this takes the most time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus çox vaxt yayındıran sayt və ya tətbiqdə itir, ondan dərhal əvvəl mesaj olmur. FocusGuard-ın gördüklərindən ən çox vaxtı bu aparır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus endet oft auf einer ablenkenden Website oder App, ohne Nachricht direkt davor. Von dem, was FocusGuard sehen kann, kostet das am meisten Zeit."
+          }
+        }
+      }
+    },
     "Focus rate on those days in the last 4 weeks." : {
       "localizations" : {
         "az" : {
@@ -15873,6 +16305,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokusrate an diesen Tagen in den letzten 4 Wochen."
+          }
+        }
+      }
+    },
+    "FocusGuard adds a %lld-minute Focus block to your calendar" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard təqviminizə %lld dəqiqəlik Fokus bloku əlavə edir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard trägt einen %lld-Minuten-Fokusblock in deinen Kalender ein"
+          }
+        }
+      }
+    },
+    "FocusGuard asks for a goal before each session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard hər sessiyadan əvvəl hədəf soruşur"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard fragt vor jeder Session nach einem Ziel"
+          }
+        }
+      }
+    },
+    "FocusGuard looks at how your working days break up, says what seems to cost the most, and tests one fix on your own days." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard iş günlərinizin necə bölündüyünə baxır, ən çox nəyin vaxt aldığını deyir və öz günlərinizdə bir həlli sınayır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard schaut, wie deine Arbeitstage zerfallen, sagt, was am meisten zu kosten scheint, und testet eine Lösung an deinen eigenen Tagen."
+          }
+        }
+      }
+    },
+    "FocusGuard may add a Focus block to my calendar on On days, and take it off again." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard aktiv günlərdə təqvimimə Fokus bloku əlavə edə və yenidən silə bilər."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard darf an aktiven Tagen einen Fokusblock in meinen Kalender eintragen und wieder entfernen."
+          }
+        }
+      }
+    },
+    "FocusGuard reminds you of this plan when a session starts" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard sessiya başlayanda bu planı xatırladır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard erinnert dich beim Start einer Session an diesen Plan"
+          }
+        }
+      }
+    },
+    "FocusGuard sees apps, sites and times, not what you were thinking, so this is its best explanation rather than a fact. A test will show whether it helps you." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard tətbiqləri, saytları və vaxtları görür, nə düşündüyünüzü yox. Ona görə bu, fakt deyil, ən yaxşı izahdır. Test bunun sizə kömək edib-etmədiyini göstərəcək."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard sieht Apps, Websites und Zeiten, nicht was du gedacht hast. Das ist also seine beste Erklärung, keine Tatsache. Ein Test zeigt, ob es dir hilft."
+          }
+        }
+      }
+    },
+    "FocusGuard will stop naming %@. You can put it back on the page. Your words stay on this Mac." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard artıq %@ adını çəkməyəcək. Onu səhifədə geri qaytara bilərsiniz. Sözləriniz bu Mac-də qalır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard nennt %@ nicht mehr. Du kannst es auf der Seite zurückholen. Deine Worte bleiben auf diesem Mac."
           }
         }
       }
@@ -15906,6 +16450,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vergessen"
+          }
+        }
+      }
+    },
+    "Four measures of attention" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diqqətin dörd ölçüsü"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vier Maße für Aufmerksamkeit"
           }
         }
       }
@@ -18244,6 +18804,22 @@
         }
       }
     },
+    "Getting started" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başlamaq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfangen"
+          }
+        }
+      }
+    },
     "GitHub refused the change. The token needs write access to this repository's issues." : {
       "localizations" : {
         "az" : {
@@ -18812,6 +19388,22 @@
         }
       }
     },
+    "Habit sites" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vərdiş saytları"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gewohnheitsseiten"
+          }
+        }
+      }
+    },
     "Hardly anything." : {
       "localizations" : {
         "az" : {
@@ -19070,6 +19662,86 @@
         }
       }
     },
+    "If a day has calls, then I'll keep %lld minutes for one deep block." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gündə zənglər olarsa, bir dərin blok üçün %lld dəqiqə saxlayacağam."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ein Tag Calls hat, halte ich mir %lld Minuten für einen Deep-Work-Block frei."
+          }
+        }
+      }
+    },
+    "If a message arrives during a session, then I'll read it at the next break." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya zamanı mesaj gəlsə, onu növbəti fasilədə oxuyacağam."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn während einer Session eine Nachricht kommt, lese ich sie in der nächsten Pause."
+          }
+        }
+      }
+    },
+    "If a session starts with no goal, then I'll write one line first." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya hədəfsiz başlayarsa, əvvəlcə bir sətir yazacağam."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn eine Session ohne Ziel startet, schreibe ich zuerst eine Zeile auf."
+          }
+        }
+      }
+    },
+    "If a task is hard, then I'll do it in my first session of the day." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tapşırıq çətindirsə, onu günün ilk sessiyasında edəcəyəm."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn eine Aufgabe schwer ist, mache ich sie in der ersten Session des Tages."
+          }
+        }
+      }
+    },
+    "If I reach %lld minutes on %@ in a day, then I'll stop there." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir gündə %2$@ üçün %1$lld dəqiqəyə çatsam, orada dayanacağam."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn ich an einem Tag %1$lld Minuten auf %2$@ erreiche, höre ich dort auf."
+          }
+        }
+      }
+    },
     "If notifications are on" : {
       "localizations" : {
         "az" : {
@@ -19316,6 +19988,22 @@
         }
       }
     },
+    "In your own words (optional)" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öz sözlərinizlə (istəyə görə)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In deinen eigenen Worten (optional)"
+          }
+        }
+      }
+    },
     "Included" : {
       "localizations" : {
         "az" : {
@@ -19508,6 +20196,38 @@
         }
       }
     },
+    "It needs %lld more working days to say why" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səbəbi demək üçün daha %lld iş günü lazımdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es braucht noch %lld Arbeitstage, um zu sagen, warum"
+          }
+        }
+      }
+    },
+    "It needs 1 more working day to say why" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səbəbi demək üçün daha 1 iş günü lazımdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es braucht noch 1 Arbeitstag, um zu sagen, warum"
+          }
+        }
+      }
+    },
     "It needs a content filter signed by Apple, which comes in a later version" : {
       "localizations" : {
         "az" : {
@@ -19647,6 +20367,38 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "It was all %1$@ of the drift %2$@."
+          }
+        }
+      }
+    },
+    "It was more like" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha çox bu idi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es war eher"
+          }
+        }
+      }
+    },
+    "It worked for you" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizdə işə yaradı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei dir hat es gewirkt"
           }
         }
       }
@@ -20094,6 +20846,22 @@
         }
       }
     },
+    "Keep it" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saxla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Behalten"
+          }
+        }
+      }
+    },
     "Keep it after this week" : {
       "localizations" : {
         "az" : {
@@ -20202,6 +20970,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Letzte 30 Tage"
+          }
+        }
+      }
+    },
+    "Last 4 weeks · %lld working days · worked out on this Mac" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son 4 həftə · %lld iş günü · bu Mac-də hazırlanıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte 4 Wochen · %lld Arbeitstage · auf diesem Mac berechnet"
           }
         }
       }
@@ -20433,6 +21217,22 @@
         }
       }
     },
+    "Late-day dip" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gün sonu enişi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagesend-Tief"
+          }
+        }
+      }
+    },
     "Late-night focus" : {
       "comment" : "Name of a session still running, shown alone and inside sentences",
       "localizations" : {
@@ -20463,6 +21263,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Später"
+          }
+        }
+      }
+    },
+    "Later hours" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonrakı saatlar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spätere Stunden"
           }
         }
       }
@@ -21050,6 +21866,54 @@
         }
       }
     },
+    "longest stretch · %lld sessions" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ən uzun müddət · %lld sessiya"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "längste Phase · %lld Sessions"
+          }
+        }
+      }
+    },
+    "Longest unbroken stretch" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən uzun fasiləsiz müddət"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Längste Phase am Stück"
+          }
+        }
+      }
+    },
+    "Longest unbroken stretch, each day in order" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən uzun fasiləsiz müddət, gün-gün"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Längste Phase am Stück, Tag für Tag"
+          }
+        }
+      }
+    },
     "Look" : {
       "comment" : "Noun: the share image's light or dark appearance",
       "localizations" : {
@@ -21259,6 +22123,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sieht neutral aus."
+          }
+        }
+      }
+    },
+    "Looks wrong?" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səhv görünür?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sieht falsch aus?"
           }
         }
       }
@@ -21570,6 +22450,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Meeting gaps" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görüş boşluqları"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meeting-Lücken"
           }
         }
       }
@@ -22269,6 +23165,22 @@
         }
       }
     },
+    "Most often in" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən çox burada"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meistens in"
+          }
+        }
+      }
+    },
     "Most sessions went bumpy." : {
       "localizations" : {
         "az" : {
@@ -22393,6 +23305,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die meisten Sessions schweiften ab."
+          }
+        }
+      }
+    },
+    "Most time on" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən çox vaxt burada"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meiste Zeit auf"
           }
         }
       }
@@ -22571,6 +23499,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Namen, Standardwerte und wie hart FocusGuard dagegenhält."
+          }
+        }
+      }
+    },
+    "needs a few more mornings" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "daha bir neçə səhər lazımdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "braucht noch ein paar Morgen"
+          }
+        }
+      }
+    },
+    "needs a few more returns" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "daha bir neçə dönüş lazımdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "braucht noch ein paar Rückkehren"
           }
         }
       }
@@ -23111,6 +24071,38 @@
         }
       }
     },
+    "No clear difference" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aydın fərq yoxdur"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein klarer Unterschied"
+          }
+        }
+      }
+    },
+    "No clear reason yet" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ aydın səbəb yoxdur"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kein klarer Grund"
+          }
+        }
+      }
+    },
     "No hours stand out." : {
       "localizations" : {
         "az" : {
@@ -23513,6 +24505,22 @@
         }
       }
     },
+    "No reason is big enough or steady enough to name. A week of calls or days off can do that, so it won't guess." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç bir səbəb adını çəkmək üçün kifayət qədər böyük və ya davamlı deyil. Zənglərlə dolu həftədən və ya istirahət günlərindən sonra belə ola bilər, ona görə təxmin etmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Grund ist groß oder beständig genug, um ihn zu nennen. Das kann nach einer Woche voller Calls oder freier Tage passieren, deshalb rät es nicht."
+          }
+        }
+      }
+    },
     "No rule yet, so it counts as neutral: neither for nor against you." : {
       "localizations" : {
         "az" : {
@@ -23722,6 +24730,22 @@
         }
       }
     },
+    "None running. Open a reason to see what you could test on your own days." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hazırda heç biri getmir. Öz günlərinizdə nəyi sınaya biləcəyinizi görmək üçün bir səbəb açın."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade läuft keins. Öffne einen Grund, um zu sehen, was du an deinen eigenen Tagen testen könntest."
+          }
+        }
+      }
+    },
     "None. Limits can only be changed for tomorrow" : {
       "localizations" : {
         "az" : {
@@ -23766,6 +24790,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch nicht geprüft"
+          }
+        }
+      }
+    },
+    "Not enough days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kifayət qədər gün yoxdur"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht genug Tage"
           }
         }
       }
@@ -23878,6 +24918,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht erfasst: Tastenanschläge, Bildschirminhalte, Seitentexte. Titel kannst du für jede App in den Einstellungen ausblenden."
+          }
+        }
+      }
+    },
+    "Not this time" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu dəfə yox"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diesmal nicht"
           }
         }
       }
@@ -24137,6 +25193,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch läuft nichts zu deinen Sessions. Wähle bei einer Playlist „Sessions“."
+          }
+        }
+      }
+    },
+    "Nothing stands out" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç nə seçilmir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts sticht heraus"
           }
         }
       }
@@ -24589,6 +25661,38 @@
         }
       }
     },
+    "Off" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passiv"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inaktiv"
+          }
+        }
+      }
+    },
+    "Off days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Passiv günlər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inaktive Tage"
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "az" : {
@@ -24751,6 +25855,22 @@
         }
       }
     },
+    "on %lld of %lld working days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld iş günündən %1$lld-də"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "an %1$lld von %2$lld Arbeitstagen"
+          }
+        }
+      }
+    },
     "On a break" : {
       "localizations" : {
         "az" : {
@@ -24795,6 +25915,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Im Anruf · %@"
+          }
+        }
+      }
+    },
+    "On and Off days in shuffled order; %lld done" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qarışıq sırada aktiv və passiv günlər; %lld tamamlanıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktive und inaktive Tage in gemischter Reihenfolge; %lld erledigt"
+          }
+        }
+      }
+    },
+    "On days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv günlər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktive Tage"
+          }
+        }
+      }
+    },
+    "On days and Off days are shuffled, half and half, so a busy week or a slow Friday can't fool the result." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv və passiv günlər yarı-yarıya qarışdırılır ki, gərgin həftə və ya ləng cümə nəticəni aldatmasın."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktive und inaktive Tage werden gemischt, je zur Hälfte, damit eine volle Woche oder ein langsamer Freitag das Ergebnis nicht verfälscht."
           }
         }
       }
@@ -24992,6 +26160,22 @@
         }
       }
     },
+    "One line is enough. This is your plan for today's test." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir sətir kifayətdir. Bu, bugünkü test üçün planınızdır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Zeile reicht. Das ist dein Plan für den heutigen Test."
+          }
+        }
+      }
+    },
     "One more push. Progress over perfection." : {
       "localizations" : {
         "az" : {
@@ -25036,6 +26220,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jede Woche eine Sache zum Ausprobieren und dein Monatsrückblick."
+          }
+        }
+      }
+    },
+    "One thing to try, as a simple if-then plan." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sınamaq üçün bir şey, sadə \"əgər-onda\" planı kimi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Sache zum Ausprobieren, als einfacher Wenn-dann-Plan."
           }
         }
       }
@@ -27418,6 +28618,22 @@
         }
       }
     },
+    "Private" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Şəxsi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privat"
+          }
+        }
+      }
+    },
     "Private windows are never remembered" : {
       "localizations" : {
         "az" : {
@@ -27641,6 +28857,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ist wieder in der Liste."
+          }
+        }
+      }
+    },
+    "Put it back" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri qaytar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückholen"
           }
         }
       }
@@ -28738,6 +29970,86 @@
         }
       }
     },
+    "See the result" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nəticəyə bax"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ergebnis ansehen"
+          }
+        }
+      }
+    },
+    "See why" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səbəbə bax"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grund ansehen"
+          }
+        }
+      }
+    },
+    "Sessions with a goal" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəfli sessiyalar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions mit Ziel"
+          }
+        }
+      }
+    },
+    "Sessions without one" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəfsiz sessiyalar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions ohne Ziel"
+          }
+        }
+      }
+    },
+    "Set the goal" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəfi qoy"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel setzen"
+          }
+        }
+      }
+    },
     "Shortcut" : {
       "comment" : "Settings row: the keyboard shortcut for Pick up",
       "localizations" : {
@@ -28751,6 +30063,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tastenkürzel"
+          }
+        }
+      }
+    },
+    "sitting down to first focus" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oturmaqdan ilk fokusa qədər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vom Hinsetzen bis zum ersten Fokus"
+          }
+        }
+      }
+    },
+    "so far" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "indiyədək"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bisher"
           }
         }
       }
@@ -31991,6 +33335,22 @@
         }
       }
     },
+    "Start on %@" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ başla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Am %@ starten"
+          }
+        }
+      }
+    },
     "Start Reading focus" : {
       "localizations" : {
         "az" : {
@@ -32003,6 +33363,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokus „Lesen“ starten"
+          }
+        }
+      }
+    },
+    "Start tomorrow" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sabah başla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morgen starten"
           }
         }
       }
@@ -32490,6 +33866,22 @@
         }
       }
     },
+    "Starts %@. Result on %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başlanğıc: %1$@. Nəticə: %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start: %1$@. Ergebnis am %2$@."
+          }
+        }
+      }
+    },
     "Starts a FocusGuard break. A running session ends first." : {
       "localizations" : {
         "az" : {
@@ -32805,6 +34197,22 @@
         }
       }
     },
+    "Still learning" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ məlumat toplayır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sammelt noch Daten"
+          }
+        }
+      }
+    },
     "Still logged, just no nudge" : {
       "localizations" : {
         "az" : {
@@ -32897,6 +34305,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ beenden"
+          }
+        }
+      }
+    },
+    "Stop it" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayandır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beenden"
           }
         }
       }
@@ -33592,6 +35016,38 @@
         }
       }
     },
+    "Tell it what really happened" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əslində nə baş verdiyini deyin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sag, was wirklich passiert ist"
+          }
+        }
+      }
+    },
+    "Ten working days, half with the change and half without." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On iş günü: yarısı dəyişikliklə, yarısı dəyişikliksiz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zehn Arbeitstage, die Hälfte mit der Änderung, die Hälfte ohne."
+          }
+        }
+      }
+    },
     "Test" : {
       "localizations" : {
         "az" : {
@@ -33637,6 +35093,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbindung testen"
+          }
+        }
+      }
+    },
+    "Test it again" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yenidən sına"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch mal testen"
+          }
+        }
+      }
+    },
+    "Test it for 2 weeks" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 həftə sına"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 Wochen lang testen"
           }
         }
       }
@@ -33856,6 +35344,22 @@
         }
       }
     },
+    "That's already set up, so there's nothing to keep on." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu artıq qurulub, ona görə saxlanacaq heç nə yoxdur."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist schon eingerichtet, es gibt also nichts beizubehalten."
+          }
+        }
+      }
+    },
     "That's already set up, so there's nothing to try." : {
       "localizations" : {
         "az" : {
@@ -33884,6 +35388,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das ist keine Jira-Cloud-Website. Nimm eine Adresse wie acme.atlassian.net."
+          }
+        }
+      }
+    },
+    "That's not it" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu deyil"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist es nicht"
           }
         }
       }
@@ -33920,6 +35440,22 @@
         }
       }
     },
+    "The Analyzer has an experiment on. One at a time keeps both fair." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analizatorda eksperiment gedir. Hər dəfə yalnız biri olanda ikisi də ədalətli qalır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Analyzer läuft ein Experiment. Immer nur eins hält beide fair."
+          }
+        }
+      }
+    },
     "The API key for your endpoint. Stored only in your Keychain." : {
       "localizations" : {
         "az" : {
@@ -33932,6 +35468,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der API-Schlüssel für deinen Endpunkt. Wird nur in deinem Schlüsselbund gespeichert."
+          }
+        }
+      }
+    },
+    "The data doesn't back a fix for this yet, so FocusGuard won't suggest one." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Məlumatlar hələ bunun üçün həlli dəstəkləmir, ona görə FocusGuard təklif etmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Daten stützen dafür noch keine Lösung, deshalb schlägt FocusGuard keine vor."
           }
         }
       }
@@ -34096,6 +35648,22 @@
         }
       }
     },
+    "The gaps between your calls are often too short for a 25-minute block. Of what FocusGuard can see, this takes the most time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zəngləriniz arasındakı boşluqlar çox vaxt 25 dəqiqəlik blok üçün qısadır. FocusGuard-ın gördüklərindən ən çox vaxtı bu aparır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Lücken zwischen deinen Calls sind oft zu kurz für einen 25-Minuten-Block. Von dem, was FocusGuard sehen kann, kostet das am meisten Zeit."
+          }
+        }
+      }
+    },
     "The goal on %@ is %@." : {
       "comment" : "Mondays, then a compact duration",
       "localizations" : {
@@ -34179,6 +35747,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der Morgenplan um %@"
+          }
+        }
+      }
+    },
+    "The morning plan comes at %@, and your first session reminds you of this plan" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səhər planı %@ saatında gəlir, ilk sessiyanız isə bu planı xatırladır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Morgenplan kommt um %@, und deine erste Session erinnert dich an diesen Plan"
           }
         }
       }
@@ -34346,6 +35930,22 @@
         }
       }
     },
+    "The result is on the Analyzer page." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nəticə Analizator səhifəsindədir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Ergebnis steht auf der Analyzer-Seite."
+          }
+        }
+      }
+    },
     "The site pauses until midnight" : {
       "localizations" : {
         "az" : {
@@ -34422,6 +36022,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Token liegt in deinem Schlüsselbund"
+          }
+        }
+      }
+    },
+    "The two groups overlap too much to tell. This doesn't mean it can't help, only that it didn't show up in these %lld days." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İki qrup bir-biri ilə çox üst-üstə düşür, ona görə nəticə çıxarmaq olmur. Bu, kömək edə bilməyəcəyi demək deyil, sadəcə bu %lld gündə görünmədi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die beiden Gruppen überschneiden sich zu stark für eine Aussage. Das heißt nicht, dass es nicht helfen kann, nur dass es sich in diesen %lld Tagen nicht gezeigt hat."
+          }
+        }
+      }
+    },
+    "The weekly coach has an experiment on. One at a time keeps both fair." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəlik kouçda eksperiment gedir. Hər dəfə yalnız biri olanda ikisi də ədalətli qalır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Wochen-Coach läuft ein Experiment. Immer nur eins hält beide fair."
           }
         }
       }
@@ -34792,6 +36424,38 @@
         }
       }
     },
+    "These two go together here. That doesn't show the goal is the reason." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunlar burada bir yerdə görünür. Bu, səbəbin hədəf olduğunu göstərmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beides tritt hier zusammen auf. Das zeigt nicht, dass das Ziel der Grund ist."
+          }
+        }
+      }
+    },
+    "These two take about the same time, so FocusGuard won't pick one. Open either below to see the times it happened." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu ikisi təxminən eyni vaxt aparır, ona görə FocusGuard birini seçmir. Nə vaxt baş verdiyini görmək üçün aşağıda hər hansı birini açın."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beide kosten etwa gleich viel Zeit, deshalb wählt FocusGuard keinen aus. Öffne unten einen davon, um zu sehen, wann es passiert ist."
+          }
+        }
+      }
+    },
     "They count in and out of sessions" : {
       "localizations" : {
         "az" : {
@@ -34804,6 +36468,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sie zählen in und außerhalb von Sessions"
+          }
+        }
+      }
+    },
+    "This is a pattern in the times. FocusGuard can't know how you feel." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu, vaxtlardakı bir nümunədir. FocusGuard özünüzü necə hiss etdiyinizi bilə bilməz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist ein Muster in den Zeiten. FocusGuard kann nicht wissen, wie du dich fühlst."
           }
         }
       }
@@ -34884,6 +36564,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Session bringt dich näher heran."
+          }
+        }
+      }
+    },
+    "This test needs your OK to add blocks to your calendar." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu test təqviminizə blok əlavə etmək üçün razılığınızı tələb edir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für diesen Test brauchen wir dein OK, um Blöcke in deinen Kalender einzutragen."
           }
         }
       }
@@ -35371,6 +37067,22 @@
         }
       }
     },
+    "Times it happened" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baş verdiyi vaxtlar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann es passiert ist"
+          }
+        }
+      }
+    },
     "Timesheet" : {
       "localizations" : {
         "az" : {
@@ -35449,6 +37161,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Heute"
+          }
+        }
+      }
+    },
+    "Today doesn't count. Result on %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün sayılmır. Nəticə: %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute zählt nicht. Ergebnis am %@."
+          }
+        }
+      }
+    },
+    "Today is an Off day. Result on %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün passiv gündür. Nəticə: %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute ist ein inaktiver Tag. Ergebnis am %@."
+          }
+        }
+      }
+    },
+    "Today is an On day. Result on %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün aktiv gündür. Nəticə: %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute ist ein aktiver Tag. Ergebnis am %@."
           }
         }
       }
@@ -35694,6 +37454,38 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Tomorrow, start before %1$@: your early days focused %2$@ more."
+          }
+        }
+      }
+    },
+    "Too close to name one" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Birini seçmək üçün çox yaxındır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu knapp, um einen zu nennen"
+          }
+        }
+      }
+    },
+    "Too few days counted to compare fairly: %lld On and %lld Off. This says nothing for or against it." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ədalətli müqayisə üçün az gün sayılıb: %1$lld aktiv və %2$lld passiv. Bu, onun lehinə də, əleyhinə də heç nə demir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zu wenige Tage zählten für einen fairen Vergleich: %1$lld aktive und %2$lld inaktive. Das sagt nichts dafür oder dagegen."
           }
         }
       }
@@ -36233,6 +38025,38 @@
         }
       }
     },
+    "Try something else" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başqa şey sına"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwas anderes probieren"
+          }
+        }
+      }
+    },
+    "Try this" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunu sınayın"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probier das"
+          }
+        }
+      }
+    },
     "Try this week" : {
       "localizations" : {
         "az" : {
@@ -36504,6 +38328,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schaltet Apples integrierten Fokus „Arbeiten“ für die Dauer deiner Session ein."
+          }
+        }
+      }
+    },
+    "Unclear task" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qeyri-müəyyən iş"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unklare Aufgabe"
+          }
+        }
+      }
+    },
+    "Unclear tasks" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qeyri-müəyyən tapşırıqlar"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unklare Aufgaben"
           }
         }
       }
@@ -37427,6 +39283,22 @@
         }
       }
     },
+    "What it compares" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nə müqayisə olunur"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was verglichen wird"
+          }
+        }
+      }
+    },
     "What it keeps" : {
       "localizations" : {
         "az" : {
@@ -37471,6 +39343,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was lenkt mich am meisten ab?"
+          }
+        }
+      }
+    },
+    "What really happened?" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əslində nə baş verdi?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ist wirklich passiert?"
+          }
+        }
+      }
+    },
+    "What seems to cost you most" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görünür, ən çox vaxtınızı bu alır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was dich am meisten zu kosten scheint"
           }
         }
       }
@@ -37551,6 +39455,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Woran du gearbeitet hast"
+          }
+        }
+      }
+    },
+    "What you'll get" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nə əldə edəcəksiniz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du bekommst"
           }
         }
       }
@@ -38010,6 +39930,70 @@
         }
       }
     },
+    "Why focus gets lost, a typical day" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus niyə itir, adi gün"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum Fokus verloren geht, ein typischer Tag"
+          }
+        }
+      }
+    },
+    "Why it looks this way" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niyə belə görünür"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum es so aussieht"
+          }
+        }
+      }
+    },
+    "Why you lose focus, and what helps" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusu niyə itirirsiniz və nə kömək edir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum du den Fokus verlierst, und was hilft"
+          }
+        }
+      }
+    },
+    "Why you lose focus: meetings, chat, habits, unclear tasks or a late-day dip." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusu niyə itirdiyiniz: görüşlər, çat, vərdişlər, qeyri-müəyyən tapşırıqlar və ya gün sonu enişi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum du den Fokus verlierst: Meetings, Chat, Gewohnheiten, unklare Aufgaben oder ein Tagesend-Tief."
+          }
+        }
+      }
+    },
     "Will be saved as “%@”." : {
       "localizations" : {
         "az" : {
@@ -38397,6 +40381,22 @@
         }
       }
     },
+    "Write the Q4 report" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Q4 hesabatını yazmaq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den Q4-Bericht schreiben"
+          }
+        }
+      }
+    },
     "Writing the debrief on this Mac…" : {
       "localizations" : {
         "az" : {
@@ -38665,6 +40665,22 @@
         }
       }
     },
+    "You can stop any time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İstənilən vaxt dayandıra bilərsiniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du kannst jederzeit aufhören."
+          }
+        }
+      }
+    },
     "You can turn offers back on in Settings" : {
       "localizations" : {
         "az" : {
@@ -38744,6 +40760,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "You had about %@ more deep blocks on On days, and the two groups barely overlapped. %lld days is a small test, but this is a clear gap." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv günlərdə təxminən %1$@ dərin blok çox olub, iki qrup isə demək olar üst-üstə düşməyib. %2$lld gün kiçik testdir, amma bu, aydın fərqdir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An aktiven Tagen hattest du etwa %1$@ Deep-Work-Blöcke mehr, und die beiden Gruppen überschnitten sich kaum. %2$lld Tage sind ein kleiner Test, aber das ist ein klarer Abstand."
           }
         }
       }
@@ -38828,6 +40860,38 @@
         }
       }
     },
+    "You said it's not %@, more like %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunun %1$@ olmadığını, daha çox %2$@ olduğunu dediniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast gesagt, es ist nicht %1$@, eher %2$@."
+          }
+        }
+      }
+    },
+    "You said it's not %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunun %@ olmadığını dediniz."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast gesagt, es ist nicht %@."
+          }
+        }
+      }
+    },
     "You sorted it. Your choice also updated past reports." : {
       "localizations" : {
         "az" : {
@@ -38856,6 +40920,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du hast nicht ohne Grund angefangen. Mach weiter."
+          }
+        }
+      }
+    },
+    "You switch quickly between work apps, with no distracting site involved. A blocker may not help with this. Of what FocusGuard can see, this takes the most time." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İş tətbiqləri arasında tez-tez keçirsiniz, yayındıran sayt olmadan. Bloklayıcı burada kömək etməyə bilər. FocusGuard-ın gördüklərindən ən çox vaxtı bu aparır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wechselst schnell zwischen Arbeits-Apps, ohne ablenkende Website. Ein Blocker hilft dabei vielleicht nicht. Von dem, was FocusGuard sehen kann, kostet das am meisten Zeit."
           }
         }
       }
@@ -39309,6 +41389,22 @@
         }
       }
     },
+    "You've tested this before, with no clear difference." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunu artıq sınamısınız, aydın fərq olmayıb."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das hast du schon getestet, ohne klaren Unterschied."
+          }
+        }
+      }
+    },
     "You've tuned the timings by hand. Pick a preset to go back to one." : {
       "localizations" : {
         "az" : {
@@ -39392,6 +41488,134 @@
         }
       }
     },
+    "Your 10 working days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 iş gününüz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine 10 Arbeitstage"
+          }
+        }
+      }
+    },
+    "Your deep blocks a day, with calls left out" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gündəlik dərin bloklarınız, zənglər çıxılmaqla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Deep-Work-Blöcke pro Tag, ohne Calls"
+          }
+        }
+      }
+    },
+    "Your experiment" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksperimentiniz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Experiment"
+          }
+        }
+      }
+    },
+    "Your experiment is done" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksperimentiniz bitdi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Experiment ist fertig"
+          }
+        }
+      }
+    },
+    "Your experiment · %lld working days" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksperimentiniz · %lld iş günü"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Experiment · %lld Arbeitstage"
+          }
+        }
+      }
+    },
+    "Your experiment · 1 working day" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksperimentiniz · 1 iş günü"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Experiment · 1 Arbeitstag"
+          }
+        }
+      }
+    },
+    "Your first session of the day reminds you of this plan" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Günün ilk sessiyası bu planı xatırladır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine erste Session des Tages erinnert dich an diesen Plan"
+          }
+        }
+      }
+    },
+    "Your focus rate drops later in the day against your own earlier hours, and nothing else here explains that time. This is a pattern in the times, not a claim about how you feel." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus dərəcəniz günün sonunda öz əvvəlki saatlarınıza nisbətən enir və bu vaxtı burada başqa heç nə izah etmir. Bu, vaxtlardakı nümunədir, özünüzü necə hiss etdiyiniz barədə iddia deyil."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Fokusrate sinkt später am Tag gegenüber deinen eigenen früheren Stunden, und nichts anderes hier erklärt diese Zeit. Das ist ein Muster in den Zeiten, keine Aussage darüber, wie du dich fühlst."
+          }
+        }
+      }
+    },
     "Your focus rate holds at about %@ whenever you work." : {
       "localizations" : {
         "az" : {
@@ -39452,6 +41676,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine letzten Orte, die neuesten zuerst"
+          }
+        }
+      }
+    },
+    "Your longest stretch was about %@ longer on On days, and the two groups barely overlapped. %lld days is a small test, but this is a clear gap." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv günlərdə ən uzun müddətiniz təxminən %1$@ uzun olub, iki qrup isə demək olar üst-üstə düşməyib. %2$lld gün kiçik testdir, amma bu, aydın fərqdir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine längste Phase war an aktiven Tagen etwa %1$@ länger, und die beiden Gruppen überschnitten sich kaum. %2$lld Tage sind ein kleiner Test, aber das ist ein klarer Abstand."
+          }
+        }
+      }
+    },
+    "Your longest stretch, deep blocks, coming back and getting started." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən uzun müddətiniz, dərin bloklar, geri dönmə və başlamaq."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine längste Phase, Deep-Work-Blöcke, Zurückkommen und Anfangen."
+          }
+        }
+      }
+    },
+    "Your longest unbroken stretch, with calls left out" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən uzun fasiləsiz müddətiniz, zənglər çıxılmaqla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine längste Phase am Stück, ohne Calls"
+          }
+        }
+      }
+    },
+    "Your plan" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planınız"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Plan"
           }
         }
       }

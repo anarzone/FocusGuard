@@ -18,6 +18,8 @@ actor StatsStore {
     private var pastDays: [Date: DaySummary] = [:]
     /// Days kept at most, oldest dropped first (a few KB each).
     private let keptDays = 400
+    /// The Analyzer's reading of finished days, kept the same way.
+    private var analyzed: [Date: AnalyzerDay] = [:]
 
     init(container: ModelContainer) {
         self.container = container
@@ -25,6 +27,7 @@ actor StatsStore {
 
     func forgetPastDays() {
         pastDays = [:]
+        analyzed = [:]
     }
 
     /// Summaries of finished `days`, making only the ones not kept yet, from
@@ -231,6 +234,53 @@ actor StatsStore {
             case .coachExperiment, .unknown:
                 return builder.cantAnswer(suggestion: nil)
             }
+        }
+    }
+
+    // MARK: - Analyzer
+
+    /// The Analyzer's reading of finished `days` (each a start of day, in
+    /// order), for those with enough tracked to be working days. The day
+    /// summaries say which, so a day off never reads an event.
+    private func analyzerDays(_ context: ModelContext, days: [Date], busy: [DateInterval], calendar: Calendar) -> [AnalyzerDay] {
+        let tracked = pastSummaries(context, days: days, calendar: calendar).filter {
+            $0.breakdown.focus + $0.breakdown.neutral + $0.breakdown.distraction >= AnalyzerRules.workingDayTracked
+                && $0.breakdown.focus >= AnalyzerRules.workingDayFocus
+        }.map(\.day)
+        let missing = tracked.filter { analyzed[$0] == nil }
+        if let first = missing.first, let last = missing.last {
+            let data = CoachDataReader.read(context, interval: DateInterval(start: first, end: calendar.startOfDay(1, from: last)))
+            for day in missing {
+                let end = calendar.startOfDay(1, from: day)
+                analyzed[day] = AnalyzerDayBuilder.make(day: day, events: data.events.filter { $0.end >= day && $0.start < end },
+                                                        sessions: data.sessions, busy: busy, calendar: calendar)
+            }
+            if analyzed.count > keptDays {
+                for day in analyzed.keys.sorted().prefix(analyzed.count - keptDays) where !tracked.contains(day) {
+                    analyzed[day] = nil
+                }
+            }
+        }
+        return tracked.compactMap { analyzed[$0] }
+    }
+
+    /// For settling an experiment's finished days.
+    func analyzerDays(_ days: [Date], busy: [DateInterval], calendar: Calendar = .current) -> [AnalyzerDay] {
+        read { analyzerDays($0, days: days.sorted(), busy: busy, calendar: calendar) }
+    }
+
+    /// The Analyzer page: the last 4 weeks of finished days against the 4 before.
+    func analyzerReport(now: Date, weekendsCount: Bool, muted: Set<AnalyzerCause>, busy: [DateInterval],
+                        calendar: Calendar = .current) -> AnalyzerReport {
+        read { context in
+            let today = calendar.startOfDay(for: now)
+            let from = calendar.startOfDay(-AnalyzerRules.periodDays, from: today)
+            let earlier = calendar.startOfDay(-2 * AnalyzerRules.periodDays, from: today)
+            let summaries = self.days(context, now: now, calendar: calendar)
+            return AnalyzerReport.make(period: DateInterval(start: from, end: today),
+                                       days: analyzerDays(context, days: summaries.days(from: from, to: today), busy: busy, calendar: calendar),
+                                       before: analyzerDays(context, days: summaries.days(from: earlier, to: from), busy: busy, calendar: calendar),
+                                       muted: muted, weekendsCount: weekendsCount, calendar: calendar)
         }
     }
 

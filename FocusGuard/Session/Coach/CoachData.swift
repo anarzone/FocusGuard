@@ -15,6 +15,8 @@ struct CoachEvent: Equatable, Sendable {
     let isSite: Bool
     /// The session it was tracked in, if any.
     let session: UUID?
+    /// The app it was tracked in, a browser for a site.
+    var bundleId: String? = nil
 
     var duration: TimeInterval { max(0, end.timeIntervalSince(start)) }
 
@@ -31,6 +33,7 @@ struct CoachSession: Equatable, Sendable {
     let start: Date
     let end: Date
     let plannedMinutes: Int?
+    var hasGoal = false
 
     var minutes: Int { Int(max(0, end.timeIntervalSince(start)) / 60) }
 }
@@ -56,7 +59,7 @@ struct CoachData: Sendable {
                 let start = max(event.start, interval.start), end = min(event.end, interval.end)
                 guard end > start else { return nil }
                 return CoachEvent(start: start, end: end, kind: event.kind, target: event.target,
-                                  name: event.name, isSite: event.isSite, session: event.session)
+                                  name: event.name, isSite: event.isSite, session: event.session, bundleId: event.bundleId)
             },
             sessions: sessions.filter { interval.start <= $0.start && $0.start < interval.end },
             busy: busy.compactMap { span in
@@ -153,7 +156,7 @@ enum CoachDataReader {
             if let h = host, h.hasPrefix("www.") { host = String(h.dropFirst(4)) }
             return CoachEvent(start: start, end: end, kind: event.classification ?? .neutral,
                               target: host ?? event.bundleIdentifier, name: host ?? event.appName,
-                              isSite: host != nil, session: event.session?.id)
+                              isSite: host != nil, session: event.session?.id, bundleId: event.bundleIdentifier)
         }
         let sessions = Persistence.fetch(context, FetchDescriptor<Session>(
             predicate: #Predicate { $0.startedAt >= from && $0.startedAt < to && $0.endedAt != nil },
@@ -161,7 +164,8 @@ enum CoachDataReader {
         )).compactMap { session -> CoachSession? in
             guard let end = session.endedAt else { return nil }
             return CoachSession(id: session.id, start: session.startedAt, end: end,
-                                plannedMinutes: session.plannedDurationMinutes)
+                                plannedMinutes: session.plannedDurationMinutes,
+                                hasGoal: session.goal?.isEmpty == false)
         }
         return CoachData(interval: interval, events: events, sessions: sessions)
     }

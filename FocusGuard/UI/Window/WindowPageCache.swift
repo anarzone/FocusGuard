@@ -12,6 +12,7 @@ final class WindowPageCache {
     var reports: [String: ReportsModel] = [:]
     var workLog: [Date: WorkLogModel] = [:]
     var apps: [AppsRange: [AppsItem]] = [:]
+    var analyzer: AnalyzerReport?
 
     static func reportsKey(_ period: ReportPeriod, _ offset: Int) -> String { "\(period.rawValue)-\(offset)" }
 
@@ -26,6 +27,9 @@ final class WindowPageCache {
         await warmReport(.month, appState, weekendsCount: weekendsCount)
         await warmApps(.today, appState)
         await warmApps(.month, appState)
+        if FeatureFlags.analyzer, Entitlements.shared.isUnlocked(.analyzer), analyzer == nil {
+            analyzer = await appState.analyzerReport(weekendsCount: weekendsCount)
+        }
     }
 
     private func warmReport(_ period: ReportPeriod, _ appState: AppState, weekendsCount: Bool) async {

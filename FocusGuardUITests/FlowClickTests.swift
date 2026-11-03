@@ -114,6 +114,8 @@ final class FlowClickTests: XCTestCase {
         launch()
         try open("Reports")
         waitFor(button("Share week"), "Reports didn't open")
+        try open("Analyzer")
+        waitForText("Why you lose focus, and what helps", "The Analyzer's Pro page didn't open")
         try open("Ask")
         waitForText("Questions about your own focus", "Ask's Pro page didn't open")
         try open("Work log")
