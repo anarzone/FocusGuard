@@ -28,6 +28,8 @@ struct BrowserTabReport: Equatable, Codable {
     var windowId: Int?
     /// A YouTube video's details, sent only while video by video is on (Pro).
     var video: Video?
+    /// The tab is in a private window. Only ever true: other tabs leave it out.
+    var incognito: Bool?
 
     struct Video: Equatable, Codable {
         var title: String?

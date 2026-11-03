@@ -10,13 +10,16 @@ struct ActivitySnapshot: Equatable {
     let url: String?
     let classification: Classification
     let observedAt: Date
+    /// A browser's private window: known here, for blocking, but its page and
+    /// title are never written down.
+    var isPrivateWindow = false
 }
 
 extension ActivitySnapshot {
     /// The same moment treated as neutral — used while FocusGuard is frontmost.
     func asNeutral(at date: Date) -> ActivitySnapshot {
         ActivitySnapshot(bundleIdentifier: bundleIdentifier, appName: appName, windowTitle: windowTitle,
-                         url: url, classification: .neutral, observedAt: date)
+                         url: url, classification: .neutral, observedAt: date, isPrivateWindow: isPrivateWindow)
     }
 
     /// The same activity, seen again at `date`. The tracker's
@@ -24,13 +27,13 @@ extension ActivitySnapshot {
     /// only when the activity does; per-tick readers stamp it with the tick.
     func observed(at date: Date) -> ActivitySnapshot {
         ActivitySnapshot(bundleIdentifier: bundleIdentifier, appName: appName, windowTitle: windowTitle,
-                         url: url, classification: classification, observedAt: date)
+                         url: url, classification: classification, observedAt: date, isPrivateWindow: isPrivateWindow)
     }
 
     /// Same app, title, page and classification, whenever it was seen.
     func isSameActivity(as other: ActivitySnapshot) -> Bool {
         bundleIdentifier == other.bundleIdentifier && appName == other.appName && windowTitle == other.windowTitle
-            && url == other.url && classification == other.classification
+            && url == other.url && classification == other.classification && isPrivateWindow == other.isPrivateWindow
     }
 }
 
@@ -98,6 +101,10 @@ final class ActivityTracker {
     /// connected for it (set by AppState). Used instead of AppleScript when
     /// present: no Automation prompt, and titles without Screen Recording.
     @ObservationIgnored var extensionTab: ((_ bundleId: String) -> ExtensionTab?)?
+
+    /// Called once the Mac or its screens went to sleep or the screen locked,
+    /// which can be the last thing that happens before they're back.
+    @ObservationIgnored var onSuspended: (() -> Void)?
 
     /// Called when a new event starts (another app, page or title). Smart
     /// categories watch it for things not sorted yet.
@@ -238,6 +245,7 @@ final class ActivityTracker {
         guard isRunning, suspendedAt == nil else { return }
         tick(now: now)
         enterSuspension(at: now)
+        onSuspended?()
         reschedule()
     }
 
@@ -364,6 +372,8 @@ final class ActivityTracker {
         } else {
             url = nil
         }
+        // The browser's word, from the extension or AppleScript. Safari doesn't say.
+        let isPrivateWindow = extensionTab?.isPrivate ?? (isBrowser && browserReader.isPrivateWindow(forBundleId: bundleId))
         needsPolling = TrackingCadence.needsPolling(
             away: false,
             browserWithoutExtension: isBrowser && extensionTab == nil,
@@ -382,7 +392,8 @@ final class ActivityTracker {
             windowTitle: title,
             url: url,
             classification: classification,
-            observedAt: now
+            observedAt: now,
+            isPrivateWindow: isPrivateWindow
         )
         // Only a different activity is published: readers (the menu bar,
         // the menu) aren't woken just because time passed.
@@ -390,10 +401,13 @@ final class ActivityTracker {
             currentSnapshot = snapshot
         }
 
+        // A private window's time still counts, under the app alone.
+        let keptTitle = isPrivateWindow ? nil : title
+        let keptURL = isPrivateWindow ? nil : url
         if let event = currentEvent,
            event.bundleIdentifier == bundleId,
-           event.windowTitle == title,
-           event.url == url {
+           event.windowTitle == keptTitle,
+           event.url == keptURL {
             // Same activity; just extend the window.
             event.endedAt = max(event.endedAt, now)
         } else {
@@ -404,8 +418,8 @@ final class ActivityTracker {
                 endedAt: now,
                 bundleIdentifier: bundleId,
                 appName: front.name,
-                windowTitle: title,
-                url: url,
+                windowTitle: keptTitle,
+                url: keptURL,
                 session: currentSession
             )
             new.classification = classification

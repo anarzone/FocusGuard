@@ -403,6 +403,11 @@ enum PrivacyStatement {
 
 /// What's worked out on this Mac, naming only the Pro AI that has shipped.
 enum PrivacyNote {
+    /// "What it keeps", under Pick up where you left off.
+    static var pickUp: String {
+        String(localized: "It uses the activity FocusGuard already tracks, from the past 7 days, only on this Mac. Private windows and titles you've excluded are left out. Safari doesn't say which of its windows are private, so those can't be left out.")
+    }
+
     static var onThisMac: String {
         make(smartCategories: FeatureFlags.smartCategories, debrief: FeatureFlags.debrief, coach: FeatureFlags.coach,
              ask: FeatureFlags.ask, monthlyReview: FeatureFlags.monthlyReview)

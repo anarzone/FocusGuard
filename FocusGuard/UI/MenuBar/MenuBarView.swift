@@ -91,6 +91,7 @@ struct MenuBarView: View {
         .onAppear(perform: restoreLength)
         .onAppear { appState.refreshMenuStats(force: true) }
         .onAppear(perform: refreshGoalSuggestions)
+        .onAppear { Task { await appState.pickUp.refreshMenuPlaces(force: true) } }
         .task {
             // The next meeting, open reminders and the Git branch, off the main thread.
             await appState.integrations.refreshForMenu()
@@ -108,6 +109,7 @@ struct MenuBarView: View {
             tickedAt = .now
             // Never waits: the numbers come back from StatsStore.
             appState.refreshMenuStats()
+            Task { await appState.pickUp.refreshMenuPlaces() }
             // Follow Spotify while the music pane is open, and in a session for
             // the header's playing indicator.
             let music = appState.music
@@ -731,6 +733,12 @@ struct MenuBarView: View {
                     .lineLimit(1)
                     .padding(.horizontal, 10)
                     .frame(height: 24)
+            }
+            if FeatureFlags.pickUp, !appState.pickUp.menuPlaces.isEmpty, !appState.breakManager.isOnBreak {
+                MenuItemRow(title: String(localized: "Where you left off")) {
+                    dismiss()
+                    Task { await appState.pickUp.showLastPlaces() }
+                }
             }
             MenuItemRow(title: String(localized: "Open FocusGuard")) {
                 dismiss()

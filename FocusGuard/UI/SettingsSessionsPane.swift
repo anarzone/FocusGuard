@@ -30,6 +30,7 @@ struct SettingsSessionsPane: View {
         SettingsColumns {
             namesSection
             defaultsSection
+            if FeatureFlags.pickUp { SettingsPickUpSection(pickUp: appState.pickUp, hotKey: appState.pickUpHotKey) }
         } right: {
             driftSection
             SettingsSection(String(localized: "Breaks", comment: "Rest breaks between sessions")) {

@@ -69,6 +69,25 @@ actor StatsStore {
         body(ModelContext(container))
     }
 
+    /// Activity for "Pick up where you left off", newest first.
+    func pickUpEvents(from: Date, before: Date, focusOnly: Bool) -> [PickUpEvent] {
+        read { context in
+            let focus = Classification.focus.rawValue
+            var descriptor = FetchDescriptor<ActivityEvent>(
+                predicate: focusOnly
+                    ? #Predicate { $0.endedAt >= from && $0.startedAt < before && $0.classificationRaw == focus }
+                    : #Predicate { $0.endedAt >= from && $0.startedAt < before },
+                sortBy: [SortDescriptor(\.endedAt, order: .reverse)]
+            )
+            descriptor.fetchLimit = 1000
+            return Persistence.fetch(context, descriptor).map {
+                PickUpEvent(bundleId: $0.bundleIdentifier, appName: $0.appName, title: $0.windowTitle, url: $0.url,
+                            startedAt: $0.startedAt, endedAt: $0.endedAt, classification: $0.classification,
+                            sessionGoal: $0.session?.goal)
+            }
+        }
+    }
+
     func menuStats(now: Date, includeStreak: Bool) -> MenuStats.Update {
         read { context in
             let dayStart = Calendar.current.startOfDay(for: now)
