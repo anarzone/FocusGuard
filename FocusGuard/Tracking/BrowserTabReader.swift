@@ -20,6 +20,10 @@ import Foundation
 /// browser without the extension is in front, at most every `maxAge`
 /// seconds unless the window's title just changed (a new tab or page).
 ///
+/// Private windows: Chromium browsers and Arc say when the front window is
+/// one, and that's kept beside the address (`isPrivateWindow`). Safari has no
+/// way to tell a script, so its private windows look like any others.
+///
 /// Permission model: NSAppleEventsUsageDescription is set in Info.plist. macOS
 /// prompts the first time we send to each browser. Denials are remembered in
 /// UserDefaults, and a denied browser is only tried again every few minutes
@@ -51,6 +55,8 @@ final class BrowserTabReader {
     /// Last fetched URL per browser bundle id. Updated from the background
     /// fetch queue once a script returns.
     private var fetchedURL: [String: String?] = [:]
+    /// Browsers whose front window was private at the last fetch.
+    private var privateWindows: Set<String> = []
     /// Background fetch in flight per bundle id. Prevents stacking calls.
     private var fetchInFlight: Set<String> = []
     /// Wall-clock time of last fetch attempt per bundle id (cache TTL).
@@ -99,6 +105,11 @@ final class BrowserTabReader {
         return fetchedURL[bundleId] ?? nil
     }
 
+    /// Whether the front window was private when the address was last read.
+    func isPrivateWindow(forBundleId bundleId: String) -> Bool {
+        privateWindows.contains(bundleId)
+    }
+
     func resetAutomationDenials() {
         deniedAutomation = []
         deniedAt.removeAll()
@@ -129,9 +140,12 @@ final class BrowserTabReader {
                 guard let self else { return }
                 self.fetchInFlight.remove(bundleId)
                 let before = self.fetchedURL[bundleId] ?? nil
+                let wasPrivate = self.privateWindows.contains(bundleId)
+                self.privateWindows.remove(bundleId)
                 switch result {
-                case .url(let url):
+                case .url(let url, let isPrivate):
                     self.fetchedURL[bundleId] = url
+                    if isPrivate { self.privateWindows.insert(bundleId) }
                     if self.deniedAutomation.contains(bundleId) {
                         self.deniedAutomation.remove(bundleId)
                         self.deniedAt[bundleId] = nil
@@ -145,7 +159,9 @@ final class BrowserTabReader {
                 case .error:
                     self.fetchedURL[bundleId] = nil
                 }
-                if (self.fetchedURL[bundleId] ?? nil) != before { self.onURLChange?() }
+                if (self.fetchedURL[bundleId] ?? nil) != before || self.privateWindows.contains(bundleId) != wasPrivate {
+                    self.onURLChange?()
+                }
             }
         }
     }
@@ -153,7 +169,7 @@ final class BrowserTabReader {
     // MARK: - Script execution (off-main)
 
     private enum FetchResult {
-        case url(String)
+        case url(String, isPrivate: Bool)
         case denied
         case error
     }
@@ -174,7 +190,8 @@ final class BrowserTabReader {
             return .error
         }
         let value = descriptor.stringValue ?? ""
-        return value.isEmpty ? .error : .url(value)
+        if value.hasPrefix(privateMark) { return .url(String(value.dropFirst(privateMark.count)), isPrivate: true) }
+        return value.isEmpty ? .error : .url(value, isPrivate: false)
     }
 
     // MARK: - Static script generation
@@ -197,14 +214,30 @@ final class BrowserTabReader {
         }
     }
 
-    private static func scriptSource(for bundleId: String, appName: String) -> String? {
+    /// Put before the address when the window is private.
+    nonisolated private static let privateMark = "private:"
+
+    /// How a browser's script says the front window is private. Not at all
+    /// for Safari; Arc has its own word.
+    private static func privateCheck(for bundleId: String) -> String? {
+        if bundleId.hasPrefix("com.apple.Safari") { return nil }
+        if bundleId == "company.thebrowser.Browser" { return "incognito of front window" }
+        return "mode of front window is not \"normal\""
+    }
+
+    static func scriptSource(for bundleId: String, appName: String) -> String? {
         let isSafari = bundleId.hasPrefix("com.apple.Safari")
         let tabAccessor = isSafari ? "current tab" : "active tab"
+        let check = privateCheck(for: bundleId).map {
+            "try\n        if \($0) then set windowMark to \"\(privateMark)\"\n    end try"
+        } ?? ""
         return """
             tell application "\(appName)"
                 if (count of windows) is 0 then return ""
+                set windowMark to ""
+                \(check)
                 try
-                    return URL of \(tabAccessor) of front window
+                    return windowMark & (URL of \(tabAccessor) of front window)
                 on error
                     return ""
                 end try

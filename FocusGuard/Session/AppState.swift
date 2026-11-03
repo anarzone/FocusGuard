@@ -25,6 +25,11 @@ final class AppState {
     let habits: HabitsCoordinator
     /// The session goal and the debrief after each session (Pro).
     let debriefs: DebriefCoordinator
+    /// "Pick up where you left off".
+    let pickUp: PickUpCoordinator
+    let pickUpHotKey = PickUpHotKey()
+    /// The block and daily-limit screens.
+    let blockOverlay: BlockOverlayController
     /// Sessions on the calendar, the next meeting, reminders and the Git
     /// branch as goals.
     let integrations: IntegrationsCoordinator
@@ -114,6 +119,11 @@ final class AppState {
                                         presenter: presenter, context: context)
         self.debriefs = DebriefCoordinator(context: context, isOptedOut: { [weak cache] in cache?.isOptedOut($0) ?? true })
         self.integrations = IntegrationsCoordinator()
+        // The UI tests' copy never reaches other apps.
+        let pickUpOpener = SystemPickUpOpener()
+        self.pickUp = PickUpCoordinator(opener: UITestMode.isOn ? NoPickUpOpener() : pickUpOpener,
+                                        presenter: UITestMode.isOn ? nil : PickUpPanelController())
+        self.blockOverlay = blockOverlay
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
         self.extensionBridge = bridge
@@ -174,6 +184,7 @@ final class AppState {
             self?.integrations.tick()
             self?.maybeAutoPauseOrResume()
             self?.extensionBridge.tick()
+            if let self, FeatureFlags.pickUp { self.pickUp.observe(self.pickUpMoment()) }
         }
         // Every second while something is timed to the second or FocusGuard
         // is on screen; otherwise tracking follows events (see TrackingCadence).
@@ -254,6 +265,7 @@ final class AppState {
         if !UITestMode.isOn {
             wireNotifications()
             wireIntegrations()
+            if FeatureFlags.pickUp { wirePickUp(opener: pickUpOpener) }
             tracker.start()
             bridge.start(appState: self)
         }

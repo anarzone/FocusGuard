@@ -74,6 +74,23 @@
         }
       }
     },
+    "%@ are back" : {
+      "comment" : "Two or three apps were brought back to the front",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ geri qayıtdı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sind zurück"
+          }
+        }
+      }
+    },
     "%@ at %@" : {
       "comment" : "A session on the day's timeline, with nothing to give a focus rate on",
       "localizations" : {
@@ -87,6 +104,78 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ um %2$@"
+          }
+        }
+      }
+    },
+    "%@ couldn't open" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ açılmadı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ließ sich nicht öffnen"
+          }
+        }
+      }
+    },
+    "%@ couldn't reopen one page" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bir səhifəni yenidən aça bilmədi"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ konnte eine Seite nicht wieder öffnen"
+          }
+        }
+      }
+    },
+    "%@ for %@" : {
+      "comment" : "Time on a distracting site: x.com for 6 min",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ für %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ for %2$@"
+          }
+        }
+      }
+    },
+    "%@ is back" : {
+      "comment" : "An app was brought back to the front",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ geri qayıtdı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist zurück"
           }
         }
       }
@@ -5267,6 +5356,46 @@
         }
       }
     },
+    "%lld h" : {
+      "comment" : "Hours away from the Mac",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld s"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Std"
+          }
+        }
+      }
+    },
+    "%lld h %lld min" : {
+      "comment" : "Hours and minutes away from the Mac",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld s %2$lld dəq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Std %2$lld Min"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld h %2$lld min"
+          }
+        }
+      }
+    },
     "%lld hours" : {
       "comment" : "Plural on h: 1 hour / 2 hours",
       "localizations" : {
@@ -8312,6 +8441,70 @@
         }
       }
     },
+    "After 2 minutes or more on a distracting site" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayındıran saytda 2 dəqiqə və ya daha çox qaldıqdan sonra"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach 2 Minuten oder mehr auf einer ablenkenden Seite"
+          }
+        }
+      }
+    },
+    "After 5 minutes or more away" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 dəqiqə və ya daha çox yoxluqdan sonra"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach 5 Minuten oder mehr Abwesenheit"
+          }
+        }
+      }
+    },
+    "After a call" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zəngdən sonra"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach einem Anruf"
+          }
+        }
+      }
+    },
+    "After drifting" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınmadan sonra"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach dem Abschweifen"
+          }
+        }
+      }
+    },
     "AI tips" : {
       "localizations" : {
         "az" : {
@@ -8356,6 +8549,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "KI-Tipps sind ausgeschaltet. Schalte sie unter Einstellungen → KI-Tipps ein."
+          }
+        }
+      }
+    },
+    "Another app is using it" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ondan başqa tətbiq istifadə edir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine andere App verwendet es"
           }
         }
       }
@@ -10401,6 +10610,23 @@
         }
       }
     },
+    "at %@" : {
+      "comment" : "When you were last in an app: at 14:00",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "saat %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "um %@"
+          }
+        }
+      }
+    },
     "At %@." : {
       "comment" : "When a drift happened",
       "localizations" : {
@@ -10457,6 +10683,23 @@
         }
       }
     },
+    "Back after %@" : {
+      "comment" : "Back at the Mac after a time away: Back after 52 min",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sonra qayıtdınız"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück nach %@"
+          }
+        }
+      }
+    },
     "Back at %@" : {
       "localizations" : {
         "az" : {
@@ -10501,6 +10744,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zurück um %@ · Blockieren pausiert"
+          }
+        }
+      }
+    },
+    "Back from your call · %@" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zəngdən qayıtdınız · %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück vom Anruf · %@"
+          }
+        }
+      }
+    },
+    "Back in place" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yerinə qayıtdı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wieder da"
           }
         }
       }
@@ -11143,6 +11418,22 @@
         }
       }
     },
+    "Bring back" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri qaytarmaq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückholen"
+          }
+        }
+      }
+    },
     "Browser access" : {
       "localizations" : {
         "az" : {
@@ -11405,6 +11696,22 @@
         }
       }
     },
+    "Calls of 5 minutes or more" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 dəqiqə və daha uzun zənglər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anrufe ab 5 Minuten"
+          }
+        }
+      }
+    },
     "Changed your mind?" : {
       "localizations" : {
         "az" : {
@@ -11417,6 +11724,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Doch anders?"
+          }
+        }
+      }
+    },
+    "Choose what to exclude" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nəyi istisna edəcəyinizi seçin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auswählen, was ausgeschlossen wird"
+          }
+        }
+      }
+    },
+    "Control Option R" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control Option R"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control Wahltaste R"
           }
         }
       }
@@ -13820,6 +14159,22 @@
         }
       }
     },
+    "Dismiss" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağla"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
+          }
+        }
+      }
+    },
     "Distracting" : {
       "comment" : "Category of an app or site",
       "localizations" : {
@@ -14403,6 +14758,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Währenddessen"
+          }
+        }
+      }
+    },
+    "Earlier this week" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə daha əvvəl"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Woche, etwas früher"
+          }
+        }
+      }
+    },
+    "Earlier today" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün daha əvvəl"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute, etwas früher"
           }
         }
       }
@@ -15486,6 +15873,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokusrate an diesen Tagen in den letzten 4 Wochen."
+          }
+        }
+      }
+    },
+    "Forget my last places" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son yerlərimi unut"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine letzten Orte vergessen"
+          }
+        }
+      }
+    },
+    "Forgotten" : {
+      "comment" : "Your last places were forgotten",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unudulub"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vergessen"
           }
         }
       }
@@ -17672,6 +18092,22 @@
         }
       }
     },
+    "From your last windows" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son pəncərələrinizdən"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus deinen letzten Fenstern"
+          }
+        }
+      }
+    },
     "Full history" : {
       "localizations" : {
         "az" : {
@@ -18992,6 +19428,22 @@
         }
       }
     },
+    "It brings apps to the front and reopens pages. It can't restore unsaved work." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tətbiqləri önə gətirir və səhifələri yenidən açır. Yadda saxlanılmamış işi bərpa edə bilmir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Holt Apps nach vorn und öffnet Seiten wieder. Ungesicherte Arbeit kann es nicht wiederherstellen."
+          }
+        }
+      }
+    },
     "It can only narrow this to today, yesterday, this week or last week." : {
       "localizations" : {
         "az" : {
@@ -19156,6 +19608,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das waren %lld Min. dieser Session."
+          }
+        }
+      }
+    },
+    "It uses the activity FocusGuard already tracks, from the past 7 days, only on this Mac. Private windows and titles you've excluded are left out. Safari doesn't say which of its windows are private, so those can't be left out." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard-ın artıq izlədiyi son 7 günün fəaliyyətindən istifadə edir, yalnız bu Mac-də. Məxfi pəncərələr və istisna etdiyiniz başlıqlar nəzərə alınmır. Safari hansı pəncərələrinin məxfi olduğunu bildirmir, ona görə onları istisna etmək mümkün deyil."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es nutzt die Aktivität, die FocusGuard ohnehin erfasst, aus den letzten 7 Tagen und nur auf diesem Mac. Private Fenster und Titel, die du ausgeschlossen hast, bleiben außen vor. Safari sagt nicht, welche seiner Fenster privat sind, darum lassen die sich nicht ausschließen."
           }
         }
       }
@@ -22171,6 +22639,22 @@
         }
       }
     },
+    "Needs “Calls never count as drift”" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Zənglər heç vaxt yayınma sayılmır” lazımdır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht „Anrufe zählen nie als Ablenkung“"
+          }
+        }
+      }
+    },
     "Network error: %@" : {
       "localizations" : {
         "az" : {
@@ -23481,6 +23965,22 @@
         }
       }
     },
+    "Nothing came back" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç nə geri qayıtmadı"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts ist zurückgekommen"
+          }
+        }
+      }
+    },
     "Nothing distracting in this month. Nice." : {
       "localizations" : {
         "az" : {
@@ -24604,6 +25104,22 @@
         }
       }
     },
+    "Only the last app" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yalnız son tətbiq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die letzte App"
+          }
+        }
+      }
+    },
     "Only this part of the site" : {
       "localizations" : {
         "az" : {
@@ -24728,6 +25244,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub öffnen"
+          }
+        }
+      }
+    },
+    "Open in browser" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brauzerdə aç"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Browser öffnen"
           }
         }
       }
@@ -25360,6 +25892,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pausiert: Die Gratis-Version enthält ein Tageslimit."
+          }
+        }
+      }
+    },
+    "Pick up" : {
+      "comment" : "Button: go back to what you were doing",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Davam et"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weitermachen"
+          }
+        }
+      }
+    },
+    "Pick up %@" : {
+      "comment" : "Button: go back to the place you were at this time",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Davam et · %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weitermachen · %@"
+          }
+        }
+      }
+    },
+    "Pick up where you left off" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qaldığınız yerdən davam edin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Da weitermachen, wo du aufgehört hast"
           }
         }
       }
@@ -26836,6 +27418,22 @@
         }
       }
     },
+    "Private windows are never remembered" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Məxfi pəncərələr heç vaxt yadda saxlanılmır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private Fenster werden nie gemerkt"
+          }
+        }
+      }
+    },
     "Pro" : {
       "shouldTranslate" : false
     },
@@ -27909,6 +28507,38 @@
         }
       }
     },
+    "Resume your session too" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyanı da davam etdirin"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session auch fortsetzen"
+          }
+        }
+      }
+    },
+    "Resume your session too · %lld min left" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyanı da davam etdirin · %lld dəq qalıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session auch fortsetzen · noch %lld Min"
+          }
+        }
+      }
+    },
     "Resumed “%@”." : {
       "localizations" : {
         "az" : {
@@ -28104,6 +28734,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Läuft. Der Rückblick wird am Ende geschrieben."
+          }
+        }
+      }
+    },
+    "Shortcut" : {
+      "comment" : "Settings row: the keyboard shortcut for Pick up",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qısayol"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastenkürzel"
           }
         }
       }
@@ -36087,6 +36734,38 @@
         }
       }
     },
+    "Up to 2 apps" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 tətbiqə qədər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zu 2 Apps"
+          }
+        }
+      }
+    },
+    "Up to 3 apps" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 tətbiqə qədər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zu 3 Apps"
+          }
+        }
+      }
+    },
     "Update checks" : {
       "localizations" : {
         "az" : {
@@ -36748,6 +37427,22 @@
         }
       }
     },
+    "What it keeps" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nə saxlayır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was es behält"
+          }
+        }
+      }
+    },
     "What leaves this Mac" : {
       "localizations" : {
         "az" : {
@@ -37133,6 +37828,22 @@
         }
       }
     },
+    "When you come back to your Mac" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac-a qayıdanda"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du zu deinem Mac zurückkommst"
+          }
+        }
+      }
+    },
     "When you drift" : {
       "localizations" : {
         "az" : {
@@ -37199,6 +37910,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wo du abgeschweift bist"
+          }
+        }
+      }
+    },
+    "Where you left off" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qaldığınız yer"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo du aufgehört hast"
           }
         }
       }
@@ -38180,6 +38907,40 @@
         }
       }
     },
+    "You were in %@" : {
+      "comment" : "A window or app: You were in AuthSession.swift",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son yeriniz: %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du warst in %@"
+          }
+        }
+      }
+    },
+    "You were working on “%@”" : {
+      "comment" : "The goal of the session, in the user's own words",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz “%@” üzərində işləyirdiniz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast an „%@“ gearbeitet"
+          }
+        }
+      }
+    },
     "You'll pick the workspace in your browser." : {
       "localizations" : {
         "az" : {
@@ -38659,6 +39420,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine Fokusrate liegt an jedem Tag bei etwa %@."
+          }
+        }
+      }
+    },
+    "Your goal for this session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sessiya üçün hədəfiniz"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Ziel für diese Session"
+          }
+        }
+      }
+    },
+    "Your last places, newest first" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son yerləriniz, ən yenisi əvvəldə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine letzten Orte, die neuesten zuerst"
+          }
+        }
+      }
+    },
+    "Your session is still running" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyanız hələ davam edir"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Session läuft noch"
           }
         }
       }

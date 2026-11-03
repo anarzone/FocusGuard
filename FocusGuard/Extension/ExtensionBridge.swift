@@ -8,6 +8,9 @@ import SwiftData
 struct ExtensionTab: Equatable {
     let url: String?
     let title: String?
+    /// The extension is allowed in private windows and this is one. Used for
+    /// blocking, never written down.
+    var isPrivate = false
 }
 
 /// The app's end of the browser extension. Browser helpers connect over a
@@ -138,6 +141,12 @@ final class ExtensionBridge {
         Self.pickTab(from: Array(clients.values), browser: bundleId, activatedAt: activatedAt[bundleId])
     }
 
+    /// The page this browser last showed, private windows aside.
+    func lastPage(forBrowser bundleId: String) -> String? {
+        let last = clients.values.filter { $0.browser == bundleId && $0.lastTab != nil }.max { $0.lastTabAt < $1.lastTabAt }?.lastTab
+        return last?.incognito == true ? nil : last?.url
+    }
+
     /// How long after switching to a browser its last page still counts,
     /// while the extension's fresh report is on its way.
     nonisolated static let returnGrace: TimeInterval = 1.5
@@ -151,11 +160,11 @@ final class ExtensionBridge {
         let mine = clients.filter { $0.greeted && $0.browser == browser }
         guard !mine.isEmpty else { return nil }
         if let tab = mine.filter({ $0.tab != nil }).max(by: { $0.tabAt < $1.tabAt })?.tab {
-            return ExtensionTab(url: tab.url, title: tab.title)
+            return ExtensionTab(url: tab.url, title: tab.title, isPrivate: tab.incognito == true)
         }
         if let activatedAt, now.timeIntervalSince(activatedAt) < returnGrace,
            let last = mine.filter({ $0.lastTab != nil }).max(by: { $0.lastTabAt < $1.lastTabAt })?.lastTab {
-            return ExtensionTab(url: last.url, title: last.title)
+            return ExtensionTab(url: last.url, title: last.title, isPrivate: last.incognito == true)
         }
         return ExtensionTab(url: nil, title: nil)
     }

@@ -27,6 +27,10 @@ enum FeatureFlags {
     /// waits for its ID in the build (`SLACK_CLIENT_ID`, `DISCORD_APPLICATION_ID`).
     static let statusSync = true
 
+    /// "Pick up where you left off": the card after a call, a time away or a
+    /// drift, and the menu's last places. Free.
+    static let pickUp = true
+
     /// Any Pro AI feature has shipped: drives general copy about AI (the
     /// upgrade sheet, the Pro pane, the privacy note).
     static var proAI: Bool { smartCategories || debrief || coach || ask || monthlyReview }

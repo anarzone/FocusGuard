@@ -293,6 +293,9 @@ async function describeTab(tab) {
   const own = tab.url?.startsWith(chrome.runtime.getURL(''));
   const web = !own && isWebURL(tab.url || '');
   const report = { url: web ? withoutHostDot(tab.url) : null, title: tab.title || null, tabId: tab.id, windowId: tab.windowId };
+  // Private windows, where the extension's allowed in them: the app blocks
+  // there but writes nothing down.
+  if (tab.incognito) report.incognito = true;
   if (web && state?.plan?.features?.youtubePerVideo && settings.youtubePerVideo && isYouTubeVideo(tab.url)) {
     const video = await readYouTubeVideo(tab);
     if (video) report.video = video;
