@@ -44,8 +44,8 @@ final class DebriefCoordinator {
     @ObservationIgnored private let model: () -> (any OnDeviceModel)?
     /// Whether the switch is on; tests turn it on before it ships.
     @ObservationIgnored var isShipped: Bool = FeatureFlags.debrief
-    /// A goal's verdict changed: from the debrief (false) or the user
-    /// (true). A reminder behind the goal gets ticked off on Done.
+    /// The user said how the goal went. A reminder behind the goal gets
+    /// ticked off on Done.
     @ObservationIgnored var onVerdict: (Session, _ byUser: Bool) -> Void = { _, _ in }
 
     private static let logger = Logger(subsystem: "com.anar.focusguard", category: "debrief")
@@ -125,18 +125,16 @@ final class DebriefCoordinator {
         Task {
             defer { writing.remove(id) }
             do {
-                let draft = DebriefCleanup.tidy(try await DebriefWriter.write(DebriefPrompt(facts: facts), with: model),
-                                                hasGoal: facts.goal != nil)
+                let tidied = DebriefCleanup.tidy(try await DebriefWriter.write(DebriefPrompt(facts: facts), with: model),
+                                                 hasGoal: facts.goal != nil)
+                let draft = DebriefCheck(facts: facts).clean(tidied)
                 guard !session.isDeleted, session.modelContext != nil else { return }
                 session.storedDebrief = draft
-                let verdictSet = session.goalVerdict == nil && draft.verdict != nil
-                if session.goalVerdict == nil { session.goalVerdict = draft.verdict }
                 if draft.project != nil {
                     session.project = ProjectGuess.guess(goal: facts.goal, modelProject: draft.project,
                                                          titles: facts.titles, apps: facts.apps, known: known)
                 }
                 Persistence.save(context)
-                if verdictSet { onVerdict(session, false) }
             } catch {
                 failed.insert(id)
                 Self.logger.error("debrief failed: \(error.localizedDescription, privacy: .public)")
@@ -179,7 +177,7 @@ final class DebriefCoordinator {
         return Persistence.fetch(context, descriptor).first
     }
 
-    /// The user's own call on the goal, over the debrief's.
+    /// The user's own call on the goal.
     func correct(_ session: Session, to verdict: GoalVerdict) {
         guard session.goal != nil else { return }
         session.goalVerdict = verdict

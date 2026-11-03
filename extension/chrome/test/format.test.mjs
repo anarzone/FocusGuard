@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import './chrome-i18n.mjs';
 import {
-  clock, displayHost, goalLabel, hostname, listSummary, minutesLabel, pagePattern, splitPart, tileLetter,
+  clock, displayHost, goalLabel, hostname, listSummary, minutesLabel, pagePattern, splitPart, tileLetter, withoutHostDot,
 } from '../src/lib/format.js';
 
 test('displayHost keeps web hosts and drops www', () => {
@@ -12,6 +12,11 @@ test('displayHost keeps web hosts and drops www', () => {
   assert.equal(displayHost('chrome-extension://abc/pages/block.html'), null);
   assert.equal(displayHost('not a url'), null);
   assert.equal(hostname('https://www.x.com/'), 'www.x.com');
+  assert.equal(hostname('https://x.com./a'), 'x.com');
+  assert.equal(displayHost('https://www.x.com./a'), 'x.com');
+  assert.equal(withoutHostDot('https://x.com./a?b=1#c'), 'https://x.com/a?b=1#c');
+  assert.equal(withoutHostDot('https://x.com/a.'), 'https://x.com/a.');
+  assert.equal(withoutHostDot('not an address'), 'not an address');
 });
 
 test('pagePattern is host and path without query, fragment or trailing slash', () => {

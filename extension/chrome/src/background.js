@@ -14,7 +14,7 @@ import {
   Conn, HOST_NAME, PROTOCOL_VERSION, PageMessage, REQUEST_TIMEOUT_MS,
   connFromDisconnect, requestId,
 } from './lib/protocol.js';
-import { displayHost, hostname, isWebURL, parseFragment, safeWebURL } from './lib/format.js';
+import { hostname, isWebURL, parseFragment, safeWebURL, withoutHostDot } from './lib/format.js';
 import { loadLanguage, t } from './lib/i18n.js';
 import { blockReason, buildRules, hostMatches, rulesKey } from './lib/blocking.js';
 import { passFor, toolbar } from './lib/view.js';
@@ -213,6 +213,7 @@ function setConn(next) {
   }
   if (conn === next && next !== Conn.connected) return;
   conn = next;
+  if (conn !== Conn.connected && conn !== Conn.connecting) settleStateWaiters();
   if (conn !== Conn.connected) applyRules();
   updateToolbar();
   broadcast();
@@ -224,10 +225,33 @@ function setConn(next) {
 async function onState(next) {
   state = next;
   if (conn !== Conn.connected) setConn(Conn.connected);
+  settleStateWaiters();
   await applyRules();
   await enforceOnOpenTabs();
   updateToolbar();
   broadcast();
+}
+
+// A worker that has just woken knows nothing until the app's state comes. A
+// page's button can get here first, and acting on no state leaves the old rules
+// in the way.
+const stateWaiters = new Set();
+
+function stateKnown(timeout = 3000) {
+  if (state || (conn !== Conn.connecting && conn !== Conn.connected)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      stateWaiters.delete(done);
+      resolve();
+    };
+    const timer = setTimeout(done, timeout);
+    stateWaiters.add(done);
+  });
+}
+
+function settleStateWaiters() {
+  for (const done of [...stateWaiters]) done();
 }
 
 function tick() {
@@ -268,7 +292,7 @@ async function doReport(force) {
 async function describeTab(tab) {
   const own = tab.url?.startsWith(chrome.runtime.getURL(''));
   const web = !own && isWebURL(tab.url || '');
-  const report = { url: web ? tab.url : null, title: tab.title || null, tabId: tab.id, windowId: tab.windowId };
+  const report = { url: web ? withoutHostDot(tab.url) : null, title: tab.title || null, tabId: tab.id, windowId: tab.windowId };
   if (web && state?.plan?.features?.youtubePerVideo && settings.youtubePerVideo && isYouTubeVideo(tab.url)) {
     const video = await readYouTubeVideo(tab);
     if (video) report.video = video;
@@ -319,6 +343,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (!change.url.startsWith(BLOCK_PAGE)) forgetPausedTab(tabId);
     enforceOnTab(tab);
   }
+  if (change.status === 'complete' && isWebURL(tab.url || '')) showPillIfPassing(tab);
   if (tab.active && (change.url || change.title || change.status === 'complete')) reportActiveTab();
 });
 chrome.tabs.onRemoved.addListener((tabId) => forgetPausedTab(tabId));
@@ -423,7 +448,17 @@ async function blockingAllowed() {
   return !!state?.plan?.features?.blockInBrowser && conn === Conn.connected && (await chrome.permissions.contains(ALL_SITES));
 }
 
-async function applyRules() {
+// One update at a time: each reads the rules it replaces, so two at once can
+// leave a rule behind that the worker thinks is gone. Each works from the state
+// at its turn, so the last one in line settles it.
+let rulesQueue = Promise.resolve();
+
+function applyRules() {
+  rulesQueue = rulesQueue.then(updateRules, updateRules);
+  return rulesQueue;
+}
+
+async function updateRules() {
   const rules = (await blockingAllowed()) ? buildRules(state, BLOCK_PAGE) : [];
   const key = rulesKey(rules);
   if (key === lastRulesKey) return;
@@ -450,7 +485,19 @@ async function enforceOnTab(tab) {
   if (!tab?.url || !isWebURL(tab.url) || !(await blockingAllowed())) return;
   const reason = blockReason(tab.url, state);
   if (!reason) return;
-  await chrome.tabs.update(tab.id, { url: blockPageURL(tab.url, reason) }).catch(() => {});
+  const url = blockPageURL(tab.url, reason);
+  // From the page itself, to replace its history entry: tabs.update would leave
+  // the blocked address behind, and Back would only block it again.
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      injectImmediately: true,
+      args: [url],
+      func: (to) => location.replace(to),
+    });
+  } catch {
+    await chrome.tabs.update(tab.id, { url }).catch(() => {});
+  }
 }
 
 // After a state change (a session started, a pass ran out, a limit was
@@ -460,6 +507,15 @@ async function enforceOnOpenTabs() {
   if (!(await blockingAllowed())) return;
   const tabs = await chrome.tabs.query({ active: true, url: ['http://*/*', 'https://*/*'] });
   for (const tab of tabs) await enforceOnTab(tab);
+}
+
+// Any page finishing its load on a host with a running pass gets the countdown:
+// the one the pass opened, a redirect, a reload, the next page, another tab.
+async function showPillIfPassing(tab) {
+  await ready;
+  await stateKnown();
+  const pass = passFor(state, hostname(tab.url));
+  if (pass) showPassPill(tab.id, pass.until);
 }
 
 // The in-page countdown while a pass runs (needs site access).
@@ -502,7 +558,7 @@ async function showPassPill(tabId, until) {
       shadow.querySelector('.sub').textContent = text.note;
       button.textContent = text.button;
       button.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'backToWork' }));
-      const host = location.hostname.replace(/^www\./, '');
+      const host = location.hostname.replace(/^www\./, '').replace(/\.+$/, '');
       const tickPill = () => {
         const left = Math.max(0, Math.ceil((untilMs - Date.now()) / 1000));
         main.textContent = text.closes.replace('{host}', host).replace('{time}', `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
@@ -521,6 +577,7 @@ async function showPassPill(tabId, until) {
 async function passThrough(tabId, url) {
   const reply = await request({ type: 'requestPass', host: hostname(url) });
   if (!reply.ok) return reply;
+  await stateKnown();
   // Wait for the state with the pass, so the rules let the page through.
   const until = reply.result?.until;
   if (until && state) {
@@ -530,16 +587,6 @@ async function passThrough(tabId, url) {
     }
     await applyRules();
   }
-  // Listen first: a fast page can finish loading before update() returns.
-  if (until) {
-    const onLoad = (id, change) => {
-      if (id === tabId && change.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(onLoad);
-        showPassPill(tabId, until);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(onLoad);
-  }
   await chrome.tabs.update(tabId, { url });
   return reply;
 }
@@ -547,6 +594,7 @@ async function passThrough(tabId, url) {
 async function forWork(tabId, url) {
   const reply = await request({ type: 'allowForWork', host: hostname(url) });
   if (!reply.ok) return reply;
+  await stateKnown();
   const host = hostname(url);
   if (state && !(state.blocking.allowed || []).includes(host)) {
     state = { ...state, blocking: { ...state.blocking, allowed: [...(state.blocking.allowed || []), host] } };
@@ -666,6 +714,7 @@ async function handlePageMessage(message, sender) {
     case PageMessage.extraTime: {
       const reply = await request({ type: 'requestExtraTime', site: message.site });
       if (!reply.ok) return reply;
+      await stateKnown();
       // Lift the limit's rule before going back, rather than wait for the state.
       if (state) {
         const limits = (state.blocking.limits || []).map((l) => (l.site === message.site ? { ...l, reached: false } : l));

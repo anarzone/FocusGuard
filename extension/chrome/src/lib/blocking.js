@@ -2,14 +2,26 @@
 // declarativeNetRequest rules that keep them from loading. Pure functions of
 // the app's state, so they're tested in Node.
 
-import { displayHost, hostname, splitPart } from './format.js';
+import { displayHost, hostname, splitPart, withoutRootDot } from './format.js';
+
+function bareHost(host) {
+  return withoutRootDot(String(host).toLowerCase()).replace(/^www\./, '');
+}
 
 // A site rule covers the site and its subdomains, like the app's Classifier.
 export function hostMatches(host, site) {
   if (!host || !site) return false;
-  const h = host.toLowerCase().replace(/^www\./, '');
-  const s = site.toLowerCase().replace(/^www\./, '');
+  const h = bareHost(host);
+  const s = bareHost(site);
   return h === s || h.endsWith(`.${s}`);
+}
+
+// The path as a server reads it: /%73horts//abc is /shorts/abc.
+export function plainPath(path) {
+  return path
+    .replace(/%([0-9a-f]{2})/gi, (whole, hex) => (parseInt(hex, 16) < 128 ? String.fromCharCode(parseInt(hex, 16)) : whole))
+    .replace(/\/{2,}/g, '/')
+    .toLowerCase();
 }
 
 // "youtube.com/shorts" covers /shorts and /shorts/abc, not /shortsale.
@@ -19,16 +31,21 @@ export function partMatches(url, pattern) {
   const { host, path } = splitPart(pattern);
   if (!hostMatches(u.hostname, host)) return false;
   if (path === '/') return true;
-  const p = u.pathname.toLowerCase();
+  const p = plainPath(u.pathname);
   return p === path || p.startsWith(`${path}/`);
 }
 
-// A pass or "for work" on one host lets through the rule it hit.
+// A pass or "for work" covers the host it was taken on and that host's
+// subdomains, with or without "www.". It never reaches up: one on m.x.com
+// leaves x.com blocked, and one on x.com covers m.x.com.
+function excusedHosts(state, now) {
+  const passes = (state.blocking?.passes || []).filter((p) => p.until > now).map((p) => p.host);
+  return [...passes, ...(state.blocking?.allowed || [])];
+}
+
 function excused(url, state, now) {
   const host = hostname(url);
-  const passes = (state.blocking?.passes || []).filter((p) => p.until > now).map((p) => p.host);
-  const allowed = state.blocking?.allowed || [];
-  return [...passes, ...allowed].some((h) => hostMatches(host, h) || hostMatches(h, host));
+  return excusedHosts(state, now).some((h) => hostMatches(host, h));
 }
 
 // The Pro features the app says are unlocked.
@@ -66,15 +83,20 @@ export function escapeRegex(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// The scheme, any login (me:pw@x.com is still x.com) and any subdomains.
+const ADDRESS_START = '^https?://([^/?#]*@)?([^/?#@]*\\.)?';
+
 // RE2 for declarativeNetRequest, anchored on the whole address.
 export function siteRegex(site) {
-  return `^https?://([^/?#@]*\\.)?${escapeRegex(site.toLowerCase())}(:[0-9]+)?([/?#].*)?$`;
+  return `${ADDRESS_START}${escapeRegex(site.toLowerCase())}\\.?(:[0-9]+)?([/?#].*)?$`;
 }
 
 export function partRegex(pattern) {
   const { host, path } = splitPart(pattern);
-  const pathPart = path === '/' ? '' : escapeRegex(path);
-  return `^https?://([^/?#@]*\\.)?${escapeRegex(host)}(:[0-9]+)?${pathPart}([/?#].*)?$`;
+  // Doubled slashes too. An escaped path is left to the matchers, which catch
+  // it as the page opens: a rule for every way to escape every letter is too big.
+  const pathPart = path === '/' ? '' : escapeRegex(path).replace(/\//g, '/+');
+  return `${ADDRESS_START}${escapeRegex(host)}\\.?(:[0-9]+)?${pathPart}([/?#].*)?$`;
 }
 
 // The block page, with what was blocked; the original address follows the
@@ -84,32 +106,41 @@ export function blockPageSubstitution(blockPage, kind, target) {
 }
 
 // The session rules for this state: one redirect per blocked site, part or
-// reached limit, minus passes and "for work" sites.
+// reached limit, minus passes and "for work" sites. An excuse on a host inside
+// a blocked site can't remove the site's rule, so it gets an allow rule above it.
+// Limits go above those: nothing excuses a limit.
 export function buildRules(state, blockPage, now = Date.now()) {
   if (!features(state).blockInBrowser) return [];
   const b = state.blocking || {};
-  const passes = (b.passes || []).filter((p) => p.until > now).map((p) => p.host);
-  const excusedHosts = [...passes, ...(b.allowed || [])];
-  const isExcused = (site) => excusedHosts.some((h) => hostMatches(h, site) || hostMatches(site, h));
+  const excuses = excusedHosts(state, now);
+  const isExcused = (site) => excuses.some((h) => hostMatches(site, h));
 
   const rules = [];
-  const add = (kind, target, regexFilter, priority) => {
+  const push = (action, regexFilter, priority) => {
     rules.push({
       id: rules.length + 1,
       priority,
-      action: { type: 'redirect', redirect: { regexSubstitution: blockPageSubstitution(blockPage, kind, target) } },
+      action,
       condition: { regexFilter, resourceTypes: ['main_frame'], isUrlFilterCaseSensitive: false },
     });
   };
+  const add = (kind, target, regexFilter, priority) => {
+    push({ type: 'redirect', redirect: { regexSubstitution: blockPageSubstitution(blockPage, kind, target) } }, regexFilter, priority);
+  };
 
   for (const limit of b.limits || []) {
-    if (limit.reached) add('limit', limit.site, siteRegex(limit.site), 3);
+    if (limit.reached) add('limit', limit.site, siteRegex(limit.site), 4);
   }
   if (sessionBlocking(state)) {
-    for (const part of features(state).partsOfSites ? b.parts || [] : []) {
+    const parts = features(state).partsOfSites ? b.parts || [] : [];
+    const sites = b.sites || [];
+    const blockedHosts = [...parts.map((part) => splitPart(part).host), ...sites];
+    const inside = new Set(excuses.map(bareHost).filter((h) => blockedHosts.some((s) => hostMatches(h, s) && !hostMatches(s, h))));
+    for (const host of inside) push({ type: 'allow' }, siteRegex(host), 3);
+    for (const part of parts) {
       if (!isExcused(splitPart(part).host)) add('part', part, partRegex(part), 2);
     }
-    for (const site of b.sites || []) {
+    for (const site of sites) {
       if (!isExcused(site)) add('site', site, siteRegex(site), 1);
     }
   }

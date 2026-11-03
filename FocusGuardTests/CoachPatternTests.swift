@@ -331,11 +331,11 @@ final class CoachWriterTests: XCTestCase {
     }
 
     func test_keepsTheModelsWordsWhenTheyStickToTheFacts() async {
-        let model = FakeModel(replies: ["headline": "\"Your evenings slip to 61%, while mornings hold at 86%\"",
-                                        "why": "Ending at 25 minutes keeps your evening sessions short enough to stay on track."])
+        let model = FakeModel(replies: ["headline": "\"After 17:00 you run at 61%, and at 86% before noon\"",
+                                        "why": "Ending at 25 minutes keeps sessions after 17:00 short enough to stay on track."])
         let wording = await CoachWriter(model: model).write(draft)
-        XCTAssertEqual(wording.headline, "Your evenings slip to 61%, while mornings hold at 86%.")
-        XCTAssertEqual(wording.why, "Ending at 25 minutes keeps your evening sessions short enough to stay on track.")
+        XCTAssertEqual(wording.headline, "After 17:00 you run at 61%, and at 86% before noon.")
+        XCTAssertEqual(wording.why, "Ending at 25 minutes keeps sessions after 17:00 short enough to stay on track.")
         XCTAssertTrue(wording.onDevice)
     }
 
@@ -362,12 +362,12 @@ final class CoachWriterTests: XCTestCase {
 
     func test_dropsWordsNamingASiteThatIsntInTheFacts() {
         XCTAssertNil(CoachWriter.accept("Your evenings go to youtube.com instead.", allowed: draft.facts, maxLength: 110))
-        XCTAssertNotNil(CoachWriter.accept("Your evenings are where focus slips.", allowed: draft.facts, maxLength: 110))
+        XCTAssertNotNil(CoachWriter.accept("Sessions after 17:00 are where focus slips.", allowed: draft.facts, maxLength: 110))
     }
 
     func test_takesTheFirstLineAndRejectsEmptyOrLongReplies() {
-        XCTAssertEqual(CoachWriter.accept("\n  Mornings are your strong suit\nSecond line", allowed: draft.facts, maxLength: 110),
-                       "Mornings are your strong suit.")
+        XCTAssertEqual(CoachWriter.accept("\n  Before noon is your strong suit\nSecond line", allowed: draft.facts, maxLength: 110),
+                       "Before noon is your strong suit.")
         XCTAssertNil(CoachWriter.accept("   ", allowed: draft.facts, maxLength: 110))
         XCTAssertNil(CoachWriter.accept(String(repeating: "word ", count: 40), allowed: draft.facts, maxLength: 110))
     }

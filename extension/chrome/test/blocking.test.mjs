@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { blockReason, buildRules, hostMatches, partMatches, partRegex, rulesKey, siteRegex } from '../src/lib/blocking.js';
+import { blockReason, buildRules, hostMatches, partMatches, partRegex, plainPath, rulesKey, siteRegex } from '../src/lib/blocking.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/state-focusing.json', import.meta.url)));
 const asOf = fixture.session.asOf;
@@ -14,6 +14,80 @@ test('site rules cover subdomains, not look-alikes', () => {
   assert.ok(hostMatches('old.reddit.com', 'reddit.com'));
   assert.ok(!hostMatches('notx.com', 'x.com'));
   assert.ok(!hostMatches('x.com.evil.net', 'x.com'));
+});
+
+test('a root dot on a host changes nothing', () => {
+  assert.ok(hostMatches('x.com.', 'x.com'));
+  assert.ok(hostMatches('www.x.com.', 'x.com'));
+  assert.ok(partMatches('https://youtube.com./shorts/abc', 'youtube.com/shorts'));
+  assert.deepEqual(blockReason('https://x.com./home', { ...fixture, blocking: { ...fixture.blocking, passes: [] } }, asOf), { kind: 'site', target: 'x.com' });
+  const site = new RegExp(siteRegex('x.com'), 'i');
+  assert.ok(site.test('https://x.com./home'));
+  assert.ok(site.test('https://www.x.com.:8443/'));
+  assert.ok(!site.test('https://x.com.evil.net/'));
+  assert.ok(new RegExp(partRegex('youtube.com/shorts'), 'i').test('https://youtube.com./shorts/abc'));
+});
+
+test('a login in the address changes nothing', () => {
+  const site = new RegExp(siteRegex('x.com'), 'i');
+  assert.ok(site.test('https://me:pw@x.com/'));
+  assert.ok(site.test('https://me@www.x.com/home'));
+  assert.ok(!site.test('https://x.com@evil.net/'), 'there x.com is the login and evil.net the site');
+  assert.ok(new RegExp(partRegex('youtube.com/shorts'), 'i').test('https://me@youtube.com/shorts/a'));
+});
+
+test('a path is read the way a server reads it', () => {
+  assert.equal(plainPath('/%73horts//abc'), '/shorts/abc');
+  assert.equal(plainPath('/%E2%9C%93/100%'), '/%e2%9c%93/100%', 'only plain letters are unescaped, and a stray % is fine');
+  assert.ok(partMatches('https://youtube.com//shorts/abc', 'youtube.com/shorts'));
+  assert.ok(partMatches('https://youtube.com/%73horts/abc', 'youtube.com/shorts'));
+  assert.ok(partMatches('https://youtube.com///Shorts', 'youtube.com/shorts'));
+  assert.ok(!partMatches('https://youtube.com/%73hortsale', 'youtube.com/shorts'));
+  const part = new RegExp(partRegex('youtube.com/shorts'), 'i');
+  assert.ok(part.test('https://youtube.com//shorts/abc'));
+  assert.ok(!part.test('https://youtube.com//shortsale'));
+});
+
+test('a pass or for-work covers its host and below, never above', () => {
+  const session = { ...fixture, blocking: { ...fixture.blocking, sites: ['x.com'], parts: [], passes: [], allowed: [] } };
+  const withExcuse = (excuse) => ({
+    pass: { ...session, blocking: { ...session.blocking, passes: [{ host: excuse, until: asOf + 60_000 }] } },
+    work: { ...session, blocking: { ...session.blocking, allowed: [excuse] } },
+  });
+  for (const state of Object.values(withExcuse('m.x.com'))) {
+    assert.equal(blockReason('https://m.x.com/a', state, asOf), null);
+    assert.equal(blockReason('https://deep.m.x.com/a', state, asOf), null);
+    assert.deepEqual(blockReason('https://x.com/', state, asOf), { kind: 'site', target: 'x.com' });
+    assert.deepEqual(blockReason('https://www.x.com/', state, asOf), { kind: 'site', target: 'x.com' });
+    assert.deepEqual(blockReason('https://other.x.com/', state, asOf), { kind: 'site', target: 'x.com' });
+    const rules = buildRules(state, BLOCK, asOf);
+    assert.deepEqual(rules.map((r) => r.action.type), ['allow', 'redirect']);
+    assert.ok(rules[0].priority > rules[1].priority);
+    assert.ok(new RegExp(rules[0].condition.regexFilter, 'i').test('https://m.x.com/a'));
+    assert.ok(!new RegExp(rules[0].condition.regexFilter, 'i').test('https://x.com/'));
+  }
+  for (const excuse of ['x.com', 'www.x.com']) {
+    for (const state of Object.values(withExcuse(excuse))) {
+      assert.equal(blockReason('https://x.com/', state, asOf), null);
+      assert.equal(blockReason('https://www.x.com/', state, asOf), null);
+      assert.equal(blockReason('https://m.x.com/', state, asOf), null);
+      assert.deepEqual(buildRules(state, BLOCK, asOf), [], 'the whole rule goes');
+    }
+  }
+});
+
+test('an excuse inside a part\'s site opens that host only, and a limit beats any excuse', () => {
+  const session = { ...fixture, blocking: { ...fixture.blocking, sites: [], parts: ['youtube.com/shorts'], allowed: [], passes: [{ host: 'm.youtube.com', until: asOf + 60_000 }] } };
+  assert.equal(blockReason('https://m.youtube.com/shorts/a', session, asOf), null);
+  assert.deepEqual(blockReason('https://www.youtube.com/shorts/a', session, asOf), { kind: 'part', target: 'youtube.com/shorts' });
+  assert.deepEqual(buildRules(session, BLOCK, asOf).map((r) => r.action.type), ['allow', 'redirect']);
+
+  const limited = { ...session, blocking: { ...session.blocking, limits: [{ site: 'youtube.com', minutes: 30, usedSeconds: 1800, reached: true, extraLeft: 0 }] } };
+  const rules = buildRules(limited, BLOCK, asOf);
+  const allow = rules.find((r) => r.action.type === 'allow');
+  const limit = rules.find((r) => r.action.redirect?.regexSubstitution.includes('kind=limit'));
+  assert.ok(limit.priority > allow.priority);
+  assert.deepEqual(blockReason('https://m.youtube.com/', limited, asOf), { kind: 'limit', target: 'youtube.com' });
 });
 
 test('parts of sites match whole path segments', () => {
@@ -63,7 +137,7 @@ test('rules redirect main frames to the block page with the address after #', ()
   assert.equal(rules.length, 5);
   assert.deepEqual(rules.map((r) => r.id), [1, 2, 3, 4, 5]);
   for (const rule of rules) {
-    assert.equal(rule.action.type, 'redirect');
+    assert.equal(rule.action.type, 'redirect', 'github.com is for work but nothing blocks it, so no allow rule');
     assert.deepEqual(rule.condition.resourceTypes, ['main_frame']);
     assert.equal(rule.condition.isUrlFilterCaseSensitive, false);
     assert.match(rule.action.redirect.regexSubstitution, /#\\0$/);

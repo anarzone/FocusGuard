@@ -5,7 +5,8 @@ import Foundation
 ///
 /// Window titles are only taken from apps that aren't opted out, even
 /// when an older event still has one: titles for opted-out apps never
-/// reach the model or the screen.
+/// reach the model or the screen. Nor does a title that reads like an
+/// instruction to the model.
 struct DebriefFacts: Equatable {
     /// One activity event, stripped down to what the debrief reads.
     struct Event: Equatable {
@@ -57,6 +58,8 @@ struct DebriefFacts: Equatable {
     let titles: [Title]
     /// In time order.
     let drifts: [Drift]
+    /// When it was focused, for hours by day.
+    var focusSpans: [DateInterval] = []
 
     static let titleLimit = 15
 
@@ -81,13 +84,16 @@ struct DebriefFacts: Equatable {
         var drifts: [Drift] = []
         var lastDriftEnd: Date?
         var previous: (name: String, title: String?)?
+        var focusSpans: [DateInterval] = []
 
         for event in sorted {
             // Each event covers its first through last 1 Hz sample, as in
             // SessionTimeline, so it stands for its duration plus a second.
             let seconds = max(0, event.end.timeIntervalSince(event.start)) + 1
             switch event.classification {
-            case .focus:       focused += seconds
+            case .focus:
+                focused += seconds
+                focusSpans.append(DateInterval(start: event.start, duration: seconds))
             case .distraction: drifted += seconds
             case .neutral:     other += seconds
             }
@@ -103,7 +109,8 @@ struct DebriefFacts: Equatable {
                 order.append(name)
             }
 
-            let allowedTitle = isOptedOut(event.bundleId) ? nil : Self.clean(event.title)
+            let allowedTitle = isOptedOut(event.bundleId) ? nil
+                : Self.clean(event.title).flatMap { UntrustedText.looksLikeInstruction($0) ? nil : $0 }
             if let title = allowedTitle {
                 let key = "\(name)\u{1}\(title)"
                 if let known = titles[key] {
@@ -138,7 +145,7 @@ struct DebriefFacts: Equatable {
         return DebriefFacts(
             goal: goal.flatMap(Self.clean), start: start, end: end,
             focused: focused, drifted: drifted, other: other,
-            apps: appList, titles: Array(titleList.prefix(titleLimit)), drifts: drifts
+            apps: appList, titles: Array(titleList.prefix(titleLimit)), drifts: drifts, focusSpans: focusSpans
         )
     }
 

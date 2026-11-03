@@ -57,7 +57,7 @@ struct SmartEvidence: Equatable, Sendable {
     /// What it's used next to, most often first: names with their category.
     let alongside: [(name: String, classification: Classification)]
     /// Window or page titles, most time first. Never from an app that's
-    /// opted out of titles.
+    /// opted out of titles, and none that read like an instruction to the model.
     let titles: [String]
 
     var isSite: Bool { host != nil }
@@ -99,7 +99,8 @@ enum SmartEvidenceBuilder {
             if record.inSession { tally.inSession += record.seconds }
             tally.byHour[calendar.component(.hour, from: record.start)] += record.seconds
             tally.categories[record.classification, default: 0] += record.seconds
-            if let title = record.title.map(cleanTitle), !title.isEmpty, !optedOut.contains(record.bundleId) {
+            if let title = record.title.map(cleanTitle), !title.isEmpty, !optedOut.contains(record.bundleId),
+               !UntrustedText.looksLikeInstruction(title) {
                 tally.titles[title, default: 0] += record.seconds
             }
             tallies[key] = tally
@@ -113,7 +114,7 @@ enum SmartEvidenceBuilder {
 
         return tallies.map { key, tally in
             let alongside = tally.neighbours.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(3).compactMap { other -> (String, Classification)? in
-                guard let neighbour = tallies[other.key] else { return nil }
+                guard let neighbour = tallies[other.key], !UntrustedText.looksLikeInstruction(neighbour.name) else { return nil }
                 let category = neighbour.categories.max { $0.value < $1.value }?.key ?? .neutral
                 return (neighbour.name, category)
             }
