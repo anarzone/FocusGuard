@@ -69,12 +69,11 @@ struct FocusRuns: Equatable {
         return FocusRuns(current: current, longest: longest, lastEnded: lastEnded)
     }
 
-    /// Spans from tracked events. Each event covers its first through last
-    /// 1 Hz sample, so it ends one second after `endedAt`.
+    /// Spans from tracked events.
     static func spans(from events: [ActivityEvent]) -> [Span] {
         events.map {
             Span(start: $0.startedAt,
-                 end: $0.endedAt.addingTimeInterval(1),
+                 end: $0.endedAt,
                  classification: $0.classification ?? .neutral)
         }
     }

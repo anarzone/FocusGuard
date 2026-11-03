@@ -349,7 +349,7 @@ enum RuleMatchPreview {
                 matched = event.windowTitle?.localizedCaseInsensitiveContains(pattern.trimmingCharacters(in: .whitespaces)) ?? false
             }
             if matched {
-                seconds += max(0, event.duration) + 1
+                seconds += max(0, event.duration)
                 if !lastMatched { visits += 1 }
             }
             lastMatched = matched

@@ -304,7 +304,7 @@ struct SessionRow: View {
                     iconButton("trash", String(localized: "Delete session"), tint: .red) { confirmingDelete = true }
                 }
             } else {
-                Text("\(Int((summary.focusShare * 100).rounded()))%", comment: "Percentage")
+                Text(summary.hasRate ? String(localized: "\(Int((summary.focusShare * 100).rounded()))%", comment: "Percentage") : "–")
                     .font(.system(size: 13, weight: .semibold).monospacedDigit())
             }
         }

@@ -5,12 +5,11 @@ import XCTest
 final class RingHoverTests: XCTestCase {
     private let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
-    /// An event `seconds` long (stored as one second shorter, the way the
-    /// tracker's 1 Hz samples land), starting `offset` seconds into the session.
+    /// An event `seconds` long, starting `offset` seconds into the session.
     private func event(_ app: String, _ c: Classification, at offset: TimeInterval, _ seconds: TimeInterval,
                        url: String? = nil) -> ActivityEvent {
         let start = t0.addingTimeInterval(offset)
-        let e = ActivityEvent(startedAt: start, endedAt: start.addingTimeInterval(seconds - 1),
+        let e = ActivityEvent(startedAt: start, endedAt: start.addingTimeInterval(seconds),
                               bundleIdentifier: "b.\(app)", appName: app, url: url)
         e.classification = c
         return e

@@ -87,7 +87,7 @@ final class AppsModelTests: XCTestCase {
                     "https://youtube.com/shorts/c"]
         for (i, url) in urls.enumerated() {
             let s = start.addingTimeInterval(Double(i) * 60)
-            context.insert(ActivityEvent(startedAt: s, endedAt: s.addingTimeInterval(59),
+            context.insert(ActivityEvent(startedAt: s, endedAt: s.addingTimeInterval(60),
                                          bundleIdentifier: "com.google.Chrome", appName: "Chrome", url: url))
         }
         Persistence.save(context)

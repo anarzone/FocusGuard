@@ -313,8 +313,6 @@ final class FlowSessionTests: XCTestCase {
         let recap = SessionRecap(session: session, bestZoneToday: 0)
         // The notification for the same session (`presentSessionComplete`).
         let noted = AppState.suggestedBreakMinutes(forSessionMinutes: 120)
-        XCTExpectFailure("Bug: SessionRecap.nextSessionMinutes uses planned ?? 25, so a two-hour open session gets a 5-minute break in the menu and 20 in the notification") {
-            XCTAssertEqual(recap.suggestedBreakMinutes, noted)
-        }
+        XCTAssertEqual(recap.suggestedBreakMinutes, noted)
     }
 }

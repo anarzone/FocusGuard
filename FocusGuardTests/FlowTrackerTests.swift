@@ -181,7 +181,8 @@ final class FlowTrackerTests: XCTestCase {
     private func tickLimits(_ rig: Rig, _ engine: DailyLimitsEngine, _ front: FrontmostApp, _ now: Date) {
         rig.tracker.record(front, now: now)
         engine.observe(snapshot: rig.tracker.currentSnapshot,
-                       counting: !rig.tracker.isFrontmostSelf && !rig.tracker.isAway, now: now)
+                       counting: !rig.tracker.isFrontmostSelf && !rig.tracker.isAway,
+                       awaySince: rig.tracker.isAway ? rig.tracker.lastActiveAt : nil, now: now)
     }
 
     func testALimitsCountMatchesTheEventsThroughSwitches() throws {
@@ -204,8 +205,7 @@ final class FlowTrackerTests: XCTestCase {
     }
 
     /// Away is only known after five quiet minutes. The tracker takes those
-    /// back (the event ends at the last input); the limit has already
-    /// counted them, tick by tick, and keeps them until a relaunch.
+    /// back (the event ends at the last input), and so does the limit.
     func testALimitDoesntCountTheQuietMinutesBeforeAway() throws {
         let rig = try Rig()
         let start = Calendar.fixed("UTC").at(2026, 11, 2, 10)
@@ -219,8 +219,6 @@ final class FlowTrackerTests: XCTestCase {
         }
         XCTAssertTrue(rig.tracker.isAway)
         XCTAssertEqual(rig.events().reduce(0) { $0 + $1.duration }, 60, accuracy: 1, "the record stops at the last input")
-        XCTExpectFailure("Bug: DailyLimitsEngine.observe counts every tick until the tracker says away, so five idle minutes on a limited site eat the allowance, and the figure changes on the next relaunch, which reads the events") {
-            XCTAssertEqual(engine.status(for: limit.id)?.used ?? 0, 60, accuracy: 2)
-        }
+        XCTAssertEqual(engine.status(for: limit.id)?.used ?? 0, 60, accuracy: 2)
     }
 }

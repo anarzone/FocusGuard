@@ -138,7 +138,7 @@ enum ReportDataBuilder {
         for event in events {
             let kind = SessionTimeline.Kind(event.classification ?? .neutral)
             let s = max(event.startedAt, start)
-            let e = min(event.endedAt.addingTimeInterval(1), end)
+            let e = min(event.endedAt, end)
             guard e > s else { continue }
 
             while firstBucket < buckets.count, buckets[firstBucket].interval.end <= s { firstBucket += 1 }
@@ -300,7 +300,8 @@ enum ReportDataBuilder {
         var out: [ReportBucket] = []
         var cursor = start
         while cursor < end {
-            let next = calendar.date(byAdding: unit, value: 1, to: cursor) ?? end
+            let next = unit == .day ? calendar.startOfDay(1, from: cursor)
+                : calendar.date(byAdding: unit, value: 1, to: cursor) ?? end
             let label: String
             switch period {
             case .day:   label = cursor.formatted(.dateTime.hour())

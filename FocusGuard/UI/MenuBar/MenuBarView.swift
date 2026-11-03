@@ -381,7 +381,7 @@ struct MenuBarView: View {
                 ) {
                     ringCenter(session: session, elapsed: elapsed, isPaused: isPaused)
                 }
-                RingLegend(trailing: timeline.focusCells + timeline.driftCells > 0
+                RingLegend(trailing: timeline.hasFocusRate
                            ? String(localized: "\(timeline.focusPercent)% focus rate") : nil)
             }
             .padding(.top, 2)
@@ -472,7 +472,7 @@ struct MenuBarView: View {
                                             events: recap.session.events)
                 }) {
                     VStack(spacing: 0) {
-                        Text("\(timeline.focusPercent)%", comment: "Percentage")
+                        Text(timeline.knownFocusPercent.map { String(localized: "\($0)%", comment: "Percentage") } ?? "–")
                             .font(.system(size: 40, weight: .semibold).monospacedDigit())
                             .kerning(-1.2)
                         Text("focus rate")

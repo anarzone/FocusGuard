@@ -32,6 +32,8 @@ struct SessionSummary: Identifiable {
     let plannedMinutes: Int?
     /// The session's focus rate, 0...1 (see `FocusRate`).
     let focusShare: Double
+    /// Anything to judge the rate on: time only in other apps shows "–", not 0%.
+    var hasRate = true
 
     var isRunning: Bool { end == nil }
 }
@@ -110,7 +112,7 @@ enum MenuInsightsBuilder {
     static func day(_ date: Date, context: ModelContext, now: Date = .now, calendar: Calendar = .current,
                     prior knownPrior: [DailyBreakdown]? = nil) -> TodayInsights {
         let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let dayEnd = calendar.startOfDay(1, from: dayStart)
         let until = min(now, dayEnd)
         let reports = ReportBuilder(context: context)
         let breakdown = reports.breakdown(from: dayStart, to: until)
@@ -385,6 +387,11 @@ enum MenuInsightsBuilder {
                                              seconds: tab.seconds, classification: tab.classification))
                     }
                 }
+                // Real time, though no site to put it under.
+                if app.noPageSeconds >= 1 {
+                    rows.append(UsageRow(id: app.bundleId, name: app.name, bundleId: app.bundleId, host: nil,
+                                         seconds: app.noPageSeconds, classification: app.noPageClassification))
+                }
             }
         }
         return Array(rows.sorted { $0.seconds > $1.seconds }.prefix(limit))
@@ -393,7 +400,7 @@ enum MenuInsightsBuilder {
     static func summary(for session: Session, now: Date) -> SessionSummary {
         var focus: TimeInterval = 0, drift: TimeInterval = 0
         for event in session.events {
-            let seconds = max(0, event.duration) + 1
+            let seconds = max(0, event.duration)
             switch event.classification {
             case .focus: focus += seconds
             case .distraction: drift += seconds
@@ -410,7 +417,8 @@ enum MenuInsightsBuilder {
             end: end,
             minutes: Int(running / 60),
             plannedMinutes: session.plannedDurationMinutes,
-            focusShare: FocusRate.of(focused: focus, drifted: drift)
+            focusShare: FocusRate.of(focused: focus, drifted: drift),
+            hasRate: focus + drift > 0
         )
     }
 
@@ -420,7 +428,7 @@ enum MenuInsightsBuilder {
         var spans: [DaySpan] = []
         for event in events {
             let start = max(event.startedAt, dayStart)
-            let end = event.endedAt.addingTimeInterval(1)
+            let end = event.endedAt
             guard end > start else { continue }
             let kind = SessionTimeline.Kind(event.classification ?? .neutral)
             if let last = spans.last, last.kind == kind, start.timeIntervalSince(last.end) < 60 {

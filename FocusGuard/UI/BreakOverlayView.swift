@@ -4,10 +4,14 @@ import SwiftUI
 struct FinishedSession: Equatable {
     let name: String
     let minutes: Int
-    let focusPercent: Int
+    /// Nil with nothing to judge a rate on.
+    let focusPercent: Int?
 
     /// "· 50 min · 92% focused"
-    var detail: String { String(localized: "· \(minutes) min · \(focusPercent)% focused", comment: "Follows the session's name; compact minutes") }
+    var detail: String {
+        guard let focusPercent else { return String(localized: "· \(minutes) min", comment: "Follows the session's name; compact minutes") }
+        return String(localized: "· \(minutes) min · \(focusPercent)% focused", comment: "Follows the session's name; compact minutes")
+    }
 }
 
 /// Calm full-screen view shown when a break starts, the opposite of the

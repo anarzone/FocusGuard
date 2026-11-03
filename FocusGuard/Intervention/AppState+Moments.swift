@@ -41,7 +41,7 @@ extension AppState {
     func finishedSessionForBreak(now: Date = .now) -> FinishedSession? {
         guard let ended = lastEndedSession(within: 30 * 60, now: now) else { return nil }
         return FinishedSession(name: ended.session.displayName, minutes: max(1, Int((ended.running / 60).rounded())),
-                               focusPercent: ended.timeline.focusPercent)
+                               focusPercent: ended.timeline.knownFocusPercent)
     }
 
     /// The session that just ended, for the paused tab's "session over" page.
@@ -53,7 +53,7 @@ extension AppState {
             name: ended.session.displayName, isAutomaticName: ended.session.label == nil,
             startedAt: ended.session.startedAt, endedAt: endedAt,
             focusMinutes: timeline.focusCells * m, driftMinutes: timeline.driftCells * m,
-            otherMinutes: timeline.otherCells * m, focusPercent: timeline.focusPercent
+            otherMinutes: timeline.otherCells * m, focusPercent: timeline.knownFocusPercent
         )
     }
 

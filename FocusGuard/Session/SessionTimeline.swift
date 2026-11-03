@@ -24,6 +24,9 @@ struct SessionTimeline: Equatable {
 
     let cells: [Cell]
     let minutesPerCell: Int
+    /// The tracked seconds behind the cells, for the focus rate.
+    var focusedSeconds: TimeInterval = 0
+    var driftedSeconds: TimeInterval = 0
 
     // MARK: - Stats (classified cells only — `now` and `future` excluded)
 
@@ -32,10 +35,21 @@ struct SessionTimeline: Equatable {
     var otherCells: Int { cells.filter { $0 == .other }.count }
     var classifiedCells: Int { focusCells + driftCells + otherCells }
 
-    /// The focus rate in whole percent: other cells don't count.
+    /// The focus rate in whole percent, focused ÷ (focused + drifted), other
+    /// time left out. A cell goes to whatever was most of its minute, so they
+    /// can't say: 40 s of focus and 20 s of drift, every minute, is 67%, not 100%.
     var focusPercent: Int {
-        FocusRate.percent(focused: Double(focusCells), drifted: Double(driftCells))
+        guard focusedSeconds + driftedSeconds > 0 else {
+            return FocusRate.percent(focused: Double(focusCells), drifted: Double(driftCells))
+        }
+        return FocusRate.percent(focused: focusedSeconds, drifted: driftedSeconds)
     }
+
+    /// Anything to judge the rate on: time only in other apps shows "–", not 0%.
+    var hasFocusRate: Bool { focusedSeconds + driftedSeconds > 0 || focusCells + driftCells > 0 }
+
+    /// `focusPercent`, or nil with nothing to judge it on.
+    var knownFocusPercent: Int? { hasFocusRate ? focusPercent : nil }
 
     var longestFocusRunMinutes: Int {
         var best = 0, run = 0
@@ -88,7 +102,11 @@ struct SessionTimeline: Equatable {
             cells.append(.now(current))
         }
         while cells.count < cellCount { cells.append(.future) }
-        return SessionTimeline(cells: cells, minutesPerCell: minutesPerCell)
+        func seconds(_ kind: Classification) -> TimeInterval {
+            segments.reduce(0) { $0 + ($1.classification == kind ? max(0, $1.seconds) : 0) }
+        }
+        return SessionTimeline(cells: cells, minutesPerCell: minutesPerCell,
+                               focusedSeconds: seconds(.focus), driftedSeconds: seconds(.distraction))
     }
 
     /// Spreads tracked time evenly across `count` cells and gives each cell
@@ -137,12 +155,11 @@ struct SessionTimeline: Equatable {
 }
 
 extension SessionTimeline {
-    /// Segments from a session's events, in order. Each event covers its
-    /// first through last 1 Hz sample, so it stands for `duration + 1` seconds.
+    /// Segments from a session's events, in order.
     static func segments(from events: [ActivityEvent]) -> [Segment] {
         events
             .sorted { $0.startedAt < $1.startedAt }
-            .map { Segment(classification: $0.classification ?? .neutral, seconds: max(0, $0.duration) + 1) }
+            .map { Segment(classification: $0.classification ?? .neutral, seconds: max(0, $0.duration)) }
     }
 
     /// The site (or app) the user drifted to most, with total seconds.
@@ -151,7 +168,7 @@ extension SessionTimeline {
         for event in events where event.classification == .distraction {
             let host = event.url.flatMap { URL(string: $0)?.host }
                 .map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
-            totals[host ?? event.appName, default: 0] += max(0, event.duration) + 1
+            totals[host ?? event.appName, default: 0] += max(0, event.duration)
         }
         return totals.max { $0.value < $1.value }.map { (name: $0.key, seconds: $0.value) }
     }
@@ -260,7 +277,7 @@ extension SessionTimeline {
     static func stretch(cells: Range<Int>, kind: Kind, in timeline: SessionTimeline,
                         events: [ActivityEvent], now: Date = .now) -> Stretch? {
         let sorted = events.sorted { $0.startedAt < $1.startedAt }
-        let lengths = sorted.map { max(0, $0.duration) + 1 }
+        let lengths = sorted.map { max(0, $0.duration) }
         let total = lengths.reduce(0, +)
         let done = timeline.classifiedCells
         guard total > 0, !cells.isEmpty else { return nil }

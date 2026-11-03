@@ -45,9 +45,9 @@ final class FocusRateTests: XCTestCase {
         let start = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: .now)!
         let session = Session(startedAt: start)
         context.insert(session)
-        for (offset, seconds, classification) in [(0.0, 299.0, Classification.focus),
-                                                  (300, 99, .distraction),
-                                                  (400, 599, .neutral)] {
+        for (offset, seconds, classification) in [(0.0, 300.0, Classification.focus),
+                                                  (300, 100, .distraction),
+                                                  (400, 600, .neutral)] {
             let event = ActivityEvent(startedAt: start.addingTimeInterval(offset),
                                       endedAt: start.addingTimeInterval(offset + seconds),
                                       bundleIdentifier: "com.apple.dt.Xcode", appName: "Xcode", session: session)

@@ -149,7 +149,8 @@ final class AppState {
             // Daily limits count all day, sessions and breaks included, and
             // go first so a used-up limit can't be passed as a drift.
             self?.limits.observe(snapshot: tracker?.currentSnapshot,
-                                 counting: tracker?.isFrontmostSelf == false && tracker?.isAway == false)
+                                 counting: tracker?.isFrontmostSelf == false && tracker?.isAway == false,
+                                 awaySince: tracker?.isAway == true ? tracker?.lastActiveAt : nil)
             if let snap = tracker?.currentSnapshot {
                 let inActiveSession = manager?.currentSession != nil
                     && manager?.currentSession?.pausedAt == nil
@@ -387,7 +388,7 @@ final class AppState {
             return cachedWeekBreakdowns
         }
         let calendar = Calendar.current
-        let endOfToday = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now)) ?? .now
+        let endOfToday = calendar.startOfDay(1, from: .now)
         let from = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: .now)) ?? .now
         let result = ReportBuilder(context: container.mainContext)
             .dailyBreakdowns(from: from, to: endOfToday)
@@ -406,7 +407,7 @@ final class AppState {
         for offset in (0..<7).reversed() {
             let day = calendar.date(byAdding: .day, value: -offset, to: .now) ?? .now
             let dayStart = calendar.startOfDay(for: day)
-            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+            let dayEnd = calendar.startOfDay(1, from: dayStart)
             let descriptor = FetchDescriptor<ActivityEvent>(
                 predicate: #Predicate { $0.endedAt >= dayStart && $0.startedAt < dayEnd }
             )
@@ -449,7 +450,7 @@ final class AppState {
         for offset in 1...6 {  // exclude today
             let day = calendar.date(byAdding: .day, value: -offset, to: .now) ?? .now
             let dayStart = calendar.startOfDay(for: day)
-            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+            let dayEnd = calendar.startOfDay(1, from: dayStart)
             let focusRaw = Classification.focus.rawValue
             let descriptor = FetchDescriptor<ActivityEvent>(
                 predicate: #Predicate {
