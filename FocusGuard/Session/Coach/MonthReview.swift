@@ -59,7 +59,8 @@ struct MonthFacts: Equatable, Sendable {
         guard now.focus + now.drift >= 3600 else { return nil }
         let name = monthName(month.interval.start, locale: locale, calendar: calendar)
         let previous = monthName(before.interval.start, locale: locale, calendar: calendar)
-        let compares = then.focus + then.drift >= 3600
+        // Two days of September aren't September.
+        let compares = then.focus + then.drift >= 3600 && comparable(month, before, calendar: calendar)
 
         let rate = FocusRate.of(focused: now.focus, drifted: now.drift)
         let moved = compares ? Int((rate * 100).rounded()) - Int((FocusRate.of(focused: then.focus, drifted: then.drift) * 100).rounded()) : 0
@@ -70,8 +71,11 @@ struct MonthFacts: Equatable, Sendable {
         if compares {
             changes += partChanges(month, before: before, locale: locale, calendar: calendar)
             if let sessions = sessionChange(month, before: before) { changes.append(sessions) }
+            // Per day worked, or February loses to January for being short.
+            let perDayNow = now.focus / activeDays(month, calendar: calendar)
+            let perDayThen = then.focus / activeDays(before, calendar: calendar)
             let delta = now.focus - then.focus
-            if abs(delta) >= 30 * 60 {
+            if abs(perDayNow - perDayThen) >= max(10 * 60, perDayThen * 0.1), (perDayNow > perDayThen) == (delta > 0) {
                 let current = CoachDraft.duration(now.focus), earlier = CoachDraft.duration(then.focus)
                 changes.append(delta > 0
                     ? CoachPoint(String(localized: "More focus overall.| \(current), up from \(earlier).", comment: "The | ends the bold start"), tone: .focus)
@@ -80,10 +84,22 @@ struct MonthFacts: Equatable, Sendable {
         } else if let best = bestPart(month, locale: locale, calendar: calendar) {
             changes.append(best)
         }
-        if let top = topDistraction(month, before: compares ? before : nil, previous: previous) {
+        if let top = topDistraction(month, before: compares ? before : nil, name: name, previous: previous) {
             changes.append(top)
         }
         return MonthFacts(headline: headline, changes: Array(changes.prefix(3)))
+    }
+
+    /// Whether the months had a similar number of days worked: the shorter at
+    /// least half the longer, and at least 5.
+    static func comparable(_ month: CoachData, _ before: CoachData, calendar: Calendar) -> Bool {
+        let a = activeDays(month, calendar: calendar), b = activeDays(before, calendar: calendar)
+        return min(a, b) >= 5 && min(a, b) * 2 >= max(a, b)
+    }
+
+    /// Days with half an hour or more tracked.
+    private static func activeDays(_ data: CoachData, calendar: Calendar) -> Double {
+        max(1, Double(data.trackedByDay(calendar: calendar).values.filter { $0 >= 30 * 60 }.count))
     }
 
     /// One whole sentence per case, since "a"/"an" and the comparison both
@@ -155,7 +171,9 @@ struct MonthFacts: Equatable, Sendable {
         if let down = moved.min(by: { $0.change < $1.change }), down.change <= -0.05 {
             let name = partsName(down.hours)
             let phrase = down.hours.phrase(locale: locale, calendar: calendar)
-            let more = down.now.drift - down.then.drift
+            // Per day worked: a longer month has more of everything.
+            let days = activeDays(month, calendar: calendar) / activeDays(before, calendar: calendar)
+            let more = down.now.drift - down.then.drift * days
             let sentence: String
             if more >= 15 * 60 {
                 let extra = CoachDraft.duration(more)
@@ -219,7 +237,7 @@ struct MonthFacts: Equatable, Sendable {
     }
 
     /// The month's top distraction, with its time the month before.
-    static func topDistraction(_ month: CoachData, before: CoachData?, previous: String) -> CoachPoint? {
+    static func topDistraction(_ month: CoachData, before: CoachData?, name monthName: String, previous: String) -> CoachPoint? {
         let drift = month.events.filter { $0.kind == .distraction }
         let byTarget = Dictionary(grouping: drift, by: \.target).mapValues { $0.reduce(0) { $0 + $1.duration } }
         guard let top = byTarget.max(by: { ($0.value, $1.key) < ($1.value, $0.key) }), top.value >= 30 * 60,
@@ -230,11 +248,11 @@ struct MonthFacts: Equatable, Sendable {
         let time = CoachDraft.duration(top.value)
         if earlier >= 60 {
             let then = CoachDraft.duration(earlier)
-            return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) this month, against \(then) in \(previous).",
-                                     comment: "An app or site, two compact durations, then a month: September. The | ends the bold start"), tone: .drift)
+            return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) in \(monthName), against \(then) in \(previous).",
+                                     comment: "An app or site, a compact duration, a month, a compact duration, a month: 3h in October, against 2h in September. The | ends the bold start"), tone: .drift)
         }
-        return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) this month.",
-                                 comment: "An app or site, then a compact duration. The | ends the bold start"), tone: .drift)
+        return CoachPoint(String(localized: "\(name) was your top distraction.| \(time) in \(monthName).",
+                                 comment: "An app or site, a compact duration, a month. The | ends the bold start"), tone: .drift)
     }
 
     // MARK: - Words

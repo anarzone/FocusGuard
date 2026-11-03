@@ -2246,48 +2246,36 @@
         }
       }
     },
-    "%@ was your top distraction.| %@ this month, against %@ in %@." : {
-      "comment" : "An app or site, two compact durations, then a month: September. The | ends the bold start",
+    "%@ was your top distraction.| %@ in %@, against %@ in %@." : {
+      "comment" : "An app or site, a compact duration, a month, a compact duration, a month: 3h in October, against 2h in September. The | ends the bold start",
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ əsas yayınmanız oldu.| Bu ay %2$@, %4$@ ayında isə %3$@."
+            "value" : "%1$@ sizi ən çox yayındırıb.| %2$@ %3$@ ayında, %4$@ isə %5$@ ayında."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ war deine größte Ablenkung.| %@ diesen Monat, gegenüber %@ im %@."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ was your top distraction.| %2$@ this month, against %3$@ in %4$@."
+            "value" : "%1$@ hat dich am meisten abgelenkt.| %2$@ im %3$@, gegenüber %4$@ im %5$@."
           }
         }
       }
     },
-    "%@ was your top distraction.| %@ this month." : {
-      "comment" : "An app or site, then a compact duration. The | ends the bold start",
+    "%@ was your top distraction.| %@ in %@." : {
+      "comment" : "An app or site, a compact duration, a month. The | ends the bold start",
       "localizations" : {
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ əsas yayınmanız oldu.| Bu ay %@."
+            "value" : "%1$@ sizi ən çox yayındırıb.| %2$@ %3$@ ayında."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ war deine größte Ablenkung.| %@ diesen Monat."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ was your top distraction.| %2$@ this month."
+            "value" : "%1$@ hat dich am meisten abgelenkt.| %2$@ im %3$@."
           }
         }
       }
@@ -23329,6 +23317,38 @@
         }
       }
     },
+    "No one pattern stood out, but your focus rate was only %@." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç bir qanunauyğunluq seçilmədi, amma fokus dərəcəniz cəmi %@ olub."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein einzelnes Muster stach heraus, aber deine Fokusrate lag nur bei %@."
+          }
+        }
+      }
+    },
+    "No pattern stood out last week." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keçən həftə heç bir qanunauyğunluq seçilmədi."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte Woche stach kein Muster heraus."
+          }
+        }
+      }
+    },
     "No playlists in your library yet." : {
       "localizations" : {
         "az" : {
@@ -25531,6 +25551,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Andere Tage:| %@."
+          }
+        }
+      }
+    },
+    "Other days:| no changes like these." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digər günlərdə:| belə dəyişikliklər olmayıb."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An anderen Tagen:| keine solchen Wechsel."
           }
         }
       }
@@ -35502,6 +35538,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zu wenig für eine Aussage."
+          }
+        }
+      }
+    },
+    "Too little tracked last week to see a pattern." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keçən həftə qanunauyğunluq görmək üçün çox az məlumat izlənilib."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte Woche zu wenig erfasst, um ein Muster zu sehen."
           }
         }
       }

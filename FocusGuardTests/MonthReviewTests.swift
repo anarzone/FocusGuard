@@ -55,7 +55,7 @@ final class MonthReviewTests: XCTestCase {
         XCTAssertEqual(facts.headline, "October: 13h 20m focused at an 80% focus rate.")
         XCTAssertEqual(facts.changes.map(\.sentence), [
             "Mornings were your strongest. Before noon ran at 90%.",
-            "youtube.com was your top distraction. 2h 30m this month.",
+            "youtube.com was your top distraction. 2h 30m in October.",
         ])
     }
 

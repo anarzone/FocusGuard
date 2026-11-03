@@ -118,9 +118,16 @@ struct EveningTip: Equatable {
     let slot: Date
     /// "Plan it for 15:00", "Plan tomorrow".
     let button: String
+    /// What it's about, to not say the same thing again evening after evening.
+    var topic = ""
+
+    /// Evenings a tip on the same topic stays away after being shown.
+    static let quietEvenings = 3
 
     /// The first rule that has something to say. A missed goal looks at
-    /// today's drift first; a met one at how the day started.
+    /// today's drift first; a met one at how the day started. Nothing for a
+    /// day that isn't counted (a weekend, unless it counts), and nothing on a
+    /// topic in `shown`, what the last evenings said.
     /// - Parameters:
     ///   - today: today so far.
     ///   - recent: the last two weeks, today included.
@@ -130,47 +137,58 @@ struct EveningTip: Equatable {
     ///   - morningHour: when the morning plan starts going out; a first
     ///     session an hour after it counts as late.
     static func choose(today: CoachData, recent: CoachData, gapMinutes: Int, tomorrowStart: Date?,
-                       sessionMinutes: Int, morningHour: Int, now: Date,
+                       sessionMinutes: Int, morningHour: Int, now: Date, weekendsCount: Bool = false, shown: Set<String> = [],
                        locale: Locale = .current, calendar: Calendar = .current) -> EveningTip? {
+        if !weekendsCount, let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDateInWeekend(tomorrow) {
+            return nil
+        }
         let goalMet = gapMinutes <= 0
         if !goalMet, let tip = driftHour(today: today, gapMinutes: gapMinutes, sessionMinutes: sessionMinutes,
-                                         now: now, locale: locale, calendar: calendar) {
+                                         now: now, locale: locale, calendar: calendar), !shown.contains(tip.topic) {
             return tip
         }
         if let tip = startEarlier(today: today, recent: recent, goalMet: goalMet, morningHour: morningHour,
-                                  tomorrowStart: tomorrowStart, now: now, locale: locale, calendar: calendar) {
+                                  tomorrowStart: tomorrowStart, now: now, locale: locale, calendar: calendar), !shown.contains(tip.topic) {
             return tip
         }
         guard let tomorrowStart else { return nil }
         let clock = HabitFormat.time(tomorrowStart, locale: locale, calendar: calendar)
+        let topic = "start|\(calendar.component(.hour, from: tomorrowStart))"
+        guard !shown.contains(topic) else { return nil }
         return EveningTip(kind: .bestStart, text: String(localized: "Best time to start tomorrow: \(clock)."),
-                          slot: tomorrowStart, button: String(localized: "Plan it for \(clock)"))
+                          slot: tomorrowStart, button: String(localized: "Plan it for \(clock)"), topic: topic)
     }
 
-    /// The hour (07:00 to 19:00) today's drift peaked in, when one
-    /// distraction took 20 minutes or more from then on.
+    /// The two hours (from 07:00, up to 19:00) today's drift peaked in, when
+    /// one distraction took 20 minutes or more of them: a session then is
+    /// what would have stopped it. Not drift long after work ended.
     static func driftHour(today: CoachData, gapMinutes: Int, sessionMinutes: Int, now: Date,
                           locale: Locale = .current, calendar: Calendar = .current) -> EveningTip? {
         let drift = today.events.filter { $0.kind == .distraction }
         var byHour = [TimeInterval](repeating: 0, count: 24)
         for event in drift { byHour[calendar.component(.hour, from: event.start)] += event.duration }
-        guard let hour = (7..<HabitSchedule.dayEndHour).max(by: { (byHour[$0], $1) < (byHour[$1], $0) }),
-              byHour[hour] >= 10 * 60,
-              let from = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: now) else { return nil }
-        let after = drift.filter { $0.start >= from }
+        func twoHours(_ hour: Int) -> TimeInterval { byHour[hour] + byHour[hour + 1] }
+        // On a tie, the window that starts with the drift, not the hour before it.
+        guard let hour = (7..<HabitSchedule.dayEndHour).max(by: { (twoHours($0), byHour[$0], $1) < (twoHours($1), byHour[$1], $0) }),
+              twoHours(hour) >= 10 * 60 else { return nil }
+        // Work over for the day: tomorrow's session then would be a new habit, not a fix.
+        let lastSession = today.sessions.map { calendar.component(.hour, from: $0.end) }.max() ?? 17
+        guard hour < max(17, lastSession + 2) else { return nil }
+        let inWindow = drift.filter { (hour...(hour + 1)).contains(calendar.component(.hour, from: $0.start)) }
+        let after = inWindow
         let byTarget = Dictionary(grouping: after, by: \.target).mapValues { $0.reduce(0) { $0 + $1.duration } }
         guard let top = byTarget.max(by: { ($0.value, $1.key) < ($1.value, $0.key) }), top.value >= 20 * 60,
               let name = after.first(where: { $0.target == top.key })?.name,
               let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)),
               let slot = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: tomorrow) else { return nil }
         let clock = HabitFormat.time(slot, locale: locale, calendar: calendar)
-        let lead = top.value * 2 >= TimeInterval(gapMinutes * 60)
+        let lead = top.value * 2 > TimeInterval(gapMinutes * 60)
             ? String(localized: "Most of the gap was \(name) after \(clock).")
             : String(localized: "\(name) took \(HabitFormat.amount(minutes: Int(top.value / 60))) after \(clock).")
         let plan = String(localized: "Tomorrow, a \(sessionMinutes)-minute session at \(clock) holds that hour.")
         return EveningTip(kind: .driftHour,
                           text: "\(lead) \(plan)",
-                          slot: slot, button: String(localized: "Plan it for \(clock)"))
+                          slot: slot, button: String(localized: "Plan it for \(clock)"), topic: "drift|\(top.key)|\(hour)")
     }
 
     /// The coach's late starts over `recent`. On a missed day only when
@@ -197,6 +215,28 @@ struct EveningTip: Equatable {
                           slot: slot,
                           button: goalMet
                             ? String(localized: "Plan tomorrow")
-                            : String(localized: "Plan it for \(HabitFormat.time(slot, locale: locale, calendar: calendar))"))
+                            : String(localized: "Plan it for \(HabitFormat.time(slot, locale: locale, calendar: calendar))"),
+                         topic: "earlier")
+    }
+}
+
+/// What the wrap-up's tip said lately, so it isn't the same every evening.
+enum EveningTipMemory {
+    static let key = "habits.eveningTipsShown"
+
+    /// Topics shown in the last `EveningTip.quietEvenings` evenings.
+    static func recent(_ defaults: UserDefaults = .standard, now: Date = .now) -> Set<String> {
+        let shown = defaults.dictionary(forKey: key) as? [String: Double] ?? [:]
+        let since = now.timeIntervalSinceReferenceDate - TimeInterval(EveningTip.quietEvenings) * 86_400
+        return Set(shown.filter { $0.value > since }.keys)
+    }
+
+    static func remember(_ tip: EveningTip, _ defaults: UserDefaults = .standard, now: Date = .now) {
+        guard !tip.topic.isEmpty else { return }
+        var shown = defaults.dictionary(forKey: key) as? [String: Double] ?? [:]
+        let since = now.timeIntervalSinceReferenceDate - TimeInterval(EveningTip.quietEvenings) * 86_400
+        shown = shown.filter { $0.value > since }
+        shown[tip.topic] = now.timeIntervalSinceReferenceDate
+        defaults.set(shown, forKey: key)
     }
 }
