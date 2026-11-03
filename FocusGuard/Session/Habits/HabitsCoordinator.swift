@@ -270,7 +270,10 @@ final class HabitsCoordinator {
             ? Int((FocusRate.of(focused: tally.focus, drifted: tally.drift) * 100).rounded()) : nil
         tipped.tip = EveningTip.choose(today: today, recent: recent, gapMinutes: wrapUp.goalMinutes - wrapUp.focusedMinutes,
                                        tomorrowStart: wrapUp.tomorrowStart, sessionMinutes: presenter.usualMinutes,
-                                       morningHour: HabitSchedule.morningStartHour(defaults), now: now, calendar: calendar)
+                                       morningHour: HabitSchedule.morningStartHour(defaults), now: now,
+                                       weekendsCount: defaults.bool(forKey: SettingsKeys.Goal.weekendsCount),
+                                       shown: EveningTipMemory.recent(defaults, now: now), calendar: calendar)
+        if let tip = tipped.tip { EveningTipMemory.remember(tip, defaults, now: now) }
         return tipped
     }
 

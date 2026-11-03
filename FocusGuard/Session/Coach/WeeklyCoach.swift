@@ -343,7 +343,7 @@ final class WeeklyCoach {
         }.value
         let plan = CoachPlanner.plan(findings, settings: settings)
         let experiment = plan?.1
-        let draft = CoachDraft.make(plan?.0, experiment: experiment, locale: locale, calendar: calendar)
+        let draft = CoachDraft.make(plan?.0, experiment: experiment, week: (tally.focus, tally.drift), locale: locale, calendar: calendar)
         let wording = await CoachWriter(model: model()).write(draft)
 
         var baseline = experiment.flatMap { $0.metric.measure(last, calendar: calendar) }

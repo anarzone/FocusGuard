@@ -30,7 +30,9 @@ struct CoachDraft: Equatable, Sendable {
 
     // MARK: - Templates
 
-    static func make(_ finding: CoachFinding?, experiment: CoachExperiment?,
+    /// - Parameter week: how last week went, for what to say when no pattern
+    ///   stands out.
+    static func make(_ finding: CoachFinding?, experiment: CoachExperiment?, week: (focus: TimeInterval, drift: TimeInterval)? = nil,
                      locale: Locale = .current, calendar: Calendar = .current) -> CoachDraft {
         let points = finding.map { Self.points(for: $0, locale: locale, calendar: calendar) } ?? []
         let why = experiment.map { Self.why(for: $0, finding: finding, locale: locale, calendar: calendar) }
@@ -41,8 +43,24 @@ struct CoachDraft: Equatable, Sendable {
             facts.append(String(localized: "Suggested experiment: \(title). \(effect)", comment: "A fact given to the on-device model"))
         }
         return CoachDraft(headline: finding.map { Self.headline(for: $0, locale: locale, calendar: calendar) }
-                              ?? String(localized: "A steady week, with nothing that stood out."),
+                              ?? noPattern(week),
                           points: points, why: why, facts: facts)
+    }
+
+    /// With no pattern to report. "Steady" is only for a week that went well:
+    /// at a 20% focus rate, or on a few minutes, it says the wrong thing.
+    private static func noPattern(_ week: (focus: TimeInterval, drift: TimeInterval)?) -> String {
+        guard let week else { return String(localized: "A steady week, with nothing that stood out.") }
+        if week.focus + week.drift < 2 * 3600 {
+            return String(localized: "Too little tracked last week to see a pattern.")
+        }
+        let rate = FocusRate.of(focused: week.focus, drifted: week.drift)
+        if rate < 0.6 {
+            let shown = percent(rate)
+            return String(localized: "No one pattern stood out, but your focus rate was only \(shown).")
+        }
+        return rate < 0.75 ? String(localized: "No pattern stood out last week.")
+            : String(localized: "A steady week, with nothing that stood out.")
     }
 
     static func headline(for finding: CoachFinding, locale: Locale, calendar: Calendar) -> String {
@@ -126,7 +144,9 @@ struct CoachDraft: Equatable, Sendable {
             return [
                 CoachPoint(String(localized: "\(day): a new app \(often)| in sessions, \(f.switches) changes in all.",
                                   comment: "Plural on changes: 1 change / 2 changes. The | ends the bold start"), tone: .drift),
-                CoachPoint(String(localized: "Other days:| \(usual).", comment: "How often: every 2 minutes. The | ends the bold start"), tone: .focus),
+                f.noneOnOtherDays
+                    ? CoachPoint(String(localized: "Other days:| no changes like these.", comment: "The | ends the bold start"), tone: .focus)
+                    : CoachPoint(String(localized: "Other days:| \(usual).", comment: "How often: every 2 minutes. The | ends the bold start"), tone: .focus),
                 CoachPoint(String(localized: "Most of those sessions| ran \(hours).", comment: "When: after 17:00. The | ends the bold start"),
                            tone: .other),
             ]
@@ -298,15 +318,37 @@ struct CoachWriter {
                                                     shape: Self.shape(withWhy: draft.why != nil)) else { return plain }
 
         let allowed = draft.facts + [draft.headline, draft.why ?? ""]
-        let headline = Self.accept(answer.headline, allowed: allowed, maxLength: 110)
+        // A headline keeps its figures: "Focus rose, afternoons declined
+        // slightly" for "82h 30m at 75%" and a 25-point fall isn't rewording.
+        let headline = Self.accept(answer.headline, allowed: allowed, maxLength: 110,
+                                   mustKeep: Set(Self.numbers(in: draft.headline.lowercased())))
         let why = draft.why == nil ? nil : answer.why.flatMap { Self.accept($0, allowed: allowed, maxLength: 170) }
         return CoachWording(headline: headline ?? draft.headline, why: why ?? draft.why,
                             onDevice: headline != nil || why != nil)
     }
 
+    /// Words that change what a sentence says: fine when the facts use them,
+    /// otherwise the model is judging, comparing or explaining by itself.
+    private static let meaningWords: Set<String> = [
+        "slightly", "somewhat", "barely", "little", "more", "less", "higher", "lower", "better", "worse", "rose", "risen", "fell", "fallen",
+        "declined", "dropped", "improved", "improving", "stronger", "weaker", "most", "least", "because", "due", "caused", "since",
+        "therefore", "morning", "mornings", "afternoon", "afternoons", "evening", "evenings", "night", "nights", "noon", "lunch",
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "mondays", "tuesdays", "wednesdays", "thursdays",
+        "fridays", "saturdays", "sundays", "january", "february", "march", "april", "june", "july", "august", "september", "october",
+        "november", "december", "etwas", "mehr", "weniger", "besser", "schlechter", "gestiegen", "gesunken", "weil", "wegen", "morgens",
+        "vormittags", "nachmittags", "abends", "nachts", "montags", "dienstags", "mittwochs", "donnerstags", "freitags", "samstags", "sonntags",
+    ]
+    /// Numbers in words dodge the check on digits, and "2m" became "two meters".
+    private static let spelledNumbers: Set<String> = [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "twenty", "thirty", "forty",
+        "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "half", "twice", "double", "meter", "meters", "metre", "metres",
+        "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun", "zehn", "elf", "zwölf", "zwanzig", "dreißig", "hälfte", "doppelt",
+    ]
+
     /// The model's reply as one clean sentence, or nil when it's empty, too
-    /// long, or names a number or a site that isn't in `allowed`.
-    static func accept(_ reply: String, allowed: [String], maxLength: Int) -> String? {
+    /// long, drops a number in `mustKeep`, or says something `allowed` doesn't:
+    /// a number, a site, a comparison, a cause, a day or a time of day.
+    static func accept(_ reply: String, allowed: [String], maxLength: Int, mustKeep: Set<String> = []) -> String? {
         let line = reply.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty } ?? ""
@@ -314,12 +356,19 @@ struct CoachWriter {
         guard text.count >= 12, text.count <= maxLength else { return nil }
         let source = allowed.joined(separator: " ").lowercased()
         let known = Set(numbers(in: source))
-        guard numbers(in: text).allSatisfy(known.contains) else { return nil }
+        guard numbers(in: text).allSatisfy(known.contains), mustKeep.isSubset(of: Set(numbers(in: text))) else { return nil }
+        let sourceWords = words(in: source), textWords = words(in: text.lowercased())
+        guard textWords.subtracting(sourceWords).isDisjoint(with: meaningWords),
+              textWords.subtracting(sourceWords).isDisjoint(with: spelledNumbers) else { return nil }
         let sites = text.lowercased().split(whereSeparator: { $0.isWhitespace || ",;:()".contains($0) })
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".!?")) }
             .filter { $0.contains(".") }
         guard sites.allSatisfy(source.contains) else { return nil }
         return text.last.map { ".!?".contains($0) } == true ? text : text + "."
+    }
+
+    private static func words(in text: String) -> Set<String> {
+        Set(text.split(whereSeparator: { !$0.isLetter }).map(String.init))
     }
 
     static func numbers(in text: String) -> [String] {
