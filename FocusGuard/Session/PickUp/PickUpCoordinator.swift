@@ -40,6 +40,8 @@ final class PickUpCoordinator {
     @ObservationIgnored private var shownAt: Date?
     @ObservationIgnored private var lastCardAt: Date?
     @ObservationIgnored private var expiry: Task<Void, Never>?
+    /// The pointer's on the card: its time stands still.
+    @ObservationIgnored private var isBeingRead = false
     @ObservationIgnored private var menuPlacesAt: Date = .distantPast
     @ObservationIgnored private var lastNoted: ActivitySnapshot?
     /// The read in progress after a return, for tests to wait on.
@@ -88,7 +90,7 @@ final class PickUpCoordinator {
     /// comes up, and after a while anyway.
     private func closeIfDue(_ moment: PickUpMoment) {
         guard let card, let shownAt else { return }
-        let expired = moment.now.timeIntervalSince(shownAt) >= PickUpRules.cardLifetime
+        let expired = !isBeingRead && moment.now.timeIntervalSince(shownAt) >= PickUpRules.cardLifetime
         let returned = card.kind != .menu && card.kind != .failed && PickUpRules.isBack(moment, in: card.places)
         // What was asked for from the menu can stay through a call.
         let called = moment.inCall && card.kind != .menu
@@ -113,13 +115,27 @@ final class PickUpCoordinator {
         resumeTicked = true
         pickedPlaceID = next.kind == .menu ? next.places.first?.id : nil
         shownAt = now
+        isBeingRead = false
         presenter?.show(next, coordinator: self)
+        scheduleExpiry(of: next)
+    }
+
+    private func scheduleExpiry(of next: PickUpCard) {
         expiry?.cancel()
         expiry = Task { [weak self] in
             try? await Task.sleep(for: .seconds(PickUpRules.cardLifetime))
-            guard !Task.isCancelled, let self, self.card?.id == next.id else { return }
+            guard !Task.isCancelled, let self, self.card?.id == next.id, !self.isBeingRead else { return }
             self.close()
         }
+    }
+
+    /// The pointer came onto the card, or left: leaving gives it its time again.
+    func setBeingRead(_ reading: Bool, now: Date = .now) {
+        guard reading != isBeingRead else { return }
+        isBeingRead = reading
+        guard !reading, let card else { return }
+        shownAt = now
+        scheduleExpiry(of: card)
     }
 
     /// Not now, Skip, Close, or closing by itself.
@@ -129,6 +145,7 @@ final class PickUpCoordinator {
         card = nil
         pickedPlaceID = nil
         shownAt = nil
+        isBeingRead = false
         presenter?.close()
     }
 

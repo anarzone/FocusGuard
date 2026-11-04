@@ -19,7 +19,9 @@ extension AppState {
         return NudgeContext(sessionName: session.displayName,
                             minutesLeft: left.map { max(1, Int(($0 / 60).rounded(.up))) },
                             backTo: backToAppName(),
-                            bundleId: tracker.currentSnapshot?.bundleIdentifier)
+                            bundleId: tracker.currentSnapshot?.bundleIdentifier,
+                            blockAt: escalationEngine.blockDeadline(at: now),
+                            presetName: escalationEngine.presetInForce(at: now).title)
     }
 
     /// "Session complete: Locked-in Deep Dive. 50 min · 92% focused · 41 min in the zone."

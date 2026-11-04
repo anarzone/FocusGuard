@@ -78,14 +78,17 @@ struct PickUpPlace: Equatable, Identifiable, Sendable {
         return trimmed
     }
 
-    /// The grey line beside the app: "AuthSession.swift", "Pull request #142 · github.com".
-    var what: String? {
-        switch (shortTitle, host) {
-        case let (title?, host?): return "\(title) · \(host)"
-        case let (title?, nil):   return title
-        case let (nil, host?):    return host
-        case (nil, nil):          return nil
+    /// The grey line beside the app: "AuthSession.swift". For a web page the
+    /// site alone: "github.com". A page's title can change by the second and
+    /// shouldn't be on a screen others may see.
+    var what: String? { host ?? shortTitle }
+
+    /// "Chrome", for "Back to Chrome": the maker's name adds nothing on a button.
+    var shortAppName: String {
+        for maker in ["Google ", "Microsoft ", "Mozilla "] where appName.hasPrefix(maker) {
+            return String(appName.dropFirst(maker.count))
         }
+        return appName
     }
 
     /// Whether what's in front is this place: the same app, and for a

@@ -43,18 +43,53 @@ struct SettingsNotificationsPane: View {
             }
             .disabled(!allowed)
         } right: {
-            SettingsSection(String(localized: "What they look like")) {
-                VStack(spacing: 8) {
-                    sample(time: "09:00", title: String(localized: "Plan your day"),
-                           body: String(localized: "Yesterday: \(WindowFormat.hm(4 * 3600 + 20 * 60)) focused. Start with \(defaultLength) minutes?"))
-                    sample(time: "18:30", title: String(localized: "\(WindowFormat.hm(3 * 3600 + 23 * 60)) focused today"),
-                           body: String(localized: "37 minutes short of your goal. One short session tonight keeps your streak."))
-                    sample(time: String(localized: "now", comment: "Time on a sample notification"), title: String(localized: "Back to your session?"),
-                           body: String(localized: "You've been on a distracting site for 30 seconds. The pause screen comes in a minute."))
+            SettingsIslandSection { appState.notificationPresenter.presentSampleCard() }
+                .disabled(!allowed)
+        }
+    }
+
+    /// "09:00", in the 24-hour style the rest of the window uses.
+    static func hour(_ h: Int) -> String { String(format: "%02d:00", h) }
+
+    private var nudgeDetail: String {
+        let engine = appState.escalationEngine
+        if engine.strictMode { return String(localized: "Strict pauses the screen straight away instead") }
+        return String(localized: "After \(DriftTimingsSheet.seconds(Int(engine.notifyThreshold))) on a distracting site · \(engine.preset.title)")
+    }
+}
+
+/// "Show them as": FocusGuard's own cards or macOS notifications.
+struct SettingsIslandSection: View {
+    let showSample: () -> Void
+
+    @AppStorage(IslandSettings.surface) private var surface = IslandSettings.Surface.cards
+    @AppStorage(IslandSettings.softSound) private var softSound = false
+
+    var body: some View {
+        SettingsSection(String(localized: "Show them as")) {
+            VStack(alignment: .leading, spacing: 6) {
+                Picker(String(localized: "Show them as"), selection: $surface) {
+                    Text("FocusGuard cards").tag(IslandSettings.Surface.cards)
+                    Text("macOS notifications").tag(IslandSettings.Surface.macOS)
                 }
-                .padding(12)
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                Text("macOS notifications can reach Notification Center and your Focus settings. Cards can't see your Focus.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            SettingsNote(text: String(localized: "These are examples. macOS decides how notifications appear; change banners or alerts in System Settings › Notifications."))
+            .padding(12)
+            SettingsDivider()
+            SettingsToggle(title: String(localized: "Play a soft sound"),
+                           detail: String(localized: "Only for a drift nudge and a finished session"),
+                           isOn: $softSound)
+                .disabled(surface != .cards)
+        }
+        Button(surface == .cards ? String(localized: "Show a sample card") : String(localized: "Send a sample notification"), action: showSample)
+            .padding(.leading, 4)
+        if surface == .macOS {
+            SettingsNote(text: String(localized: "macOS decides how notifications appear; change banners or alerts in System Settings › Notifications."))
             Button("Open Notification Settings…") {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
                     NSWorkspace.shared.open(url)
@@ -63,36 +98,5 @@ struct SettingsNotificationsPane: View {
             .buttonStyle(.textLink)
             .padding(.leading, 4)
         }
-    }
-
-    /// "09:00", in the 24-hour style the rest of the window uses.
-    static func hour(_ h: Int) -> String { String(format: "%02d:00", h) }
-
-    private var defaultLength: Int {
-        UserDefaults.standard.object(forKey: SessionDefaultsKey.durationMinutes) as? Int ?? 50
-    }
-
-    private var nudgeDetail: String {
-        let engine = appState.escalationEngine
-        if engine.strictMode { return String(localized: "Strict pauses the screen straight away instead") }
-        return String(localized: "After \(DriftTimingsSheet.seconds(Int(engine.notifyThreshold))) on a distracting site · \(engine.preset.title)")
-    }
-
-    private func sample(time: String, title: String, body: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            AppGlyph(kind: .focusguard, size: 28).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text("FocusGuard").font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.secondaryText)
-                    Spacer()
-                    Text(time).font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
-                }
-                Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.primaryText)
-                Text(body).font(.system(size: 12)).foregroundStyle(Theme.bodyText).fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.inset))
-        .accessibilityElement(children: .combine)
     }
 }

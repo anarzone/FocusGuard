@@ -14,6 +14,8 @@ final class AppState {
     let tracker: ActivityTracker
     let sessionManager: SessionManager
     let notificationPresenter: NotificationPresenter
+    /// The floating island; nil in the UI tests' copy.
+    let island: IslandController?
     let escalationEngine: EscalationEngine
     /// Daily limits on sites and apps, counted all day.
     let limits: DailyLimitsEngine
@@ -94,7 +96,8 @@ final class AppState {
         let classifier = Classifier(context: context)
         let tracker = ActivityTracker(context: context, optOutCache: cache, classifier: classifier)
         let manager = SessionManager(context: context, tracker: tracker)
-        let presenter = NotificationPresenter()
+        // The UI tests' copy shows nothing, on the island or as a notification.
+        let presenter = UITestMode.isOn ? NotificationPresenter(send: { _ in }) : NotificationPresenter()
         let blockOverlay = BlockOverlayController()
         let engine = EscalationEngine(presenter: presenter, overlay: blockOverlay)
         let limits = DailyLimitsEngine(context: context, notifier: presenter, overlay: blockOverlay,
@@ -121,8 +124,11 @@ final class AppState {
         self.integrations = IntegrationsCoordinator()
         // The UI tests' copy never reaches other apps.
         let pickUpOpener = SystemPickUpOpener()
+        let island = UITestMode.isOn ? nil : IslandController(surface: IslandPanelController())
+        self.island = island
+        presenter.island = island
         self.pickUp = PickUpCoordinator(opener: UITestMode.isOn ? NoPickUpOpener() : pickUpOpener,
-                                        presenter: UITestMode.isOn ? nil : PickUpPanelController())
+                                        presenter: island.map { IslandPickUpPresenter(island: $0) })
         self.blockOverlay = blockOverlay
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
@@ -215,6 +221,7 @@ final class AppState {
             self.debriefs.sessionEnded(session)
             Task { await self.integrations.sessionEnded(session) }
             self.presentSessionComplete(for: session)
+            self.island?.notePause()
         }
 
         // Wire break overlay buttons → BreakManager actions.
@@ -233,6 +240,7 @@ final class AppState {
         }
         self.breakManager.onBreakEnded = { [weak self] in
             self?.breakOverlay.dismiss()
+            self?.island?.notePause()
             // A calendar event that came up during the break starts now.
             self?.calendarAutostart.reevaluate()
         }
@@ -265,6 +273,7 @@ final class AppState {
         // calendar.
         if !UITestMode.isOn {
             wireNotifications()
+            wireIsland()
             wireIntegrations()
             if FeatureFlags.pickUp { wirePickUp(opener: pickUpOpener) }
             tracker.start()

@@ -476,7 +476,7 @@ final class FlowClickTests: XCTestCase {
             ("Sessions", "how hard FocusGuard pushes back"),
             ("Blocking", "Levels add up"),
             ("Daily limits", "Counts in and out of sessions"),
-            ("Notifications", "never with a sound"),
+            ("Notifications", "Few and quiet"),
             ("Integrations", "working with your sessions"),
             ("Privacy & data", "how to take it all back"),
             ("Pro & licence", "Your plan, your trial"),
