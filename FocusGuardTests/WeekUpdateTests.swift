@@ -42,7 +42,7 @@ final class WeekUpdateTests: XCTestCase {
                 entries.filter { $0.project == project.name && calendar.isDate($0.start, inSameDayAs: day) }.reduce(0) { $0 + $1.focused }
             })
         }
-        return WorkLogModel(interval: interval, days: days, projects: projects, timesheet: Timesheet(days: sheetDays, rows: rows), standup: nil)
+        return WorkLogModel(interval: interval, days: days, projects: projects, timesheet: Timesheet(days: sheetDays, rows: rows))
     }
 
     // MARK: - Lines
@@ -131,6 +131,86 @@ final class WeekUpdateTests: XCTestCase {
         XCTAssertFalse(WeekVerdict.dayLetter(monday.addingTimeInterval(12 * 3600), locale: Locale(identifier: "az_AZ")).contains { $0.isNumber })
     }
 
+    // MARK: - Standup
+
+    /// Wednesday, 10:00.
+    private var wednesday: Date { monday.addingTimeInterval(2 * 86_400 + 10 * 3600) }
+
+    func testStandupSaysWhatsBehindAndAhead() {
+        var task = TaskItem(id: "ENG-151", title: "Add password reset", list: "ENG", due: nil, created: nil)
+        task.source = .linear
+        let meeting = NextMeeting(id: "m", title: "Design review", start: wednesday.addingTimeInterval(3600))
+        let standup = WeekStandup.make(model: model([
+            entry(day: 1, goal: "Fix login", state: .verdict(.done)),
+            entry(day: 1, hour: 11, goal: "Onboarding", state: .verdict(.partly)),
+            entry(day: 0, goal: "Old goal", state: .verdict(.partly)),
+        ]), isCurrent: true, tasks: [task], meetings: [meeting], now: wednesday, calendar: calendar)
+        XCTAssertEqual(standup.lastTitle, "Yesterday")
+        XCTAssertEqual(standup.last.map(\.text), ["Fix login", "Onboarding"])
+        XCTAssertEqual(standup.last.first?.from, "Marked done, 1h")
+        XCTAssertEqual(standup.nextTitle, "Today")
+        XCTAssertEqual(standup.next.map(\.text).prefix(2), ["Onboarding", "Add password reset"])
+        XCTAssertEqual(standup.next[1].from, "Next on Linear")
+        XCTAssertTrue(standup.next[2].text.hasPrefix("Design review at "), standup.next[2].text)
+    }
+
+    func testStandupOnAMondayGoesBackToLastWeek() {
+        let friday = entry(day: -3, goal: "Ship it", state: .verdict(.done))
+        let last = WorkLogModel(interval: DateInterval(start: monday.addingTimeInterval(-7 * 86_400), duration: 7 * 86_400),
+                                days: [WorkLogDay(day: calendar.startOfDay(for: friday.start), entries: [friday])],
+                                projects: [], timesheet: Timesheet(days: [], rows: []))
+        let standup = WeekStandup.make(model: .empty(interval), earlier: last, isCurrent: true,
+                                       now: monday.addingTimeInterval(9 * 3600), calendar: calendar)
+        XCTAssertEqual(standup.last.map(\.text), ["Ship it"])
+        XCTAssertNotEqual(standup.lastTitle, "Yesterday")
+    }
+
+    func testAGoalFinishedTodayIsNotStillOpen() {
+        let standup = WeekStandup.make(model: model([
+            entry(day: 1, goal: "Onboarding", state: .verdict(.partly)),
+            entry(day: 2, hour: 8, goal: "onboarding", state: .verdict(.done)),
+        ]), isCurrent: true, now: wednesday, calendar: calendar)
+        XCTAssertTrue(standup.next.isEmpty, "\(standup.next)")
+    }
+
+    func testAPastWeekHasNoTodayOrTasks() {
+        var task = TaskItem(id: "1", title: "A task", list: "", due: nil, created: nil)
+        task.source = .linear
+        let standup = WeekStandup.make(model: model([entry(day: 4, goal: "Onboarding", state: .verdict(.partly))]), isCurrent: false,
+                                       tasks: [task], now: monday.addingTimeInterval(10 * 86_400), calendar: calendar)
+        XCTAssertEqual(standup.nextTitle, "Next")
+        XCTAssertEqual(standup.next.map(\.text), ["Onboarding"])
+    }
+
+    func testStandupTextDoesntClaimNothingIsBlocked() {
+        let standup = WeekStandup(lastDay: monday, lastTitle: "Yesterday", last: [.init(text: "Ship it", from: "")],
+                                  nextTitle: "Today", next: [.init(text: "Fix it", from: "")])
+        XCTAssertEqual(standup.text(blockers: []), "*Yesterday*\n• Ship it\n\n*Today*\n• Fix it\n")
+        XCTAssertTrue(standup.text(blockers: ["Waiting on legal"]).hasSuffix("*Blocked*\n• Waiting on legal\n"))
+    }
+
+    func testSessionsWithoutGoalsStillGiveAStandupLine() {
+        let standup = WeekStandup.make(model: model([entry(day: 1, minutes: 90, mostly: "Xcode")]), isCurrent: true, now: wednesday, calendar: calendar)
+        XCTAssertEqual(standup.last.first?.text, "1 session, 1h 30m focused")
+    }
+
+    func testBlockersStayUntilTakenOff() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "WeekUpdateTests.blockers"))
+        defaults.removePersistentDomain(forName: "WeekUpdateTests.blockers")
+        let store = WeekBlockerStore(defaults: defaults)
+        store.add("  Waiting on legal ")
+        store.add("Waiting on legal")
+        store.add("   ")
+        XCTAssertEqual(store.blockers, ["Waiting on legal"])
+        store.remove("Waiting on legal")
+        XCTAssertTrue(store.blockers.isEmpty)
+    }
+
+    func testTimesheetHoursMatchTheExport() {
+        XCTAssertEqual(Timesheet.hours(9600), "2.67")
+        XCTAssertEqual(Timesheet.hours(0), "")
+    }
+
     // MARK: - The store
 
     func testDecisionsStayWithTheirWeek() throws {
@@ -192,7 +272,7 @@ final class WeekUpdateTests: XCTestCase {
         sheetDays.append(monday.addingTimeInterval(5 * 86_400))
         let base = model(entries)
         let withSaturday = WorkLogModel(interval: interval, days: base.days, projects: base.projects,
-                                        timesheet: Timesheet(days: sheetDays, rows: [Timesheet.Row(project: nil, seconds: [14400, 0, 0, 0, 0, 3600])]), standup: nil)
+                                        timesheet: Timesheet(days: sheetDays, rows: [Timesheet.Row(project: nil, seconds: [14400, 0, 0, 0, 0, 3600])]))
         let off = WeekOverview.make(model: withSaturday, report: nil, goal: { _ in 3600 }, weekendsCount: false, calendar: calendar)
         XCTAssertEqual(off.days.count, 6)
         XCTAssertEqual(off.goalDays.count, 5)

@@ -51,6 +51,7 @@ enum DataEraser {
         Task { await FocusAnalyzer.shared.erase() }
         WeekEditStore().erase()
         WeekColourStore().erase()
+        WeekBlockerStore().erase()
     }
 }
 

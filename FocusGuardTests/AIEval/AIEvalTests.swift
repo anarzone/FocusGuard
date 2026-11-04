@@ -854,9 +854,7 @@ final class AIEvalTests: XCTestCase {
                        "timesheetDays": timesheet.days.map { cal.component(.day, from: $0) },
                        "timesheetRows": timesheet.rows.map { "\($0.title): " + $0.seconds.map(Timesheet.hours).joined(separator: " ") + " = " + Timesheet.hours($0.total) },
                        "timesheetTotal": Timesheet.hours(timesheet.total),
-                       "csv": timesheet.csv(calendar: cal),
-                       "standupDay": model.standup.map { cal.component(.day, from: $0.day) } ?? 0,
-                       "standup": model.standup?.text ?? ""])
+                       "csv": timesheet.csv(calendar: cal)])
         }
 
         // Mon 2h and 1h, Tue 3h. By hand: 6h, Alpha 5h, Beta 1h, one drift of 10m, one goal of each kind.

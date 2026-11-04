@@ -197,20 +197,4 @@ final class DebriefCheckTests: XCTestCase {
         }
         XCTAssertFalse(all.contains("like \""), "the model copies examples as if they were this session's")
     }
-
-    // MARK: - The standup
-
-    func testTheStandupDoesntClaimNothingIsBlocked() {
-        let draft = StandupDraft(day: start, done: ["Ship it"], next: ["Fix it"])
-        XCTAssertEqual(draft.text, "Done: Ship it.\nNext: Fix it.")
-        XCTAssertFalse(draft.text.contains("Blocked"))
-    }
-
-    func testAGoalNobodyHasJudgedIsWorkedOnNotDone() {
-        let week = DateInterval(start: start.addingTimeInterval(-86_400), duration: 7 * 86_400)
-        let input = WorkLogBuilder.Input(id: UUID(), start: start, end: start.addingTimeInterval(3000), name: "S", goal: "Write the Q3 report",
-                                         verdict: nil, project: nil, stored: nil, facts: merged)
-        let model = WorkLogBuilder.build([input], interval: week, now: start.addingTimeInterval(4000))
-        XCTAssertEqual(model.standup?.text, "Worked on: Write the Q3 report.\nNext: pick up from Your week.")
-    }
 }

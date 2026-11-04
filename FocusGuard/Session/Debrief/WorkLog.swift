@@ -73,9 +73,9 @@ struct Timesheet: Equatable {
     }
     var total: TimeInterval { rows.reduce(0) { $0 + $1.total } }
 
-    /// "3.1": hours with one decimal, "–" for nothing.
+    /// "3.17": hours with two decimals, as in the CSV. Nothing for nothing.
     static func hours(_ seconds: TimeInterval) -> String {
-        seconds < 1 ? "–" : String(format: "%.1f", seconds / 3600)
+        seconds < 1 ? "" : String(format: "%.2f", seconds / 3600)
     }
 
     /// Hours as CSV: a header of dates, a row per project, then the totals.
@@ -103,34 +103,6 @@ struct Timesheet: Equatable {
     }
 }
 
-/// Done, worked on and next, for the next working day's standup. Only what the
-/// log can show: it doesn't know what's blocked, so it doesn't say.
-struct StandupDraft: Equatable {
-    /// The day it's for: the working day after the last one with sessions.
-    let day: Date
-    let done: [String]
-    /// Goals nobody has said the outcome of.
-    var workedOn: [String] = []
-    let next: [String]
-
-    var text: String {
-        var lines: [String] = []
-        if !done.isEmpty {
-            lines.append(String(localized: "Done: \(Self.list(done))"))
-        } else if workedOn.isEmpty {
-            lines.append(String(localized: "Done: nothing marked done yet."))
-        }
-        if !workedOn.isEmpty { lines.append(String(localized: "Worked on: \(Self.list(workedOn))")) }
-        lines.append(next.isEmpty ? String(localized: "Next: pick up from Your week.") : String(localized: "Next: \(Self.list(next))"))
-        return lines.joined(separator: "\n")
-    }
-
-    private static func list(_ items: [String]) -> String {
-        let joined = items.joined(separator: "; ")
-        return joined.hasSuffix(".") ? joined : joined + "."
-    }
-}
-
 /// Everything the work log shows for one week.
 struct WorkLogModel: Equatable {
     let interval: DateInterval
@@ -138,13 +110,12 @@ struct WorkLogModel: Equatable {
     let days: [WorkLogDay]
     let projects: [WorkLogProject]
     let timesheet: Timesheet
-    let standup: StandupDraft?
 
     var entries: [WorkLogEntry] { days.flatMap(\.entries) }
     var focused: TimeInterval { entries.reduce(0) { $0 + $1.focused } }
 
     static func empty(_ interval: DateInterval) -> WorkLogModel {
-        WorkLogModel(interval: interval, days: [], projects: [], timesheet: Timesheet(days: [], rows: []), standup: nil)
+        WorkLogModel(interval: interval, days: [], projects: [], timesheet: Timesheet(days: [], rows: []))
     }
 }
 
@@ -200,8 +171,7 @@ enum WorkLogBuilder {
             }
 
         return WorkLogModel(interval: interval, days: days, projects: projects,
-                            timesheet: timesheet(entries, projects: projects, interval: interval, calendar: calendar),
-                            standup: standup(days, calendar: calendar))
+                            timesheet: timesheet(entries, projects: projects, interval: interval, calendar: calendar))
     }
 
     private static func entry(_ input: Input) -> WorkLogEntry {
@@ -280,41 +250,5 @@ enum WorkLogBuilder {
             return Timesheet.Row(project: project.name, seconds: kept.map { seconds[$0] })
         }
         return Timesheet(days: kept.map { days[$0] }, rows: rows)
-    }
-
-    /// From the last day with sessions: its goals done, and what's still
-    /// open (partly done, not yet, or running) as next.
-    private static func standup(_ days: [WorkLogDay], calendar: Calendar) -> StandupDraft? {
-        guard let last = days.first else { return nil }
-        var done: [String] = []
-        var workedOn: [String] = []
-        var next: [String] = []
-        for entry in last.entries.reversed() where entry.hasGoal {
-            switch entry.state {
-            case .verdict(.done): done.append(entry.title)
-            case .verdict(.partly), .verdict(.notYet), .live: next.append(entry.title)
-            case .open: workedOn.append(entry.title)
-            }
-        }
-        if done.isEmpty && workedOn.isEmpty && next.isEmpty {
-            let focused = WindowFormat.hm(last.focused)
-            let count = last.entries.count
-            done = [String(localized: "\(count) sessions, \(focused) focused", comment: "Plural on count: 1 session, 3h focused")]
-        }
-        return StandupDraft(day: nextWorkingDay(after: last.day, calendar: calendar), done: dedupe(done),
-                            workedOn: dedupe(workedOn), next: dedupe(next))
-    }
-
-    static func nextWorkingDay(after day: Date, calendar: Calendar) -> Date {
-        var next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: day)) ?? day
-        while calendar.isDateInWeekend(next) {
-            next = calendar.date(byAdding: .day, value: 1, to: next) ?? next
-        }
-        return next
-    }
-
-    private static func dedupe(_ items: [String]) -> [String] {
-        var seen = Set<String>()
-        return items.filter { seen.insert($0.lowercased()).inserted }
     }
 }
