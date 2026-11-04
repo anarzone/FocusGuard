@@ -118,8 +118,8 @@ final class FlowClickTests: XCTestCase {
         waitForText("Why you lose focus, and what helps", "The Analyzer's Pro page didn't open")
         try open("Ask")
         waitForText("Questions about your own focus", "Ask's Pro page didn't open")
-        try open("Work log")
-        waitForText("Your week, written up for you", "Work log's Pro page didn't open")
+        try open("Your week")
+        waitForText("Your week, written up for you", "Your week's Pro page didn't open")
         try open("Apps & Sites")
         waitFor(button("Sort your apps"), "Apps & Sites didn't open")
         try open("Settings")
@@ -140,10 +140,41 @@ final class FlowClickTests: XCTestCase {
         XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15), "No answer came")
         shoot("ask-answer")
 
-        try open("Work log")
-        waitFor(button("Previous week"), "Work log didn't open")
+        try open("Your week")
+        waitFor(button("Previous week"), "Your week didn't open")
         try click(button("Previous week"))
         waitFor(button("Next week"), "The week didn't step")
+    }
+
+    // MARK: - Your week
+
+    func testYourWeekWritesItselfAndAsksAboutGuesses() throws {
+        launch(plan: "pro", seed: "week")
+        try open("Your week")
+        waitFor(button("Previous week"), "Your week didn't open")
+        // Last week, which is whole whatever day the tests run on.
+        try click(button("Previous week"))
+        waitFor(button("Keep it"), "The guesses should be asked about")
+        sleep(2)
+        shoot("week-update")
+        try click(button("Keep it"))
+        waitForText("1 line to check", "A kept guess shouldn't need checking any more")
+        shoot("week-kept")
+        try click(button("Leave out"))
+        waitForText("Ready to share", "With nothing left to check it's ready")
+        sleep(1)
+        shoot("week-ready")
+        try click(button("Copy"))
+        waitFor(button("Copied"), "Copy should say so")
+        try click(button("Standup"))
+        sleep(1)
+        shoot("week-standup")
+        try click(button("Timesheet"))
+        sleep(1)
+        shoot("week-timesheet")
+        try click(button("Sessions"))
+        sleep(1)
+        shoot("week-sessions")
     }
 
     // MARK: - A session
@@ -440,7 +471,7 @@ final class FlowClickTests: XCTestCase {
         waitGone(key, "Cancel didn't close it")
 
         // The upgrade sheet: nothing changes until the trial is asked for.
-        XCTAssertTrue(buttonStarting("Work log").label.contains("Pro"), "Work log should be marked Pro before the trial")
+        XCTAssertTrue(buttonStarting("Your week").label.contains("Pro"), "Your week should be marked Pro before the trial")
         try click(button("Try Pro free for 14 days"))
         let start = window.sheets.buttons["Start the 14-day free trial"].firstMatch
         waitFor(start, "The upgrade sheet didn't open")
@@ -455,9 +486,9 @@ final class FlowClickTests: XCTestCase {
         waitGone(start, "The upgrade sheet stayed")
         waitForText("Pro trial", "The plan didn't change")
         waitForText("Ends on", "No end date")
-        XCTAssertFalse(buttonStarting("Work log").label.contains("Pro"), "The badge should go with the trial")
-        try open("Work log")
-        waitFor(button("Previous week"), "Work log should open on the trial")
+        XCTAssertFalse(buttonStarting("Your week").label.contains("Pro"), "The badge should go with the trial")
+        try open("Your week")
+        waitFor(button("Previous week"), "Your week should open on the trial")
     }
 
     func testAskTrialButtonUnlocksThePageInPlace() throws {

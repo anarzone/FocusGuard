@@ -30,6 +30,29 @@
       "comment" : "A change in focus rate, then when: +7 pts after 17:00\nA preset's name, then when: Strict after 17:00",
       "shouldTranslate" : false
     },
+    "%@ %@ %@" : {
+      "comment" : "Change in focus: ↑ 3h 10m vs last week",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        }
+      }
+    },
     "%@ %@: %@ focused" : {
       "localizations" : {
         "az" : {
@@ -1877,6 +1900,29 @@
         }
       }
     },
+    "%@ on %@, with no goal set" : {
+      "comment" : "2h 05m on github.com, with no goal set",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ on %2$@, with no goal set"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ auf %2$@, ohne Ziel"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ üzərində %1$@, hədəf qoyulmayıb"
+          }
+        }
+      }
+    },
     "%@ over your %@ goal." : {
       "localizations" : {
         "az" : {
@@ -2907,6 +2953,113 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%@ · %lld sessions · %lld projects" : {
+      "comment" : "Plural on both: 2 – 8 November · 1 session · 3 projects",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$#@arg1@ · %3$#@arg2@"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sessions"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2" : {
+              "argNum" : 3,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg project"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg projects"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$#@arg1@ · %3$#@arg2@"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Sessions"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2" : {
+              "argNum" : 3,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekt"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekte"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld sessiya · %3$lld layihə"
           }
         }
       }
@@ -4747,6 +4900,29 @@
         }
       }
     },
+    "%@?" : {
+      "comment" : "A guess at what some time was: github.com?",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@?"
+          }
+        }
+      }
+    },
     "%@h" : {
       "comment" : "Compact hours with one decimal: 12.5h",
       "localizations" : {
@@ -5778,6 +5954,73 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld hr %2$lld min"
+          }
+        }
+      }
+    },
+    "%lld lines to check before you share this." : {
+      "comment" : "Plural on count: 1 line to check before you share this.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@arg1@ to check before you share this."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg line"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg lines"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@arg1@ zum Prüfen, bevor du das teilst."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeile"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeilen"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaşmazdan əvvəl yoxlanılmalı %lld sətir var."
           }
         }
       }
@@ -7065,6 +7308,73 @@
         }
       }
     },
+    "%lld sessions with this goal, %@ focused" : {
+      "comment" : "Plural on count: 1 session with this goal, 2h focused",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$#@arg1@ with this goal, %2$@ focused"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sessions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$#@arg1@ mit diesem Ziel, %2$@ fokussiert"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Sessions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu hədəflə %1$lld sessiya, %2$@ fokusda"
+          }
+        }
+      }
+    },
     "%lld sessions · %@ focused" : {
       "comment" : "Plural on entries.count: 1 session / 2 sessions",
       "localizations" : {
@@ -7396,6 +7706,73 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld sessions, coloured by project" : {
+      "comment" : "Plural on count: 1 session, coloured by project",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@arg1@, coloured by project"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg sessions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%#@arg1@, nach Projekt eingefärbt"
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Session"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Sessions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld sessiya, layihəyə görə rənglənib"
           }
         }
       }
@@ -8940,6 +9317,22 @@
         }
       }
     },
+    "A week update, a standup draft and a timesheet, ready to paste." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Wochenbericht, ein Standup-Entwurf und ein Stundenzettel, bereit zum Einfügen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəlik hesabat, standup qaralaması və iş vaxtı cədvəli, yapışdırmağa hazır."
+          }
+        }
+      }
+    },
     "About %@ a day, over %lld working days" : {
       "localizations" : {
         "az" : {
@@ -9128,6 +9521,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ekran Yazısına icazə verin"
+          }
+        }
+      }
+    },
+    "Also this week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Außerdem diese Woche"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə həmçinin"
           }
         }
       }
@@ -12356,6 +12765,38 @@
         }
       }
     },
+    "Check this" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitte prüfen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunu yoxlayın"
+          }
+        }
+      }
+    },
+    "Choose a view" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ansicht wählen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görünüş seçin"
+          }
+        }
+      }
+    },
     "Choose what to exclude" : {
       "localizations" : {
         "az" : {
@@ -13860,6 +14301,29 @@
         }
       }
     },
+    "Daily goal met: %lld of %lld" : {
+      "comment" : "How many days met the daily focus goal: Daily goal met: 4 of 5",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily goal met: %1$lld of %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagesziel erreicht: %1$lld von %2$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gündəlik hədəf: %2$lld gündən %1$lld"
+          }
+        }
+      }
+    },
     "Daily goal: %@ of %@." : {
       "localizations" : {
         "az" : {
@@ -14264,6 +14728,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "An Tagen mit frühem Start warst du fokussierter."
+          }
+        }
+      }
+    },
+    "Days this drew on: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tage, aus denen das stammt: %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu məlumatın günləri: %@"
           }
         }
       }
@@ -15058,6 +15538,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fertig"
+          }
+        }
+      }
+    },
+    "Done comes from the goals you marked" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fertig kommt von den Zielen, die du markiert hast"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hazır olanlar qeyd etdiyiniz hədəflərdəndir"
           }
         }
       }
@@ -16406,6 +16902,22 @@
         }
       }
     },
+    "Every session" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jede Session"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bütün sessiyalar"
+          }
+        }
+      }
+    },
     "Every session, activity, rule and setting is removed. This can't be undone." : {
       "localizations" : {
         "az" : {
@@ -16697,6 +17209,22 @@
         }
       }
     },
+    "Focus by day and project" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus nach Tag und Projekt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Günlər və layihələr üzrə fokus"
+          }
+        }
+      }
+    },
     "Focus often ends in or right after a message app. Of what FocusGuard can see, this takes the most time." : {
       "localizations" : {
         "az" : {
@@ -16745,6 +17273,38 @@
         }
       }
     },
+    "Focus shows up here by project." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Fokus erscheint hier nach Projekt."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusunuz burada layihələr üzrə görünəcək."
+          }
+        }
+      }
+    },
+    "Focused hours in sessions, per project and day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokussierte Stunden in Sessions, pro Projekt und Tag"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyalarda fokus saatları, layihə və günlər üzrə"
+          }
+        }
+      }
+    },
     "Focused since %@" : {
       "localizations" : {
         "az" : {
@@ -16757,6 +17317,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokussiert seit %@"
+          }
+        }
+      }
+    },
+    "Focused this week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Woche fokussiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə fokusda"
           }
         }
       }
@@ -16805,6 +17381,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard-Karten"
+          }
+        }
+      }
+    },
+    "FocusGuard is guessing, so it stays out of your update unless you keep it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard rät hier nur, also bleibt es aus deinem Bericht draußen, solange du es nicht behältst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard burada təxmin edir, ona görə saxlamasanız hesabata düşməyəcək."
           }
         }
       }
@@ -19352,6 +19944,22 @@
         }
       }
     },
+    "Give a session a goal when it starts and say how it went when it ends. FocusGuard turns that into a week update, a standup draft and a timesheet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einer Session beim Start ein Ziel und sag am Ende, wie es lief. FocusGuard macht daraus einen Wochenbericht, einen Standup-Entwurf und einen Stundenzettel."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya başlayanda hədəf verin, bitəndə necə keçdiyini deyin. FocusGuard bundan həftəlik hesabat, standup qaralaması və iş vaxtı cədvəli hazırlayır."
+          }
+        }
+      }
+    },
     "Give a session a goal when it starts and say how it went when it ends. FocusGuard turns that into a work log, a standup draft and a timesheet." : {
       "localizations" : {
         "az" : {
@@ -20014,6 +20622,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verlauf"
+          }
+        }
+      }
+    },
+    "Hover one for its time; click it for its goal and debrief" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fahre darüber für die Zeit, klicke für Ziel und Rückblick"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vaxtı üçün üzərinə gəlin, hədəf və yekun üçün klikləyin"
           }
         }
       }
@@ -21910,6 +22534,39 @@
         }
       }
     },
+    "Leave out" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weglassen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çıxar"
+          }
+        }
+      }
+    },
+    "Left out: %lld. Bring back" : {
+      "comment" : "Lines the user left out of the week update, and the button to bring them back",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weggelassen: %lld. Zurückholen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çıxarılıb: %lld. Geri qaytar"
+          }
+        }
+      }
+    },
     "Length" : {
       "localizations" : {
         "az" : {
@@ -23057,6 +23714,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als teilweise erledigt markieren"
+          }
+        }
+      }
+    },
+    "Marked done in %@'s session" : {
+      "comment" : "Marked done in Wednesday's session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Session am %@ als fertig markiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sessiyasında hazır kimi qeyd olunub"
+          }
+        }
+      }
+    },
+    "Marked not yet in %@'s session" : {
+      "comment" : "Marked not yet in Wednesday's session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Session am %@ als noch nicht markiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sessiyasında hələ yox kimi qeyd olunub"
+          }
+        }
+      }
+    },
+    "Marked partly done in %@'s session" : {
+      "comment" : "Marked partly done in Wednesday's session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Session am %@ als teilweise fertig markiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sessiyasında qismən hazır kimi qeyd olunub"
           }
         }
       }
@@ -24532,6 +25240,22 @@
         }
       }
     },
+    "Next comes from goals still open" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes kommt von noch offenen Zielen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti işlər hələ açıq hədəflərdəndir"
+          }
+        }
+      }
+    },
     "Next day" : {
       "localizations" : {
         "az" : {
@@ -24710,6 +25434,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als Nächstes: im Arbeitsprotokoll weitermachen."
+          }
+        }
+      }
+    },
+    "Next: pick up from Your week." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes: bei „Deine Woche“ weitermachen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti: Həftəniz bölməsindən davam edin."
           }
         }
       }
@@ -25561,6 +26301,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht enthalten"
+          }
+        }
+      }
+    },
+    "Not marked done yet, so it stays under Still going" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht als fertig markiert, also bleibt es unter Läuft noch"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ hazır kimi qeyd olunmayıb, ona görə Davam edir bölməsində qalır"
           }
         }
       }
@@ -27091,6 +27847,22 @@
         }
       }
     },
+    "Only you can say what's blocking you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur du kannst sagen, was dich aufhält"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizə nəyin mane olduğunu yalnız siz deyə bilərsiniz"
+          }
+        }
+      }
+    },
     "Open" : {
       "localizations" : {
         "az" : {
@@ -27471,6 +28243,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arbeitsprotokoll öffnen"
+          }
+        }
+      }
+    },
+    "Open your week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Woche öffnen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftənizi açın"
           }
         }
       }
@@ -27879,6 +28667,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İcazələr · %lld / 3 hazırdır"
+          }
+        }
+      }
+    },
+    "Pick a line to see what it stands on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Zeile, um zu sehen, worauf sie beruht."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nəyə əsaslandığını görmək üçün sətir seçin."
           }
         }
       }
@@ -29615,6 +30419,22 @@
         }
       }
     },
+    "Projects come from your goals and apps" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projekte ergeben sich aus deinen Zielen und Apps"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layihələr hədəfləriniz və tətbiqləriniz əsasında müəyyən olunur"
+          }
+        }
+      }
+    },
     "Projects come from your goals and apps." : {
       "localizations" : {
         "az" : {
@@ -30047,6 +30867,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bereit für den Fokus"
+          }
+        }
+      }
+    },
+    "Ready to share. Only on this Mac until you copy it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereit zum Teilen. Bleibt auf diesem Mac, bis du es kopierst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaşmağa hazırdır. Kopyalayana qədər yalnız bu Mac-dadır."
           }
         }
       }
@@ -30916,6 +31752,38 @@
         }
       }
     },
+    "Session goals, debriefs and your week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session-Ziele, Rückblicke und deine Woche"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya hədəfləri, yekunlar və həftəniz"
+          }
+        }
+      }
+    },
+    "Sessions coloured by project" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions nach Projekt eingefärbt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyalar layihəyə görə rənglənib"
+          }
+        }
+      }
+    },
     "Sessions with a goal" : {
       "localizations" : {
         "az" : {
@@ -31041,6 +31909,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "bisher"
+          }
+        }
+      }
+    },
+    "Standup" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standup"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standup"
           }
         }
       }
@@ -35177,6 +36061,22 @@
         }
       }
     },
+    "Still going" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Läuft noch"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Davam edir"
+          }
+        }
+      }
+    },
     "Still learning" : {
       "localizations" : {
         "az" : {
@@ -35791,6 +36691,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause machen"
+          }
+        }
+      }
+    },
+    "Take it back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurücknehmen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri al"
           }
         }
       }
@@ -39914,6 +40830,22 @@
         }
       }
     },
+    "vs the week before" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vs. Woche davor"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "əvvəlki həftəyə nisbətən"
+          }
+        }
+      }
+    },
     "Waiting for the extension" : {
       "localizations" : {
         "az" : {
@@ -40079,6 +41011,23 @@
         }
       }
     },
+    "Was this %@" : {
+      "comment" : "Asking about a guess, whose text ends in a question mark: Was this github.com?",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "War das %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu %@"
+          }
+        }
+      }
+    },
     "Wednesdays" : {
       "comment" : "Every Wednesday: \"Goal on Wednesdays\", \"2h on Wednesdays\"",
       "localizations" : {
@@ -40109,6 +41058,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Woche"
+          }
+        }
+      }
+    },
+    "Week of %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woche vom %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ həftəsi"
           }
         }
       }
@@ -40147,6 +41112,22 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Week of %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Week update" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wochenbericht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəlik hesabat"
           }
         }
       }
@@ -40435,6 +41416,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das sieht dein Team"
+          }
+        }
+      }
+    },
+    "What was it?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was war es?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu nə idi?"
           }
         }
       }
@@ -40842,6 +41839,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beim Abschweifen: %@ · sofort Stopp"
+          }
+        }
+      }
+    },
+    "Where this came from" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woher das kommt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu haradan gəlir"
           }
         }
       }
@@ -41856,6 +42869,22 @@
         }
       }
     },
+    "You kept this line" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast diese Zeile behalten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sətri saxladınız"
+          }
+        }
+      }
+    },
     "You only focus around %@. Try a session at another time to compare." : {
       "localizations" : {
         "az" : {
@@ -42834,6 +43863,38 @@
         }
       }
     },
+    "Your standup" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Standup"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standupınız"
+          }
+        }
+      }
+    },
+    "Your timesheet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Stundenzettel"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İş vaxtı cədvəliniz"
+          }
+        }
+      }
+    },
     "Your trial ends in %lld days" : {
       "localizations" : {
         "en" : {
@@ -42880,6 +43941,71 @@
         }
       },
       "comment" : "Plural on the days: ends in 1 day"
+    },
+    "Your week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Woche"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəniz"
+          }
+        }
+      }
+    },
+    "your week" : {
+      "comment" : "In a list of things worked out on this Mac",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "deine Woche"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "həftəniz"
+          }
+        }
+      }
+    },
+    "Your week arrives in a coming update, as part of Pro." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Deine Woche“ kommt mit einem der nächsten Updates als Teil von Pro."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəniz növbəti yeniləmələrdən birində Pro planının bir hissəsi kimi gələcək."
+          }
+        }
+      }
+    },
+    "Your week arrives in a coming update. It's included in your Pro." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Deine Woche“ kommt mit einem der nächsten Updates. Es ist in deinem Pro enthalten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəniz növbəti yeniləmələrdən birində gələcək. Pro planınıza daxildir."
+          }
+        }
+      }
     },
     "YouTube decided video by video, and as many daily limits as you like" : {
       "localizations" : {

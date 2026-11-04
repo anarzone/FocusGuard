@@ -30,6 +30,8 @@ struct WorkLogEntry: Identifiable, Equatable {
     let focused: TimeInterval
     /// When it was focused, so a session across midnight counts on both days.
     var focusSpans: [DateInterval] = []
+    /// The focus app or site it was mostly in, to ask about time without a goal.
+    var mostly: String? = nil
 
     var isLive: Bool { end == nil }
 }
@@ -119,7 +121,7 @@ struct StandupDraft: Equatable {
             lines.append(String(localized: "Done: nothing marked done yet."))
         }
         if !workedOn.isEmpty { lines.append(String(localized: "Worked on: \(Self.list(workedOn))")) }
-        lines.append(next.isEmpty ? String(localized: "Next: pick up from the work log.") : String(localized: "Next: \(Self.list(next))"))
+        lines.append(next.isEmpty ? String(localized: "Next: pick up from Your week.") : String(localized: "Next: \(Self.list(next))"))
         return lines.joined(separator: "\n")
     }
 
@@ -139,51 +141,7 @@ struct WorkLogModel: Equatable {
     let standup: StandupDraft?
 
     var entries: [WorkLogEntry] { days.flatMap(\.entries) }
-    var goalsDone: Int { entries.filter { $0.state == .verdict(.done) }.count }
-    var goalsPartly: Int { entries.filter { $0.state == .verdict(.partly) }.count }
     var focused: TimeInterval { entries.reduce(0) { $0 + $1.focused } }
-    var topProject: String? { projects.first?.name }
-
-    /// "11 goals done and 3 partly this week." and "Most of it went to
-    /// FocusGuard." `offset` counts weeks back from this one.
-    func headline(offset: Int) -> (lead: String, rest: String) {
-        let done = goalsDone, partly = goalsPartly
-        let lead: String
-        if done > 0 && partly > 0 {
-            switch offset {
-            case 0:  lead = String(localized: "\(done) goals done and \(partly) partly this week.", comment: "Plural on done: 1 goal done and 2 partly")
-            case 1:  lead = String(localized: "\(done) goals done and \(partly) partly last week.", comment: "Plural on done: 1 goal done and 2 partly")
-            default: lead = String(localized: "\(done) goals done and \(partly) partly that week.", comment: "Plural on done: 1 goal done and 2 partly")
-            }
-        } else if done > 0 {
-            switch offset {
-            case 0:  lead = String(localized: "\(done) goals done this week.", comment: "Plural on done: 1 goal done")
-            case 1:  lead = String(localized: "\(done) goals done last week.", comment: "Plural on done: 1 goal done")
-            default: lead = String(localized: "\(done) goals done that week.", comment: "Plural on done: 1 goal done")
-            }
-        } else if partly > 0 {
-            switch offset {
-            case 0:  lead = String(localized: "\(partly) goals partly done this week.", comment: "Plural on partly: 1 goal partly done")
-            case 1:  lead = String(localized: "\(partly) goals partly done last week.", comment: "Plural on partly: 1 goal partly done")
-            default: lead = String(localized: "\(partly) goals partly done that week.", comment: "Plural on partly: 1 goal partly done")
-            }
-        } else if !entries.isEmpty {
-            let count = entries.count, hours = WindowFormat.hm(focused)
-            switch offset {
-            case 0:  lead = String(localized: "\(count) sessions, \(hours) focused this week.", comment: "Plural on count: 1 session, 3h focused")
-            case 1:  lead = String(localized: "\(count) sessions, \(hours) focused last week.", comment: "Plural on count: 1 session, 3h focused")
-            default: lead = String(localized: "\(count) sessions, \(hours) focused that week.", comment: "Plural on count: 1 session, 3h focused")
-            }
-        } else {
-            switch offset {
-            case 0:  return (String(localized: "No sessions yet this week."), String(localized: "Start one, and give it a goal."))
-            case 1:  return (String(localized: "No sessions last week."), "")
-            default: return (String(localized: "No sessions that week."), "")
-            }
-        }
-        if let top = topProject { return (lead, String(localized: "Most of it went to \(top).")) }
-        return (lead, entries.contains(where: \.hasGoal) ? "" : String(localized: "Give the next session a goal to see it here."))
-    }
 
     static func empty(_ interval: DateInterval) -> WorkLogModel {
         WorkLogModel(interval: interval, days: [], projects: [], timesheet: Timesheet(days: [], rows: []), standup: nil)
@@ -273,7 +231,8 @@ enum WorkLogBuilder {
             id: input.id, start: input.start, end: input.end, name: input.name,
             focusRate: facts.focusRate, hasRate: facts.focused + facts.drifted >= 60,
             title: title, hasGoal: input.goal != nil, project: input.project,
-            state: state, note: note, apps: appsLine(facts), focused: facts.focused, focusSpans: facts.focusSpans
+            state: state, note: note, apps: appsLine(facts), focused: facts.focused, focusSpans: facts.focusSpans,
+            mostly: mostly?.name
         )
     }
 

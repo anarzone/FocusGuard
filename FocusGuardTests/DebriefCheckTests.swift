@@ -211,6 +211,6 @@ final class DebriefCheckTests: XCTestCase {
         let input = WorkLogBuilder.Input(id: UUID(), start: start, end: start.addingTimeInterval(3000), name: "S", goal: "Write the Q3 report",
                                          verdict: nil, project: nil, stored: nil, facts: merged)
         let model = WorkLogBuilder.build([input], interval: week, now: start.addingTimeInterval(4000))
-        XCTAssertEqual(model.standup?.text, "Worked on: Write the Q3 report.\nNext: pick up from the work log.")
+        XCTAssertEqual(model.standup?.text, "Worked on: Write the Q3 report.\nNext: pick up from Your week.")
     }
 }

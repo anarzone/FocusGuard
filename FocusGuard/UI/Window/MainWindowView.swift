@@ -24,7 +24,7 @@ enum MainTab: Hashable, CaseIterable {
         case .reports:  return String(localized: "Reports")
         case .analyzer: return String(localized: "Analyzer", comment: "Sidebar section: why focus gets lost, and fair tests of fixes")
         case .ask:      return String(localized: "Ask", comment: "Sidebar section where you ask questions about your own data")
-        case .workLog:  return String(localized: "Work log")
+        case .workLog:  return String(localized: "Your week")
         case .apps:     return String(localized: "Apps & Sites")
         case .settings: return String(localized: "Settings")
         }
@@ -99,6 +99,7 @@ enum MainWindowSize {
         }
         // `-FocusGuardUITestUsualHeight YES`: the click test about pages that
         // fit needs the usual height, on a screen with a Dock in the way.
+        if UITestMode.isOn, UserDefaults.standard.bool(forKey: "FocusGuardUITestSmallest") { return minimum }
         if UITestMode.isOn, UserDefaults.standard.bool(forKey: "FocusGuardUITestUsualHeight") { size.height = usual.height }
         return size
     }

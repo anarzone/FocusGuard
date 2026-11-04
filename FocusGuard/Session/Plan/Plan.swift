@@ -59,7 +59,7 @@ enum ProFeature: String, CaseIterable {
         case .unlimitedLimits: return String(localized: "Unlimited daily limits")
         case .smartCategories: return String(localized: "Smart categories")
         case .debrief:         return String(localized: "Session debrief")
-        case .workLog:         return String(localized: "Work log")
+        case .workLog:         return String(localized: "Your week")
         case .coach:           return String(localized: "Weekly coach")
         case .taskGoals:       return String(localized: "Tasks as session goals")
         case .ask:             return String(localized: "Ask", comment: "A Pro feature: asking questions about your own focus")

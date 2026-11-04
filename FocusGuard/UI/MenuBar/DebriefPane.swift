@@ -272,7 +272,7 @@ struct DebriefPane: View {
                 if copied, let standup = standup(debrief) { copiedCard(standup) }
                 Spacer(minLength: 0)
                 HStack(spacing: 6) {
-                    Button("Open work log", action: onOpenLog)
+                    Button("Open your week", action: onOpenLog)
                         .buttonStyle(.capsule(.primary, height: 32, fullWidth: true))
                     if let standup = standup(debrief) {
                         Button("Copy for standup") {

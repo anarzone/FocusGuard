@@ -3,9 +3,9 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Work log, a Pro feature built on session goals and debriefs: the week's
-/// sessions by day, the projects they went to, a standup draft and a
-/// timesheet. Locked, it's a faded preview with a card about it.
+/// Your week, a Pro feature built on session goals and debriefs: the week's
+/// focus by day and project, an update to share, a standup draft, a timesheet
+/// and every session. Locked, it's a faded preview with a card about it.
 struct WorkLogPage: View {
     @Bindable var appState: AppState
     var entitlements: Entitlements = .shared
@@ -25,7 +25,7 @@ enum WorkLogAccess {
     static func isOpen(shipped: Bool, unlocked: Bool) -> Bool { shipped && unlocked }
 }
 
-// MARK: - The log
+// MARK: - The week
 
 /// Loads the week from the store and keeps it fresh.
 private struct WorkLogView: View {
@@ -35,7 +35,14 @@ private struct WorkLogView: View {
 
     @State private var offset = 0
     @State private var model: WorkLogModel
+    @State private var report: ReportsModel?
+    @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
     @Environment(\.isOnScreen) private var isOnScreen
+
+    private let edits = WeekEditStore()
+    private let colours = WeekColourStore()
+    /// Bumped when a decision changes, to rebuild the update.
+    @State private var editCount = 0
 
     init(appState: AppState, calendar: Calendar = .current) {
         self._appState = Bindable(wrappedValue: appState)
@@ -43,14 +50,33 @@ private struct WorkLogView: View {
         // Open on the week as last loaded; the fresh copy follows.
         let interval = ReportPeriod.week.interval(offset: 0, calendar: calendar)
         self._model = State(initialValue: appState.windowPages.workLog[interval.start] ?? .empty(interval))
+        self._report = State(initialValue: appState.windowPages.reports[WindowPageCache.reportsKey(.week, 0)])
+    }
+
+    private var overview: WeekOverview {
+        WeekOverview.make(model: model, report: report, goal: { FocusGoal.seconds(on: $0, calendar: calendar) },
+                          weekendsCount: weekendsCount, remembered: colours.remembered, calendar: calendar)
+    }
+
+    private var update: WeekUpdate {
+        _ = editCount
+        return WeekUpdateBuilder.build(model, decisions: edits.decisions(week: model.interval.start),
+                                       links: appState.integrations.taskLinks, calendar: calendar)
     }
 
     var body: some View {
-        WorkLogContent(model: model, offset: $offset, canWrite: appState.debriefs.canWrite, calendar: calendar) { entry, verdict in
-            guard let session = appState.debriefs.session(id: entry.id) else { return }
-            appState.debriefs.correct(session, to: verdict)
-            reload()
-        }
+        WorkLogContent(
+            model: model, overview: overview, update: update, offset: $offset, calendar: calendar,
+            onCorrect: { entry, verdict in
+                guard let session = appState.debriefs.session(id: entry.id) else { return }
+                appState.debriefs.correct(session, to: verdict)
+                reload()
+            },
+            onDecide: { line, decision in
+                edits.set(decision, line: line, week: model.interval.start)
+                editCount += 1
+            }
+        )
         // Every minute while the window can be seen.
         .repeating(every: .seconds(60), while: isOnScreen, id: offset) { reload() }
         .onChange(of: appState.debriefs.writing) { reload() }
@@ -62,308 +88,226 @@ private struct WorkLogView: View {
         model = WorkLogBuilder.load(interval: interval, context: appState.container.mainContext,
                                     isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
         appState.windowPages.workLog[interval.start] = model
+        let key = WindowPageCache.reportsKey(.week, offset)
+        report = appState.windowPages.reports[key]
+        let weekOffset = offset
+        Task {
+            let fresh = await appState.stats.reports(period: .week, offset: weekOffset, now: .now,
+                                                     historyStart: Entitlements.shared.historyStart(),
+                                                     weekendsCount: weekendsCount)
+            appState.windowPages.reports[key] = fresh
+            // The user may have stepped to another week meanwhile.
+            guard weekOffset == offset else { return }
+            report = fresh
+            colours.remember(WeekOverview.assignSlots(overview.series.compactMap { $0.slot == nil ? nil : $0.id },
+                                                      remembered: colours.remembered))
+        }
     }
 }
 
-/// The week laid out: sessions by day on the left; projects, the standup
-/// draft and the timesheet on the right.
+/// The page's views. The top row stays put; the tabs change what's below it.
+enum WeekTab: Hashable {
+    case week, standup, sheet, log
+}
+
+/// The week laid out: its total, its days and its projects along the top; below
+/// them a tab, and beside it where that came from.
 struct WorkLogContent: View {
     let model: WorkLogModel
+    let overview: WeekOverview
+    let update: WeekUpdate
     @Binding var offset: Int
-    /// Apple Intelligence is there to write debriefs.
-    let canWrite: Bool
     /// The one the model was built with, for the CSV's dates.
     var calendar: Calendar = .current
-    /// The user's own call on a goal, from the row's menu.
+    /// The user's own call on a goal.
     var onCorrect: (WorkLogEntry, GoalVerdict) -> Void = { _, _ in }
+    /// The user's call on a guess; nil takes it back.
+    var onDecide: (String, WeekDecision?) -> Void = { _, _ in }
 
+    @State private var tab = WeekTab.week
+    @State private var pickedLine: String?
+    @State private var pickedSession: UUID?
+    @State private var hoverProject: String?
+    @State private var pinnedProject: String?
     @State private var editingStandup = false
     @State private var standupText = ""
     @State private var copied = false
+    @ReduceMotion private var reduced
+
+    private var highlight: String? { hoverProject ?? pinnedProject }
+
+    /// The line picked, else the first one that needs an answer, else the first.
+    private var currentLine: WeekLine? {
+        update.lines.first { $0.id == pickedLine } ?? update.check.first ?? update.lines.first
+    }
+
+    private var currentSession: WorkLogEntry? {
+        model.entries.first { $0.id == pickedSession }
+    }
+
+    private var chartDays: [Date] { overview.days.map(\.date) }
 
     var body: some View {
         WindowScroll {
-            PageHeader(title: String(localized: "Work log"), subtitle: subtitle) {
-                PeriodStepper(offset: $offset, unit: .week)
-                exportMenu
-            }
+            header
         } content: {
-            VStack(alignment: .leading, spacing: 12) {
-                let headline = model.headline(offset: offset)
-                WindowHeadline(lead: headline.lead, rest: headline.rest)
-                if !canWrite { appleIntelligenceNote }
-                WindowSplitRow(weights: [1.5, 1]) {
-                    sessions
-                    VStack(spacing: 12) {
-                        projects
-                        standup
-                        timesheet
-                    }
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    WeekHeroCard(overview: overview, offset: offset).frame(width: 216)
+                    WeekChartCard(overview: overview, highlight: highlight)
+                    WeekProjectsCard(overview: overview, hover: $hoverProject, pinned: $pinnedProject).frame(width: 232)
                 }
+                .frame(height: 188)
+                HStack(spacing: 10) {
+                    panel.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    side.frame(width: 272)
+                }
+                .frame(minHeight: 320, maxHeight: .infinity)
             }
+            .frame(maxHeight: .infinity)
         }
         .onAppear { standupText = model.standup?.text ?? "" }
         .onChange(of: model.standup) {
             standupText = model.standup?.text ?? ""
             editingStandup = false
         }
+        .onChange(of: tab) { copied = false }
     }
+
+    // MARK: Header
 
     private var subtitle: String {
-        String(localized: "Week of \(model.interval.start.formatted(.dateTime.day().month(.wide))) · from your session goals and debriefs")
+        let last = model.interval.end.addingTimeInterval(-1)
+        let range = ReportPeriod.week.title(for: DateInterval(start: model.interval.start, end: last), calendar: calendar)
+        let projects = overview.series.filter { $0.slot != nil }.count
+        return String(localized: "\(range) · \(model.entries.count) sessions · \(projects) projects", comment: "Plural on both: 2 – 8 November · 1 session · 3 projects")
     }
 
-    private var exportMenu: some View {
-        Menu {
-            Button("Timesheet as CSV…") { exportTimesheet() }
-                .disabled(model.timesheet.rows.isEmpty)
-            Button("Copy the work log") { copy(WorkLogText.make(model), flash: false) }
-                .disabled(model.days.isEmpty)
-        } label: {
-            HStack(spacing: 6) {
-                Text("Export")
-                Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-            }
-            .font(.system(size: 13))
+    private var heading: some View {
+        Text("Your week")
+            .font(.system(size: 22, weight: .bold))
+            .kerning(-0.44)
             .foregroundStyle(Theme.primaryText)
-            .padding(.leading, 14)
-            .padding(.trailing, 12)
-            .frame(height: 32)
-            .background(HeaderCapsuleBackground())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
+            .accessibilityAddTraits(.isHeader)
     }
 
-    private var appleIntelligenceNote: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "sparkles").foregroundStyle(Theme.focus).accessibilityHidden(true)
-            Text(OnDeviceAI.isAvailable ? "Debriefs aren't written in this language yet. Goals, times and apps still show here."
-                 : "Needs Apple Intelligence (macOS 26) to write debriefs. Goals, times and apps still show here.")
+    private var title: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            heading
+            Text(subtitle)
                 .font(.system(size: 12))
-                .foregroundStyle(Theme.bodyText)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 36)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.inset))
-    }
-
-    // MARK: Sessions
-
-    private var sessions: some View {
-        WindowCard(padding: EdgeInsets(top: 6, leading: 20, bottom: 10, trailing: 20)) {
-            if model.days.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "doc.text").font(.system(size: 20)).foregroundStyle(Theme.focus)
-                        .accessibilityHidden(true)
-                    Text("Nothing logged").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.primaryText)
-                    Text("Sessions show up here with their goals and debriefs.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.secondaryText)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, minHeight: 220)
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(model.days) { day in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(day.day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(Theme.primaryText)
-                                .accessibilityAddTraits(.isHeader)
-                            Spacer(minLength: 8)
-                            Text("\(day.entries.count) sessions · \(WindowFormat.hm(day.focused)) focused", comment: "Plural on entries.count: 1 session / 2 sessions")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.secondaryText)
-                        }
-                        .padding(.top, 12)
-                        .padding(.bottom, 6)
-                        ForEach(day.entries) { entry in row(entry) }
-                    }
-                }
-            }
-        }
-    }
-
-    private func row(_ entry: WorkLogEntry) -> some View {
-        VStack(spacing: 0) {
-            Rectangle().fill(Theme.hairline).frame(height: 0.5)
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.end.map { WindowFormat.span(entry.start, $0) }
-                         ?? String(localized: "\(WindowFormat.clock(entry.start))–now", comment: "A session still running: 14:05–now"))
-                        .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                        .foregroundStyle(Theme.primaryText)
-                    Text(entry.name)
-                    if entry.hasRate {
-                        let rate = Int((entry.focusRate * 100).rounded())
-                        Text(entry.isLive ? "\(rate)% so far" : "\(rate)% focus rate")
-                    }
-                }
-                .font(.system(size: 11))
                 .foregroundStyle(Theme.secondaryText)
                 .lineLimit(1)
-                .frame(width: 112, alignment: .leading)
+        }
+    }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(entry.title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(entry.hasGoal ? Theme.primaryText : Theme.secondaryText)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        if let project = entry.project { projectChip(project) }
-                        stateChip(entry.state)
-                    }
-                    if let note = entry.note {
-                        Text(note)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.bodyText)
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if !entry.apps.isEmpty {
-                        Text(entry.apps).font(.system(size: 11)).foregroundStyle(Theme.tertiaryText).lineLimit(1)
-                    }
+    private var tabs: some View {
+        WeekTabs(options: [(WeekTab.week, String(localized: "Week update")),
+                           (WeekTab.standup, String(localized: "Standup")),
+                           (WeekTab.sheet, String(localized: "Timesheet")),
+                           (WeekTab.log, String(localized: "Sessions"))],
+                 selection: $tab, label: String(localized: "Choose a view"))
+    }
+
+    /// In one row when it fits. On a narrow window the subtitle goes first,
+    /// then the tabs drop below.
+    private var header: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                title.fixedSize()
+                Spacer(minLength: 12)
+                PeriodStepper(offset: $offset, unit: .week)
+                tabs
+            }
+            .frame(height: 60)
+            HStack(spacing: 12) {
+                heading.fixedSize()
+                Spacer(minLength: 12)
+                PeriodStepper(offset: $offset, unit: .week)
+                tabs
+            }
+            .frame(height: 60)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 12) {
+                    title
+                    Spacer(minLength: 12)
+                    PeriodStepper(offset: $offset, unit: .week)
                 }
+                tabs
             }
-            .padding(.vertical, 10)
         }
-        .contentShape(Rectangle())
-        .contextMenu {
-            if entry.hasGoal && !entry.isLive {
-                ForEach(GoalVerdict.allCases, id: \.self) { verdict in
-                    Button(markTitle(verdict)) { onCorrect(entry, verdict) }
-                        .disabled(entry.state == .verdict(verdict))
+    }
+
+    // MARK: Below the top row
+
+    @ViewBuilder private var panel: some View {
+        switch tab {
+        case .week:
+            WeekUpdateCard(update: update, overview: overview, offset: offset, selected: currentLine?.id, highlight: highlight, copied: copied,
+                           onSelect: { pickedLine = $0.id }, onCopy: { copy(update.text(interval: model.interval)) },
+                           onBringBack: { update.leftOut.forEach { onDecide($0.id, nil) } }, onCorrect: onCorrect)
+        case .standup:
+            standup
+        case .sheet:
+            timesheet
+        case .log:
+            WeekSessionsCard(model: model, overview: overview, selected: pickedSession, copied: copied, calendar: calendar,
+                             onSelect: { pickedSession = $0.id }, onCopy: { copy(WorkLogText.make(model)) })
+        }
+    }
+
+    @ViewBuilder private var side: some View {
+        switch tab {
+        case .week:
+            WeekSourcePanel(source: currentLine.map(WeekSource.init(line:)), days: chartDays) {
+                if let line = currentLine { lineActions(line) }
+            }
+        case .standup:
+            WeekSourcePanel(source: note(id: "standup", title: String(localized: "Your standup"), [
+                ("checkmark", String(localized: "Done comes from the goals you marked")),
+                ("clock", String(localized: "Next comes from goals still open")),
+                ("questionmark", String(localized: "Only you can say what's blocking you")),
+            ]), days: chartDays) { EmptyView() }
+        case .sheet:
+            WeekSourcePanel(source: note(id: "sheet", title: String(localized: "Your timesheet"), [
+                ("clock", String(localized: "Focused hours in sessions, per project and day")),
+                ("macwindow", String(localized: "Projects come from your goals and apps")),
+            ]), days: chartDays) { EmptyView() }
+        case .log:
+            if let entry = currentSession {
+                WeekSourcePanel(source: WeekSessionText.source(entry, calendar: calendar), days: chartDays) {
+                    if entry.hasGoal && !entry.isLive { verdictPicker(entry) }
                 }
+            } else {
+                WeekSourcePanel(source: note(id: "log", title: String(localized: "Every session"), [
+                    ("clock", String(localized: "Sessions coloured by project")),
+                    ("questionmark", String(localized: "Hover one for its time; click it for its goal and debrief")),
+                ]), days: chartDays) { EmptyView() }
             }
         }
-        .accessibilityElement(children: .combine)
     }
 
-    private func markTitle(_ verdict: GoalVerdict) -> String {
-        switch verdict {
-        case .done:   return String(localized: "Mark as done")
-        case .partly: return String(localized: "Mark as partly")
-        case .notYet: return String(localized: "Mark as not yet")
-        }
+    private func note(id: String, title: String, _ items: [(String, String)]) -> WeekSource {
+        WeekSource(id: id, title: title, days: Set(model.days.map(\.day)),
+                   items: items.map { WeekSource.Item(symbol: $0.0, text: $0.1) })
     }
 
-    private func projectChip(_ name: String) -> some View {
-        Text(name)
-            .font(.system(size: 11))
-            .foregroundStyle(Theme.bodyText)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Theme.track))
-            .fixedSize()
-    }
-
-    @ViewBuilder private func stateChip(_ state: WorkLogEntry.State) -> some View {
-        switch state {
-        case .verdict(.done):
-            chip(fill: Theme.focusFill, ink: .white) {
-                Image(systemName: "checkmark").font(.system(size: 8, weight: .bold))
-                Text("Done")
-            }
-        case .verdict(.partly):
-            chip(fill: Theme.focusTint, ink: Theme.link) {
-                Image(systemName: "circle.lefthalf.filled").font(.system(size: 8, weight: .bold))
-                Text("Partly")
-            }
-        case .verdict(.notYet):
-            chip(fill: Theme.track, ink: Theme.bodyText) { Text("Not yet") }
-        case .live:
-            chip(fill: Theme.track, ink: Theme.bodyText) {
-                Circle().fill(Theme.focus).frame(width: 6, height: 6)
-                Text("In progress")
-            }
-        case .open:
-            EmptyView()
+    @ViewBuilder private func lineActions(_ line: WeekLine) -> some View {
+        switch line.group {
+        case .check:
+            WeekGuessActions(line: line, onKeep: { onDecide(line.id, .kept(name: $0)) }, onLeave: { onDecide(line.id, .left) })
+        case .also:
+            Button("Take it back") { onDecide(line.id, nil) }
+                .buttonStyle(.capsule(.secondary, height: 26))
+        case .done, .going:
+            if let entry = line.sessions.first(where: { !$0.isLive }) { verdictPicker(entry) }
         }
     }
 
-    private func chip<Content: View>(fill: Color, ink: Color, @ViewBuilder _ content: () -> Content) -> some View {
-        HStack(spacing: 4) { content() }
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(ink)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(fill))
-            .fixedSize()
-    }
-
-    // MARK: Projects
-
-    /// Indigo, a shade further for each next project; grey for "No project".
-    private func projectColor(_ project: WorkLogProject, at index: Int) -> Color {
-        guard project.name != nil else { return Theme.other.opacity(0.6) }
-        return Self.projectShades[min(index, Self.projectShades.count - 1)]
-    }
-
-    /// #6155F5, #9C94FA, #C9C4FC, #E0DDFD; on dark #6D7CFF, #9AA3FF, #4A50A6, #3A3F80.
-    private static let projectShades: [Color] = [
-        (0x6155F5, 0x6D7CFF), (0x9C94FA, 0x9AA3FF), (0xC9C4FC, 0x4A50A6), (0xE0DDFD, 0x3A3F80),
-    ].map { light, dark in
-        Color(nsColor: NSColor(name: nil) { appearance in
-            let hex = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
-            return NSColor(srgbRed: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255,
-                           blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
-        })
-    }
-
-    private var projects: some View {
-        WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
-            VStack(alignment: .leading, spacing: 10) {
-                WindowCardTitle(String(localized: "Projects"))
-                if model.projects.isEmpty {
-                    Text("No focused time yet.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.secondaryText)
-                } else {
-                    let shown = Array(model.projects.prefix(6))
-                    GeometryReader { geo in
-                        let total = max(1, shown.reduce(0) { $0 + $1.seconds })
-                        let free = geo.size.width - CGFloat(max(0, shown.count - 1)) * 2
-                        HStack(spacing: 2) {
-                            ForEach(Array(shown.enumerated()), id: \.element.id) { index, project in
-                                Rectangle().fill(projectColor(project, at: index))
-                                    .frame(width: max(2, free * CGFloat(project.seconds / total)))
-                            }
-                        }
-                    }
-                    .frame(height: 8)
-                    .clipShape(Capsule())
-                    .accessibilityHidden(true)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                              alignment: .leading, spacing: 6) {
-                        ForEach(Array(shown.enumerated()), id: \.element.id) { index, project in
-                            HStack(spacing: 6) {
-                                Circle().fill(projectColor(project, at: index)).frame(width: 8, height: 8)
-                                    .accessibilityHidden(true)
-                                Text(project.title)
-                                    .fontWeight(project.name == nil ? .regular : .semibold)
-                                    .foregroundStyle(project.name == nil ? Theme.secondaryText : Theme.primaryText)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(WindowFormat.hm(project.seconds))
-                                    .monospacedDigit()
-                                    .foregroundStyle(Theme.secondaryText)
-                            }
-                            .font(.system(size: 12))
-                            .accessibilityElement(children: .combine)
-                        }
-                    }
-                }
-            }
-        }
-        .fixedSize(horizontal: false, vertical: true)
+    private func verdictPicker(_ entry: WorkLogEntry) -> some View {
+        var current: GoalVerdict?
+        if case .verdict(let verdict) = entry.state { current = verdict }
+        return WeekVerdictPicker(current: current) { onCorrect(entry, $0) }
     }
 
     // MARK: Standup
@@ -424,11 +368,10 @@ struct WorkLogContent: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// `flash` turns the standup's Copy into "Copied" for a moment.
-    private func copy(_ text: String, flash: Bool = true) {
+    /// Puts it on the clipboard, and turns the button into "Copied" for a moment.
+    private func copy(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        guard flash else { return }
         copied = true
         Task {
             try? await Task.sleep(for: .seconds(2))
@@ -562,7 +505,7 @@ private struct WorkLogLocked: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PageHeader(title: String(localized: "Work log"), subtitle: String(localized: "Part of FocusGuard Pro")) { EmptyView() }
+            PageHeader(title: String(localized: "Your week"), subtitle: String(localized: "Part of FocusGuard Pro")) { EmptyView() }
             ZStack(alignment: .top) {
                 WorkLogSkeleton()
                     .opacity(0.45)
@@ -603,7 +546,7 @@ private struct WorkLogLocked: View {
                     .kerning(-0.44)
                     .foregroundStyle(Theme.primaryText)
                     .accessibilityAddTraits(.isHeader)
-                Text("Give a session a goal when it starts and say how it went when it ends. FocusGuard turns that into a work log, a standup draft and a timesheet.")
+                Text("Give a session a goal when it starts and say how it went when it ends. FocusGuard turns that into a week update, a standup draft and a timesheet.")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.bodyText)
                     .lineSpacing(3)
@@ -666,8 +609,8 @@ private struct WorkLogLocked: View {
 
     private var comingNote: String {
         entitlements.isUnlocked(.workLog)
-            ? String(localized: "The work log arrives in a coming update. It's included in your Pro.")
-            : String(localized: "The work log arrives in a coming update, as part of Pro.")
+            ? String(localized: "Your week arrives in a coming update. It's included in your Pro.")
+            : String(localized: "Your week arrives in a coming update, as part of Pro.")
     }
 
     private func point(_ title: String, _ detail: String) -> some View {

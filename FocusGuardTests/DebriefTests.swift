@@ -408,16 +408,14 @@ final class WorkLogTests: XCTestCase {
         XCTAssertEqual(model.days.first?.entries.first?.state, .live)
         XCTAssertNil(model.days.first?.entries[1].note, "nothing in the session backs that up")
         XCTAssertEqual(model.days.last?.entries.first?.title, "Mostly Xcode")
-        XCTAssertEqual(model.goalsDone, 2)
-        XCTAssertEqual(model.goalsPartly, 2)
+        XCTAssertEqual(model.entries.filter { $0.state == .verdict(.done) }.count, 2)
+        XCTAssertEqual(model.entries.filter { $0.state == .verdict(.partly) }.count, 2)
     }
 
     func testProjectsAddUpFocusedTimeWithNoProjectLast() {
         let model = model()
         XCTAssertEqual(model.projects.map(\.title), ["FocusGuard", "anar.to", "Support", "No project"])
         XCTAssertEqual(model.projects.first?.seconds ?? 0, 110 * 60, accuracy: 1)
-        XCTAssertEqual(model.headline(offset: 0).lead, "2 goals done and 2 partly this week.")
-        XCTAssertEqual(model.headline(offset: 0).rest, "Most of it went to FocusGuard.")
     }
 
     func testTheTimesheetHasWeekdaysAndTotals() {
@@ -497,8 +495,6 @@ final class WorkLogTests: XCTestCase {
     func testAnEmptyWeekSaysSo() {
         let empty = WorkLogBuilder.build([], interval: week, calendar: calendar)
         XCTAssertNil(empty.standup)
-        XCTAssertEqual(empty.headline(offset: 0).lead, "No sessions yet this week.")
-        XCTAssertEqual(empty.headline(offset: 1).lead, "No sessions last week.")
     }
 
     func testTheSidebarBadgeShowsUntilTheLogOpens() {
