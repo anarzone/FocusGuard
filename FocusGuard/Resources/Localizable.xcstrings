@@ -12837,6 +12837,22 @@
         }
       }
     },
+    "Choose a client for a project, and their report shows here." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen Kunden für ein Projekt, dann erscheint sein Bericht hier."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layihə üçün müştəri seçin, onun hesabatı burada görünəcək."
+          }
+        }
+      }
+    },
     "Choose a view" : {
       "localizations" : {
         "de" : {
@@ -12865,6 +12881,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auswählen, was ausgeschlossen wird"
+          }
+        }
+      }
+    },
+    "Client" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunde"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri"
+          }
+        }
+      }
+    },
+    "Client for %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunde für %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ üçün müştəri"
+          }
+        }
+      }
+    },
+    "Client report" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kundenbericht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri hesabatı"
+          }
+        }
+      }
+    },
+    "Clients and rounding" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunden und Rundung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştərilər, yuvarlama"
           }
         }
       }
@@ -15808,6 +15888,22 @@
         }
       }
     },
+    "Drift" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ablenkung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınma"
+          }
+        }
+      }
+    },
     "Drift %@: %@" : {
       "localizations" : {
         "az" : {
@@ -17070,6 +17166,22 @@
         }
       }
     },
+    "Export client report" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kundenbericht exportieren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri hesabatını ixrac et"
+          }
+        }
+      }
+    },
     "Export CSV" : {
       "localizations" : {
         "az" : {
@@ -17166,6 +17278,22 @@
         }
       }
     },
+    "Export PDF" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF exportieren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF ixrac et"
+          }
+        }
+      }
+    },
     "Export this day's activity as CSV" : {
       "localizations" : {
         "az" : {
@@ -17249,6 +17377,23 @@
         }
       }
     },
+    "Finished: %@" : {
+      "comment" : "A goal done this week, in a client report",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgeschlossen: %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamamlanıb: %@"
+          }
+        }
+      }
+    },
     "Focus Analyzer" : {
       "localizations" : {
         "de" : {
@@ -17325,6 +17470,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fokusrate an diesen Tagen in den letzten 4 Wochen."
+          }
+        }
+      }
+    },
+    "Focus rates" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusquoten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus faizləri"
           }
         }
       }
@@ -17437,6 +17598,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard-Karten"
+          }
+        }
+      }
+    },
+    "FocusGuard groups your time by goal, repository and app. Fix a guess once, and it stays fixed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard ordnet deine Zeit nach Ziel, Repository und App. Korrigiere eine Vermutung einmal, und sie bleibt korrigiert."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard vaxtınızı hədəf, repozitoriya və tətbiqə görə qruplaşdırır. Təxmini bir dəfə düzəldin, belə də qalacaq."
           }
         }
       }
@@ -20488,6 +20665,22 @@
         }
       }
     },
+    "Goals" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziele"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəflər"
+          }
+        }
+      }
+    },
     "Goals and debriefs" : {
       "localizations" : {
         "az" : {
@@ -22602,6 +22795,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Çıxar"
+          }
+        }
+      }
+    },
+    "Left as it is. FocusGuard won't ask about %@ again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bleibt, wie es ist. FocusGuard fragt nicht mehr nach %@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Olduğu kimi qaldı. FocusGuard %@ barədə bir daha soruşmayacaq."
           }
         }
       }
@@ -24829,6 +25038,44 @@
         }
       }
     },
+    "Move to" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verschieben nach"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bura köçür"
+          }
+        }
+      }
+    },
+    "Moved. FocusGuard will count %@ as %@ from now on." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moved. FocusGuard will count %1$@ as %2$@ from now on."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verschoben. FocusGuard zählt %1$@ ab jetzt als %2$@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Köçürüldü. FocusGuard bundan sonra %1$@ vaxtını %2$@ kimi sayacaq."
+          }
+        }
+      }
+    },
     "Music" : {
       "localizations" : {
         "az" : {
@@ -25169,6 +25416,22 @@
         }
       }
     },
+    "Never in a client report" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie in einem Kundenbericht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri hesabatında heç vaxt olmur"
+          }
+        }
+      }
+    },
     "Never keystrokes, screen contents, page text or passwords" : {
       "localizations" : {
         "az" : {
@@ -25277,6 +25540,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Neuer Tagesrekord"
+          }
+        }
+      }
+    },
+    "New client" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Kunde"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni müştəri"
+          }
+        }
+      }
+    },
+    "New client…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neuer Kunde …"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni müştəri…"
+          }
+        }
+      }
+    },
+    "New project" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Projekt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni layihə"
+          }
+        }
+      }
+    },
+    "New project…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neues Projekt …"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeni layihə…"
           }
         }
       }
@@ -25637,6 +25964,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch kein klarer Grund"
+          }
+        }
+      }
+    },
+    "No client" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Kunde"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri yoxdur"
+          }
+        }
+      }
+    },
+    "No focused time this week." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Woche keine fokussierte Zeit."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə fokus vaxtı yoxdur."
           }
         }
       }
@@ -26188,6 +26547,22 @@
         }
       }
     },
+    "No sites, window titles, drift or other clients" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Websites, Fenstertitel, Ablenkungen oder anderen Kunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saytlar, pəncərə başlıqları, yayınma və digər müştərilər olmur"
+          }
+        }
+      }
+    },
     "No songs in this album." : {
       "localizations" : {
         "az" : {
@@ -26489,6 +26864,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht erfasst: Tastenanschläge, Bildschirminhalte, Seitentexte. Titel kannst du für jede App in den Einstellungen ausblenden."
+          }
+        }
+      }
+    },
+    "Not rounded, as you set" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gerundet, wie eingestellt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarladığınız kimi yuvarlaqlaşdırılmayıb"
           }
         }
       }
@@ -27955,6 +28346,22 @@
         }
       }
     },
+    "Only this Mac has it until you export. You check the PDF before it goes anywhere." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis zum Export bleibt es auf diesem Mac. Du prüfst das PDF, bevor es irgendwohin geht."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İxrac edənə qədər yalnız bu Mac-dadır. PDF-i göndərməzdən əvvəl özünüz yoxlayırsınız."
+          }
+        }
+      }
+    },
     "Only this part of the site" : {
       "localizations" : {
         "az" : {
@@ -28645,6 +29052,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Andere App…"
+          }
+        }
+      }
+    },
+    "Other clients" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Kunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digər müştərilər"
           }
         }
       }
@@ -30559,6 +30982,22 @@
         }
       }
     },
+    "Projects and clients" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projekte und Kunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layihələr və müştərilər"
+          }
+        }
+      }
+    },
     "Projects come from your goals and apps" : {
       "localizations" : {
         "de" : {
@@ -30587,6 +31026,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Projekte ergeben sich aus deinen Zielen und Apps."
+          }
+        }
+      }
+    },
+    "Projects, finished work and hours" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projekte, abgeschlossene Arbeit und Stunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layihələr, tamamlanmış işlər və saatlar"
           }
         }
       }
@@ -31747,6 +32202,38 @@
         }
       }
     },
+    "Round up for clients" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für Kunden aufrunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştərilər üçün yuvarlaqlaşdır"
+          }
+        }
+      }
+    },
+    "Rounded up to %lld minutes, as you set" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf %lld Minuten aufgerundet, wie eingestellt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarladığınız kimi %lld dəqiqəyə yuvarlaqlaşdırılıb"
+          }
+        }
+      }
+    },
     "Rules decide how new activity is sorted. Yours win over built-in ones." : {
       "localizations" : {
         "az" : {
@@ -32017,6 +32504,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anzeigen als"
+          }
+        }
+      }
+    },
+    "Site names" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website-Namen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sayt adları"
           }
         }
       }
@@ -41386,6 +41889,54 @@
         }
       }
     },
+    "What %@ sees" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was %@ sieht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nə görür"
+          }
+        }
+      }
+    },
+    "What %@ will see, live" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was %@ sehen wird, live"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nə görəcək, canlı"
+          }
+        }
+      }
+    },
+    "What a client sees" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was ein Kunde sieht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Müştəri nə görür"
+          }
+        }
+      }
+    },
     "What FocusGuard can see" : {
       "localizations" : {
         "az" : {
@@ -42061,6 +42612,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beim Abschweifen: %@ · sofort Stopp"
+          }
+        }
+      }
+    },
+    "Where does this belong?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wohin gehört das?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu haraya aiddir?"
           }
         }
       }

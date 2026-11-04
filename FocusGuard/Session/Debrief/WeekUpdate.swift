@@ -99,7 +99,7 @@ enum WeekUpdateBuilder {
     /// Time without a goal has to add up to this before it's worth asking about.
     static let guessFrom: TimeInterval = 30 * 60
 
-    static func build(_ model: WorkLogModel, decisions: [String: WeekDecision] = [:],
+    static func build(_ model: WorkLogModel, decisions: [String: WeekDecision] = [:], ignored: [String] = [],
                       links: [UUID: TaskLink] = [:], calendar: Calendar = .current) -> WeekUpdate {
         var done: [WeekLine] = [], going: [WeekLine] = [], check: [WeekLine] = []
         var also: [WeekLine] = [], leftOut: [WeekLine] = []
@@ -112,12 +112,14 @@ enum WeekUpdateBuilder {
 
         let loose = model.entries.filter { !$0.hasGoal && !$0.isLive && $0.focused > 0 }
         let guesses = Dictionary(grouping: loose) { $0.project ?? $0.mostly ?? "" }
-        for (name, entries) in guesses where !name.isEmpty {
+        for (name, entries) in guesses where !name.isEmpty && !ignored.contains(name.lowercased()) {
             let seconds = entries.reduce(0) { $0 + $1.focused }
             guard seconds >= guessFrom else { continue }
             let id = "time:\(name.lowercased())"
             let base = guessLine(id: id, name: name, entries: sortedNewestFirst(entries), seconds: seconds, calendar: calendar)
-            switch decisions[id] {
+            // Time the user put under a project isn't a guess any more.
+            let settled: WeekDecision? = entries.allSatisfy(\.movedByUser) ? .kept(name: nil) : nil
+            switch decisions[id] ?? settled {
             case .kept(let renamed):
                 also.append(base.kept(name: renamed ?? name))
             case .left:

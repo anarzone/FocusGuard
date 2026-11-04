@@ -174,9 +174,18 @@ final class FlowClickTests: XCTestCase {
         waitFor(button("Export CSV"), "The timesheet should open")
         sleep(1)
         shoot("week-timesheet")
+        try click(button("Client report"))
+        waitFor(button("Export PDF"), "The client report should open")
+        sleep(1)
+        shoot("week-client")
         try click(button("Sessions"))
         sleep(1)
         shoot("week-sessions")
+        try click(button("Clients and rounding"))
+        waitFor(button("Save"), "The projects sheet should open")
+        sleep(1)
+        shoot("week-projects")
+        try click(button("Cancel"))
     }
 
     // MARK: - A session
