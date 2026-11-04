@@ -75,7 +75,7 @@ final class IslandPanelController: IslandSurface {
     private var spot = IslandPlacement.Spot(centerX: 0, top: 0)
     private var settling: Task<Void, Never>?
     private var isHovering = false
-    private var pointerMonitors: [Any] = []
+    private var pointerTimer: Timer?
 
     func attach(_ island: IslandController) {
         self.island = island
@@ -214,23 +214,22 @@ final class IslandPanelController: IslandSurface {
     // MARK: - The pointer
 
     /// The panel ignores the mouse most of the time, so it can't watch for
-    /// itself: other apps' moves come to the first monitor, its own to the second.
-    /// Neither needs a permission, and they only run while the island is up.
+    /// itself, and mouse-move events don't reliably reach an app that isn't
+    /// tracking them. So it looks at the pointer directly, only while the
+    /// island is up.
     private func watchPointer() {
-        guard pointerMonitors.isEmpty else { return }
-        let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
-        if let global = NSEvent.addGlobalMonitorForEvents(matching: events, handler: { [weak self] _ in
+        guard pointerTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.pointerMoved() }
-        }) { pointerMonitors.append(global) }
-        if let local = NSEvent.addLocalMonitorForEvents(matching: events, handler: { [weak self] event in
-            MainActor.assumeIsolated { self?.pointerMoved() }
-            return event
-        }) { pointerMonitors.append(local) }
+        }
+        timer.tolerance = 0.01
+        RunLoop.main.add(timer, forMode: .common)
+        pointerTimer = timer
     }
 
     private func stopWatchingPointer() {
-        pointerMonitors.forEach(NSEvent.removeMonitor)
-        pointerMonitors = []
+        pointerTimer?.invalidate()
+        pointerTimer = nil
     }
 
     private var isPointerOverIsland: Bool {
