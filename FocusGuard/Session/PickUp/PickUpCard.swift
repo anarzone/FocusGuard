@@ -60,7 +60,11 @@ struct PickUpCard: Equatable, Identifiable {
             title = String(localized: "You were working on “\(goal)”", comment: "The goal of the session, in the user's own words")
             sub = String(localized: "Your goal for this session")
         } else {
-            title = String(localized: "You were in \(lastWindow(places.first))", comment: "A window or app: You were in AuthSession.swift")
+            if let site = places.first?.host {
+                title = String(localized: "You were on \(site)", comment: "A website: You were on tradingview.com")
+            } else {
+                title = String(localized: "You were in \(lastWindow(places.first))", comment: "A window or app: You were in AuthSession.swift")
+            }
             if sawPrivateWindow {
                 sub = String(localized: "Private windows are never remembered")
             } else if kind == .drift, session?.isPaused == false {
@@ -70,7 +74,7 @@ struct PickUpCard: Equatable, Identifiable {
             }
         }
         let primary = kind == .drift
-            ? String(localized: "Back to \(shown.first?.appName ?? "")")
+            ? String(localized: "Back to \(shown.first?.shortAppName ?? "")")
             : String(localized: "Pick up", comment: "Button: go back to what you were doing")
         return PickUpCard(kind: kind, top: top, title: title, sub: sub,
                           rows: shown.map { Row(place: $0, detail: $0.what) },

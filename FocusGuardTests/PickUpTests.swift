@@ -170,7 +170,7 @@ final class PickUpTests: XCTestCase {
 
     func testWhatTheRowsSay() {
         XCTAssertEqual(place(title: "AuthSession.swift — FocusGuard").what, "AuthSession.swift")
-        XCTAssertEqual(place(arc, "Arc", title: "Pull request #142", url: "https://www.github.com/x").what, "Pull request #142 · github.com")
+        XCTAssertEqual(place(arc, "Arc", title: "Pull request #142", url: "https://www.github.com/x").what, "github.com")
         XCTAssertEqual(place(arc, "Arc", title: nil, url: "https://github.com/x").what, "github.com")
         XCTAssertNil(place(title: "Xcode").what)
     }

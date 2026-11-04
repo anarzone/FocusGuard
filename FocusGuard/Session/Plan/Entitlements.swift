@@ -30,7 +30,8 @@ final class Entitlements {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let verifier: LicenceVerifier
-    @ObservationIgnored private let reminder: TrialReminding?
+    /// AppState hands over its presenter, so the reminder can go on the island.
+    @ObservationIgnored var reminder: TrialReminding?
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var wakeObserver: NSObjectProtocol?

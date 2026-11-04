@@ -14,7 +14,7 @@ extension NotificationPresenter {
             info: [NotificationInfo.slots: plan.slots.map(\.timeIntervalSinceReferenceDate),
                    NotificationInfo.minutes: plan.sessionMinutes]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: morningPlanMoment(plan))
     }
 
     /// A slot from the morning plan has come: "Time for your 14:00 session".
@@ -27,7 +27,7 @@ extension NotificationPresenter {
                                                  (.skip, String(localized: "Skip this one"))]),
             info: [NotificationInfo.minutes: minutes, NotificationInfo.slot: slot.timeIntervalSinceReferenceDate]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: plannedSessionMoment(at: slot, title: request.content.title, body: request.content.body))
     }
 
     /// "You've been in Xcode 5 minutes" with "Start 50 minutes" and "Not now".
@@ -42,7 +42,7 @@ extension NotificationPresenter {
             info: [NotificationInfo.since: offer.since.timeIntervalSinceReferenceDate,
                    NotificationInfo.minutes: minutes]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: autoStartMoment(offer, usualMinutes: minutes, now: now))
     }
 
     /// "Today: 3h 40m focused" with "See today"; with a tip for tomorrow,
@@ -57,6 +57,6 @@ extension NotificationPresenter {
             info: wrapUp.tip.map { [NotificationInfo.slots: [$0.slot.timeIntervalSinceReferenceDate]] } ?? [:],
             level: .passive
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: wrapUpMoment(wrapUp))
     }
 }

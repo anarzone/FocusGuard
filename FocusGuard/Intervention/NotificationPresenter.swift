@@ -20,6 +20,10 @@ struct NudgeContext: Equatable {
     var backTo: String?
     /// The drifting app's bundle id, so "It's for work" knows what to allow.
     var bundleId: String?
+    /// When the block screen comes up, from `EscalationEngine`.
+    var blockAt: Date?
+    /// The preset in force: "Standard".
+    var presetName: String?
 }
 
 /// Every notification FocusGuard sends, with its buttons. The buttons'
@@ -42,6 +46,8 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
 
     /// The running session, for the nudge's words. Set by AppState.
     var nudgeContext: () -> NudgeContext? = { nil }
+    /// The floating island; nil where nothing may show (the UI tests).
+    var island: IslandController?
 
     /// - Parameters:
     ///   - defaults: where the notification switches live; tests pass their own.
@@ -74,9 +80,21 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         return true
     }
 
-    func deliver(_ request: UNNotificationRequest, as kind: Kind, force: Bool = false) {
+    /// The one place that decides how a notification shows: on the island,
+    /// or as a macOS notification when Settings says so.
+    func deliver(_ request: UNNotificationRequest, as kind: Kind, force: Bool = false, moment: IslandMoment? = nil) {
         guard force || allows(kind) else { return }
-        send(request)
+        guard let island, IslandSettings.surface(defaults) == .cards else {
+            send(request)
+            return
+        }
+        var look = moment ?? reminderMoment(for: request)
+        look.buttons = islandButtons(for: request) + look.buttons
+        island.post(look)
+    }
+
+    func categoryActions(_ identifier: String) -> [UNNotificationAction] {
+        categories.byID[identifier]?.actions ?? []
     }
 
     /// The length "Start 50 minutes" starts: the one the menu would.
@@ -120,8 +138,10 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
 
     /// "Still on x.com?" with "Back to Xcode" and "It's for work".
     func presentDistractionWarning(appName: String, currentURL: String? = nil) {
-        deliver(distractionWarning(appName: appName, currentURL: currentURL, context: nudgeContext()),
-                as: .driftWarning)
+        let context = nudgeContext()
+        let request = distractionWarning(appName: appName, currentURL: currentURL, context: context)
+        let place = BlockRequest.displayHost(currentURL) ?? appName
+        deliver(request, as: .driftWarning, moment: driftMoment(place: place, body: request.content.body, context: context))
     }
 
     /// Settings' "Send test notification": always delivers, so the user can
@@ -173,7 +193,7 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
                                                   (.startSession, String(localized: "Start another"))]),
             info: [NotificationInfo.minutes: breakMinutes, NotificationInfo.nextMinutes: usualMinutes]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: sessionFinishedMoment(name: name, minutes: minutes, focusPercent: focusPercent, zoneMinutes: zoneMinutes))
     }
 
     /// Shown when a break timer hits zero. Friendly nudge — no urgency.
@@ -187,7 +207,7 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
                                             (.extendBreak, String(localized: "5 more minutes"))]),
             info: [NotificationInfo.minutes: minutes]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: breakOverMoment(minutes: minutes))
     }
 
     // MARK: - Around the day
@@ -203,7 +223,7 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
             category: category(.driftPrompt, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes"))]),
             info: [NotificationInfo.minutes: minutes]
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: driftPromptMoment(host: host))
     }
 
     /// Five minutes before a daily limit runs out, while the user is on it.
@@ -214,7 +234,8 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
             title: String(localized: "\(minutesLeft) minutes left on \(name)", comment: "Plural on minutesLeft: 1 minute / 2 minutes"),
             body: String(localized: "You've used \(used) of your \(minutesToday) minutes today.", comment: "Plural on minutesToday: 1 minute / 2 minutes")
         )
-        deliver(request, as: .general)
+        deliver(request, as: .general, moment: limitMoment(name: name, minutesLeft: minutesLeft, used: used, minutesToday: minutesToday,
+                                                           title: request.content.title, body: request.content.body))
     }
 }
 

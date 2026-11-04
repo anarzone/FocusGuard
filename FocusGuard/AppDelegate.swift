@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 dismiss: { self?.menuBarController?.close() }
             )
         }
+        appState?.island?.statusItemFrame = { [weak self] in self?.menuBarController?.statusItemFrame }
 
         // Apply the persisted "Show in Dock" preference. When enabled the
         // app stays in .regular policy so the Dock icon is always visible —

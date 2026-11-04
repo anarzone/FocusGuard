@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 extension AppState {
@@ -24,6 +25,24 @@ extension AppState {
         pickUp.currentMoment = { [weak self] in self?.pickUpMoment() ?? PickUpMoment(now: .now) }
         pickUpHotKey.onPress = { [weak self] in self?.pickUp.shortcutPressed() }
         pickUpHotKey.setEnabled(PickUpSettings.isOn(PickUpSettings.shortcut))
+    }
+
+    /// What the island reads each second, and what settings still allow.
+    func wireIsland() {
+        island?.conditions = { [weak self] in self?.islandConditions() ?? IslandConditions(now: .now) }
+        island?.isAllowed = { [weak self] in self?.notificationPresenter.islandAllows($0) ?? false }
+        Entitlements.shared.reminder = notificationPresenter
+    }
+
+    private func islandConditions(now: Date = .now) -> IslandConditions {
+        IslandConditions(now: now,
+                         frontApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                         idleSeconds: IdleMonitor.secondsSinceInput(),
+                         inCall: habits.isInCall(now: now),
+                         screenUp: blockOverlay.isPresenting || breakOverlay.isPresenting || breakManager.isOnBreak,
+                         isAsleepOrLocked: tracker.isSuspended,
+                         isAway: tracker.isAway,
+                         isDrifting: escalationEngine.currentStreakStartedAt != nil)
     }
 
     /// What's going on right now. Read at each of the tracker's looks.

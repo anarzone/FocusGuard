@@ -227,6 +227,12 @@ final class MenuBarController: NSObject {
         }
     }
 
+    /// Where the status item is on screen; nil until it has a window.
+    var statusItemFrame: NSRect? {
+        guard let button = statusItem.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
     /// Whether a click landed on the status item. Checked by screen position
     /// because `event.window` isn't reliably the status bar's window — e.g.
     /// when FocusGuard isn't the active app — and treating the icon as

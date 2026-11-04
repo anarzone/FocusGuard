@@ -6,7 +6,8 @@ import UserNotifications
 extension NotificationPresenter: TrialReminding {
     func presentTrialEndingSoon(endsAt: Date) {
         let buttons = category(.trialEnding, [(.seePlans, String(localized: "See Free and Pro"))])
-        deliver(Self.trialEndingSoon(endsAt: endsAt, category: buttons), as: .general)
+        let request = Self.trialEndingSoon(endsAt: endsAt, category: buttons)
+        deliver(request, as: .general, moment: trialMoment(title: request.content.title, body: request.content.body))
     }
 
     static func trialEndingSoon(endsAt: Date, category: String? = nil) -> UNNotificationRequest {

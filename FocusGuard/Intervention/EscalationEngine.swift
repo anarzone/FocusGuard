@@ -142,6 +142,15 @@ final class EscalationEngine {
         }
     }
 
+    /// When the streak now running brings the block screen up, as `observe`
+    /// works it out. Nil without a streak.
+    func blockDeadline(at now: Date = .now) -> Date? {
+        guard let start = currentStreakStartedAt else { return nil }
+        let inForce = presetInForce(at: now)
+        let block = inForce != preset ? TimeInterval(inForce.values.block) : blockThreshold
+        return start.addingTimeInterval(block)
+    }
+
     private func presentBlock(for snapshot: ActivitySnapshot) {
         blocked = snapshot
         reblockKey = nil

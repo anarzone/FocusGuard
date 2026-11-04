@@ -1899,6 +1899,23 @@
         }
       }
     },
+    "%@ session" : {
+      "comment" : "On the small island: 10:00 session",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sessiyası"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session um %@"
+          }
+        }
+      }
+    },
     "%@ short of the %@ goal" : {
       "localizations" : {
         "az" : {
@@ -2806,6 +2823,23 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$lld min"
+          }
+        }
+      }
+    },
+    "%@ · %lld min left" : {
+      "comment" : "Session, then time left: Evening focus · 18 min left",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld dəq qalıb"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · noch %2$lld Min"
           }
         }
       }
@@ -4847,6 +4881,53 @@
         }
       }
     },
+    "%lld days left" : {
+      "comment" : "Plural on the days: 1 day left / 2 days left",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld gün qalıb"
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "noch %lld Tag"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "noch %lld Tage"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld day left"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld days left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld days with %lld hours of calls or more: %@| focused a day." : {
       "comment" : "Plural on the first number: 1 day / 2 days. The | ends the bold start",
       "localizations" : {
@@ -4933,6 +5014,53 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld focused, %2$lld drifted, %3$lld other."
+          }
+        }
+      }
+    },
+    "%lld free slots" : {
+      "comment" : "Plural on the count: 1 free slot / 3 free slots",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld boş vaxt"
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld freier Platz"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld freie Plätze"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld free slot"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld free slots"
+                }
+              }
+            }
           }
         }
       }
@@ -5753,6 +5881,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld Min in Sessions"
+          }
+        }
+      }
+    },
+    "%lld min in the zone." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dəq tam fokusda."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min im Flow."
           }
         }
       }
@@ -8205,6 +8349,54 @@
         }
       }
     },
+    "A few visits in 10 minutes" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 dəqiqədə bir neçə dəfə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein paar Besuche in 10 Minuten"
+          }
+        }
+      }
+    },
+    "A good moment for a break." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fasilə üçün yaxşı məqamdır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein guter Moment für eine Pause."
+          }
+        }
+      }
+    },
+    "A nudge looks like this. The buttons here only close it." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xatırlatma belə görünür. Buradakı düymələr sadəcə onu bağlayır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So sieht ein Hinweis aus. Die Buttons hier schließen ihn nur."
+          }
+        }
+      }
+    },
     "A Pro level starts a %lld-day free trial. No card, and a reminder %lld days before it ends." : {
       "localizations" : {
         "az" : {
@@ -8391,6 +8583,22 @@
         }
       }
     },
+    "A sample card" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nümunə kart"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Beispielkarte"
+          }
+        }
+      }
+    },
     "A session at %@ would add %@ toward your %@ goal." : {
       "localizations" : {
         "az" : {
@@ -8501,6 +8709,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Session heute?"
+          }
+        }
+      }
+    },
+    "A short session might help." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qısa sessiya kömək edə bilər."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine kurze Session könnte helfen."
           }
         }
       }
@@ -11084,22 +11308,6 @@
         }
       }
     },
-    "Back to your session?" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sessiyanıza qayıdaq?"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zurück zu deiner Session?"
-          }
-        }
-      }
-    },
     "Base URL" : {
       "localizations" : {
         "az" : {
@@ -11440,6 +11648,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blockieren"
+          }
+        }
+      }
+    },
+    "Blocking comes back when you start." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başlayanda bloklama geri qayıdır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Sperre kommt zurück, sobald du startest."
           }
         }
       }
@@ -15034,6 +15258,22 @@
         }
       }
     },
+    "Drifting to %@?" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tərəfə yayınırsınız?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schweifst du zu %@ ab?"
+          }
+        }
+      }
+    },
     "Drifting?" : {
       "localizations" : {
         "az" : {
@@ -16242,6 +16482,22 @@
         }
       }
     },
+    "Few and quiet." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az və sakit."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenige und leise."
+          }
+        }
+      }
+    },
     "FG-XXXX-XXXX-XXXX-XXXX" : {
       "shouldTranslate" : false
     },
@@ -16309,6 +16565,22 @@
         }
       }
     },
+    "Focused since %@" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vaxtından fokusdasınız"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokussiert seit %@"
+          }
+        }
+      }
+    },
     "FocusGuard adds a %lld-minute Focus block to your calendar" : {
       "localizations" : {
         "az" : {
@@ -16337,6 +16609,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard fragt vor jeder Session nach einem Ziel"
+          }
+        }
+      }
+    },
+    "FocusGuard cards" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard kartları"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard-Karten"
           }
         }
       }
@@ -16600,22 +16888,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Funktion"
-          }
-        }
-      }
-    },
-    "Few, quiet, and never with a sound." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Az, sakit və heç vaxt səsli deyil."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenige, leise und nie mit Ton."
           }
         }
       }
@@ -20148,6 +20420,22 @@
         }
       }
     },
+    "It counts from when you began." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başladığınız andan sayılır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie zählt ab dem Moment, in dem du angefangen hast."
+          }
+        }
+      }
+    },
     "It ends on %@. Nothing renews on its own: after that you're on Free." : {
       "localizations" : {
         "az" : {
@@ -22191,6 +22479,54 @@
         }
       }
     },
+    "macOS decides how notifications appear; change banners or alerts in System Settings › Notifications." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildirişlərin necə görünəcəyini macOS müəyyən edir; bannerləri və ya xəbərdarlıqları Sistem Ayarları › Bildirişlər bölməsində dəyişin."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS entscheidet, wie Mitteilungen erscheinen; Banner oder Hinweise änderst du in den Systemeinstellungen › Mitteilungen."
+          }
+        }
+      }
+    },
+    "macOS notifications" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS bildirişləri"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS-Mitteilungen"
+          }
+        }
+      }
+    },
+    "macOS notifications can reach Notification Center and your Focus settings. Cards can't see your Focus." : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS bildirişləri Bildiriş Mərkəzinə düşür və Fokus ayarlarınıza tabe olur. Kartlar Fokusunuzu görmür."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS-Mitteilungen landen in der Mitteilungszentrale und folgen deinen Fokus-Einstellungen. Karten sehen deinen Fokus nicht."
+          }
+        }
+      }
+    },
     "Made by" : {
       "localizations" : {
         "az" : {
@@ -22219,6 +22555,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Bild dieser Woche zum Teilen erstellen"
+          }
+        }
+      }
+    },
+    "Make it a session?" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyaya çevirək?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Session daraus machen?"
           }
         }
       }
@@ -26240,6 +26592,22 @@
         }
       }
     },
+    "Only for a drift nudge and a finished session" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yalnız yayınma xatırlatmasında və sessiya bitəndə"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur bei einem Drift-Hinweis und am Ende einer Session"
+          }
+        }
+      }
+    },
     "Only if you connect them: reads your tasks, and ticks off the one you finish" : {
       "localizations" : {
         "az" : {
@@ -26852,6 +27220,22 @@
         }
       }
     },
+    "Opens the card" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kartı açır"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die Karte"
+          }
+        }
+      }
+    },
     "Optional" : {
       "localizations" : {
         "az" : {
@@ -27142,6 +27526,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Da weitermachen, wo du aufgehört hast"
+          }
+        }
+      }
+    },
+    "Play a soft sound" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yumşaq səs çal"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leisen Ton abspielen"
           }
         }
       }
@@ -28247,22 +28647,6 @@
         }
       }
     },
-    "Plan your day" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gününüzü planlayın"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plane deinen Tag"
-          }
-        }
-      }
-    },
     "Planned. A reminder comes at %@" : {
       "localizations" : {
         "az" : {
@@ -29138,6 +29522,53 @@
         }
       }
     },
+    "Ready for another %lld minutes?" : {
+      "comment" : "Plural on minutes: 1 minute / 2 minutes",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha %lld dəqiqəyə hazırsınız?"
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bereit für %lld weitere Minute?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Bereit für %lld weitere Minuten?"
+                }
+              }
+            }
+          }
+        },
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Ready for another %lld minute?"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Ready for another %lld minutes?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Ready for another %lld minutes? Blocking comes back when you start." : {
       "comment" : "Plural on minutes: 1 minute / 2 minutes",
       "localizations" : {
@@ -30002,6 +30433,38 @@
         }
       }
     },
+    "Send a sample notification" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nümunə bildiriş göndər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beispiel-Mitteilung senden"
+          }
+        }
+      }
+    },
+    "Session complete · %lld min" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya bitdi · %lld dəq"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session beendet · %lld Min"
+          }
+        }
+      }
+    },
     "Sessions with a goal" : {
       "localizations" : {
         "az" : {
@@ -30063,6 +30526,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tastenkürzel"
+          }
+        }
+      }
+    },
+    "Show a sample card" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nümunə kartı göstər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beispielkarte zeigen"
+          }
+        }
+      }
+    },
+    "Show them as" : {
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belə göstər"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anzeigen als"
           }
         }
       }
@@ -33758,6 +34253,23 @@
         }
       }
     },
+    "Start?" : {
+      "comment" : "On the small island: start a session?",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Başlayaq?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starten?"
+          }
+        }
+      }
+    },
     "Started a %lld-minute break. Back at %@." : {
       "localizations" : {
         "az" : {
@@ -36388,22 +36900,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "In dieser Woche wurde nicht genug erfasst, um %@ zu messen."
-          }
-        }
-      }
-    },
-    "These are examples. macOS decides how notifications appear; change banners or alerts in System Settings › Notifications." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bunlar nümunələrdir. Bildirişlərin necə görünəcəyini macOS müəyyən edir; bannerləri və ya xəbərdarlıqları Sistem Ayarları › Bildirişlər bölməsində dəyişin."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das sind Beispiele. macOS entscheidet, wie Mitteilungen erscheinen; Banner oder Hinweise änderst du in Systemeinstellungen › Mitteilungen."
           }
         }
       }
@@ -39395,22 +39891,6 @@
         }
       }
     },
-    "What they look like" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Necə görünürlər"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "So sehen sie aus"
-          }
-        }
-      }
-    },
     "What you did, where you drifted, a tip" : {
       "localizations" : {
         "az" : {
@@ -41004,6 +41484,23 @@
         }
       }
     },
+    "You were on %@" : {
+      "comment" : "A website: You were on tradingview.com",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son yeriniz: %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du warst auf %@"
+          }
+        }
+      }
+    },
     "You were working on “%@”" : {
       "comment" : "The goal of the session, in the user's own words",
       "localizations" : {
@@ -41233,22 +41730,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du warst in den letzten 10 Min mehrmals auf %@. Eine Fokus-Session starten?"
-          }
-        }
-      }
-    },
-    "You've been on a distracting site for 30 seconds. The pause screen comes in a minute." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 saniyədir yayındıran saytdasınız. Dayandırma ekranı bir dəqiqəyə gələcək."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Du bist seit 30 Sekunden auf einer ablenkenden Website. Der Pausierbildschirm kommt in einer Minute."
           }
         }
       }
@@ -41484,6 +41965,23 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Your %@ preset blocks it when this runs out." : {
+      "comment" : "The preset's name: Standard",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu vaxt bitəndə %@ rejiminiz onu bloklayır."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Voreinstellung %@ sperrt es, wenn das abläuft."
           }
         }
       }
