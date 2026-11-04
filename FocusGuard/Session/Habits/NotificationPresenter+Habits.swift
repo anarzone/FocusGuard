@@ -64,4 +64,15 @@ extension NotificationPresenter {
         )
         deliver(request, as: .general, moment: wrapUpMoment(wrapUp))
     }
+
+    /// Friday's "Your week is written", once the week has been written up.
+    func presentWeekReady(_ week: WeekReady) {
+        let title = String(localized: "Your week is written")
+        let request = Self.request(
+            "weekReady", title: title, body: week.body,
+            category: category(.weekReady, [(.readWeek, String(localized: "Read it", comment: "Button: open the week that was written up"))]),
+            level: .passive
+        )
+        deliver(request, as: .general, moment: weekReadyMoment(week))
+    }
 }

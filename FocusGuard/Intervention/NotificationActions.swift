@@ -23,6 +23,8 @@ enum NotificationCommand: Equatable, Codable {
     case openPlans
     /// "See the result" on a finished experiment: the Analyzer and its result sheet.
     case openAnalyzer
+    /// "Read it" on Friday's card.
+    case openYourWeek
 
     /// The window page it opens, for the commands that open one.
     var page: MainTab? {
@@ -30,6 +32,7 @@ enum NotificationCommand: Equatable, Codable {
         case .openToday:    return .home
         case .openPlans:    return .settings
         case .openAnalyzer: return .analyzer
+        case .openYourWeek: return .workLog
         default:            return nil
         }
     }
@@ -49,6 +52,7 @@ enum NotificationCommand: Equatable, Codable {
             case .nudge:       self = .backToWork
             case .trialEnding: self = .openPlans
             case .experimentDone: self = .openAnalyzer
+            case .weekReady:   self = .openYourWeek
             default:           self = .openToday
             }
             return
@@ -84,6 +88,8 @@ enum NotificationCommand: Equatable, Codable {
             self = .skipPlannedSession(at: Date(timeIntervalSinceReferenceDate: slot))
         case (.wrapUp, .seeToday?), (.limit, .seeToday?):
             self = .openToday
+        case (.weekReady, .readWeek?):
+            self = .openYourWeek
         case (.experimentDone, .seeResult?):
             self = .openAnalyzer
         case (.trialEnding, .seePlans?):

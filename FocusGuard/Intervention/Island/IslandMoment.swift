@@ -4,7 +4,7 @@ import SwiftUI
 /// What the island is showing. The order is `IslandRules.rank`'s.
 enum IslandKind: String, CaseIterable, Codable {
     case drift, limit, sessionFinished, pickUp, plannedSession, breakOver
-    case autoStart, driftPrompt, morningPlan, wrapUp, reminder, trial
+    case autoStart, driftPrompt, morningPlan, wrapUp, weekReady, reminder, trial
     case sample
 
     /// Whether it still means something after a quit and relaunch. A nudge is
@@ -71,6 +71,24 @@ struct IslandCounting: Equatable, Codable {
     }
 }
 
+/// Friday's little chart: the week's bars, on the card and across a quit.
+struct IslandWeekChart: Equatable, Codable {
+    struct Part: Equatable, Codable {
+        /// Which project colour; nil is Other.
+        let slot: Int?
+        let seconds: TimeInterval
+    }
+
+    struct Day: Equatable, Codable {
+        let label: String
+        /// Bottom of the bar first.
+        let parts: [Part]
+        var total: TimeInterval { parts.reduce(0) { $0 + $1.seconds } }
+    }
+
+    let days: [Day]
+}
+
 /// Everything one appearance of the island says. Site names only, never a
 /// page's title: the screen may be visible to others.
 struct IslandMoment: Equatable, Identifiable, Codable {
@@ -103,13 +121,15 @@ struct IslandMoment: Equatable, Identifiable, Codable {
     var counting: IslandCounting?
     /// How the menu's Recent list names it, when the title needs the card around it.
     var recentTitle: String?
+    /// Friday's card: its chart, above the lines.
+    var weekChart: IslandWeekChart?
     /// Pick up's card: the card shows this instead of the lines above.
     var pickUp: PickUpCard?
 
     /// Pick up's card stays out: it never outlives its coordinator (`IslandKind.survivesRelaunch`).
     private enum CodingKeys: String, CodingKey {
         case kind, key, pillName, pillValue, kicker, title, value, body, tone, fill, buttons
-        case countdown, startsOpen, requested, expiresAt, kickerAtPause, shownAtPause, counting, recentTitle
+        case countdown, startsOpen, requested, expiresAt, kickerAtPause, shownAtPause, counting, recentTitle, weekChart
     }
 
     var id: String { key }

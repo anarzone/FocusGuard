@@ -7,6 +7,8 @@ enum HabitSettings {
     /// An evening notification: focused time against the goal, and when to
     /// start tomorrow.
     static let eveningWrapUp = "habits.eveningWrapUp.enabled"
+    /// Friday's card: the week, written up and ready to read (Pro).
+    static let fridayWeek = "habits.fridayWeek.enabled"
     /// "You've been in Xcode 5 minutes. Start a session?"
     static let autoStartOffer = "habits.autoStartOffer.enabled"
     /// Calls count as neutral, and nudges wait until the call ends.

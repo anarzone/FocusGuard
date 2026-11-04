@@ -100,7 +100,7 @@ final class IslandRecents {
     static func button(for item: IslandRecent, now: Date, busy: Bool) -> IslandButton? {
         guard !item.answered, var button = item.button, let command = button.command else { return nil }
         switch command {
-        case .openToday, .openPlans, .openAnalyzer:
+        case .openToday, .openPlans, .openAnalyzer, .openYourWeek:
             return button
         case .startSession, .takeBreak, .startFromOffer:
             return !busy && now < item.expires ? button : nil

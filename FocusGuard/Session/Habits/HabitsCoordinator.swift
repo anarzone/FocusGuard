@@ -66,6 +66,7 @@ final class HabitsCoordinator {
 
     private enum Key {
         static let morningPlanDay = "habits.morningPlan.lastDay"
+        static let weekReadyDay = "habits.fridayWeek.lastDay"
         static let plannedSlots = "habits.morningPlan.slots"
         /// When each planned slot was planned, by the slot's time.
         static let plannedAt = "habits.morningPlan.plannedAt"
@@ -94,6 +95,7 @@ final class HabitsCoordinator {
         dayChecksAt = now
         sendMorningPlanIfDue(now: now)
         sendWrapUpIfDue(now: now)
+        sendWeekReadyIfDue(now: now)
     }
 
     // MARK: - Calls
@@ -253,6 +255,54 @@ final class HabitsCoordinator {
         guard enabled, available, lastSentDay != HabitFormat.dayKey(now, calendar: calendar),
               HabitSchedule.morningHours.contains(calendar.component(.hour, from: now)) else { return false }
         return weekendsCount || !calendar.isDateInWeekend(now)
+    }
+
+    // MARK: - Friday
+
+    /// The hour Friday's card can start showing.
+    nonisolated static let weekReadyHour = 15
+
+    /// Once a week, on Friday afternoon, between sessions: a wrap-up never
+    /// breaks one.
+    nonisolated static func weekReadyDue(now: Date, lastSentDay: String?, enabled: Bool, unlocked: Bool, available: Bool,
+                                         calendar: Calendar = .current) -> Bool {
+        guard enabled, unlocked, available, calendar.component(.weekday, from: now) == 6,
+              calendar.component(.hour, from: now) >= weekReadyHour else { return false }
+        return lastSentDay != HabitFormat.dayKey(now, calendar: calendar)
+    }
+
+    private func sendWeekReadyIfDue(now: Date) {
+        guard Self.weekReadyDue(now: now, lastSentDay: defaults.string(forKey: Key.weekReadyDay),
+                                enabled: HabitSettings.isOn(HabitSettings.fridayWeek, defaults),
+                                unlocked: FeatureFlags.debrief && Entitlements.shared.isUnlocked(.workLog),
+                                available: !tracker.isAway && sessions.currentSession == nil && !breaks.isOnBreak) else { return }
+        defaults.set(HabitFormat.dayKey(now), forKey: Key.weekReadyDay)
+        guard let week = weekReady(now: now) else { return }
+        presenter.presentWeekReady(week)
+    }
+
+    /// The week as Your week shows it; nil with no sessions in it.
+    func weekReady(now: Date = .now, calendar: Calendar = .current) -> WeekReady? {
+        let interval = ReportPeriod.week.interval(offset: 0, now: now, calendar: calendar)
+        let settings = WeekProjectStore().load()
+        let model = WorkLogBuilder.load(interval: interval, context: context, isOptedOut: { _ in false },
+                                        moved: settings.moved, now: now, calendar: calendar)
+        guard !model.entries.isEmpty else { return nil }
+        let reports = ReportBuilder(context: context)
+        var allFocus: [Date: TimeInterval] = [:]
+        var day = interval.start
+        while day < min(interval.end, now) {
+            let next = calendar.date(byAdding: .day, value: 1, to: day) ?? interval.end
+            allFocus[day] = reports.breakdown(from: day, to: min(next, now)).focus
+            day = next
+        }
+        let overview = WeekOverview.make(model: model, allFocus: allFocus, focused: allFocus.values.reduce(0, +), before: nil,
+                                         goalDays: nil, goalLine: nil, goal: { FocusGoal.seconds(on: $0, self.defaults, calendar: calendar) },
+                                         weekendsCount: defaults.bool(forKey: SettingsKeys.Goal.weekendsCount),
+                                         remembered: WeekColourStore().remembered, calendar: calendar)
+        let update = WeekUpdateBuilder.build(model, decisions: WeekEditStore().decisions(week: interval.start),
+                                             ignored: settings.ignored, calendar: calendar)
+        return WeekReady(overview: overview, update: update)
     }
 
     // MARK: - Evening wrap-up

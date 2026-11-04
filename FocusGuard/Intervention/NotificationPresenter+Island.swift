@@ -166,6 +166,16 @@ extension NotificationPresenter {
                      buttons: [IslandButton(title: String(localized: "Close"))])
     }
 
+    func weekReadyMoment(_ week: WeekReady) -> IslandMoment {
+        IslandMoment(kind: .weekReady, key: "weekReady",
+                     pillName: String(localized: "Your week"),
+                     pillValue: String(localized: "Written", comment: "On the small island, beside Your week. Keep it short"),
+                     kicker: String(localized: "Friday wrap-up"), title: String(localized: "Your week is written"),
+                     body: week.body, fill: 1,
+                     buttons: [IslandButton(title: String(localized: "Later"))],
+                     startsOpen: true, weekChart: week.chart)
+    }
+
     /// - Parameter daysLeft: real days left: it can wait a while before it shows.
     func trialMoment(daysLeft: Int) -> IslandMoment {
         IslandMoment(kind: .trial, key: "trialEndingSoon",

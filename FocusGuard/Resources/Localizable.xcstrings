@@ -179,6 +179,89 @@
         }
       }
     },
+    "%@ focused, and %lld lines to check." : {
+      "comment" : "Plural on toCheck: 22h 40m focused, and 1 line to check.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ focused, and %2$#@arg1@ to check."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg line"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg lines"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ fokussiert und %2$#@arg1@ zum Prüfen."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeile"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeilen"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ fokusda, yoxlanılmalı %2$lld sətir var."
+          }
+        }
+      }
+    },
+    "%@ focused. Ready to share." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fokussiert. Bereit zum Teilen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fokusda. Paylaşmağa hazırdır."
+          }
+        }
+      }
+    },
     "%@ for %@" : {
       "comment" : "Time on a distracting site: x.com for 6 min",
       "localizations" : {
@@ -1919,6 +2002,180 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$@ üzərində %1$@, hədəf qoyulmayıb"
+          }
+        }
+      }
+    },
+    "%@ on %lld projects, and %lld lines to check." : {
+      "comment" : "Plural on both: 22h 40m on 1 project, and 1 line to check.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ on %2$#@arg1@, and %3$#@arg2@ to check."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg project"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg projects"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2" : {
+              "argNum" : 3,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg line"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg lines"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ an %2$#@arg1@ und %3$#@arg2@ zum Prüfen."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekt"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekten"
+                    }
+                  }
+                }
+              }
+            },
+            "arg2" : {
+              "argNum" : 3,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeile"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Zeilen"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld layihədə %1$@, yoxlanılmalı %3$lld sətir var."
+          }
+        }
+      }
+    },
+    "%@ on %lld projects. Ready to share." : {
+      "comment" : "Plural on projects: 22h 40m on 1 project. Ready to share.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ on %2$#@arg1@. Ready to share."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg project"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg projects"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ an %2$#@arg1@. Bereit zum Teilen."
+          },
+          "substitutions" : {
+            "arg1" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekt"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg Projekten"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld layihədə %1$@. Paylaşmağa hazırdır."
           }
         }
       }
@@ -19500,6 +19757,22 @@
         }
       }
     },
+    "Friday wrap-up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wochenabschluss am Freitag"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cümə yekunu"
+          }
+        }
+      }
+    },
     "Fridays" : {
       "comment" : "Every Friday: \"Goal on Fridays\", \"2h on Fridays\"",
       "localizations" : {
@@ -19529,6 +19802,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aus %@"
+          }
+        }
+      }
+    },
+    "From %@ on Fridays, between sessions: your week, written up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freitags ab %@, zwischen Sessions: deine Woche, aufgeschrieben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cümə günləri %@ saatından, sessiyalar arasında: həftəniz yazılmış şəkildə"
           }
         }
       }
@@ -31336,6 +31625,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zu viele Anfragen (HTTP 429). Der Anbieter drosselt die Anfragen – warte eine Minute und versuch es noch einmal."
+          }
+        }
+      }
+    },
+    "Read it" : {
+      "comment" : "Button: open the week that was written up",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oxu"
           }
         }
       }
@@ -43259,6 +43565,23 @@
         }
       }
     },
+    "Written" : {
+      "comment" : "On the small island, beside Your week. Keep it short",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschrieben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yazılıb"
+          }
+        }
+      }
+    },
     "Written debriefs run on this Mac with Apple Intelligence. Until then, here are the numbers." : {
       "localizations" : {
         "az" : {
@@ -44792,6 +45115,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Həftəniz növbəti yeniləmələrdən birində gələcək. Pro planınıza daxildir."
+          }
+        }
+      }
+    },
+    "Your week is written" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Woche ist aufgeschrieben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Həftəniz yazılıb"
           }
         }
       }

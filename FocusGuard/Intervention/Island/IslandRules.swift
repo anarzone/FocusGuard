@@ -45,6 +45,8 @@ enum IslandRules {
     static let afterHover: TimeInterval = 5
     /// Time on screen after opening it by a click or VoiceOver.
     static let afterOpening: TimeInterval = 60
+    /// How long Friday's card stays as a pill after folding away.
+    static let tuckedFor: TimeInterval = 30 * 60
     private static let minute: TimeInterval = 60
 
     static func timing(_ kind: IslandKind) -> Timing {
@@ -59,6 +61,7 @@ enum IslandRules {
         case .driftPrompt:     return Timing(maxWait: 2 * minute, expiry: 10 * minute, onScreen: 20)
         case .morningPlan:     return Timing(maxWait: 30 * minute, expiry: 4 * 60 * minute, onScreen: 30) // and midday
         case .wrapUp:          return Timing(maxWait: 30 * minute, expiry: 3 * 60 * minute, onScreen: 30)
+        case .weekReady:       return Timing(maxWait: 30 * minute, expiry: 8 * 60 * minute, onScreen: 12)
         case .reminder:        return Timing(maxWait: 15 * minute, expiry: 2 * 60 * minute, onScreen: 30)
         case .trial:           return Timing(maxWait: 30 * minute, expiry: 24 * 60 * minute, onScreen: 30)
         case .sample:          return Timing(atOnce: true, expiry: minute, onScreen: minute)
@@ -247,7 +250,18 @@ struct IslandQueue {
     mutating func openByHand(now: Date) {
         guard var entry = current else { return }
         entry.openedByHand = true
-        if entry.shownUntil != nil { entry.shownUntil = now.addingTimeInterval(IslandRules.afterOpening) }
+        if let until = entry.shownUntil { entry.shownUntil = max(until, now.addingTimeInterval(IslandRules.afterOpening)) }
+        current = entry
+    }
+
+    /// "Later" on Friday's card: back to a pill for a while. Hovering or a
+    /// click opens it again.
+    mutating func tuck(now: Date) {
+        guard var entry = current else { return }
+        entry.moment.startsOpen = false
+        entry.hoveredSince = nil
+        entry.openedByHand = false
+        entry.shownUntil = now.addingTimeInterval(IslandRules.tuckedFor)
         current = entry
     }
 
@@ -265,6 +279,10 @@ struct IslandQueue {
         }
         timedOut += waiting.filter { now >= $0.expires }.map { Saved(moment: $0.moment, arrived: $0.arrived, expires: $0.expires) }
         waiting.removeAll(where: isStale)
+        // Friday's card folds to its pill rather than going, so it can still be read.
+        if let entry = current, !isStale(entry), isDone(entry, now: now), entry.moment.kind == .weekReady, entry.moment.startsOpen {
+            tuck(now: now)
+        }
         if let entry = current, isStale(entry) || isDone(entry, now: now) {
             current = nil
             closedAt = now

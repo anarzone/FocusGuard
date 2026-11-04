@@ -112,7 +112,7 @@ extension AppState {
         case .openAnalyzer:
             FocusAnalyzer.shared.wantsResultShown = true
             (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: command.page)
-        case .openToday, .openPlans:
+        case .openToday, .openPlans, .openYourWeek:
             (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: command.page)
         }
     }
