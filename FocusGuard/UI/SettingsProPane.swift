@@ -216,7 +216,7 @@ enum PlanComparison {
         Row(name: String(localized: "Block in the browser, parts of sites too"), free: .no, pro: .yes),
         Row(name: String(localized: "Block on the whole Mac"), free: .no, pro: .text(String(localized: "Later", comment: "Plan table: comes in a later version"))),
         Row(name: String(localized: "Smart categories, YouTube per video"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.smartCategories),
-        Row(name: String(localized: "Session goals, debriefs and work log"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
+        Row(name: String(localized: "Session goals, debriefs and your week"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
         Row(name: String(localized: "Standup draft and timesheet"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.debrief),
         Row(name: String(localized: "Weekly coach"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.coach),
         Row(name: String(localized: "Ask about your focus"), free: .no, pro: .yes, ai: true, shipped: FeatureFlags.ask),

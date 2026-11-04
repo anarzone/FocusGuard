@@ -104,19 +104,6 @@ final class FlowLayoutTests: XCTestCase {
         }
     }
 
-    /// WorkLogPage.swift:210: "100% focus rate", 11 pt in 112, one line.
-    func testTheWorkLogsRateFits() throws {
-        let font = Font.system(size: 11)
-        var cut: [String] = []
-        for lang in languages {
-            for key in ["%lld%% focus rate", "%lld%% so far"] {
-                let text = String(format: try tr(key, lang), 100)
-                if !fits(text, font, 112) { cut.append("\(lang): \(text) (\(Int(width(text, font))))") }
-            }
-        }
-        XCTAssertTrue(cut.isEmpty, "\(cut)")
-    }
-
     /// SettingsBlockingPane.swift:139: a preset's name, 12 pt semibold in 70.
     func testPresetNamesFitTheirColumn() throws {
         let font = Font.system(size: 12, weight: .semibold)

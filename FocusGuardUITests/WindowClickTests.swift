@@ -35,7 +35,7 @@ final class WindowClickTests: XCTestCase {
         app.terminate()
     }
 
-    /// A sidebar row; its label may carry a badge ("Work log, PRO").
+    /// A sidebar row; its label may carry a badge ("Your week, PRO").
     private func open(_ page: String) throws {
         try click(window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", page)).firstMatch)
     }
@@ -75,9 +75,9 @@ final class WindowClickTests: XCTestCase {
     func testSidebarOpensEveryPage() throws {
         try open("Reports")
         waitFor(window.buttons["Share week"], "Reports didn't open")
-        try open("Work log")
+        try open("Your week")
         // Unlocked it has a week stepper; on the free plan, its Pro page.
-        waitForEither(window.buttons["Previous week"], text(containing: "FocusGuard Pro"), "Work log didn't open")
+        waitForEither(window.buttons["Previous week"], text(containing: "FocusGuard Pro"), "Your week didn't open")
         try open("Apps & Sites")
         waitFor(window.buttons["Sort your apps"], "Apps & Sites didn't open")
         try open("Settings")

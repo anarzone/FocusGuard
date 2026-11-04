@@ -12,6 +12,8 @@ enum KeychainStore {
     /// deletes the entry — treat "" as "no secret".
     @discardableResult
     static func set(_ value: String, account: String) -> Bool {
+        // The UI tests' copy stays out of the real Keychain: reading it asks for a password.
+        guard !UITestMode.isOn else { return true }
         guard !value.isEmpty else { return delete(account: account) }
         guard let data = value.data(using: .utf8) else { return false }
 
@@ -35,6 +37,7 @@ enum KeychainStore {
 
     /// Returns the stored secret for `account`, or nil if absent.
     static func get(account: String) -> String? {
+        guard !UITestMode.isOn else { return nil }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -53,6 +56,7 @@ enum KeychainStore {
 
     @discardableResult
     static func delete(account: String) -> Bool {
+        guard !UITestMode.isOn else { return true }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

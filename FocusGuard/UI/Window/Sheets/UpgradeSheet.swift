@@ -220,7 +220,7 @@ struct UpgradeFeature {
                        symbol: "sparkle", ai: true, shipped: FeatureFlags.smartCategories),
         UpgradeFeature(title: String(localized: "Goals and debriefs"), body: String(localized: "A goal when you start, one click when you finish."),
                        symbol: "scope", ai: true, shipped: FeatureFlags.debrief),
-        UpgradeFeature(title: String(localized: "Work log"), body: String(localized: "A standup draft and a timesheet, ready to paste."),
+        UpgradeFeature(title: String(localized: "Your week"), body: String(localized: "A week update, a standup draft and a timesheet, ready to paste."),
                        symbol: "doc.text", ai: true, shipped: FeatureFlags.debrief),
         UpgradeFeature(title: String(localized: "Weekly coach"), body: FeatureFlags.monthlyReview
                            ? String(localized: "One thing to try each week, and your month in review.") : String(localized: "Three things to try, every Monday."),

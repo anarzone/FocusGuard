@@ -420,7 +420,7 @@ enum PrivacyNote {
             ? [String(localized: "Smart categories", comment: "Starts a sentence: Smart categories, highlights and session names are worked out on this Mac"), String(localized: "highlights", comment: "In a list, not first: Smart categories, highlights and session names are worked out on this Mac")]
             : [String(localized: "Highlights", comment: "Starts a sentence: Highlights and session names are worked out on this Mac")]
         parts.append(String(localized: "session names", comment: "In a list of things worked out on this Mac"))
-        if debrief { parts += [String(localized: "debriefs", comment: "In a list of things worked out on this Mac"), String(localized: "the work log", comment: "In a list of things worked out on this Mac")] }
+        if debrief { parts += [String(localized: "debriefs", comment: "In a list of things worked out on this Mac"), String(localized: "your week", comment: "In a list of things worked out on this Mac")] }
         if coach { parts.append(String(localized: "the weekly coach", comment: "In a list of things worked out on this Mac")) }
         if ask { parts.append(String(localized: "answers in Ask", comment: "In a list of things worked out on this Mac")) }
         if monthlyReview { parts.append(String(localized: "the month in review", comment: "In a list of things worked out on this Mac")) }

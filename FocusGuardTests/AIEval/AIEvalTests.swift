@@ -845,8 +845,8 @@ final class AIEvalTests: XCTestCase {
         }
         func dump(_ name: String, _ model: WorkLogModel, truth: String) {
             let timesheet = model.timesheet
-            log.write(["scenario": name, "truth": truth, "headline": [model.headline(offset: 0).lead, model.headline(offset: 0).rest],
-                       "goalsDone": model.goalsDone, "goalsPartly": model.goalsPartly, "focusedMin": Int(model.focused / 60),
+            log.write(["scenario": name, "truth": truth, 
+                       "goalsDone": model.entries.filter { $0.state == .verdict(.done) }.count, "goalsPartly": model.entries.filter { $0.state == .verdict(.partly) }.count, "focusedMin": Int(model.focused / 60),
                        "projects": model.projects.map { "\($0.title) \(Int($0.seconds / 60))m" },
                        "days": model.days.map { day in
                            [cal.component(.day, from: day.day), Int(day.focused / 60), day.entries.map { "\($0.title) | \($0.state) | \($0.apps) | \($0.note ?? "-")" }] as [Any]

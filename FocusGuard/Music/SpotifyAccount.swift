@@ -608,6 +608,8 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func read() -> String? {
+        // The UI tests' copy stays out of the real Keychain: reading it asks for a password.
+        guard !UITestMode.isOn else { return nil }
         var item: CFTypeRef?
         var search = query
         search[kSecReturnData as String] = true
@@ -618,6 +620,7 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func write(_ token: String) {
+        guard !UITestMode.isOn else { return }
         let data = Data(token.utf8)
         if SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecItemNotFound {
             var add = query
@@ -628,6 +631,7 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func delete() {
+        guard !UITestMode.isOn else { return }
         SecItemDelete(query as CFDictionary)
     }
 }
