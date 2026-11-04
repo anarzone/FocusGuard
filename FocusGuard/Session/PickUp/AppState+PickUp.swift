@@ -31,7 +31,38 @@ extension AppState {
     func wireIsland() {
         island?.conditions = { [weak self] in self?.islandConditions() ?? IslandConditions(now: .now) }
         island?.isAllowed = { [weak self] in self?.notificationPresenter.islandAllows($0) ?? false }
+        island?.didShow = { if $0.kind == .trial { Entitlements.shared.noteTrialReminderShown() } }
+        // Not known yet counts as allowed, or a reminder would go out again and again.
+        notificationPresenter.macOSAllows = { [weak self] in
+            self?.permissions.notifications == .granted || self?.permissions.notifications == .unknown
+        }
         Entitlements.shared.reminder = notificationPresenter
+        // A hold from before a crash or a relaunch has to prove itself.
+        Task { await checkFocusQuiet() }
+    }
+
+    /// While someone's sharing their screen, when Settings says to stay quiet
+    /// for it. Reads the screen's windows, so it's only asked when it matters.
+    func isSharingScreen() -> Bool {
+        guard IslandSettings.isQuietWhileSharing(), IslandSettings.surface() == .cards else { return false }
+        return ScreenShareDetector.isSharing(ScreenShareDetector.onScreenWindows())
+    }
+
+    /// Asks the Focus filter whether its hold still stands.
+    func checkFocusQuiet(now: Date = .now) async {
+        FocusQuiet().apply(await FocusQuiet.read(), now: now)
+        lastFocusQuietCheck = now
+    }
+
+    /// Whether a Focus holds cards, looked at again now and then while one does.
+    private func isFocusQuiet(now: Date) -> Bool {
+        let quiet = FocusQuiet()
+        guard quiet.isOn(now: now) else { return false }
+        if now.timeIntervalSince(lastFocusQuietCheck) >= FocusQuiet.checkEvery {
+            lastFocusQuietCheck = now
+            Task { await checkFocusQuiet(now: now) }
+        }
+        return true
     }
 
     private func islandConditions(now: Date = .now) -> IslandConditions {
@@ -39,6 +70,8 @@ extension AppState {
                          frontApp: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
                          idleSeconds: IdleMonitor.secondsSinceInput(),
                          inCall: habits.isInCall(now: now),
+                         isSharingScreen: isSharingScreen(),
+                         isFocusQuiet: isFocusQuiet(now: now),
                          screenUp: blockOverlay.isPresenting || breakOverlay.isPresenting || breakManager.isOnBreak,
                          isAsleepOrLocked: tracker.isSuspended,
                          isAway: tracker.isAway,

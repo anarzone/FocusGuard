@@ -48,6 +48,8 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
     var nudgeContext: () -> NudgeContext? = { nil }
     /// The floating island; nil where nothing may show (the UI tests).
     var island: IslandController?
+    /// Whether macOS lets notifications through. Set by AppState.
+    var macOSAllows: () -> Bool = { true }
 
     /// - Parameters:
     ///   - defaults: where the notification switches live; tests pass their own.
@@ -80,17 +82,29 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         return true
     }
 
+    /// What became of a notification.
+    enum Delivery {
+        /// Settings don't allow it.
+        case dropped
+        /// With macOS, which shows it right away if it may.
+        case sent
+        /// On the island, which shows it when the time is right.
+        case onIsland
+    }
+
     /// The one place that decides how a notification shows: on the island,
     /// or as a macOS notification when Settings says so.
-    func deliver(_ request: UNNotificationRequest, as kind: Kind, force: Bool = false, moment: IslandMoment? = nil) {
-        guard force || allows(kind) else { return }
+    @discardableResult
+    func deliver(_ request: UNNotificationRequest, as kind: Kind, force: Bool = false, moment: IslandMoment? = nil) -> Delivery {
+        guard force || allows(kind) else { return .dropped }
         guard let island, IslandSettings.surface(defaults) == .cards else {
             send(request)
-            return
+            return .sent
         }
         var look = moment ?? reminderMoment(for: request)
         look.buttons = islandButtons(for: request) + look.buttons
         island.post(look)
+        return .onIsland
     }
 
     func categoryActions(_ identifier: String) -> [UNNotificationAction] {
@@ -177,7 +191,9 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
     }
 
     /// "Session complete: Locked-in Deep Dive", with a break and another session.
-    func presentSessionComplete(name: String, minutes: Int, focusPercent: Int?, zoneMinutes: Int, breakMinutes: Int) {
+    /// - Parameter longestThisWeek: this session's stretch beat the week's (`SessionFinishedFacts`).
+    func presentSessionComplete(name: String, minutes: Int, focusPercent: Int?, zoneMinutes: Int, breakMinutes: Int,
+                                longestThisWeek: Bool = false) {
         let body: String
         if let focusPercent {
             body = zoneMinutes > 0
@@ -193,37 +209,54 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
                                                   (.startSession, String(localized: "Start another"))]),
             info: [NotificationInfo.minutes: breakMinutes, NotificationInfo.nextMinutes: usualMinutes]
         )
-        deliver(request, as: .general, moment: sessionFinishedMoment(name: name, minutes: minutes, focusPercent: focusPercent, zoneMinutes: zoneMinutes))
+        deliver(request, as: .general, moment: sessionFinishedMoment(name: name, minutes: minutes, focusPercent: focusPercent, zoneMinutes: zoneMinutes,
+                                                                  longestThisWeek: longestThisWeek))
     }
 
     /// Shown when a break timer hits zero. Friendly nudge — no urgency.
-    func presentBreakOver() {
+    /// - Parameter breakMinutes: how long the break was, for "You took a 10-minute break."
+    func presentBreakOver(breakMinutes: Int? = nil) {
         let minutes = usualMinutes
         let request = Self.request(
             "breakOver",
             title: String(localized: "Break's over"),
             body: String(localized: "Ready for another \(minutes) minutes? Blocking comes back when you start.", comment: "Plural on minutes: 1 minute / 2 minutes"),
-            category: category(.breakOver, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes")),
-                                            (.extendBreak, String(localized: "5 more minutes"))]),
+            category: category(.breakOver, [(.startSession, String(localized: "Start session", comment: "Button: start a focus session")),
+                                            (.extendBreak, String(localized: "5 more min", comment: "Button: make the break five minutes longer"))]),
             info: [NotificationInfo.minutes: minutes]
         )
-        deliver(request, as: .general, moment: breakOverMoment(minutes: minutes))
+        deliver(request, as: .general, moment: breakOverMoment(minutes: minutes, breakMinutes: breakMinutes))
     }
 
     // MARK: - Around the day
 
+    /// A short session is the easy answer to drifting: not the usual length.
+    static let driftPromptMinutes = 25
+
     /// Shown when the PatternDetector spots repeated visits to the same
     /// distraction host while no session is active.
     func presentDriftPrompt(host: String) {
-        let minutes = usualMinutes
+        let minutes = Self.driftPromptMinutes
         let request = Self.request(
             "driftPrompt-\(host)",
             title: String(localized: "Drifting?"),
             body: String(localized: "You've been on \(host) a few times in the last 10 min. Start a focus session?"),
-            category: category(.driftPrompt, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes"))]),
+            category: category(.driftPrompt, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: 1 minute / 2 minutes")),
+                                              (.notNow, String(localized: "Not now"))]),
             info: [NotificationInfo.minutes: minutes]
         )
         deliver(request, as: .general, moment: driftPromptMoment(host: host))
+    }
+
+    /// An Analyzer experiment finished: its result waits on the Analyzer page.
+    func presentExperimentFinished() {
+        let request = Self.request(
+            "experimentDone",
+            title: String(localized: "Your experiment is done"),
+            body: String(localized: "The result is on the Analyzer page."),
+            category: category(.experimentDone, [(.seeResult, String(localized: "See the result")), (.ok, String(localized: "OK"))])
+        )
+        deliver(request, as: .general, moment: experimentDoneMoment(title: request.content.title, body: request.content.body))
     }
 
     /// Five minutes before a daily limit runs out, while the user is on it.
@@ -232,10 +265,14 @@ class NotificationPresenter: DistractionNotifier, LimitNotifying {
         let request = Self.request(
             "limitWarning-\(name)",
             title: String(localized: "\(minutesLeft) minutes left on \(name)", comment: "Plural on minutesLeft: 1 minute / 2 minutes"),
-            body: String(localized: "You've used \(used) of your \(minutesToday) minutes today.", comment: "Plural on minutesToday: 1 minute / 2 minutes")
+            body: String(localized: "You've used \(used) of your \(minutesToday) minutes today.", comment: "Plural on minutesToday: 1 minute / 2 minutes"),
+            // A session already running can't start again: Today is where the numbers are.
+            category: category(.limit, [nudgeContext() == nil ? (.startSession, String(localized: "Start a session"))
+                                                               : (.seeToday, String(localized: "See today")),
+                                        (.ok, String(localized: "OK"))])
         )
         deliver(request, as: .general, moment: limitMoment(name: name, minutesLeft: minutesLeft, used: used, minutesToday: minutesToday,
-                                                           title: request.content.title, body: request.content.body))
+                                                           recentTitle: request.content.title))
     }
 }
 
@@ -253,6 +290,7 @@ final class NotificationCategories {
 enum NotificationCategory: String, CaseIterable {
     case nudge, sessionComplete, breakOver, driftPrompt
     case morningPlan, plannedSession, autoStart, wrapUp, trialEnding
+    case limit, experimentDone
 
     static let separator = "|"
 
@@ -268,12 +306,12 @@ enum NotificationAction: String, CaseIterable {
     case backToWork, forWork
     case takeBreak, startSession, extendBreak
     case planThem, notToday, skip, notNow
-    case seeToday, seePlans
+    case seeToday, seePlans, seeResult, ok
 
     /// Buttons that open a window bring FocusGuard forward.
     var options: UNNotificationActionOptions {
         switch self {
-        case .seeToday, .seePlans: return [.foreground]
+        case .seeToday, .seePlans, .seeResult: return [.foreground]
         default: return []
         }
     }

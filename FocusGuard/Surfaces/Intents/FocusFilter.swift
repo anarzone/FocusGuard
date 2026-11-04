@@ -24,7 +24,8 @@ enum FocusFilterLength: String, AppEnum {
 }
 
 /// Focus filter (System Settings › Focus › Work › Focus filters): start a
-/// session when that Focus turns on, end it when the Focus turns off.
+/// session when that Focus turns on, end it when the Focus turns off, and
+/// hold FocusGuard's cards while it's on (`FocusQuiet`).
 ///
 /// When a Focus turns off, the system sets every parameter back to its
 /// default and calls `perform()` again, so the defaults mean "off": a
@@ -33,7 +34,7 @@ enum FocusFilterLength: String, AppEnum {
 struct FocusGuardFocusFilter: SetFocusFilterIntent {
     static let title: LocalizedStringResource = "Start a Focus Session"
     static let description: IntentDescription? = IntentDescription(
-        "Starts a FocusGuard session when this Focus turns on, and can end it when the Focus turns off. Sessions are named automatically when they end."
+        "Starts a FocusGuard session when this Focus turns on, and can end it when the Focus turns off. It can also keep FocusGuard's cards quiet while the Focus is on."
     )
 
     @Parameter(title: "Start a session when this Focus turns on", default: false)
@@ -45,13 +46,25 @@ struct FocusGuardFocusFilter: SetFocusFilterIntent {
     @Parameter(title: "End the session when this Focus turns off", default: true)
     var endSession: Bool
 
+    @Parameter(title: "Keep cards quiet", default: false)
+    var keepCardsQuiet: Bool
+
     var displayRepresentation: DisplayRepresentation {
-        guard startSession else { return DisplayRepresentation(stringLiteral: String(localized: "Don't start a session")) }
-        if let minutes = length.minutes {
-            return DisplayRepresentation(stringLiteral: String(localized: "Start a \(minutes)-minute session"))
+        DisplayRepresentation(stringLiteral: Self.summary(startSession: startSession, minutes: length.minutes, keepCardsQuiet: keepCardsQuiet))
+    }
+
+    /// What the filter does, in System Settings' list.
+    static func summary(startSession: Bool, minutes: Int?, keepCardsQuiet: Bool) -> String {
+        guard startSession else {
+            return keepCardsQuiet ? String(localized: "Keep cards quiet") : String(localized: "Don't start a session")
         }
-        return DisplayRepresentation(stringLiteral: String(localized: "Start a session while it's on",
-                                                           comment: "It: the Focus (Do Not Disturb, Work…) this filter belongs to"))
+        let start: String
+        if let minutes {
+            start = String(localized: "Start a \(minutes)-minute session")
+        } else {
+            start = String(localized: "Start a session while it's on", comment: "It: the Focus (Do Not Disturb, Work…) this filter belongs to")
+        }
+        return keepCardsQuiet ? String(localized: "\(start), cards quiet", comment: "Start a 25-minute session, cards quiet") : start
     }
 
     static func suggestedFocusFilters(for context: FocusFilterSuggestionContext) async -> [FocusGuardFocusFilter] {
@@ -59,11 +72,16 @@ struct FocusGuardFocusFilter: SetFocusFilterIntent {
         suggestion.startSession = true
         suggestion.length = .whileOn
         suggestion.endSession = true
-        return [suggestion]
+        var quiet = FocusGuardFocusFilter()
+        quiet.keepCardsQuiet = true
+        return [suggestion, quiet]
     }
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        // First: the off comes through here as well, and must never be lost
+        // to anything going wrong below.
+        FocusQuiet().set(keepCardsQuiet, now: .now)
         let actions = try await FocusActions.live()
         FocusFilterResponder().apply(startSession: startSession, minutes: length.minutes,
                                      endWhenOff: endSession, actions: actions)

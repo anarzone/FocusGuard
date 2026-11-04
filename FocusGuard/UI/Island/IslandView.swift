@@ -11,8 +11,13 @@ enum IslandStyle {
     static let cardWidth: CGFloat = 352
     static let pillRadius: CGFloat = 19
     static let cardRadius: CGFloat = 24
-    /// Room in the window around the island, for its shadow and the spring's overshoot.
-    static let margin = EdgeInsets(top: 4, leading: 24, bottom: 32, trailing: 24)
+    /// The design's shadow: 0 16px 44px rgba(10, 10, 30, 0.42). A radius of 22
+    /// is CSS's 44 blur: measured against it, within 0.01 of alpha at every distance.
+    static let shadowRadius: CGFloat = 22
+    static let shadowOffset: CGFloat = 16
+    /// Room in the window around the island, for all of that shadow. Clicks
+    /// here pass through (`IslandPanelController`).
+    static let margin = EdgeInsets(top: 28, leading: 44, bottom: 60, trailing: 44)
 }
 
 /// What the view shows and how to answer. The panel controller owns it.
@@ -79,11 +84,13 @@ struct IslandView: View {
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .modifier(IslandShape(radius: model.phase == .card ? IslandStyle.cardRadius : IslandStyle.pillRadius))
-        .opacity(model.phase == .gone ? 0 : 1)
-        .offset(y: model.phase == .gone ? -14 : 0)
         .animation(model.motion.change, value: model.phase)
         .animation(model.motion.change, value: model.cardHeight)
         .animation(model.motion.change, value: model.moment?.key)
+        .opacity(model.phase == .gone ? 0 : 1)
+        .animation(model.motion.fade, value: model.phase)
+        .offset(y: model.phase == .gone ? -14 : 0)
+        .animation(model.motion.change, value: model.phase)
     }
 
     private var crossFading: some View {
@@ -111,7 +118,7 @@ struct IslandView: View {
             }
             .buttonStyle(.plain)
             .id(moment.key)
-            .accessibilityLabel(String(localized: "\(moment.pillName), \(moment.shownPillValue(at: model.now))", comment: "The small island read aloud: x.com, 0:58"))
+            .accessibilityLabel(String(localized: "\(moment.shownPillName(at: model.now)), \(moment.shownPillValue(at: model.now))", comment: "The small island read aloud: x.com, 0:58"))
             .accessibilityHint(String(localized: "Opens the card"))
         }
     }
@@ -136,8 +143,10 @@ private struct IslandShape: ViewModifier {
         content
             .background(IslandStyle.background)
             .clipShape(shape)
-            .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
-            .shadow(color: Color(red: 10 / 255, green: 10 / 255, blue: 30 / 255).opacity(0.42), radius: 12, y: 8)
+            // The ring of light sits just outside the shape, as a CSS spread does.
+            .overlay(shape.inset(by: -0.25).stroke(.white.opacity(0.14), lineWidth: 0.5))
+            .shadow(color: Color(red: 10 / 255, green: 10 / 255, blue: 30 / 255).opacity(0.42),
+                    radius: IslandStyle.shadowRadius, y: IslandStyle.shadowOffset)
     }
 }
 
@@ -184,7 +193,7 @@ struct IslandPillBody: View {
     var body: some View {
         HStack(spacing: 9) {
             IslandRing(fill: moment.shownFill(at: now), tone: moment.tone, diameter: 24, lineWidth: 2.7)
-            Text(moment.pillName)
+            Text(moment.shownPillName(at: now))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -239,7 +248,7 @@ struct IslandCardBody: View {
                 IslandRing(fill: moment.shownFill(at: now), tone: moment.tone, diameter: 46, lineWidth: 4.3,
                            trackOpacity: 0.18, fillsOnAppear: animatesRing)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(moment.kicker)
+                    Text(moment.shownKicker)
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(IslandStyle.secondaryOpacity))
                         .fixedSize(horizontal: false, vertical: true)
@@ -262,7 +271,7 @@ struct IslandCardBody: View {
                 }
                 IslandCloseButton(action: onClose)
             }
-            Text(moment.body)
+            Text(moment.shownBody(at: now))
                 .font(.system(size: 12))
                 .lineSpacing(2.5)
                 .foregroundStyle(.white.opacity(IslandStyle.bodyOpacity))

@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 /// What a click on a notification, or one of its buttons, asks for.
-enum NotificationCommand: Equatable {
+enum NotificationCommand: Equatable, Codable {
     /// "Back to Xcode".
     case backToWork
     /// "It's for work": stop nudging about this page or app this session.
@@ -21,6 +21,18 @@ enum NotificationCommand: Equatable {
     case skipPlannedSession(at: Date)
     case openToday
     case openPlans
+    /// "See the result" on a finished experiment: the Analyzer and its result sheet.
+    case openAnalyzer
+
+    /// The window page it opens, for the commands that open one.
+    var page: MainTab? {
+        switch self {
+        case .openToday:    return .home
+        case .openPlans:    return .settings
+        case .openAnalyzer: return .analyzer
+        default:            return nil
+        }
+    }
 
     /// Nil for buttons that only dismiss ("Not today").
     init?(action: String, category identifier: String, info: [AnyHashable: Any]) {
@@ -36,6 +48,7 @@ enum NotificationCommand: Equatable {
             switch category {
             case .nudge:       self = .backToWork
             case .trialEnding: self = .openPlans
+            case .experimentDone: self = .openAnalyzer
             default:           self = .openToday
             }
             return
@@ -53,7 +66,7 @@ enum NotificationCommand: Equatable {
             self = .startSession(minutes: info[NotificationInfo.nextMinutes] as? Int)
         case (.breakOver, .extendBreak?):
             self = .takeBreak(minutes: 5)
-        case (.breakOver, .startSession?), (.driftPrompt, .startSession?), (.plannedSession, .startSession?):
+        case (.breakOver, .startSession?), (.driftPrompt, .startSession?), (.plannedSession, .startSession?), (.limit, .startSession?):
             self = .startSession(minutes: minutes)
         case (.autoStart, .startSession?):
             guard let since = info[NotificationInfo.since] as? Double else {
@@ -69,8 +82,10 @@ enum NotificationCommand: Equatable {
         case (.plannedSession, .skip?):
             guard let slot = info[NotificationInfo.slot] as? Double else { return nil }
             self = .skipPlannedSession(at: Date(timeIntervalSinceReferenceDate: slot))
-        case (.wrapUp, .seeToday?):
+        case (.wrapUp, .seeToday?), (.limit, .seeToday?):
             self = .openToday
+        case (.experimentDone, .seeResult?):
+            self = .openAnalyzer
         case (.trialEnding, .seePlans?):
             self = .openPlans
         default:

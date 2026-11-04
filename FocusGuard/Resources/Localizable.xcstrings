@@ -3613,6 +3613,23 @@
         }
       }
     },
+    "%@, cards quiet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, Karten still"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, kartlar səssiz"
+          }
+        }
+      },
+      "comment" : "Start a 25-minute session, cards quiet"
+    },
     "%@, Pro" : {
       "shouldTranslate" : false
     },
@@ -5901,6 +5918,22 @@
         }
       }
     },
+    "%lld min in the zone. Your longest stretch this week." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min im Flow. Deine längste Phase diese Woche."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dəq tam fokusda. Bu həftənin ən uzun fokusu."
+          }
+        }
+      }
+    },
     "%lld min left" : {
       "localizations" : {
         "az" : {
@@ -6267,6 +6300,53 @@
         }
       }
     },
+    "%lld minutes left today" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute left today"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutes left today"
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Heute noch %lld Minute"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Heute noch %lld Minuten"
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün %lld dəqiqə qalıb"
+          }
+        }
+      },
+      "comment" : "Plural on minutes: 1 minute left today"
+    },
     "%lld minutes left, paused" : {
       "comment" : "Plural on minutes: 1 minute left, paused",
       "localizations" : {
@@ -6455,13 +6535,24 @@
         }
       }
     },
-    "%lld minutes, as you planned this morning." : {
-      "comment" : "Plural on minutes: 1 minute, as you planned this morning",
+    "%lld minutes, as you planned." : {
       "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld dəqiqə, bu səhər planlaşdırdığınız kimi."
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute, as you planned."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutes, as you planned."
+                }
+              }
+            }
           }
         },
         "de" : {
@@ -6470,37 +6561,26 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Minute, wie du es heute Morgen geplant hast."
+                  "value" : "%lld Minute, wie du es geplant hast."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld Minuten, wie du es heute Morgen geplant hast."
+                  "value" : "%lld Minuten, wie du es geplant hast."
                 }
               }
             }
           }
         },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld minute, as you planned this morning."
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld minutes, as you planned this morning."
-                }
-              }
-            }
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dəqiqə, planlaşdırdığınız kimi."
           }
         }
-      }
+      },
+      "comment" : "Plural on minutes: 1 minute, as you planned"
     },
     "%lld more" : {
       "localizations" : {
@@ -7320,6 +7400,41 @@
         }
       }
     },
+    "%lld slots" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld slot"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld slots"
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Zeitfenster"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld vaxt"
+          }
+        }
+      },
+      "comment" : "Plural on the count: 1 slot / 3 slots"
+    },
     "%lld songs" : {
       "comment" : "Plural on count: 1 song / 2 songs",
       "localizations" : {
@@ -8049,22 +8164,6 @@
         }
       }
     },
-    "5 more minutes" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Daha 5 dəqiqə"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch 5 Minuten"
-          }
-        }
-      }
-    },
     "5 more minutes — you've got this." : {
       "localizations" : {
         "az" : {
@@ -8349,18 +8448,18 @@
         }
       }
     },
-    "A few visits in 10 minutes" : {
+    "A few visits this hour" : {
       "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "10 dəqiqədə bir neçə dəfə"
-          }
-        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein paar Besuche in 10 Minuten"
+            "value" : "Ein paar Besuche in dieser Stunde"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu saat bir neçə ziyarət"
           }
         }
       }
@@ -8997,6 +9096,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "KI-Tipps sind ausgeschaltet. Schalte sie unter Einstellungen → KI-Tipps ein."
+          }
+        }
+      }
+    },
+    "Allow notifications…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mitteilungen erlauben…"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildirişlərə icazə verin…"
+          }
+        }
+      }
+    },
+    "Allow Screen Recording" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildschirmaufnahme erlauben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran Yazısına icazə verin"
           }
         }
       }
@@ -10462,22 +10593,6 @@
         }
       }
     },
-    "Allow Screen Recording and notifications" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ekran Yazısına və bildirişlərə icazə verin"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bildschirmaufnahme und Mitteilungen erlauben"
-          }
-        }
-      }
-    },
     "Allow a little each day, then pause it" : {
       "localizations" : {
         "az" : {
@@ -11108,6 +11223,23 @@
         }
       }
     },
+    "At a natural pause" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In einer natürlichen Pause"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Təbii fasilədə"
+          }
+        }
+      },
+      "comment" : "Why the card shows now: it waited for a moment that interrupts less"
+    },
     "Average drift by day of the week: most on %@, %@." : {
       "comment" : "Mondays",
       "localizations" : {
@@ -11713,6 +11845,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause"
+          }
+        }
+      }
+    },
+    "Break over" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause vorbei"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fasilə bitdi"
           }
         }
       }
@@ -16322,6 +16470,22 @@
         }
       }
     },
+    "Experiment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Experiment"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eksperiment"
+          }
+        }
+      }
+    },
     "Export" : {
       "localizations" : {
         "az" : {
@@ -16517,6 +16681,22 @@
         }
       }
     },
+    "Focus Analyzer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus-Analyzer"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus Analizatoru"
+          }
+        }
+      }
+    },
     "Focus often ends in or right after a message app. Of what FocusGuard can see, this takes the most time." : {
       "localizations" : {
         "az" : {
@@ -16657,6 +16837,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard darf an aktiven Tagen einen Fokusblock in meinen Kalender eintragen und wieder entfernen."
+          }
+        }
+      }
+    },
+    "FocusGuard needs Screen Recording to see what you're working on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard braucht Bildschirmaufnahme, um deine Arbeit zu erkennen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard-a nə üzərində işlədiyinizi görmək üçün Ekran Yazısı lazımdır."
+          }
+        }
+      }
+    },
+    "FocusGuard needs Screen Recording to see what's in front." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard braucht Bildschirmaufnahme, um zu sehen, was im Vordergrund ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ön planda nə olduğunu görmək üçün FocusGuard-a Ekran Yazısı lazımdır."
           }
         }
       }
@@ -17545,38 +17757,6 @@
         }
       }
     },
-    "FocusGuard needs Screen Recording and notifications to see what's in front and nudge you." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ön planda nə olduğunu görmək və sizə xatırlatmaq üçün FocusGuard-a Ekran Yazısı və bildirişlər lazımdır."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGuard braucht Bildschirmaufnahme und Mitteilungen, um zu sehen, was im Vordergrund ist, und dir Hinweise zu geben."
-          }
-        }
-      }
-    },
-    "FocusGuard needs a couple of permissions to see what you're working on." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGuard-a nə üzərində işlədiyinizi görmək üçün bir neçə icazə lazımdır."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "FocusGuard braucht Berechtigungen, um deine Arbeit zu erkennen."
-          }
-        }
-      }
-    },
     "FocusGuard notices the extension by itself" : {
       "localizations" : {
         "az" : {
@@ -18102,22 +18282,6 @@
         }
       }
     },
-    "For nudges, session ends, and a morning plan if you want one." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xatırlatmalar, sessiyanın sonu və istəsəniz səhər planı üçün."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Für Hinweise, das Ende von Sessions und auf Wunsch einen Morgenplan."
-          }
-        }
-      }
-    },
     "For the same drift" : {
       "localizations" : {
         "az" : {
@@ -18163,6 +18327,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gratis und Pro"
+          }
+        }
+      }
+    },
+    "Free at %@, around your meetings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frei um %@, rund um deine Termine."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görüşləriniz arasında boş vaxt: %@."
+          }
+        }
+      }
+    },
+    "Free at %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frei um %@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boş vaxt: %@."
           }
         }
       }
@@ -18313,6 +18509,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Im Gratis-Plan bleibt eines."
+          }
+        }
+      }
+    },
+    "Free keeps your data and the basics." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Free bleiben deine Daten und die Grundfunktionen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free ilə məlumatlarınız və əsas funksiyalar qalır."
           }
         }
       }
@@ -20372,6 +20584,54 @@
         }
       }
     },
+    "island.drifting" : {
+      "comment" : "On the small island, beside the site's name. Keep it short: 75 points at most",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınırsınız?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgelenkt?"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drifting?"
+          }
+        }
+      }
+    },
+    "island.proTrial" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro trial"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro-Test"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro sınaq"
+          }
+        }
+      },
+      "comment" : "On the small island, beside \"2 days left\". Keep it short: 80 points at most",
+      "extractionState" : "extracted_with_value"
+    },
     "Issues assigned to you, moved to done when you finish" : {
       "localizations" : {
         "az" : {
@@ -20387,6 +20647,53 @@
           }
         }
       }
+    },
+    "It blocks at %lld minutes and resets at midnight." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "It blocks at %lld minute and resets at midnight."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "It blocks at %lld minutes and resets at midnight."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sperrt bei %lld Minute, um Mitternacht beginnt es neu."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Sperrt bei %lld Minuten, um Mitternacht beginnt es neu."
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dəqiqədə bloklanır və gecəyarısı sıfırlanır."
+          }
+        }
+      },
+      "comment" : "Plural on minutes. It: the site or app with a daily limit"
     },
     "It brings apps to the front and reopens pages. It can't restore unsaved work." : {
       "localizations" : {
@@ -20416,22 +20723,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Genauer geht es nur für heute, gestern, diese oder letzte Woche."
-          }
-        }
-      }
-    },
-    "It counts from when you began." : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Başladığınız andan sayılır."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sie zählt ab dem Moment, in dem du angefangen hast."
           }
         }
       }
@@ -21098,6 +21389,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles behalten"
+          }
+        }
+      }
+    },
+    "Keep cards quiet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karten still halten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kartları səssiz saxla"
           }
         }
       }
@@ -22495,6 +22802,38 @@
         }
       }
     },
+    "macOS has notifications off for FocusGuard, so nothing will show until you allow them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS hat Mitteilungen für FocusGuard ausgeschaltet. Bis du sie erlaubst, erscheint nichts."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS-da FocusGuard üçün bildirişlər söndürülüb; icazə verməyincə heç nə görünməyəcək."
+          }
+        }
+      }
+    },
+    "macOS hasn't been asked yet, so nothing can show." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS wurde noch nicht gefragt, deshalb kann nichts erscheinen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS-dan hələ icazə istənməyib, ona görə heç nə görünə bilməz."
+          }
+        }
+      }
+    },
     "macOS notifications" : {
       "localizations" : {
         "az" : {
@@ -22511,18 +22850,18 @@
         }
       }
     },
-    "macOS notifications can reach Notification Center and your Focus settings. Cards can't see your Focus." : {
+    "macOS notifications can reach Notification Center and your Focus settings." : {
       "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS bildirişləri Bildiriş Mərkəzinə düşür və Fokus ayarlarınıza tabe olur. Kartlar Fokusunuzu görmür."
-          }
-        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS-Mitteilungen landen in der Mitteilungszentrale und folgen deinen Fokus-Einstellungen. Karten sehen deinen Fokus nicht."
+            "value" : "macOS-Mitteilungen landen in der Mitteilungszentrale und folgen deinen Fokus-Einstellungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS bildirişləri Bildiriş Mərkəzinə düşür və Fokus ayarlarınıza tabe olur."
           }
         }
       }
@@ -23915,6 +24254,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zum Schreiben von Rückblicken ist Apple Intelligence (macOS 26) nötig. Ziele, Zeiten und Apps erscheinen trotzdem hier."
+          }
+        }
+      }
+    },
+    "Needs Screen Recording to notice Zoom, Teams, Webex and Google Meet in a browser. macOS is still asked to leave cards out of captures." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Braucht Bildschirmaufnahme, um Zoom, Teams, Webex und Google Meet im Browser zu erkennen. macOS wird trotzdem gebeten, Karten aus Aufnahmen herauszuhalten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom, Teams, Webex və brauzerdə Google Meet-i tanımaq üçün Ekran Yazısı lazımdır. macOS-dan yenə də kartları çəkilişlərə daxil etməmək istənir."
           }
         }
       }
@@ -25757,6 +26112,22 @@
         }
       }
     },
+    "Notices Zoom, Teams, Webex and Google Meet in a browser. Held cards show when you stop, if they still matter. macOS is also asked to leave cards out of captures." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erkennt Zoom, Teams, Webex und Google Meet im Browser. Zurückgehaltene Karten erscheinen danach, wenn sie noch wichtig sind. macOS wird außerdem gebeten, Karten aus Aufnahmen herauszuhalten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom, Teams, Webex və brauzerdə Google Meet-i tanıyır. Saxlanılan kartlar paylaşım bitəndə, hələ vacibdirsə, görünür. macOS-dan həmçinin kartları çəkilişlərə daxil etməmək istənir."
+          }
+        }
+      }
+    },
     "Notifications" : {
       "localizations" : {
         "az" : {
@@ -26768,6 +27139,22 @@
         }
       }
     },
+    "Open Focus Settings…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus-Einstellungen öffnen…"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus ayarlarını aç…"
+          }
+        }
+      }
+    },
     "Open FocusGuard" : {
       "localizations" : {
         "az" : {
@@ -27480,6 +27867,22 @@
         }
       }
     },
+    "Permissions · %lld of 3 ready" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berechtigungen · %lld von 3 bereit"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İcazələr · %lld / 3 hazırdır"
+          }
+        }
+      }
+    },
     "Pick up" : {
       "comment" : "Button: go back to what you were doing",
       "localizations" : {
@@ -27526,6 +27929,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Da weitermachen, wo du aufgehört hast"
+          }
+        }
+      }
+    },
+    "Plan your day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plane deinen Tag"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gününüzü planlayın"
+          }
+        }
+      }
+    },
+    "Planned this morning" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute Morgen geplant"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu səhər planlaşdırılıb"
           }
         }
       }
@@ -28242,22 +28677,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zeitraum"
-          }
-        }
-      }
-    },
-    "Permissions · %lld of 4 ready" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "İcazələr · %lld / 4 hazırdır"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Berechtigungen · %lld von 4 bereit"
           }
         }
       }
@@ -29664,6 +30083,22 @@
         }
       }
     },
+    "Recent" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonuncular"
+          }
+        }
+      }
+    },
     "Recent videos" : {
       "localizations" : {
         "az" : {
@@ -30401,6 +30836,22 @@
         }
       }
     },
+    "See plans" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarife ansehen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlara bax"
+          }
+        }
+      }
+    },
     "See the result" : {
       "localizations" : {
         "az" : {
@@ -30881,22 +31332,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suchen oder Website wie reddit.com hinzufügen"
-          }
-        }
-      }
-    },
-    "See Free and Pro" : {
-      "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pulsuz və Pro planlarına bax"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gratis und Pro ansehen"
           }
         }
       }
@@ -33862,6 +34297,23 @@
         }
       }
     },
+    "Start session" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session starten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyaya başla"
+          }
+        }
+      },
+      "comment" : "Button: start a focus session"
+    },
     "Start tomorrow" : {
       "localizations" : {
         "az" : {
@@ -34426,18 +34878,18 @@
         }
       }
     },
-    "Starts a FocusGuard session when this Focus turns on, and can end it when the Focus turns off. Sessions are named automatically when they end." : {
+    "Starts a FocusGuard session when this Focus turns on, and can end it when the Focus turns off. It can also keep FocusGuard's cards quiet while the Focus is on." : {
       "localizations" : {
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu Fokus açılanda FocusGuard sessiyası başladır, Fokus sönəndə isə onu bitirə bilər. Sessiyalar bitəndə avtomatik adlandırılır."
-          }
-        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Startet eine FocusGuard-Session, wenn dieser Fokus aktiviert wird, und kann sie beenden, wenn er deaktiviert wird. Sessions werden automatisch benannt, wenn sie enden."
+            "value" : "Startet eine FocusGuard-Session, wenn dieser Fokus aktiviert wird, und kann sie beenden, wenn er deaktiviert wird. Außerdem kann er FocusGuard-Karten zurückhalten, solange er aktiv ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Fokus açılanda FocusGuard sessiyası başladır, Fokus sönəndə isə onu bitirə bilər. Fokus açıq olan müddətdə FocusGuard kartlarını da səssiz saxlaya bilər."
           }
         }
       }
@@ -34566,6 +35018,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bei Anrufen still bleiben"
+          }
+        }
+      }
+    },
+    "Stay quiet while sharing your screen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Teilen des Bildschirms still bleiben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekran paylaşılarkən səssiz qal"
           }
         }
       }
@@ -36904,6 +37372,53 @@
         }
       }
     },
+    "These %lld minutes will count." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This %lld minute will count."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "These %lld minutes will count."
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Diese %lld Minute zählt mit."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Diese %lld Minuten zählen mit."
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu %lld dəqiqə də hesablanacaq."
+          }
+        }
+      },
+      "comment" : "Plural on minutes: This 1 minute will count. The session counts from when the work began"
+    },
     "These run when a focus session starts or ends. macOS won't let any app install Shortcuts silently — each one takes ~30s the first time." : {
       "localizations" : {
         "az" : {
@@ -37644,6 +38159,22 @@
         }
       }
     },
+    "To hold cards during a Focus, add FocusGuard under Focus filters in that Focus's settings and turn on Keep cards quiet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damit Karten während eines Fokus warten, füge FocusGuard in den Einstellungen dieses Fokus unter „Fokusfilter“ hinzu und aktiviere „Karten still halten“."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus zamanı kartları saxlamaq üçün həmin Fokusun ayarlarında Fokus filtrlərinə FocusGuard-ı əlavə edin və “Kartları səssiz saxla”nı açın."
+          }
+        }
+      }
+    },
     "Today" : {
       "comment" : "Settings section: today's use of each daily limit\nTab: today's insights",
       "localizations" : {
@@ -38359,6 +38890,23 @@
           }
         }
       }
+    },
+    "Try %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versuch es um %@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ saatını sınayın."
+          }
+        }
+      },
+      "comment" : "Session times spread over the day; the calendar can't be read"
     },
     "Try a wider question, such as the last 4 weeks." : {
       "localizations" : {
@@ -41420,6 +41968,34 @@
         }
       }
     },
+    "You took a %lld-minute break." : {
+      "localizations" : {
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Du hast %lld Minute Pause gemacht."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Du hast %lld Minuten Pause gemacht."
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dəqiqəlik fasilə verdiniz."
+          }
+        }
+      }
+    },
     "You were %lld minutes in the zone before this. Pick it back up." : {
       "comment" : "Plural on minutes: 1 minute / 2 minutes",
       "localizations" : {
@@ -42257,6 +42833,53 @@
           }
         }
       }
+    },
+    "Your trial ends in %lld days" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your trial ends in %lld day"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your trial ends in %lld days"
+                }
+              }
+            }
+          }
+        },
+        "de" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Deine Testphase endet in %lld Tag"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Deine Testphase endet in %lld Tagen"
+                }
+              }
+            }
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sınaq müddətiniz %lld gün sonra bitir"
+          }
+        }
+      },
+      "comment" : "Plural on the days: ends in 1 day"
     },
     "YouTube decided video by video, and as many daily limits as you like" : {
       "localizations" : {

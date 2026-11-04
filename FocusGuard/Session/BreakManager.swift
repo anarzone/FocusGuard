@@ -29,6 +29,8 @@ final class BreakManager {
     /// the user skips — skipping cancels the break, the prompt to start a new
     /// session is the user's already-active intent.
     var onBreakCompleted: (() -> Void)?
+    /// How long the break that just ran out was.
+    private(set) var lastCompletedMinutes: Int?
     /// Fired when a break ends by any means (completed or skipped). Hooked to
     /// the overlay controller so it can dismiss.
     var onBreakEnded: (() -> Void)?
@@ -74,6 +76,7 @@ final class BreakManager {
     func checkExpiration(now: Date = .now) -> Bool {
         guard let state = current, state.remaining(now: now) <= 0 else { return false }
         current = nil
+        lastCompletedMinutes = Int((state.plannedDuration / 60).rounded())
         onBreakCompleted?()
         onBreakEnded?()
         return true

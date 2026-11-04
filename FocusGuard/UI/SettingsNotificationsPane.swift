@@ -43,7 +43,7 @@ struct SettingsNotificationsPane: View {
             }
             .disabled(!allowed)
         } right: {
-            SettingsIslandSection { appState.notificationPresenter.presentSampleCard() }
+            SettingsIslandSection(permissions: appState.permissions) { appState.notificationPresenter.presentSampleCard() }
                 .disabled(!allowed)
         }
     }
@@ -60,12 +60,26 @@ struct SettingsNotificationsPane: View {
 
 /// "Show them as": FocusGuard's own cards or macOS notifications.
 struct SettingsIslandSection: View {
+    let permissions: PermissionsCoordinator
     let showSample: () -> Void
 
     @AppStorage(IslandSettings.surface) private var surface = IslandSettings.Surface.cards
     @AppStorage(IslandSettings.softSound) private var softSound = false
+    @AppStorage(IslandSettings.quietWhileSharing) private var quietWhileSharing = true
+
+    /// True to what it does: it knows these apps, and macOS only gets asked.
+    private var sharingDetail: String {
+        permissions.screenRecording == .granted
+            ? String(localized: "Notices Zoom, Teams, Webex and Google Meet in a browser. Held cards show when you stop, if they still matter. macOS is also asked to leave cards out of captures.")
+            : String(localized: "Needs Screen Recording to notice Zoom, Teams, Webex and Google Meet in a browser. macOS is still asked to leave cards out of captures.")
+    }
 
     var body: some View {
+        section.modifier(IslandPermissionWatch(permissions: permissions, surface: surface))
+    }
+
+    @ViewBuilder
+    private var section: some View {
         SettingsSection(String(localized: "Show them as")) {
             VStack(alignment: .leading, spacing: 6) {
                 Picker(String(localized: "Show them as"), selection: $surface) {
@@ -74,7 +88,7 @@ struct SettingsIslandSection: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                Text("macOS notifications can reach Notification Center and your Focus settings. Cards can't see your Focus.")
+                Text("macOS notifications can reach Notification Center and your Focus settings.")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -85,11 +99,43 @@ struct SettingsIslandSection: View {
                            detail: String(localized: "Only for a drift nudge and a finished session"),
                            isOn: $softSound)
                 .disabled(surface != .cards)
+            SettingsDivider()
+            SettingsToggle(title: String(localized: "Stay quiet while sharing your screen"),
+                           detail: sharingDetail,
+                           isOn: $quietWhileSharing)
+                .disabled(surface != .cards)
         }
         Button(surface == .cards ? String(localized: "Show a sample card") : String(localized: "Send a sample notification"), action: showSample)
             .padding(.leading, 4)
         if surface == .macOS {
+            macOSPermission
+        } else {
+            SettingsNote(text: String(localized: "To hold cards during a Focus, add FocusGuard under Focus filters in that Focus's settings and turn on Keep cards quiet."))
+            Button("Open Focus Settings…") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Focus-Settings.extension") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .buttonStyle(.textLink)
+            .padding(.leading, 4)
+        }
+    }
+
+    /// How macOS's permission stands. It's only needed, and only asked for, here.
+    @ViewBuilder
+    private var macOSPermission: some View {
+        switch permissions.notifications {
+        case .granted:
             SettingsNote(text: String(localized: "macOS decides how notifications appear; change banners or alerts in System Settings › Notifications."))
+        case .notDetermined:
+            SettingsNote(systemImage: "exclamationmark.triangle", text: String(localized: "macOS hasn't been asked yet, so nothing can show."))
+            Button("Allow notifications…") { Task { await permissions.requestNotifications() } }
+                .buttonStyle(.textLink)
+                .padding(.leading, 4)
+        case .denied, .unknown:
+            SettingsNote(systemImage: "exclamationmark.triangle", text: String(localized: "macOS has notifications off for FocusGuard, so nothing will show until you allow them."))
+        }
+        if permissions.notifications != .notDetermined {
             Button("Open Notification Settings…") {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
                     NSWorkspace.shared.open(url)
@@ -98,5 +144,20 @@ struct SettingsIslandSection: View {
             .buttonStyle(.textLink)
             .padding(.leading, 4)
         }
+    }
+}
+
+/// Keeps the section's permission states fresh, and asks when macOS gets picked.
+private struct IslandPermissionWatch: ViewModifier {
+    let permissions: PermissionsCoordinator
+    let surface: IslandSettings.Surface
+
+    func body(content: Content) -> some View {
+        content
+            .task { await permissions.refresh() }
+            .onChange(of: surface) { _, picked in
+                guard picked == .macOS else { return }
+                Task { await permissions.askForNotificationsIfNeeded() }
+            }
     }
 }

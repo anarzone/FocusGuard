@@ -93,24 +93,18 @@ struct PermissionsStep: View {
     private var permissions: PermissionsCoordinator { appState.permissions }
 
     private var ready: Int {
-        [browser == .allowed, permissions.notifications == .granted,
-         calendar == .authorized, permissions.screenRecording == .granted].filter { $0 }.count
+        [browser == .allowed, calendar == .authorized, permissions.screenRecording == .granted].filter { $0 }.count
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingEyebrow(String(localized: "Permissions · \(ready) of 4 ready"))
+            OnboardingEyebrow(String(localized: "Permissions · \(ready) of 3 ready"))
             OnboardingHeading(title: String(localized: "What FocusGuard can see"),
                               detail: String(localized: "Only what it needs to tell focus from drift. This screen updates as you allow each one."))
             VStack(spacing: 10) {
                 PermissionRow(symbol: "globe", title: String(localized: "Browser access"), optional: false,
                               detail: String(localized: "Reads the front tab's address, so x.com counts as drift and github.com as focus. macOS asks once per browser."),
                               status: browserStatus, action: askBrowsers)
-                PermissionRow(symbol: "bell", title: String(localized: "Notifications"), optional: false,
-                              detail: String(localized: "For nudges, session ends, and a morning plan if you want one."),
-                              status: status(permissions.notifications)) {
-                    Task { await permissions.requestNotifications() }
-                }
                 PermissionRow(symbol: "calendar", title: String(localized: "Calendar"), optional: true,
                               detail: String(localized: "Starts sessions from events with “focus” in the title, finds free slots, and keeps meetings out of your drift."),
                               status: calendarStatus, action: askCalendar)
@@ -149,14 +143,6 @@ struct PermissionsStep: View {
         case .authorized:    return .allowed
         case .denied:        return .openSettings
         case .notDetermined: return .ask
-        }
-    }
-
-    private func status(_ status: PermissionStatus) -> PermissionRow.Status {
-        switch status {
-        case .granted: return .allowed
-        case .denied:  return .openSettings
-        default:       return .ask
         }
     }
 

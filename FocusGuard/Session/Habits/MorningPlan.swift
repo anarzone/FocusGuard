@@ -16,6 +16,8 @@ struct MorningPlan: Equatable {
     /// The weekly coach's session before the first call, when it's on and
     /// fits: one of `slots`, shorter than the rest.
     var warmUp: WarmUp?
+    /// Whether the calendar has anything in it today, so the slots go around something.
+    var hasMeetings = false
 
     struct WarmUp: Equatable {
         let start: Date
@@ -52,7 +54,8 @@ struct MorningPlan: Equatable {
         let slots = ([warmUp?.start].compactMap { $0 } + others).sorted()
         guard !slots.isEmpty else { return nil }
         return MorningPlan(slots: slots, sessionMinutes: sessionMinutes, goalMinutes: goalMinutes,
-                           focusedMinutes: focusedMinutes, fromCalendar: busy != nil, warmUp: warmUp)
+                           focusedMinutes: focusedMinutes, fromCalendar: busy != nil, warmUp: warmUp,
+                           hasMeetings: busy?.isEmpty == false)
     }
 
     /// A session of `minutes` ending as the first call after `from` starts,
@@ -72,6 +75,13 @@ struct MorningPlan: Equatable {
     var title: String {
         if warmUp != nil && slots.count == 1 { return String(localized: "A session before your first call?") }
         return slots.count == 1 ? String(localized: "A session today?") : String(localized: "\(slots.count) sessions today?", comment: "The count is 2 or more")
+    }
+
+    /// The card's line: "Free at 9:30, 11:00 and 14:30, around your meetings."
+    func shortBody(locale: Locale = .current, calendar: Calendar = .current) -> String {
+        let times = HabitFormat.list(slots.map { HabitFormat.time($0, locale: locale, calendar: calendar) })
+        guard fromCalendar else { return String(localized: "Try \(times).", comment: "Session times spread over the day; the calendar can't be read") }
+        return hasMeetings ? String(localized: "Free at \(times), around your meetings.") : String(localized: "Free at \(times).")
     }
 
     /// "Free slots at 10:00, 14:00 and 17:30 would cover your 4h goal."

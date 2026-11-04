@@ -6,36 +6,13 @@ import SwiftUI
 private final class IslandPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+    /// The room for the shadow reaches up under the menu bar: AppKit would push the whole window down.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 /// A button works on the first click, though the panel never becomes key.
-/// The pointer's comings and goings are watched here because the panel is
-/// never active: the area covers the island, not its shadow.
 private final class IslandHostingView: NSHostingView<IslandView> {
-    var onEnter: () -> Void = {}
-    var onExit: () -> Void = {}
-    private var area: NSTrackingArea?
-
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let area { removeTrackingArea(area) }
-        let area = NSTrackingArea(rect: islandRect, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
-        addTrackingArea(area)
-        self.area = area
-    }
-
-    /// Where the island is in this view, once the window has its size.
-    var islandRect: NSRect {
-        let margin = IslandStyle.margin
-        return NSRect(x: margin.leading, y: isFlipped ? margin.top : margin.bottom,
-                      width: max(0, bounds.width - margin.leading - margin.trailing),
-                      height: max(0, bounds.height - margin.top - margin.bottom))
-    }
-
-    override func mouseEntered(with event: NSEvent) { onEnter() }
-    override func mouseExited(with event: NSEvent) { onExit() }
 }
 
 /// The spot under the status item. Worked out away from AppKit so it can be tested.
@@ -55,6 +32,20 @@ enum IslandPlacement {
     static let gap: CGFloat = 6
     static let sideMargin: CGFloat = 8
 
+    /// Where the island is on screen, in screen coordinates.
+    static func shape(of size: CGSize, at spot: Spot) -> NSRect {
+        NSRect(x: spot.centerX - size.width / 2, y: spot.top - size.height, width: size.width, height: size.height)
+    }
+
+    /// Whether a point is on the island itself. Its shadow and the corners
+    /// outside its curve aren't: clicks there belong to what's underneath.
+    static func isOver(_ shape: NSRect, radius: CGFloat, point: NSPoint) -> Bool {
+        guard shape.contains(point) else { return false }
+        let dx = max(shape.minX + radius - point.x, point.x - (shape.maxX - radius), 0)
+        let dy = max(shape.minY + radius - point.y, point.y - (shape.maxY - radius), 0)
+        return dx * dx + dy * dy <= radius * radius
+    }
+
     /// Centred under the status item and kept on its screen, or at the top
     /// right of the screen in use when the item's place isn't known. Always
     /// below the menu bar and the notch, even with the menu bar hidden.
@@ -73,17 +64,18 @@ enum IslandPlacement {
 }
 
 /// The one window: grows at once when the island is about to open, and shrinks
-/// after it has, so the spring runs inside it.
+/// after it has, so the spring runs inside it. It's bigger than the island to
+/// hold the shadow, so it only takes the mouse while the pointer is on the
+/// island itself: everywhere else a click reaches what's underneath.
 @MainActor
 final class IslandPanelController: IslandSurface {
     private let model = IslandModel()
     private weak var island: IslandController?
     private var panel: NSPanel?
-    private var host: IslandHostingView?
     private var spot = IslandPlacement.Spot(centerX: 0, top: 0)
     private var settling: Task<Void, Never>?
-    private var leaving: Task<Void, Never>?
     private var isHovering = false
+    private var pointerMonitors: [Any] = []
 
     func attach(_ island: IslandController) {
         self.island = island
@@ -107,15 +99,22 @@ final class IslandPanelController: IslandSurface {
         model.motion = .choose(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         let target: IslandModel.Phase = open ? .card : .pill
         let panel = self.panel ?? makePanel()
+        // Left out of screen captures, where macOS goes along with that.
+        panel.sharingType = IslandSettings.isQuietWhileSharing() ? .none : .readOnly
         panel.orderFrontRegardless()
         isHovering = false
+        watchPointer()
         if wasUp {
             move(to: target, on: panel)
         } else {
             place(for: target, on: panel)
             // The first frame is the small shape, so the spring has somewhere to start.
-            DispatchQueue.main.async { [weak self] in self?.model.phase = target }
+            DispatchQueue.main.async { [weak self] in
+                self?.model.phase = target
+                self?.settlePointer()
+            }
         }
+        settlePointer()
     }
 
     func update(_ moment: IslandMoment, open: Bool, now: Date) {
@@ -124,8 +123,8 @@ final class IslandPanelController: IslandSurface {
             model.moment = moment
         }
         model.now = now
-        settlePointer()
         if let panel { move(to: open ? .card : .pill, on: panel) }
+        settlePointer()
     }
 
     /// Grows the window before the island opens, and shrinks it once the island has.
@@ -151,6 +150,8 @@ final class IslandPanelController: IslandSurface {
     func hide() {
         settling?.cancel()
         isHovering = false
+        stopWatchingPointer()
+        panel?.ignoresMouseEvents = true
         model.phase = .gone
         settling = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(320))
@@ -205,38 +206,54 @@ final class IslandPanelController: IslandSurface {
         panel.animationBehavior = .none
         let host = IslandHostingView(rootView: IslandView(model: model))
         host.sizingOptions = []
-        host.onEnter = { [weak self] in self?.pointerEntered() }
-        host.onExit = { [weak self] in self?.pointerExited() }
         panel.contentView = host
         self.panel = panel
-        self.host = host
         return panel
     }
 
     // MARK: - The pointer
 
-    private func pointerEntered() {
-        leaving?.cancel()
-        guard !isHovering else { return }
-        isHovering = true
-        island?.hover(true)
+    /// The panel ignores the mouse most of the time, so it can't watch for
+    /// itself: other apps' moves come to the first monitor, its own to the second.
+    /// Neither needs a permission, and they only run while the island is up.
+    private func watchPointer() {
+        guard pointerMonitors.isEmpty else { return }
+        let events: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: events, handler: { [weak self] _ in
+            MainActor.assumeIsolated { self?.pointerMoved() }
+        }) { pointerMonitors.append(global) }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: events, handler: { [weak self] event in
+            MainActor.assumeIsolated { self?.pointerMoved() }
+            return event
+        }) { pointerMonitors.append(local) }
     }
 
-    /// A moment's patience: the window changing size under the pointer also says it left.
-    private func pointerExited() {
-        leaving?.cancel()
-        leaving = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(120))
-            guard !Task.isCancelled else { return }
-            self?.settlePointer()
-        }
+    private func stopWatchingPointer() {
+        pointerMonitors.forEach(NSEvent.removeMonitor)
+        pointerMonitors = []
     }
 
-    /// Catches a leave that came while the window was changing size.
+    private var isPointerOverIsland: Bool {
+        guard model.phase != .gone else { return false }
+        return IslandPlacement.isOver(IslandPlacement.shape(of: model.size(for: model.phase), at: spot),
+                                      radius: model.phase == .card ? IslandStyle.cardRadius : IslandStyle.pillRadius,
+                                      point: NSEvent.mouseLocation)
+    }
+
+    private func pointerMoved() {
+        let inside = isPointerOverIsland
+        panel?.ignoresMouseEvents = !inside
+        guard inside != isHovering else { return }
+        isHovering = inside
+        island?.hover(inside)
+    }
+
+    /// The island moved or changed shape, perhaps under a pointer standing
+    /// still. It may take the click now, but only a move opens it.
     private func settlePointer() {
-        guard isHovering, let host, let panel else { return }
-        let rect = panel.convertToScreen(host.convert(host.islandRect, to: nil))
-        guard !rect.contains(NSEvent.mouseLocation) else { return }
+        let inside = isPointerOverIsland
+        panel?.ignoresMouseEvents = !inside
+        guard isHovering, !inside else { return }
         isHovering = false
         DispatchQueue.main.async { [weak self] in self?.island?.hover(false) }
     }

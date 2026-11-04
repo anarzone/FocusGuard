@@ -5,7 +5,9 @@ import OSLog
 /// Sends the reminder two days before the trial ends.
 @MainActor
 protocol TrialReminding: AnyObject {
-    func presentTrialEndingSoon(endsAt: Date)
+    /// True when it counts as sent now; otherwise `noteTrialReminderShown` says when it does.
+    @discardableResult
+    func presentTrialEndingSoon(endsAt: Date, now: Date) -> Bool
 }
 
 /// Which plan this Mac is on, and what that unlocks.
@@ -17,7 +19,9 @@ protocol TrialReminding: AnyObject {
 @MainActor
 @Observable
 final class Entitlements {
-    static let shared = Entitlements(reminder: NotificationPresenter())
+    /// AppState hands over the presenter: a reminder sent before there's an
+    /// island would go to macOS, which may not be allowed to show it.
+    static let shared = Entitlements(reminder: nil)
 
     /// Changes when the trial starts or runs out, and when a licence is
     /// added or removed.
@@ -30,7 +34,6 @@ final class Entitlements {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let verifier: LicenceVerifier
-    /// AppState hands over its presenter, so the reminder can go on the island.
     @ObservationIgnored var reminder: TrialReminding?
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var timer: Timer?
@@ -179,12 +182,17 @@ final class Entitlements {
     }
 
     private var reminded: Bool { defaults.bool(forKey: Key.trialReminded) }
+    private static let remindAgainAfter: TimeInterval = 3600
 
     private func remindIfDue(at now: Date) {
         guard overridePlan == nil, case .trial(let endsAt) = plan,
               now >= Self.reminderDate(for: endsAt), !reminded else { return }
+        if reminder?.presentTrialEndingSoon(endsAt: endsAt, now: now) == true { noteTrialReminderShown() }
+    }
+
+    /// It has really been seen, so it never goes out again.
+    func noteTrialReminderShown() {
         defaults.set(true, forKey: Key.trialReminded)
-        reminder?.presentTrialEndingSoon(endsAt: endsAt)
     }
 
     /// One timer at the next moment something changes: the reminder, then
@@ -194,7 +202,9 @@ final class Entitlements {
         timer = nil
         guard case .trial(let endsAt) = plan else { return }
         let remindAt = Self.reminderDate(for: endsAt)
-        let next = overridePlan == nil && !reminded && remindAt > now ? remindAt : endsAt
+        // Sent but not seen yet (a card waiting, or expired unseen): try again in an hour.
+        let again = max(remindAt, now.addingTimeInterval(Self.remindAgainAfter))
+        let next = overridePlan == nil && !reminded && reminder != nil ? min(again, endsAt) : endsAt
         let timer = Timer(fire: next.addingTimeInterval(1), interval: 0, repeats: false) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }

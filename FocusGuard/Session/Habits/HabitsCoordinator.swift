@@ -67,6 +67,8 @@ final class HabitsCoordinator {
     private enum Key {
         static let morningPlanDay = "habits.morningPlan.lastDay"
         static let plannedSlots = "habits.morningPlan.slots"
+        /// When each planned slot was planned, by the slot's time.
+        static let plannedAt = "habits.morningPlan.plannedAt"
         /// The morning plan's session before the first call: [start, minutes].
         static let warmUp = "habits.morningPlan.warmUp"
     }
@@ -143,7 +145,10 @@ final class HabitsCoordinator {
                                               classification: tracker.isFrontmostSelf ? .neutral : snapshot.classification,
                                               at: now, eligible: eligible)
         let offer = detector.observe(sample)
-        if let current = autoStartOffer, !detector.isOngoing(since: current.since) { autoStartOffer = nil }
+        if let current = autoStartOffer, !detector.isOngoing(since: current.since) {
+            autoStartOffer = nil
+            presenter.withdrawAutoStartOffer()
+        }
         guard let offer, Self.mayOffer(now: now, lastOfferAt: lastOfferAt, pausedUntil: offersPausedUntil) else { return }
         lastOfferAt = now
         autoStartOffer = offer
@@ -183,21 +188,31 @@ final class HabitsCoordinator {
     func plan(_ slots: [Date], now: Date = .now) {
         let added = slots.filter { $0 > now }
         let kept = plannedSlots.filter { old in old > now && !added.contains { abs($0.timeIntervalSince(old)) < 5 * 60 } }
-        replacePlanned(with: kept + added)
+        var times = plannedTimes
+        for slot in added { times[String(slot.timeIntervalSinceReferenceDate)] = now.timeIntervalSinceReferenceDate }
+        replacePlanned(with: kept + added, times: times)
     }
 
-    private func replacePlanned(with slots: [Date]) {
+    private var plannedTimes: [String: Double] {
+        defaults.dictionary(forKey: Key.plannedAt) as? [String: Double] ?? [:]
+    }
+
+    private func replacePlanned(with slots: [Date], times: [String: Double]? = nil) {
         plannedSlots = slots.sorted()
         defaults.set(plannedSlots.map(\.timeIntervalSinceReferenceDate), forKey: Key.plannedSlots)
+        let keys = Set(plannedSlots.map { String($0.timeIntervalSinceReferenceDate) })
+        defaults.set((times ?? plannedTimes).filter { keys.contains($0.key) }, forKey: Key.plannedAt)
     }
 
     private func offerPlannedSession(now: Date) {
         guard let first = plannedSlots.first, first <= now else { return }
         let due = plannedSlots.filter { $0 <= now }
+        let times = plannedTimes
         replacePlanned(with: plannedSlots.filter { $0 > now })
         guard let slot = due.last, now.timeIntervalSince(slot) < HabitSchedule.plannedSessionGrace,
               sessions.currentSession == nil, !breaks.isOnBreak else { return }
-        presenter.presentPlannedSession(at: slot, minutes: plannedMinutes(at: slot))
+        presenter.presentPlannedSession(at: slot, minutes: plannedMinutes(at: slot),
+                                        plannedAt: times[String(slot.timeIntervalSinceReferenceDate)].map(Date.init(timeIntervalSinceReferenceDate:)))
     }
 
     /// The usual length, or the shorter one of the session before the first call.

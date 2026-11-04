@@ -118,7 +118,7 @@ final class NotificationPresenterTests: XCTestCase {
     func testBreakOverOffersTheUsualLength() {
         presenter.presentBreakOver()
         XCTAssertEqual(sent.first?.content.body, "Ready for another 50 minutes? Blocking comes back when you start.")
-        XCTAssertEqual(buttons(sent.first), ["Start 50 minutes", "5 more minutes"])
+        XCTAssertEqual(buttons(sent.first), ["Start session", "5 more min"])
         XCTAssertEqual(sent.first?.content.userInfo[NotificationInfo.minutes] as? Int, 50)
     }
 
@@ -149,27 +149,29 @@ final class NotificationPresenterTests: XCTestCase {
         XCTAssertTrue(sent.isEmpty)
         defaults.set(true, forKey: SettingsKeys.showNotifications)
         presenter.presentTrialEndingSoon(endsAt: .now)
-        XCTAssertEqual(buttons(sent.first), ["See Free and Pro"])
+        XCTAssertEqual(buttons(sent.first), ["See plans"])
     }
 
     // MARK: - Buttons
 
     func testEachSetOfButtonsIsRegisteredOnce() {
-        presenter.presentBreakOver()
-        presenter.presentBreakOver()
+        func finish(breakMinutes: Int) {
+            presenter.presentSessionComplete(name: "Run", minutes: 50, focusPercent: 88, zoneMinutes: 34, breakMinutes: breakMinutes)
+        }
+        finish(breakMinutes: 10)
+        finish(breakMinutes: 10)
         XCTAssertEqual(registered.count, 1)
 
-        defaults.set(25, forKey: SessionDefaultsKey.durationMinutes)
-        presenter.presentBreakOver()
+        finish(breakMinutes: 5)
         XCTAssertEqual(registered.count, 2)
         // Earlier sets stay, so older notifications keep their buttons.
         XCTAssertEqual(registered.last?.count, 2)
-        XCTAssertEqual(buttons(sent.last), ["Start 25 minutes", "5 more minutes"])
+        XCTAssertEqual(buttons(sent.last), ["Take a 5-minute break", "Start another"])
     }
 
     func testCategoryIdentifiersKeepTheirKind() {
         sendEverything()
         let kinds = sent.compactMap { NotificationCategory(identifier: $0.content.categoryIdentifier) }
-        XCTAssertEqual(kinds, [.nudge, .sessionComplete, .breakOver, .driftPrompt, .wrapUp, .autoStart, .trialEnding])
+        XCTAssertEqual(kinds, [.nudge, .sessionComplete, .breakOver, .driftPrompt, .limit, .wrapUp, .autoStart, .trialEnding])
     }
 }
