@@ -154,6 +154,65 @@ struct MenuItemRow: View {
     }
 }
 
+/// Today's island moments, newest first: what it was, when, and its main
+/// button if that still makes sense. Nothing at all until there's something.
+struct MenuRecentList: View {
+    let recents: IslandRecents
+    let isBusy: Bool
+    let perform: (IslandRecent, IslandButton) -> Void
+    var now: Date = .now
+
+    var body: some View {
+        let items = Array(recents.today(now: now).prefix(IslandRecents.shownInMenu))
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Recent")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.horizontal, 10)
+                    .frame(height: 20)
+                ForEach(items) { item in
+                    MenuRecentRow(item: item, button: IslandRecents.button(for: item, now: now, busy: isBusy)) { button in
+                        perform(item, button)
+                    }
+                }
+            }
+            MenuSeparator()
+        }
+    }
+}
+
+/// One line: the title gives way first, so the button and the time always read.
+private struct MenuRecentRow: View {
+    let item: IslandRecent
+    let button: IslandButton?
+    let press: (IslandButton) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(item.title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let button {
+                Button(button.title) { press(button) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.accentColor)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Text(HabitFormat.time(item.at))
+                .monospacedDigit()
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize()
+        }
+        .font(.system(size: 12))
+        .padding(.horizontal, 10)
+        .frame(height: 22)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct MenuSeparator: View {
     var body: some View {
         Rectangle()

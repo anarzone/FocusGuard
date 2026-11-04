@@ -703,7 +703,7 @@ struct MenuBarView: View {
 
     private var permissionModule: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("FocusGuard needs a couple of permissions to see what you're working on.",
+            Label("FocusGuard needs Screen Recording to see what you're working on.",
                   systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 12))
                 .labelStyle(.titleAndIcon)
@@ -733,6 +733,13 @@ struct MenuBarView: View {
                     .lineLimit(1)
                     .padding(.horizontal, 10)
                     .frame(height: 24)
+            }
+            if let recents = appState.island?.recents {
+                MenuRecentList(recents: recents, isBusy: appState.sessionManager.currentSession != nil || appState.breakManager.isOnBreak) { item, button in
+                    dismiss()
+                    recents.noteAnswered(key: item.key)
+                    if let command = button.command { appState.perform(command) }
+                }
             }
             if FeatureFlags.pickUp, !appState.pickUp.menuPlaces.isEmpty, !appState.breakManager.isOnBreak {
                 MenuItemRow(title: String(localized: "Where you left off")) {

@@ -5,6 +5,9 @@ import Foundation
 enum IslandSettings {
     static let surface = "notifications.surface"
     static let softSound = "notifications.softSound"
+    static let quietWhileSharing = "notifications.quietWhileSharing"
+    /// What's on the island or waiting, so a quit doesn't lose it (`IslandQueue.Saved`).
+    static let savedQueue = "island.queue"
 
     enum Surface: String, CaseIterable, Identifiable {
         case cards, macOS
@@ -14,6 +17,17 @@ enum IslandSettings {
     /// Cards until the user picks macOS notifications.
     static func surface(_ defaults: UserDefaults = .standard) -> Surface {
         defaults.string(forKey: surface).flatMap(Surface.init) ?? .cards
+    }
+
+    /// On until the user turns it off.
+    static func isQuietWhileSharing(_ defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: quietWhileSharing) as? Bool ?? true
+    }
+
+    /// Asked when macOS notifications get picked: cards don't need the
+    /// permission, and macOS only prompts once.
+    static func shouldAskForNotifications(surface: Surface, status: PermissionStatus) -> Bool {
+        surface == .macOS && status == .notDetermined
     }
 
     static func hasSound(_ kind: IslandKind) -> Bool {
@@ -46,6 +60,10 @@ final class IslandController {
     /// The buttons' route. Tests record instead.
     var perform: (NotificationCommand) -> Void = { NotificationRouter.shared.perform($0) }
     var playSound: (IslandKind) -> Void = { _ in NSSound(named: "Tink")?.play() }
+    /// A moment really showed. The trial reminder counts as sent only now.
+    var didShow: (IslandMoment) -> Void = { _ in }
+    /// The menu's Recent list.
+    let recents: IslandRecents
 
     private(set) var queue: IslandQueue
     private let surface: IslandSurface
@@ -53,6 +71,7 @@ final class IslandController {
     private let defaults: UserDefaults
     private let runsTimer: Bool
     private var timer: Timer?
+    private var lastSaved: [IslandQueue.Saved] = []
 
     init(surface: IslandSurface, clock: @escaping () -> Date = { .now }, defaults: UserDefaults = .standard,
          calendar: Calendar = .current, runsTimer: Bool = true) {
@@ -61,7 +80,18 @@ final class IslandController {
         self.defaults = defaults
         self.runsTimer = runsTimer
         self.queue = IslandQueue(calendar: calendar)
+        self.recents = IslandRecents(defaults: defaults, calendar: calendar)
         surface.attach(self)
+    }
+
+    /// Brings back what was waiting at the last quit, once the conditions are wired.
+    func restoreWaiting() {
+        recents.forgetOtherDays(now: clock())
+        guard let data = defaults.data(forKey: IslandSettings.savedQueue),
+              let saved = try? JSONDecoder().decode([IslandQueue.Saved].self, from: data) else { return }
+        queue.restore(saved, now: clock())
+        lastSaved = saved
+        tick()
     }
 
     func post(_ moment: IslandMoment) {
@@ -73,6 +103,7 @@ final class IslandController {
     }
 
     func remove(key: String) {
+        recents.noteAnswered(key: key)
         if queue.remove(key: key, now: clock()) { surface.hide() }
         tick()
     }
@@ -88,14 +119,26 @@ final class IslandController {
         switch queue.step(conditions(), allowed: isAllowed) {
         case .showed(let moment):
             surface.show(moment, open: queue.isOpen, now: clock())
-            surface.announce(moment.announcement, urgent: moment.kind == .drift || moment.kind == .limit)
+            surface.announce(moment.announcement(at: clock()), urgent: moment.kind == .drift || moment.kind == .limit)
             if IslandSettings.hasSound(moment.kind), defaults.bool(forKey: IslandSettings.softSound) { playSound(moment.kind) }
+            recents.note(moment, at: clock(), expires: queue.current?.expires)
+            didShow(moment)
         case .hid:
             surface.hide()
         case .none:
             refresh()
         }
+        for gone in queue.takeTimedOut() { recents.noteTimedOut(gone.moment, expired: gone.expires, now: clock()) }
+        save()
         keepTimer()
+    }
+
+    /// After every change, so a crash loses nothing either.
+    private func save() {
+        let saved = queue.saved
+        guard saved != lastSaved else { return }
+        lastSaved = saved
+        if let data = try? JSONEncoder().encode(saved) { defaults.set(data, forKey: IslandSettings.savedQueue) }
     }
 
     // MARK: - From the surface

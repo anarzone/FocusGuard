@@ -8,6 +8,10 @@ struct IslandConditions {
     var idleSeconds: TimeInterval = 0
     /// Respects "Stay quiet during calls".
     var inCall = false
+    /// Respects "Stay quiet while sharing your screen" (`ScreenShareDetector`).
+    var isSharingScreen = false
+    /// A Focus whose FocusGuard filter says "Keep cards quiet" is on (`FocusQuiet`).
+    var isFocusQuiet = false
     /// The block, daily-limit or break screen is up, or a break is on.
     var screenUp = false
     var isAsleepOrLocked = false
@@ -86,11 +90,12 @@ enum IslandRules {
     static func holds(_ moment: IslandMoment, _ conditions: IslandConditions) -> Bool {
         if conditions.isAsleepOrLocked || conditions.screenUp { return true }
         if moment.requested { return false }
-        return conditions.inCall || conditions.isAway
+        return conditions.inCall || conditions.isAway || conditions.isSharingScreen || conditions.isFocusQuiet
     }
 
     static func isQuiet(_ conditions: IslandConditions) -> Bool {
         conditions.isAsleepOrLocked || conditions.screenUp || conditions.inCall || conditions.isAway
+            || conditions.isSharingScreen || conditions.isFocusQuiet
     }
 
     /// Waits at most `maxWait`, and at most half of what's left: one arriving
@@ -122,8 +127,17 @@ struct IslandQueue {
         case hid
     }
 
+    /// What's kept across a quit: everything here, on screen or not, comes back waiting.
+    struct Saved: Equatable, Codable {
+        let moment: IslandMoment
+        let arrived: Date
+        let expires: Date
+    }
+
     private(set) var current: Entry?
     private(set) var waiting: [Entry] = []
+    /// Waited until it no longer mattered, since the last `takeTimedOut`.
+    private var timedOut: [Saved] = []
     private var lastFront: String?
     private var lastPauseAt: Date?
     private var wasQuiet = false
@@ -179,6 +193,33 @@ struct IslandQueue {
         return true
     }
 
+    // MARK: - Across a quit
+
+    var saved: [Saved] {
+        ([current].compactMap { $0 } + waiting)
+            .filter { $0.moment.kind.survivesRelaunch }
+            .map { Saved(moment: $0.moment, arrived: $0.arrived, expires: $0.expires) }
+    }
+
+    /// Brings back what was here at the last quit. It keeps its arrival and
+    /// expiry: time passed while the app wasn't running still counts.
+    mutating func restore(_ saved: [Saved], now: Date) {
+        for item in saved where !waiting.contains(where: { $0.moment.key == item.moment.key }) {
+            var moment = item.moment
+            moment.shownAtPause = false
+            if now >= item.expires {
+                timedOut.append(item)
+            } else {
+                waiting.append(Entry(moment: moment, arrived: item.arrived, expires: item.expires))
+            }
+        }
+    }
+
+    mutating func takeTimedOut() -> [Saved] {
+        defer { timedOut = [] }
+        return timedOut
+    }
+
     /// A session or break ended.
     mutating func notePause(now: Date) {
         if !waiting.isEmpty { lastPauseAt = now }
@@ -222,6 +263,7 @@ struct IslandQueue {
             now >= entry.expires || !allowed(entry.moment.kind)
                 || (entry.moment.kind == .drift && !conditions.isDrifting)
         }
+        timedOut += waiting.filter { now >= $0.expires }.map { Saved(moment: $0.moment, arrived: $0.arrived, expires: $0.expires) }
         waiting.removeAll(where: isStale)
         if let entry = current, isStale(entry) || isDone(entry, now: now) {
             current = nil
@@ -267,6 +309,8 @@ struct IslandQueue {
     private mutating func show(_ entry: Entry, now: Date) {
         var entry = entry
         waiting.removeAll { $0.moment.key == entry.moment.key }
+        // It really was held: one that came during a pause only happened to.
+        entry.moment.shownAtPause = isPause(now: now) && now > entry.arrived
         entry.shownUntil = IslandRules.timing(entry.moment.kind).onScreen.map { now.addingTimeInterval($0) }
         current = entry
     }

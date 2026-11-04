@@ -96,7 +96,10 @@ final class FlowPlanTests: XCTestCase {
     func testTheTrialReminderComesTwoDaysBeforeTheEnd() {
         final class Spy: TrialReminding {
             var reminders: [Date] = []
-            func presentTrialEndingSoon(endsAt: Date) { reminders.append(endsAt) }
+            func presentTrialEndingSoon(endsAt: Date, now: Date) -> Bool {
+                reminders.append(endsAt)
+                return true
+            }
         }
         let spy = Spy()
         let clock = clock

@@ -253,7 +253,10 @@ final class EntitlementsTests: XCTestCase {
 @MainActor
 private final class RecordingReminder: TrialReminding {
     var sent: [Date] = []
-    func presentTrialEndingSoon(endsAt: Date) { sent.append(endsAt) }
+    func presentTrialEndingSoon(endsAt: Date, now: Date) -> Bool {
+        sent.append(endsAt)
+        return true
+    }
 }
 
 private final class AcceptingVerifier: LicenceVerifier {

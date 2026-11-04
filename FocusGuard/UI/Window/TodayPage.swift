@@ -319,7 +319,7 @@ struct TodayPage: View {
     private var permissionBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
-            Text("FocusGuard needs Screen Recording and notifications to see what's in front and nudge you.")
+            Text("FocusGuard needs Screen Recording to see what's in front.")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.bodyText)
                 .lineLimit(1)
@@ -879,7 +879,7 @@ private struct SetupCard: View {
 
     private var steps: [TodaySetupStep] {
         [
-            TodaySetupStep(title: String(localized: "Allow Screen Recording and notifications"),
+            TodaySetupStep(title: String(localized: "Allow Screen Recording"),
                       detail: String(localized: "So FocusGuard can see what's in front."),
                       done: appState.permissions.allGranted,
                       action: (String(localized: "Set up"), { NotificationCenter.default.post(name: .showOnboarding, object: nil) })),

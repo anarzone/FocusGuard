@@ -544,7 +544,7 @@ final class IslandTests: XCTestCase {
             (.sessionFinished, { self.presenter.presentSessionComplete(name: "Run", minutes: 50, focusPercent: 88, zoneMinutes: 34, breakMinutes: 10) },
              [.takeBreak(minutes: 10), .startSession(minutes: 50)]),
             (.breakOver, { self.presenter.presentBreakOver() }, [.startSession(minutes: 50), .takeBreak(minutes: 5)]),
-            (.driftPrompt, { self.presenter.presentDriftPrompt(host: "reddit.com") }, [.startSession(minutes: 50), nil]),
+            (.driftPrompt, { self.presenter.presentDriftPrompt(host: "reddit.com") }, [.startSession(minutes: 25), nil]),
             (.limit, { self.presenter.presentLimitWarning(name: "reddit.com", minutesLeft: 5, minutesToday: 30) }, [.openToday, nil]),
             (.morningPlan, { self.presenter.presentMorningPlan(plan) }, [.planSessions([slot]), nil]),
             (.plannedSession, { self.presenter.presentPlannedSession(at: slot, minutes: 25) },
@@ -580,7 +580,7 @@ final class IslandTests: XCTestCase {
         presenter.presentLimitWarning(name: "reddit.com", minutesLeft: 5, minutesToday: 30)
         let button = try XCTUnwrap(island.queue.current?.moment.buttons.first)
         island.press(button)
-        XCTAssertEqual(performed, [.openToday])
+        XCTAssertEqual(performed, [.startSession(minutes: nil)])
         XCTAssertNil(currentKind)
     }
 

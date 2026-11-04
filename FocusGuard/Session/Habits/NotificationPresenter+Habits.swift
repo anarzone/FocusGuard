@@ -18,16 +18,16 @@ extension NotificationPresenter {
     }
 
     /// A slot from the morning plan has come: "Time for your 14:00 session".
-    func presentPlannedSession(at slot: Date, minutes: Int) {
+    func presentPlannedSession(at slot: Date, minutes: Int, plannedAt: Date? = nil) {
         let request = Self.request(
             "plannedSession",
             title: String(localized: "Time for your \(HabitFormat.time(slot)) session"),
-            body: String(localized: "\(minutes) minutes, as you planned this morning.", comment: "Plural on minutes: 1 minute, as you planned this morning"),
-            category: category(.plannedSession, [(.startSession, String(localized: "Start \(minutes) minutes", comment: "Plural on minutes: Start 1 minute")),
+            body: String(localized: "\(minutes) minutes, as you planned.", comment: "Plural on minutes: 1 minute, as you planned"),
+            category: category(.plannedSession, [(.startSession, String(localized: "Start now", comment: "Button: start the planned session")),
                                                  (.skip, String(localized: "Skip this one"))]),
             info: [NotificationInfo.minutes: minutes, NotificationInfo.slot: slot.timeIntervalSinceReferenceDate]
         )
-        deliver(request, as: .general, moment: plannedSessionMoment(at: slot, title: request.content.title, body: request.content.body))
+        deliver(request, as: .general, moment: plannedSessionMoment(at: slot, title: request.content.title, body: request.content.body, plannedAt: plannedAt))
     }
 
     /// "You've been in Xcode 5 minutes" with "Start 50 minutes" and "Not now".
@@ -43,6 +43,11 @@ extension NotificationPresenter {
                    NotificationInfo.minutes: minutes]
         )
         deliver(request, as: .general, moment: autoStartMoment(offer, usualMinutes: minutes, now: now))
+    }
+
+    /// The offer stopped being true (that work ended, or it was taken): the card goes.
+    func withdrawAutoStartOffer() {
+        island?.remove(key: "autoStart")
     }
 
     /// "Today: 3h 40m focused" with "See today"; with a tip for tomorrow,

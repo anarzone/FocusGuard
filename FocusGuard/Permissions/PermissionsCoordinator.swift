@@ -18,9 +18,11 @@ final class PermissionsCoordinator {
     var screenRecording: PermissionStatus = .unknown
 
     var allGranted: Bool {
-        // Tracking needs window titles (Screen Recording) and nudges need
-        // notifications. Accessibility isn't used by anything, so it isn't asked for.
-        notifications == .granted && screenRecording == .granted
+        // Tracking needs window titles (Screen Recording). Cards need nothing:
+        // notifications are asked for only when macOS notifications get picked,
+        // and Settings shows how that stands. Accessibility isn't used by
+        // anything, so it isn't asked for.
+        screenRecording == .granted
     }
 
     func refresh() async {
@@ -47,6 +49,13 @@ final class PermissionsCoordinator {
             openSettings(path: "id=com.anar.focusguard", scheme: "notifications")
         }
         notifications = await currentNotificationStatus()
+    }
+
+    /// Someone just picked macOS notifications: the prompt, the first time only.
+    func askForNotificationsIfNeeded() async {
+        notifications = await currentNotificationStatus()
+        guard IslandSettings.shouldAskForNotifications(surface: .macOS, status: notifications) else { return }
+        await requestNotifications()
     }
 
     /// Triggers the system prompt the first time; otherwise opens System Settings.

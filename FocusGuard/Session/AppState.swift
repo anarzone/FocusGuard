@@ -16,6 +16,8 @@ final class AppState {
     let notificationPresenter: NotificationPresenter
     /// The floating island; nil in the UI tests' copy.
     let island: IslandController?
+    /// When a Focus's hold on cards was last checked against its filter.
+    var lastFocusQuietCheck = Date.distantPast
     let escalationEngine: EscalationEngine
     /// Daily limits on sites and apps, counted all day.
     let limits: DailyLimitsEngine
@@ -236,7 +238,7 @@ final class AppState {
             // and the menu bar shows the countdown.
         }
         self.breakManager.onBreakCompleted = { [weak self] in
-            self?.notificationPresenter.presentBreakOver()
+            self?.notificationPresenter.presentBreakOver(breakMinutes: self?.breakManager.lastCompletedMinutes)
         }
         self.breakManager.onBreakEnded = { [weak self] in
             self?.breakOverlay.dismiss()

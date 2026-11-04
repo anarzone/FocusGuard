@@ -1,12 +1,17 @@
 import AppKit
 import Foundation
+import SwiftData
 
 extension AppState {
     /// Called once from `init`: what the notifications need to know, and
     /// what their buttons do.
     func wireNotifications() {
         notificationPresenter.nudgeContext = { [weak self] in self?.nudgeContext() }
-        escalationEngine.holdsNudges = { [weak self] in self?.habits.isInCall() ?? false }
+        // Sharing too: the block screen would be on everyone's screen.
+        escalationEngine.holdsNudges = { [weak self] in
+            guard let self else { return false }
+            return habits.isInCall() || isSharingScreen()
+        }
         NotificationRouter.shared.perform = { [weak self] in self?.perform($0) }
         NotificationRouter.shared.attach()
     }
@@ -36,8 +41,21 @@ extension AppState {
             minutes: Int((running / 60).rounded()),
             focusPercent: Self.completionPercent(of: session),
             zoneMinutes: Int(zone / 60),
-            breakMinutes: Self.suggestedBreakMinutes(forSessionMinutes: session.plannedDurationMinutes ?? Int(running / 60))
+            breakMinutes: Self.suggestedBreakMinutes(forSessionMinutes: session.plannedDurationMinutes ?? Int(running / 60)),
+            longestThisWeek: SessionFinishedFacts.isLongestThisWeek(zone: zone, others: otherStretchesThisWeek(than: session, now: end))
         )
+    }
+
+    /// The longest stretch of every other session this week, the way Reports
+    /// measures "Longest in the zone".
+    private func otherStretchesThisWeek(than session: Session, now: Date) -> [TimeInterval] {
+        let start = ReportPeriod.week.interval(offset: 0, now: now, calendar: .current).start
+        let finished = Persistence.fetch(container.mainContext, FetchDescriptor<Session>(
+            predicate: #Predicate { $0.startedAt >= start && $0.endedAt != nil }
+        ))
+        return finished.filter { $0.id != session.id }.map {
+            FocusRuns.compute(FocusRuns.spans(from: $0.events), now: $0.endedAt ?? now).longest
+        }
     }
 
     /// The rate in the session-complete notification: its own events, so
@@ -91,10 +109,21 @@ extension AppState {
             Task { await integrations.planned(slots, minutes: minutes, now: now) }
         case .skipPlannedSession(let slot):
             Task { await integrations.skipPlanned(slot) }
-        case .openToday:
-            (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: .home)
-        case .openPlans:
-            (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: .settings)
+        case .openAnalyzer:
+            FocusAnalyzer.shared.wantsResultShown = true
+            (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: command.page)
+        case .openToday, .openPlans:
+            (NSApp.delegate as? AppDelegate)?.openMainWindow(tab: command.page)
         }
+    }
+}
+
+/// What's true about a session that just finished.
+enum SessionFinishedFacts {
+    /// "Your longest stretch this week": ahead of every other session this
+    /// week. The week's first session has nothing to beat, so it says nothing.
+    static func isLongestThisWeek(zone: TimeInterval, others: [TimeInterval]) -> Bool {
+        guard zone >= 60, let best = others.max() else { return false }
+        return zone > best
     }
 }

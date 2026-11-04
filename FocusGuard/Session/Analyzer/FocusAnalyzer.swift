@@ -92,6 +92,8 @@ final class FocusAnalyzer {
     private(set) var state: AnalyzerState
     /// Why something didn't happen, for a moment.
     private(set) var problem: String?
+    /// "See the result" was pressed: the page opens its result sheet.
+    var wantsResultShown = false
 
     /// Days with anything tracked, for settling an experiment's past days.
     @ObservationIgnored var days: ([Date]) async -> [AnalyzerDay] = { _ in [] }
@@ -445,10 +447,7 @@ final class LiveAnalyzerApplier: AnalyzerApplying {
     }
 
     func experimentFinished() {
-        appState?.notificationPresenter.deliver(
-            NotificationPresenter.request(title: String(localized: "Your experiment is done"),
-                                          body: String(localized: "The result is on the Analyzer page.")),
-            as: .general)
+        appState?.notificationPresenter.presentExperimentFinished()
     }
 }
 

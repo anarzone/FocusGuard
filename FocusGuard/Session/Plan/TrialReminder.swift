@@ -4,10 +4,14 @@ import UserNotifications
 /// The trial reminder, sent like the app's other notifications and behind
 /// the same "Show notifications" switch.
 extension NotificationPresenter: TrialReminding {
-    func presentTrialEndingSoon(endsAt: Date) {
-        let buttons = category(.trialEnding, [(.seePlans, String(localized: "See Free and Pro"))])
+    /// True when it counts as sent now. On the island that comes later, when
+    /// the card really shows (`Entitlements.noteTrialReminderShown`).
+    @discardableResult
+    func presentTrialEndingSoon(endsAt: Date, now: Date = .now) -> Bool {
+        let buttons = category(.trialEnding, [(.seePlans, String(localized: "See plans"))])
         let request = Self.trialEndingSoon(endsAt: endsAt, category: buttons)
-        deliver(request, as: .general, moment: trialMoment(title: request.content.title, body: request.content.body))
+        let left = max(1, Int((endsAt.timeIntervalSince(now) / 86_400).rounded(.up)))
+        return deliver(request, as: .general, moment: trialMoment(daysLeft: left)) == .sent && macOSAllows()
     }
 
     static func trialEndingSoon(endsAt: Date, category: String? = nil) -> UNNotificationRequest {

@@ -109,6 +109,20 @@ final class OnboardingTests: XCTestCase {
         XCTAssertEqual(SetupPanel.presetLine(nil), "Your own timings from Settings.")
     }
 
+    func test_cardsNeedNoNotificationPermission() {
+        let permissions = PermissionsCoordinator()
+        permissions.screenRecording = .granted
+        permissions.notifications = .notDetermined
+        XCTAssertTrue(permissions.allGranted, "someone who skipped it isn't reminded about it")
+    }
+
+    func test_someoneAlreadyAskedIsntAskedAgain() {
+        XCTAssertFalse(IslandSettings.shouldAskForNotifications(surface: .cards, status: .notDetermined))
+        XCTAssertFalse(IslandSettings.shouldAskForNotifications(surface: .macOS, status: .granted))
+        XCTAssertFalse(IslandSettings.shouldAskForNotifications(surface: .macOS, status: .denied))
+        XCTAssertTrue(IslandSettings.shouldAskForNotifications(surface: .macOS, status: .notDetermined))
+    }
+
     func test_onboardingHasFourSteps() {
         XCTAssertEqual(OnboardingView.Step.allCases.count, 4)
         XCTAssertEqual(OnboardingWindowController.size, NSSize(width: 960, height: 640))

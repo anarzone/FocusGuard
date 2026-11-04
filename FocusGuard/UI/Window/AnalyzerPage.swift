@@ -65,6 +65,12 @@ private struct AnalyzerView: View {
             .sheet(item: $sheet) { item in
                 sheetView(item)
             }
+            // "See the result" on the finished experiment's card or banner.
+            .onChange(of: analyzer.wantsResultShown, initial: true) { _, wanted in
+                guard wanted else { return }
+                analyzer.wantsResultShown = false
+                if analyzer.state.finished != nil { sheet = .result }
+            }
     }
 
     private func reload() async {
