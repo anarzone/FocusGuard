@@ -704,7 +704,7 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     const page = await tb.tab('https://pwa.test/pwa');
     await waitBlocked(page);
   });
-  await it('a site with its own service worker never gets to run first', { bug: 'B-site-worker' }, async () => {
+  await it('a site with its own service worker never gets to run first', async () => {
     const since = Date.now();
     const page = await tb.tab('https://pwa.test/pwa');
     await waitBlocked(page);
@@ -713,7 +713,7 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     app.startSession(SITES);
     assertEqual(ran.map((r) => r.path).join(','), '', 'the page ran');
   });
-  await it('a web page can\'t use the block page to count visits', { bug: 'B-war-visit' }, async () => {
+  await it('a web page can\'t use the block page to count visits', async () => {
     const before = app.messages('blockedVisit').length;
     const page = await tb.tab('https://ok.test/');
     await page.evaluate((src) => { const f = document.createElement('iframe'); f.src = src; document.body.append(f); }, `${BLOCK}?kind=site&target=evil.test#https://evil.test/`);
@@ -721,7 +721,7 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     const counted = app.messages('blockedVisit').slice(before);
     assertEqual(counted.map((m) => m.host).join(','), '', 'visits counted from a web page');
   });
-  await it('a second stopped visit to the same address in one tab counts', { bug: 'B-visit-count' }, async () => {
+  await it('a second stopped visit to the same address in one tab counts', async () => {
     const before = app.messages('blockedVisit').length;
     const page = await tb.tab('https://x.com/twice');
     await waitBlocked(page);
@@ -772,7 +772,7 @@ group('block: getting there', {}, async ({ tb, app, it }) => {
     const page = await tb.tab('https://x.com/still');
     await waitBlocked(page, 1500);
   });
-  await it('a site in Unicode is blocked too', { bug: 'B-unicode-site' }, async () => {
+  await it('a site in Unicode is blocked too', async () => {
     const other = await tb.tab('https://münchen.test/');
     app.set({ sites: ['x.com'] });
     await waitBlocked(other, 1500);
@@ -919,9 +919,9 @@ group('presets on the block page', {}, async ({ tb, app, it }) => {
     app.endSession();
   });
 
-  await it('the waits hold in the app too: a pass asked for at once in Standard is refused', { bug: 'B-wait-client-only' }, async () => {
-    // Not reachable by clicking, only by script in the extension's own page. The
-    // app's grantPass has no idea when the page opened, so this is by design today.
+  await it('the waits hold in the app too: a pass asked for at once in Standard is refused', async () => {
+    // Not reachable by clicking, only by script in the extension's own page: the
+    // app keeps the wait too, from when the block page last opened.
     app.startSession({ preset: 'standard', sites: ['x.com'] });
     const page = await tb.tab('https://x.com/');
     await waitBlocked(page);
@@ -1030,6 +1030,8 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
 
   await it('a redirect from the site to somewhere allowed: no countdown there', async () => {
     app.startSession({ preset: 'gentle', sites });
+    // The last test's pass on x.com goes with the new session: wait for its rule.
+    await until('the rules without the pass', async () => (await tb.rules()).some((r) => r.condition.regexFilter.includes('x\\.com')));
     const page = await tb.tab('https://x.com/redirect?to=https://work.test/landed');
     await takePass(page);
     await waitAt(page, 'https://work.test/landed');
@@ -1817,7 +1819,7 @@ group('service worker death', {}, async ({ tb, app, it }) => {
     await until('the session-over view', async () => (await pageText(page)).includes(title), 5000);
   });
 
-  await it('in a pass: the page stays, and the block comes back when it ends', { bug: 'B-worker-30s' }, async () => {
+  await it('in a pass: the page stays, and the block comes back when it ends', async () => {
     await wake();
     app.startSession({ preset: 'gentle', sites });
     app.passMs = 6000;

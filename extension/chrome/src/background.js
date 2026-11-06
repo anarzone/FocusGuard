@@ -14,9 +14,9 @@ import {
   Conn, HOST_NAME, PROTOCOL_VERSION, PageMessage, REQUEST_TIMEOUT_MS,
   connFromDisconnect, requestId,
 } from './lib/protocol.js';
-import { hostname, isWebURL, parseFragment, safeWebURL, withoutHostDot } from './lib/format.js';
+import { hostname, isWebURL, parseFragment, safeWebURL, splitPart, withoutHostDot } from './lib/format.js';
 import { loadLanguage, t } from './lib/i18n.js';
-import { blockReason, buildRules, hostMatches, rulesKey } from './lib/blocking.js';
+import { asciiHost, blockReason, buildRules, hostMatches, rulesKey } from './lib/blocking.js';
 import { passFor, toolbar } from './lib/view.js';
 import { glyphImages } from './lib/icon.js';
 
@@ -475,6 +475,7 @@ async function updateRules() {
   const rules = (await blockingAllowed()) ? buildRules(state, BLOCK_PAGE) : [];
   const key = rulesKey(rules);
   if (key === lastRulesKey) return;
+  await forgetSiteWorkers(rules);
   try {
     const existing = await chrome.declarativeNetRequest.getSessionRules();
     await chrome.declarativeNetRequest.updateSessionRules({
@@ -485,6 +486,26 @@ async function updateRules() {
   } catch (error) {
     console.warn('FocusGuard: could not update blocking rules', error);
   }
+}
+
+// A site with its own service worker answers its pages from the worker, where
+// the rules never see them: its page would run before the block. Newly blocked
+// sites lose their worker, so their pages come from the network again. The
+// site registers it again on its next visit, outside the block.
+let workersForgotten = new Set();
+
+async function forgetSiteWorkers(rules) {
+  const hosts = new Set();
+  for (const rule of rules) {
+    if (rule.action.type !== 'redirect') continue;
+    const target = new URLSearchParams(rule.action.redirect.regexSubstitution.split('?')[1]?.split('#')[0]).get('target');
+    if (target) hosts.add(asciiHost(splitPart(target).host));
+  }
+  const fresh = [...hosts].filter((host) => !workersForgotten.has(host));
+  workersForgotten = hosts;
+  if (!fresh.length || !chrome.browsingData) return;
+  const origins = fresh.flatMap((host) => [`https://${host}`, `https://www.${host}`, `http://${host}`, `http://www.${host}`]);
+  await chrome.browsingData.remove({ origins }, { serviceWorkers: true }).catch(() => {});
 }
 
 function blockPageURL(url, reason) {
@@ -622,7 +643,11 @@ async function showPassPill(tabId, until) {
       const tickPill = () => {
         const left = Math.max(0, Math.ceil((untilMs - Date.now()) / 1000));
         main.textContent = text.closes.replace('{host}', host).replace('{time}', `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
-        if (left <= 0) { clearInterval(timer); pill.remove(); }
+        if (left <= 0) {
+          clearInterval(timer);
+          pill.remove();
+          chrome.runtime.sendMessage({ type: 'passOver' }).catch(() => {});
+        }
       };
       const timer = setInterval(tickPill, 1000);
       tickPill();
@@ -726,9 +751,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+// What a page in a frame may ask: a web page can put the block page in a frame
+// of its own, and must not use it to count visits or take passes.
+const FRAME_SAFE = new Set([PageMessage.snapshot, PageMessage.appearance]);
+
 async function handlePageMessage(message, sender) {
   await ready;
   const tabId = sender.tab?.id;
+  if (sender.tab && sender.frameId && !FRAME_SAFE.has(message?.type) && message?.type !== 'passOver') {
+    return { ok: false, error: 'frame' };
+  }
   switch (message?.type) {
     case PageMessage.request:
       return request(message.payload);
@@ -786,6 +818,18 @@ async function handlePageMessage(message, sender) {
     }
     case PageMessage.blockedVisit:
       send({ type: 'blockedVisit', host: message.host });
+      return { ok: true };
+    case 'passOver':
+      // A pill reached 0. It also wakes a worker that died during the pass, so
+      // the block comes back on time rather than at the next alarm.
+      if (!port) connect();
+      await stateKnown();
+      await applyRules();
+      // Only the tab in front: tabs behind block when they come forward.
+      if (sender.tab) {
+        const tab = await chrome.tabs.get(sender.tab.id).catch(() => null);
+        if (tab?.active) await enforceOnTab(tab);
+      }
       return { ok: true };
     case PageMessage.goTo:
       if (tabId != null && isWebURL(message.url)) await chrome.tabs.update(tabId, { url: message.url });

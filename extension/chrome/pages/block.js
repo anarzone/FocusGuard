@@ -47,17 +47,12 @@ subscribe('block', (next) => { snap = next; render(); });
 setInterval(() => live.forEach((update) => update(Date.now())), 250);
 document.addEventListener('keydown', onKey);
 
-// Count a stopped visit once per page load (not on reloads of the same page).
-if (kind !== 'paused') {
-  const mark = `counted:${location.href}`;
-  try {
-    if (!sessionStorage.getItem(mark)) {
-      sessionStorage.setItem(mark, '1');
-      tell({ type: 'blockedVisit', host: reportedHost });
-    }
-  } catch {
-    tell({ type: 'blockedVisit', host: reportedHost });
-  }
+// Count every stopped visit, but not a reload of this page or a step back or
+// forward onto it: those aren't new tries at the site. Only as the tab's own
+// page: inside a frame, a web page could count visits with it.
+const arrival = performance.getEntriesByType('navigation')[0]?.type;
+if (kind !== 'paused' && window.top === window && arrival !== 'reload' && arrival !== 'back_forward') {
+  tell({ type: 'blockedVisit', host: reportedHost });
 }
 
 function readAddress() {

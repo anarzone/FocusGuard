@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { blockReason, buildRules, hostMatches, partMatches, partRegex, plainPath, rulesKey, siteRegex } from '../src/lib/blocking.js';
+import { asciiHost, blockReason, buildRules, hostMatches, partMatches, partRegex, plainPath, rulesKey, siteRegex } from '../src/lib/blocking.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/state-focusing.json', import.meta.url)));
 const asOf = fixture.session.asOf;
@@ -161,4 +161,11 @@ test('rule regexes match the same addresses as the matchers', () => {
   assert.ok(part.test('https://youtube.com/Shorts?feature=share'));
   assert.ok(!part.test('https://youtube.com/shortsale'));
   assert.ok(!part.test('https://youtube.com/watch?v=shorts'));
+});
+
+test('a site in Unicode matches the address the browser writes', () => {
+  assert.equal(asciiHost('münchen.test'), 'xn--mnchen-3ya.test');
+  assert.equal(asciiHost('X.com'), 'x.com');
+  assert.ok(hostMatches('xn--mnchen-3ya.test', 'münchen.test'));
+  assert.ok(new RegExp(siteRegex('münchen.test')).test('https://xn--mnchen-3ya.test/'));
 });

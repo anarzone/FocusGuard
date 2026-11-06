@@ -240,8 +240,9 @@ final class ExtensionBridge {
             reply(id, requestId, error: allowForWork(host: host))
         case .requestExtraTime(let requestId, let site):
             reply(id, requestId, error: takeExtraTime(site: site))
-        case .blockedVisit:
+        case .blockedVisit(let host):
             resetCountersIfNeeded()
+            blockShownAt[Self.bare(host)] = .now
             if appState?.sessionManager.currentSession != nil { stoppedVisits += 1 }
         case .pauseResult(let requestId, let ok):
             finishPause(requestId, ok: ok)
@@ -314,7 +315,22 @@ final class ExtensionBridge {
     }
 
     enum PassRefusal: String, Error {
-        case notPro, noSession, strict
+        case notPro, noSession, strict, tooSoon
+    }
+
+    /// When each host's block page last opened, for the preset's wait.
+    private var blockShownAt: [String: Date] = [:]
+
+    /// Whether the block page shown at `shown` is still in its wait. Never
+    /// shown (a subdomain's page, a restart): the page's own wait has to do.
+    nonisolated static func isTooSoon(shown: Date?, wait: Int, now: Date) -> Bool {
+        guard let shown, wait > 0 else { return false }
+        return now.timeIntervalSince(shown) < TimeInterval(wait)
+    }
+
+    nonisolated static func bare(_ host: String) -> String {
+        let lower = host.lowercased()
+        return lower.hasPrefix("www.") ? String(lower.dropFirst(4)) : lower
     }
 
     /// "Let me through" on a block page: as long as the preset's pass, when
@@ -324,6 +340,11 @@ final class ExtensionBridge {
         guard appState?.sessionManager.currentSession != nil else { return .failure(.noSession) }
         let policy = presetProvider().overridePolicy
         guard policy.allowsPass else { return .failure(.strict) }
+        // The block page waits before offering it; a script calling for it at
+        // once shouldn't get round that.
+        if Self.isTooSoon(shown: blockShownAt[Self.bare(host)], wait: policy.passWaitSeconds, now: now) {
+            return .failure(.tooSoon)
+        }
         resetCountersIfNeeded()
         let key = host.lowercased()
         let until = now.addingTimeInterval(policy.passSeconds)
