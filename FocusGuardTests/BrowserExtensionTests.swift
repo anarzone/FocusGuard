@@ -667,4 +667,13 @@ final class URLPrefixRuleTests: XCTestCase {
         XCTAssertEqual(article.classification, .focus)
         XCTAssertEqual(other.classification, .distraction)
     }
+
+    func testAPassWaitsAsLongAsTheBlockPageDoes() {
+        let shown = Date(timeIntervalSince1970: 1_000)
+        XCTAssertTrue(ExtensionBridge.isTooSoon(shown: shown, wait: 5, now: shown.addingTimeInterval(1)))
+        XCTAssertFalse(ExtensionBridge.isTooSoon(shown: shown, wait: 5, now: shown.addingTimeInterval(5)))
+        XCTAssertFalse(ExtensionBridge.isTooSoon(shown: shown, wait: 0, now: shown), "Gentle doesn't wait")
+        XCTAssertFalse(ExtensionBridge.isTooSoon(shown: nil, wait: 5, now: shown))
+        XCTAssertEqual(ExtensionBridge.bare("WWW.X.com"), "x.com")
+    }
 }

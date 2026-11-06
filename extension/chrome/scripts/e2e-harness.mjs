@@ -22,6 +22,8 @@ export const EXTENSION = path.resolve(here, '..');
 export const EXTENSION_ID = 'abeehapgjhkgbfokheomoahlgidgcoik';
 export const ORIGIN = `chrome-extension://${EXTENSION_ID}`;
 
+const bare = (host) => String(host || '').toLowerCase().replace(/^www\./, '');
+
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Waits for an async predicate to give something truthy.
@@ -79,6 +81,7 @@ export class FakeApp {
   constructor(socketPath) {
     this.socketPath = socketPath;
     this.received = [];
+    this.blockedAt = new Map();
     this.sockets = new Set();
     this.server = null;
     this.greeted = new Set();
@@ -139,6 +142,12 @@ export class FakeApp {
   }
 
   // --- what tests set ------------------------------------------------------
+
+  // As the app's grantPass: a pass the block page's wait hasn't allowed yet.
+  tooSoon(host) {
+    const shown = this.blockedAt.get(bare(host));
+    return shown != null && Date.now() - shown < POLICY[this.preset].passWaitSeconds * 1000;
+  }
 
   startSession({ preset = this.preset, name = 'Evening focus', minutes = 50, backTo = null, sites, parts } = {}) {
     const now = Date.now();
@@ -289,6 +298,7 @@ export class FakeApp {
         if (!this.plan.features.blockInBrowser) reply({ error: 'notPro' });
         else if (!this.session) reply({ error: 'noSession' });
         else if (!POLICY[this.preset].allowsPass) reply({ error: 'strict' });
+        else if (this.tooSoon(m.host)) reply({ error: 'tooSoon' });
         else {
           const until = Date.now() + this.passMs;
           this.passes.set(String(m.host).toLowerCase(), until);
@@ -314,6 +324,7 @@ export class FakeApp {
       }
       case 'blockedVisit':
         if (this.session) this.stoppedVisits += 1;
+        this.blockedAt.set(bare(m.host), Date.now());
         break;
       case 'tabAction':
         reply();

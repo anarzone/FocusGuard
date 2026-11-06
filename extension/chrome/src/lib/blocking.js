@@ -4,8 +4,20 @@
 
 import { displayHost, hostname, splitPart, withoutRootDot } from './format.js';
 
+// "münchen.test" as the browser writes it in addresses: xn--mnchen-3ya.test.
+// Rules and tab addresses only ever see this form.
+export function asciiHost(host) {
+  const text = String(host).toLowerCase();
+  if (/^[\x00-\x7f]*$/.test(text)) return text;
+  try {
+    return new URL(`http://${text}/`).hostname;
+  } catch {
+    return text;
+  }
+}
+
 function bareHost(host) {
-  return withoutRootDot(String(host).toLowerCase()).replace(/^www\./, '');
+  return withoutRootDot(asciiHost(host)).replace(/^www\./, '');
 }
 
 // A site rule covers the site and its subdomains, like the app's Classifier.
@@ -88,7 +100,7 @@ const ADDRESS_START = '^https?://([^/?#]*@)?([^/?#@]*\\.)?';
 
 // RE2 for declarativeNetRequest, anchored on the whole address.
 export function siteRegex(site) {
-  return `${ADDRESS_START}${escapeRegex(site.toLowerCase())}\\.?(:[0-9]+)?([/?#].*)?$`;
+  return `${ADDRESS_START}${escapeRegex(asciiHost(site))}\\.?(:[0-9]+)?([/?#].*)?$`;
 }
 
 export function partRegex(pattern) {
@@ -96,7 +108,7 @@ export function partRegex(pattern) {
   // Doubled slashes too. An escaped path is left to the matchers, which catch
   // it as the page opens: a rule for every way to escape every letter is too big.
   const pathPart = path === '/' ? '' : escapeRegex(path).replace(/\//g, '/+');
-  return `${ADDRESS_START}${escapeRegex(host)}\\.?(:[0-9]+)?${pathPart}([/?#].*)?$`;
+  return `${ADDRESS_START}${escapeRegex(asciiHost(host))}\\.?(:[0-9]+)?${pathPart}([/?#].*)?$`;
 }
 
 // The block page, with what was blocked; the original address follows the
