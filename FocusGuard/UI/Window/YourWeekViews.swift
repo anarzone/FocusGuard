@@ -357,18 +357,26 @@ struct WeekProjectsCard: View {
     let overview: WeekOverview
     @Binding var hover: String?
     @Binding var pinned: String?
+    var onEdit: () -> Void = {}
     @State private var appeared = false
     @ReduceMotion private var reduced
 
     var body: some View {
         WindowCard(padding: EdgeInsets(top: 12, leading: 8, bottom: 8, trailing: 8), radius: 16) {
             VStack(alignment: .leading, spacing: 1) {
-                Text("Projects")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.secondaryText)
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, 3)
-                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: 6) {
+                    Text("Projects")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.secondaryText)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 6)
+                    Button("Clients and rounding", action: onEdit)
+                        .buttonStyle(.textLink)
+                        .font(.system(size: 11))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 6)
+                .padding(.bottom, 3)
                 if overview.series.isEmpty {
                     Text("Focus shows up here by project.")
                         .font(.system(size: 12))
@@ -1266,5 +1274,593 @@ struct WeekTimesheetCard: View {
             .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(seconds < 1 ? AnyShapeStyle(Theme.inset) : AnyShapeStyle(Theme.focus.opacity(0.1 + seconds / most * 0.55))))
             .accessibilityLabel("\(project), \(day.formatted(.dateTime.weekday(.wide))), \(WindowFormat.hm(seconds))")
+    }
+}
+
+// MARK: - Client report
+
+/// The sheet of paper a client gets. Always black on white, on screen and in
+/// the PDF, whatever the Mac's appearance.
+struct WeekClientPaper: View {
+    let report: ClientReport
+    var width: CGFloat = 390
+    @State private var appeared = false
+    @ReduceMotion private var reduced
+
+    private let ink = Color(red: 0x1D / 255, green: 0x1D / 255, blue: 0x1F / 255)
+    private let quiet = Color(red: 0x55 / 255, green: 0x55 / 255, blue: 0x5E / 255)
+    private let track = Color(red: 0xF0 / 255, green: 0xF0 / 255, blue: 0xF4 / 255)
+    private let bar = Color(red: 0x61 / 255, green: 0x55 / 255, blue: 0xF5 / 255)
+
+    private var most: TimeInterval { max(1, report.rows.map(\.seconds).max() ?? 1) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(report.client).font(.system(size: 16, weight: .bold))
+                Spacer(minLength: 8)
+                Text(ReportPeriod.week.title(for: report.interval))
+                    .font(.system(size: 11))
+                    .foregroundStyle(quiet)
+            }
+            ForEach(Array(report.rows.enumerated()), id: \.element.id) { index, row in
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(row.project)
+                        Spacer(minLength: 8)
+                        Text(WindowFormat.hm(row.seconds)).monospacedDigit()
+                    }
+                    .font(.system(size: 13))
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(track)
+                            Capsule().fill(bar)
+                                .frame(width: geo.size.width * CGFloat(row.seconds / most))
+                                .scaleEffect(x: appeared ? 1 : 0, anchor: .leading)
+                                .animation(reduced ? nil : WeekMotion.ease(delay: 0.12 + Double(index) * 0.09), value: appeared)
+                        }
+                    }
+                    .frame(height: 4)
+                    ForEach(row.finished, id: \.self) { goal in
+                        Text("Finished: \(goal)", comment: "A goal done this week, in a client report")
+                            .font(.system(size: 11))
+                            .foregroundStyle(quiet)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            Rectangle().fill(Color.black.opacity(0.16)).frame(height: 0.5).padding(.top, 3)
+            HStack {
+                Text("Total")
+                Spacer(minLength: 8)
+                Text(WindowFormat.hm(report.total)).monospacedDigit()
+            }
+            .font(.system(size: 14, weight: .bold))
+        }
+        .foregroundStyle(ink)
+        .padding(EdgeInsets(top: 18, leading: 22, bottom: 18, trailing: 22))
+        .frame(width: width, alignment: .leading)
+        .background(Color.white)
+        .modifier(WeekEntrance(appeared: $appeared))
+    }
+
+    /// One A4 page with the report at its top.
+    @MainActor
+    static func pdf(_ report: ClientReport) -> Data? {
+        let renderer = ImageRenderer(content: WeekClientPaper(report: report, appearedForExport: true))
+        let output = NSMutableData()
+        var failed = false
+        renderer.render { size, draw in
+            guard let consumer = CGDataConsumer(data: output) else { failed = true; return }
+            var page = CGRect(x: 0, y: 0, width: 595, height: 842)
+            guard let context = CGContext(consumer: consumer, mediaBox: &page, nil) else { failed = true; return }
+            context.beginPDFPage(nil)
+            context.translateBy(x: (page.width - size.width) / 2, y: page.height - size.height - 40)
+            draw(context)
+            context.endPDFPage()
+            context.closePDF()
+        }
+        return failed ? nil : output as Data
+    }
+}
+
+extension WeekClientPaper {
+    /// Bars at full width from the start, for a PDF.
+    init(report: ClientReport, appearedForExport: Bool) {
+        self.report = report
+        self.width = 390
+        self._appeared = State(initialValue: appearedForExport)
+    }
+}
+
+/// The report on its grey desk, sliding up when it opens.
+struct WeekClientCard: View {
+    let report: ClientReport?
+    let clients: [String]
+    @Binding var picked: String?
+    let onExport: () -> Void
+    let onSetUp: () -> Void
+    @State private var risen = false
+    @ReduceMotion private var reduced
+
+    var body: some View {
+        WindowCard(padding: EdgeInsets(top: 13, leading: 16, bottom: 11, trailing: 16), radius: 16) {
+            VStack(spacing: 10) {
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.inset)
+                    if let report {
+                        WeekClientPaper(report: report)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .shadow(color: Color(red: 20 / 255, green: 30 / 255, blue: 60 / 255).opacity(0.16), radius: 12, y: 6)
+                            .padding(.top, 12)
+                            .padding(.bottom, 12)
+                            .offset(y: risen ? 0 : 22)
+                            .rotationEffect(.degrees(risen ? 0 : -0.6))
+                            .opacity(risen ? 1 : 0)
+                            .id(report.client)
+                    } else {
+                        VStack(spacing: 10) {
+                            Text("Choose a client for a project, and their report shows here.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.bodyText)
+                                .multilineTextAlignment(.center)
+                            Button("Clients and rounding", action: onSetUp)
+                                .buttonStyle(.capsule(.secondary, height: 30))
+                        }
+                        .padding(24)
+                        .frame(maxHeight: .infinity)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+                HStack(spacing: 8) {
+                    if clients.count > 1 {
+                        Picker(String(localized: "Client"), selection: Binding(get: { picked ?? clients.first ?? "" }, set: { picked = $0 })) {
+                            ForEach(clients, id: \.self) { Text($0).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .fixedSize()
+                    }
+                    WeekReadiness(ready: true, text: String(localized: "Ready to share. Only on this Mac until you copy it."))
+                    Spacer(minLength: 8)
+                    Button("Export PDF", action: onExport)
+                        .buttonStyle(.capsule(.primary, height: 30))
+                        .disabled(report?.rows.isEmpty ?? true)
+                }
+            }
+        }
+        .onAppear {
+            if reduced {
+                risen = true
+            } else {
+                withAnimation(.spring(response: 0.46, dampingFraction: 0.82)) { risen = true }
+            }
+        }
+    }
+}
+
+// MARK: - Projects and clients
+
+/// Whose each project is, how hours round up, and where stray time belongs,
+/// with the client's report changing beside it as you go. Nothing is kept
+/// until Save.
+struct WeekProjectsSheet: View {
+    let model: WorkLogModel
+    let update: WeekUpdate
+    let modelWith: ([String: String]) -> WorkLogModel?
+    let onSave: (WeekProjectSettings) -> Void
+    var calendar: Calendar = .current
+    @Environment(\.dismiss) private var dismiss
+    @ReduceMotion private var reduced
+
+    @State private var draft: WeekProjectSettings
+    @State private var live: WorkLogModel
+    @State private var hover: String?
+    /// The project a new client is being named for.
+    @State private var namingClientFor: String?
+    @State private var newClient = ""
+    @State private var namingProject = false
+    @State private var newProject = ""
+    /// The last guess answered: its app or site as it's shown, its key, and
+    /// the project it went to, if any.
+    @State private var answered: (name: String, key: String, project: String?)?
+
+    private let original: WeekProjectSettings
+
+    init(model: WorkLogModel, settings: WeekProjectSettings, update: WeekUpdate,
+         modelWith: @escaping ([String: String]) -> WorkLogModel?, onSave: @escaping (WeekProjectSettings) -> Void,
+         calendar: Calendar = .current) {
+        self.model = model
+        self.update = update
+        self.modelWith = modelWith
+        self.onSave = onSave
+        self.calendar = calendar
+        self.original = settings
+        self._draft = State(initialValue: settings)
+        self._live = State(initialValue: model)
+    }
+
+    private var overview: WeekOverview {
+        WeekOverview.make(model: live, report: nil, goal: { _ in 0 }, weekendsCount: true, remembered: WeekColourStore().remembered, calendar: calendar)
+    }
+
+    private var rows: [WorkLogProject] { live.projects }
+
+    /// The first bit of time still without a home.
+    private var guess: WeekLine? {
+        WeekUpdateBuilder.build(live, ignored: draft.ignored, calendar: calendar).check.first
+    }
+
+    private func guessKey(_ line: WeekLine) -> String { String(line.id.dropFirst("time:".count)) }
+
+    /// "Notes" from the line "Notes?".
+    private func shownName(_ line: WeekLine) -> String { line.sessions.first?.project ?? line.sessions.first?.mostly ?? guessKey(line) }
+
+    private var previewClient: String? {
+        draft.clientNames.first
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            main
+            preview.frame(width: 330)
+        }
+        .padding(12)
+        .frame(width: 900, height: 600)
+        .background(Theme.windowBackground)
+        .alert(String(localized: "New client"), isPresented: Binding(get: { namingClientFor != nil }, set: { if !$0 { namingClientFor = nil } })) {
+            TextField(String(localized: "Name"), text: $newClient)
+            Button(String(localized: "Add")) {
+                let name = newClient.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let project = namingClientFor, !name.isEmpty { set(client: name, for: project) }
+                namingClientFor = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { namingClientFor = nil }
+        }
+        .alert(String(localized: "New project"), isPresented: $namingProject) {
+            TextField(String(localized: "Name"), text: $newProject)
+            Button(String(localized: "Add")) {
+                let name = newProject.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let line = guess, !name.isEmpty { move(line, to: name) }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        }
+    }
+
+    private var main: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Projects and clients")
+                    .font(.system(size: 20, weight: .bold))
+                    .kerning(-0.4)
+                    .foregroundStyle(Theme.primaryText)
+                    .accessibilityAddTraits(.isHeader)
+                Text("FocusGuard groups your time by goal, repository and app. Fix a guess once, and it stays fixed.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            shareBar
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(rows) { row($0) }
+                    if rows.isEmpty {
+                        Text("No focused time this week.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.secondaryText)
+                            .frame(maxWidth: .infinity, minHeight: 80)
+                    }
+                }
+            }
+            .frame(maxHeight: .infinity)
+            guessCard
+            HStack(spacing: 10) {
+                Text("Round up for clients")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                WeekTabs(options: WeekProjectSettings.roundings.map { ($0, $0 == 0 ? String(localized: "None", comment: "No rounding") : String(localized: "\($0) min", comment: "Compact minutes")) },
+                         selection: $draft.roundUp, label: String(localized: "Round up for clients"))
+                Spacer(minLength: 8)
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(.capsule(.secondary, height: 30))
+                    .keyboardShortcut(.cancelAction)
+                Button("Save") {
+                    onSave(draft)
+                    dismiss()
+                }
+                .buttonStyle(.capsule(.primary, height: 30))
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(EdgeInsets(top: 16, leading: 18, bottom: 14, trailing: 18))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.windowCard))
+    }
+
+    private var shareBar: some View {
+        let series = overview.series
+        let total = max(1, series.reduce(0) { $0 + $1.seconds })
+        return VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    ForEach(series) { item in
+                        Rectangle()
+                            .fill(WeekPalette.colour(slot: item.slot))
+                            .frame(width: max(2, (geo.size.width - CGFloat(max(0, series.count - 1)) * 2) * CGFloat(item.seconds / total)))
+                    }
+                }
+                .animation(reduced ? nil : WeekMotion.ease(), value: series)
+            }
+            .frame(height: 14)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .accessibilityHidden(true)
+            HStack(spacing: 14) {
+                ForEach(series) { item in
+                    HStack(spacing: 5) {
+                        RoundedRectangle(cornerRadius: 3).fill(WeekPalette.colour(slot: item.slot)).frame(width: 8, height: 8)
+                        Text(item.title).lineLimit(1)
+                        Text("\(Int((item.seconds / total * 100).rounded()))%", comment: "Share of the week").foregroundStyle(Theme.secondaryText).monospacedDigit()
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.bodyText)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+    }
+
+    private func row(_ project: WorkLogProject) -> some View {
+        let series = overview.series.first { $0.id == project.name }
+        let sheetRow = live.timesheet.rows.first { $0.project == project.name }
+        return HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(WeekPalette.colour(slot: series?.slot))
+                .frame(width: 12, height: 12)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(project.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.primaryText)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    ForEach(sources(project), id: \.self) { source in
+                        Text(source)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.bodyText)
+                            .lineLimit(1)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Theme.track))
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            sparkline(sheetRow, colour: WeekPalette.colour(slot: series?.slot))
+            if let name = project.name {
+                clientMenu(name)
+            } else {
+                Text("No client")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 120, alignment: .leading)
+            }
+            Text(WindowFormat.hm(project.seconds))
+                .font(.system(size: 14, weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(Theme.primaryText)
+                .lineLimit(1)
+                .frame(width: 74, alignment: .trailing)
+        }
+        .padding(EdgeInsets(top: 9, leading: 13, bottom: 9, trailing: 13))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(hover == project.id ? Theme.inset : .clear))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.5))
+        .onHover { hover = $0 ? project.id : (hover == project.id ? nil : hover) }
+        .animation(reduced ? nil : WeekMotion.hover, value: hover)
+    }
+
+    /// What the project's time was worked out from.
+    private func sources(_ project: WorkLogProject) -> [String] {
+        let entries = live.entries.filter { $0.project == project.name }
+        var out: [String] = []
+        if entries.contains(where: \.hasGoal) { out.append(String(localized: "Goals")) }
+        var seen = Set<String>()
+        for name in entries.compactMap(\.mostly) where seen.insert(name).inserted && seen.count <= 2 { out.append(name) }
+        return out
+    }
+
+    private func sparkline(_ row: Timesheet.Row?, colour: Color) -> some View {
+        let seconds = row?.seconds ?? []
+        return HStack(alignment: .bottom, spacing: 3) {
+            ForEach(Array(seconds.enumerated()), id: \.offset) { _, value in
+                UnevenRoundedRectangle(topLeadingRadius: 3, topTrailingRadius: 3)
+                    .fill(value > 0 ? colour : Theme.track)
+                    .frame(width: 9, height: max(3, min(34, CGFloat(value / 3600) * 9)))
+            }
+        }
+        .frame(height: 34, alignment: .bottom)
+        .animation(reduced ? nil : WeekMotion.ease(), value: seconds)
+        .accessibilityHidden(true)
+    }
+
+    private func clientMenu(_ project: String) -> some View {
+        Menu {
+            Button(String(localized: "No client")) { set(client: nil, for: project) }
+            ForEach(draft.clientNames, id: \.self) { name in
+                Button(name) { set(client: name, for: project) }
+            }
+            Divider()
+            Button(String(localized: "New client…")) {
+                newClient = ""
+                namingClientFor = project
+            }
+        } label: {
+            Text(draft.clients[project] ?? String(localized: "No client"))
+                .font(.system(size: 12))
+                .lineLimit(1)
+        }
+        .menuStyle(.borderedButton)
+        .frame(width: 120)
+        .accessibilityLabel(String(localized: "Client for \(project)"))
+    }
+
+    private func set(client: String?, for project: String) {
+        draft.clients[project] = client
+    }
+
+    @ViewBuilder private var guessCard: some View {
+        if let answered {
+            answeredCard(answered)
+        }
+        if let line = guess {
+            askCard(line)
+        }
+    }
+
+    private func answeredCard(_ answered: (name: String, key: String, project: String?)) -> some View {
+        HStack(spacing: 11) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Theme.focus)
+                .accessibilityHidden(true)
+            Text(answered.project.map { String(localized: "Moved. FocusGuard will count \(answered.name) as \($0) from now on.") }
+                 ?? String(localized: "Left as it is. FocusGuard won't ask about \(answered.name) again."))
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.primaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("Undo") { undo() }
+                .buttonStyle(.capsule(.secondary, height: 26))
+        }
+        .padding(EdgeInsets(top: 9, leading: 13, bottom: 9, trailing: 13))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.focusTint))
+        .transition(reduced ? .opacity : .opacity.combined(with: .offset(y: 7)))
+    }
+
+    private func askCard(_ line: WeekLine) -> some View {
+        HStack(spacing: 11) {
+            Text(verbatim: "?")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.distractionInk)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(Theme.warning.opacity(0.22)))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Where does this belong?")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.primaryText)
+                Text(line.evidence.first?.text ?? line.text)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.bodyText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Menu {
+                ForEach(rows.compactMap(\.name), id: \.self) { name in
+                    Button(name) { move(line, to: name) }
+                }
+                Divider()
+                Button(String(localized: "New project…")) {
+                    newProject = ""
+                    namingProject = true
+                }
+            } label: {
+                Text("Move to").font(.system(size: 12))
+            }
+            .menuStyle(.borderedButton)
+            .fixedSize()
+            Button("Leave it") { leave(line) }
+                .buttonStyle(.capsule(.secondary, height: 26))
+        }
+        .padding(EdgeInsets(top: 9, leading: 13, bottom: 9, trailing: 13))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.warning.opacity(0.12)))
+        .transition(reduced ? .opacity : .opacity.combined(with: .offset(y: 7)))
+    }
+
+    private func move(_ line: WeekLine, to project: String) {
+        let key = guessKey(line)
+        draft.moved[key] = project
+        answered = (shownName(line), key, project)
+        refresh()
+    }
+
+    private func leave(_ line: WeekLine) {
+        let key = guessKey(line)
+        draft.ignored.append(key)
+        answered = (shownName(line), key, nil)
+    }
+
+    private func undo() {
+        guard let answered else { return }
+        draft.moved[answered.key] = nil
+        draft.ignored.removeAll { $0 == answered.key }
+        self.answered = nil
+        refresh()
+    }
+
+    private func refresh() {
+        guard let fresh = modelWith(draft.moved) else { return }
+        if reduced {
+            live = fresh
+        } else {
+            withAnimation(WeekMotion.ease()) { live = fresh }
+        }
+    }
+
+    private var preview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let client = previewClient {
+                Text("What \(client) will see, live")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                WeekClientPaper(report: ClientReport.make(client: client, model: live, settings: draft), width: 306)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .shadow(color: Color(red: 20 / 255, green: 30 / 255, blue: 60 / 255).opacity(0.14), radius: 12, y: 6)
+            } else {
+                Text("Choose a client for a project, and their report shows here.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.bodyText)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Never in a client report")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                ForEach(Array([String(localized: "Site names"), String(localized: "Window titles"), String(localized: "Drift"),
+                               String(localized: "Focus rates"), String(localized: "Other clients")].enumerated()), id: \.offset) { index, text in
+                    WeekStruck(text: text, delay: 0.3 + Double(index) * 0.09)
+                }
+            }
+            Spacer(minLength: 0)
+            Text("Only this Mac has it until you export. You check the PDF before it goes anywhere.")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.inset))
+    }
+}
+
+/// A word with a line drawing itself through it.
+private struct WeekStruck: View {
+    let text: String
+    let delay: Double
+    @State private var drawn = false
+    @ReduceMotion private var reduced
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 13))
+            .foregroundStyle(Theme.bodyText)
+            .overlay(alignment: .leading) {
+                Rectangle()
+                    .fill(Theme.bodyText)
+                    .frame(height: 1)
+                    .scaleEffect(x: drawn ? 1 : 0, anchor: .leading)
+            }
+            .onAppear {
+                if reduced {
+                    drawn = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.34).delay(delay)) { drawn = true }
+                }
+            }
     }
 }

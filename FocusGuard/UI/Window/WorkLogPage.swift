@@ -42,8 +42,10 @@ private struct WorkLogView: View {
     private let edits = WeekEditStore()
     private let colours = WeekColourStore()
     private let blockerStore = WeekBlockerStore()
+    private let projectStore = WeekProjectStore()
     /// Bumped when a decision changes, to rebuild the update.
     @State private var editCount = 0
+    @State private var settings = WeekProjectStore().load()
     @State private var blockers = WeekBlockerStore().blockers
     @State private var meetings: [NextMeeting] = []
     /// The week before, for a Monday with nothing yet this week.
@@ -65,7 +67,7 @@ private struct WorkLogView: View {
 
     private var update: WeekUpdate {
         _ = editCount
-        return WeekUpdateBuilder.build(model, decisions: edits.decisions(week: model.interval.start),
+        return WeekUpdateBuilder.build(model, decisions: edits.decisions(week: model.interval.start), ignored: settings.ignored,
                                        links: appState.integrations.taskLinks, calendar: calendar)
     }
 
@@ -76,7 +78,8 @@ private struct WorkLogView: View {
 
     var body: some View {
         WorkLogContent(
-            model: model, overview: overview, update: update, standup: standup, blockers: blockers, offset: $offset, calendar: calendar,
+            model: model, overview: overview, update: update, standup: standup, blockers: blockers, settings: settings,
+            offset: $offset, calendar: calendar,
             onCorrect: { entry, verdict in
                 guard let session = appState.debriefs.session(id: entry.id) else { return }
                 appState.debriefs.correct(session, to: verdict)
@@ -94,6 +97,15 @@ private struct WorkLogView: View {
                 blockerStore.remove($0)
                 blockers = blockerStore.blockers
             },
+            onSaveProjects: {
+                settings = $0
+                projectStore.save($0)
+                reload()
+            },
+            modelWith: { moved in
+                WorkLogBuilder.load(interval: model.interval, context: appState.container.mainContext,
+                                    isOptedOut: appState.optOutCache.isOptedOut, moved: moved, calendar: calendar)
+            },
             onOpenStandup: {
                 Task {
                     await appState.integrations.refreshGoalSources()
@@ -110,12 +122,12 @@ private struct WorkLogView: View {
     private func reload() {
         let interval = ReportPeriod.week.interval(offset: offset, calendar: calendar)
         model = WorkLogBuilder.load(interval: interval, context: appState.container.mainContext,
-                                    isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
+                                    isOptedOut: appState.optOutCache.isOptedOut, moved: settings.moved, calendar: calendar)
         appState.windowPages.workLog[interval.start] = model
         let lastWeek = ReportPeriod.week.interval(offset: offset + 1, calendar: calendar)
         earlier = offset == 0 && !model.days.contains { $0.day < calendar.startOfDay(for: .now) }
             ? WorkLogBuilder.load(interval: lastWeek, context: appState.container.mainContext,
-                                  isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
+                                  isOptedOut: appState.optOutCache.isOptedOut, moved: settings.moved, calendar: calendar)
             : nil
         let key = WindowPageCache.reportsKey(.week, offset)
         report = appState.windowPages.reports[key]
@@ -136,7 +148,7 @@ private struct WorkLogView: View {
 
 /// The page's views. The top row stays put; the tabs change what's below it.
 enum WeekTab: Hashable {
-    case week, standup, sheet, log
+    case week, standup, sheet, client, log
 }
 
 /// The week laid out: its total, its days and its projects along the top; below
@@ -147,6 +159,7 @@ struct WorkLogContent: View {
     let update: WeekUpdate
     var standup = WeekStandup(lastDay: nil, lastTitle: "", last: [], nextTitle: "", next: [])
     var blockers: [String] = []
+    var settings = WeekProjectSettings()
     @Binding var offset: Int
     /// The one the model was built with, for the CSV's dates.
     var calendar: Calendar = .current
@@ -156,6 +169,9 @@ struct WorkLogContent: View {
     var onDecide: (String, WeekDecision?) -> Void = { _, _ in }
     var onAddBlocker: (String) -> Void = { _ in }
     var onRemoveBlocker: (String) -> Void = { _ in }
+    var onSaveProjects: (WeekProjectSettings) -> Void = { _ in }
+    /// The week again with time moved to other projects, for the sheet's preview.
+    var modelWith: ([String: String]) -> WorkLogModel? = { _ in nil }
     /// Looks up the task list and today's meetings, which take a moment.
     var onOpenStandup: () -> Void = {}
 
@@ -165,6 +181,8 @@ struct WorkLogContent: View {
     @State private var hoverProject: String?
     @State private var pinnedProject: String?
     @State private var copied = false
+    @State private var editingProjects = false
+    @State private var pickedClient: String?
     @ReduceMotion private var reduced
 
     private var highlight: String? { hoverProject ?? pinnedProject }
@@ -188,7 +206,9 @@ struct WorkLogContent: View {
                 HStack(spacing: 10) {
                     WeekHeroCard(overview: overview, offset: offset).frame(width: 216)
                     WeekChartCard(overview: overview, highlight: highlight)
-                    WeekProjectsCard(overview: overview, hover: $hoverProject, pinned: $pinnedProject).frame(width: 232)
+                    WeekProjectsCard(overview: overview, hover: $hoverProject, pinned: $pinnedProject,
+                                     onEdit: { editingProjects = true })
+                        .frame(width: 232)
                 }
                 .frame(height: 188)
                 HStack(spacing: 10) {
@@ -198,6 +218,10 @@ struct WorkLogContent: View {
                 .frame(minHeight: 320, maxHeight: .infinity)
             }
             .frame(maxHeight: .infinity)
+        }
+        .sheet(isPresented: $editingProjects) {
+            WeekProjectsSheet(model: model, settings: settings, update: update, modelWith: modelWith,
+                              onSave: onSaveProjects, calendar: calendar)
         }
         .onChange(of: tab) {
             copied = false
@@ -236,6 +260,7 @@ struct WorkLogContent: View {
         WeekTabs(options: [(WeekTab.week, String(localized: "Week update")),
                            (WeekTab.standup, String(localized: "Standup")),
                            (WeekTab.sheet, String(localized: "Timesheet")),
+                           (WeekTab.client, String(localized: "Client report")),
                            (WeekTab.log, String(localized: "Sessions"))],
                  selection: $tab, label: String(localized: "Choose a view"))
     }
@@ -283,6 +308,9 @@ struct WorkLogContent: View {
                             onCopy: { copy(standup.text(blockers: blockers)) })
         case .sheet:
             WeekTimesheetCard(sheet: model.timesheet, onExport: exportTimesheet)
+        case .client:
+            WeekClientCard(report: clientReport, clients: settings.clientNames, picked: $pickedClient,
+                           onExport: exportClientReport, onSetUp: { editingProjects = true })
         case .log:
             WeekSessionsCard(model: model, overview: overview, selected: pickedSession, copied: copied, calendar: calendar,
                              onSelect: { pickedSession = $0.id }, onCopy: { copy(WorkLogText.make(model)) })
@@ -308,6 +336,12 @@ struct WorkLogContent: View {
                 ("clock", String(localized: "Focused hours in sessions, per project and day")),
                 ("macwindow", String(localized: "Projects come from your goals and apps")),
             ]), days: chartDays) { EmptyView() }
+        case .client:
+            WeekSourcePanel(source: note(id: "client", title: clientReport.map { String(localized: "What \($0.client) sees") } ?? String(localized: "What a client sees"), [
+                ("checkmark", String(localized: "Projects, finished work and hours")),
+                ("clock", settings.roundUp > 0 ? String(localized: "Rounded up to \(settings.roundUp) minutes, as you set") : String(localized: "Not rounded, as you set")),
+                ("minus", String(localized: "No sites, window titles, drift or other clients")),
+            ]), days: chartDays) { EmptyView() }
         case .log:
             if let entry = currentSession {
                 WeekSourcePanel(source: WeekSessionText.source(entry, calendar: calendar), days: chartDays) {
@@ -320,6 +354,12 @@ struct WorkLogContent: View {
                 ]), days: chartDays) { EmptyView() }
             }
         }
+    }
+
+    private var clientReport: ClientReport? {
+        let names = settings.clientNames
+        guard let client = pickedClient.flatMap({ names.contains($0) ? $0 : nil }) ?? names.first else { return nil }
+        return ClientReport.make(client: client, model: model, settings: settings)
     }
 
     private func note(id: String, title: String, _ items: [(String, String)]) -> WeekSource {
@@ -357,6 +397,33 @@ struct WorkLogContent: View {
     }
 
     // MARK: Timesheet
+
+    private func exportClientReport() {
+        guard let report = clientReport, let pdf = WeekClientPaper.pdf(report) else { return }
+        let panel = NSSavePanel()
+        panel.title = String(localized: "Export client report")
+        let name = report.client.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
+        panel.nameFieldStringValue = "\(String(name))-\(model.interval.start.formatted(.iso8601.year().month().day())).pdf"
+        panel.allowedContentTypes = [.pdf]
+        panel.canCreateDirectories = true
+        let save: (NSApplication.ModalResponse) -> Void = { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                try pdf.write(to: url, options: .atomic)
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "Export failed")
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .warning
+                alert.runModal()
+            }
+        }
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            panel.beginSheetModal(for: window, completionHandler: save)
+        } else {
+            panel.begin(completionHandler: save)
+        }
+    }
 
     private func exportTimesheet() {
         let csv = model.timesheet.csv(calendar: calendar)

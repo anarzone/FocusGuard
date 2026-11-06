@@ -32,6 +32,8 @@ struct WorkLogEntry: Identifiable, Equatable {
     var focusSpans: [DateInterval] = []
     /// The focus app or site it was mostly in, to ask about time without a goal.
     var mostly: String? = nil
+    /// The user put this time under its project themselves.
+    var movedByUser = false
 
     var isLive: Bool { end == nil }
 }
@@ -136,7 +138,7 @@ enum WorkLogBuilder {
 
     @MainActor
     static func load(interval: DateInterval, context: ModelContext, isOptedOut: (String) -> Bool,
-                     now: Date = .now, calendar: Calendar = .current) -> WorkLogModel {
+                     moved: [String: String] = [:], now: Date = .now, calendar: Calendar = .current) -> WorkLogModel {
         let start = interval.start, end = interval.end
         let sessions = Persistence.fetch(context, FetchDescriptor<Session>(
             predicate: #Predicate { $0.startedAt >= start && $0.startedAt < end },
@@ -148,14 +150,16 @@ enum WorkLogBuilder {
                   stored: session.storedDebrief,
                   facts: DebriefFacts(session: session, isOptedOut: isOptedOut))
         }
-        return build(inputs, interval: interval, now: now, calendar: calendar)
+        return build(inputs, interval: interval, moved: moved, now: now, calendar: calendar)
     }
 
-    static func build(_ inputs: [Input], interval: DateInterval, now: Date = .now,
+    /// - Parameter moved: project by app or site, lowercased, for time with
+    ///   neither a goal nor a project of its own.
+    static func build(_ inputs: [Input], interval: DateInterval, moved: [String: String] = [:], now: Date = .now,
                       calendar: Calendar = .current) -> WorkLogModel {
         let entries = inputs
             .filter { $0.end == nil || $0.facts.tracked >= 60 || $0.goal != nil }
-            .map(entry)
+            .map { entry($0, moved: moved) }
             .sorted { $0.start > $1.start }
         let grouped = Dictionary(grouping: entries) { calendar.startOfDay(for: $0.start) }
         let days = grouped.keys.sorted(by: >).map { WorkLogDay(day: $0, entries: grouped[$0] ?? []) }
@@ -174,7 +178,7 @@ enum WorkLogBuilder {
                             timesheet: timesheet(entries, projects: projects, interval: interval, calendar: calendar))
     }
 
-    private static func entry(_ input: Input) -> WorkLogEntry {
+    private static func entry(_ input: Input, moved: [String: String]) -> WorkLogEntry {
         let facts = input.facts
         let state: WorkLogEntry.State
         if input.end == nil {
@@ -185,6 +189,7 @@ enum WorkLogBuilder {
             state = .open
         }
         let mostly = facts.apps.first { $0.classification == .focus } ?? facts.apps.first
+        let movedTo = input.goal == nil && input.project == nil ? mostly.flatMap { moved[$0.name.lowercased()] } : nil
         let fallback = mostly.map { String(localized: "Mostly \($0.name)") } ?? String(localized: "Nothing tracked")
         let stored = input.stored.map { DebriefCheck(facts: facts).clean($0) }
         let firstWork = stored?.workedOn.first { !$0.what.isEmpty }
@@ -200,9 +205,9 @@ enum WorkLogBuilder {
         return WorkLogEntry(
             id: input.id, start: input.start, end: input.end, name: input.name,
             focusRate: facts.focusRate, hasRate: facts.focused + facts.drifted >= 60,
-            title: title, hasGoal: input.goal != nil, project: input.project,
+            title: title, hasGoal: input.goal != nil, project: input.project ?? movedTo,
             state: state, note: note, apps: appsLine(facts), focused: facts.focused, focusSpans: facts.focusSpans,
-            mostly: mostly?.name
+            mostly: mostly?.name, movedByUser: movedTo != nil
         )
     }
 

@@ -106,6 +106,7 @@ enum UITestMode {
             }
         }
         try? context.save()
+        WeekProjectStore().save(WeekProjectSettings(clients: ["Onboarding": "Acme", "Login": "Acme", "Pricing": "Acme"]))
     }
 
     /// Three years of long days under long names: what the pages have to

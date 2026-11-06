@@ -17,13 +17,13 @@ final class WeekUpdateTests: XCTestCase {
     private var interval: DateInterval { DateInterval(start: monday, duration: 7 * 86_400) }
 
     private func entry(day: Int = 0, hour: Double = 9, minutes: Double = 60, goal: String? = nil, project: String? = nil,
-                       state: WorkLogEntry.State = .open, mostly: String? = nil, live: Bool = false) -> WorkLogEntry {
+                       state: WorkLogEntry.State = .open, mostly: String? = nil, live: Bool = false, moved: Bool = false) -> WorkLogEntry {
         let start = monday.addingTimeInterval(Double(day) * 86_400 + hour * 3600)
         let end = start.addingTimeInterval(minutes * 60)
         return WorkLogEntry(id: UUID(), start: start, end: live ? nil : end, name: "Session", focusRate: 0.9, hasRate: true,
                             title: goal ?? "Mostly \(mostly ?? "")", hasGoal: goal != nil, project: project,
                             state: live ? .live : state, note: nil, apps: mostly ?? "", focused: minutes * 60,
-                            focusSpans: [DateInterval(start: start, end: end)], mostly: mostly)
+                            focusSpans: [DateInterval(start: start, end: end)], mostly: mostly, movedByUser: moved)
     }
 
     private func model(_ entries: [WorkLogEntry]) -> WorkLogModel {
@@ -209,6 +209,56 @@ final class WeekUpdateTests: XCTestCase {
     func testTimesheetHoursMatchTheExport() {
         XCTAssertEqual(Timesheet.hours(9600), "2.67")
         XCTAssertEqual(Timesheet.hours(0), "")
+    }
+
+    // MARK: - Clients
+
+    func testRoundingUpForgivesStraySeconds() {
+        XCTAssertEqual(ClientReport.roundedUp(370 * 60, minutes: 15), 375 * 60)
+        XCTAssertEqual(ClientReport.roundedUp(360 * 60 + 20, minutes: 15), 360 * 60)
+        XCTAssertEqual(ClientReport.roundedUp(360 * 60 + 40, minutes: 15), 375 * 60)
+        XCTAssertEqual(ClientReport.roundedUp(161 * 60, minutes: 6), 162 * 60)
+        XCTAssertEqual(ClientReport.roundedUp(161 * 60, minutes: 0), 161 * 60)
+    }
+
+    func testAClientReportHasOnlyItsProjectsAndFinishedWork() {
+        let entries = [
+            entry(day: 0, minutes: 370, goal: "Onboarding flow", project: "Onboarding", state: .verdict(.partly)),
+            entry(day: 1, minutes: 160, goal: "Fix login", project: "Login", state: .verdict(.done)),
+            entry(day: 2, minutes: 60, goal: "Secret other work", project: "Beta", state: .verdict(.done)),
+            entry(day: 3, minutes: 90, mostly: "x.com"),
+        ]
+        let settings = WeekProjectSettings(clients: ["Onboarding": "Acme", "Login": "Acme", "Beta": "Globex"])
+        let report = ClientReport.make(client: "Acme", model: model(entries), settings: settings)
+        XCTAssertEqual(report.rows.map(\.project), ["Onboarding", "Login"])
+        XCTAssertEqual(report.rows.first?.seconds, 375 * 60)
+        XCTAssertEqual(report.rows.last?.finished, ["Fix login"])
+        XCTAssertEqual(report.total, 540 * 60)
+        XCTAssertFalse("\(report)".contains("x.com"))
+        XCTAssertFalse("\(report)".contains("Secret"))
+    }
+
+    func testMovedTimeCountsUnderItsProjectAndIsNoLongerAGuess() {
+        let moved = entry(minutes: 125, project: "Login", mostly: "github.com", moved: true)
+        let update = WeekUpdateBuilder.build(model([moved]), calendar: calendar)
+        XCTAssertTrue(update.check.isEmpty)
+        XCTAssertEqual(update.also.map(\.text), ["Login"])
+    }
+
+    func testIgnoredTimeIsNotAskedAbout() {
+        let update = WeekUpdateBuilder.build(model([entry(minutes: 125, mostly: "github.com")]), ignored: ["github.com"], calendar: calendar)
+        XCTAssertTrue(update.isEmpty)
+    }
+
+    func testClientNamesAreUniqueAndSorted() {
+        let settings = WeekProjectSettings(clients: ["A": "Globex", "B": "acme", "C": "Globex"])
+        XCTAssertEqual(settings.clientNames, ["acme", "Globex"])
+    }
+
+    func testAClientPDFIsMade() throws {
+        let report = ClientReport(client: "Acme", interval: interval, rows: [.init(project: "Login", seconds: 3600, finished: ["Fix login"])])
+        let data = try XCTUnwrap(MainActor.assumeIsolated { WeekClientPaper.pdf(report) })
+        XCTAssertEqual(data.prefix(4), Data("%PDF".utf8))
     }
 
     // MARK: - The store

@@ -52,6 +52,7 @@ enum DataEraser {
         WeekEditStore().erase()
         WeekColourStore().erase()
         WeekBlockerStore().erase()
+        WeekProjectStore().erase()
     }
 }
 
