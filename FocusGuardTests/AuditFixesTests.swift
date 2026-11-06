@@ -58,6 +58,14 @@ final class AuditFixesTests: XCTestCase {
 
     // MARK: - Back to work
 
+    func testBackToAPageOnlyWhenTheBrowserCanSwitchTabs() {
+        let chrome = "com.google.Chrome"
+        XCTAssertEqual(BackToWork.page(lastFocus: chrome, host: "claude.ai", hasExtension: { _ in true }), "claude.ai")
+        XCTAssertNil(BackToWork.page(lastFocus: chrome, host: "claude.ai", hasExtension: { _ in false }), "Without the extension it's the app")
+        XCTAssertNil(BackToWork.page(lastFocus: "com.apple.dt.Xcode", host: "claude.ai", hasExtension: { _ in true }), "Not a browser")
+        XCTAssertNil(BackToWork.page(lastFocus: chrome, host: nil, hasExtension: { _ in true }))
+    }
+
     func test_backToWork_returnsToTheLastFocusApp() {
         let target = BackToWork.target(lastFocus: "com.apple.dt.Xcode", isRunning: { _ in true },
                                        distraction: "com.apple.Safari", selfId: "com.anar.focusguard")

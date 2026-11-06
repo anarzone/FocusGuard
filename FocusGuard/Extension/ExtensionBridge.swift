@@ -306,6 +306,10 @@ final class ExtensionBridge {
               let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first
         else { return nil }
         app.activate()
+        if let host = appState.backToPage() {
+            showTab(host: host, browser: id)
+            return host
+        }
         return app.localizedName
     }
 
@@ -398,6 +402,16 @@ final class ExtensionBridge {
     func redirectTab(pauseID: String, browser: String, fragment: String? = nil, url: URL? = nil) {
         let command = RedirectTabCommand(pauseId: pauseID, fragment: fragment, url: url?.absoluteString)
         for (id, client) in clients where client.greeted && client.browser == browser { send(command, to: id) }
+    }
+
+    /// Whether an extension for this browser is connected, so it can switch tabs.
+    func isConnected(browser: String) -> Bool {
+        clients.values.contains { $0.greeted && $0.browser == browser }
+    }
+
+    /// Brings the last tab on `host` to the front in this browser.
+    func showTab(host: String, browser: String) {
+        for (id, client) in clients where client.greeted && client.browser == browser { send(ShowTabCommand(host: host), to: id) }
     }
 
     /// The paused page's buttons, as the app's own `focusguard://` routes.
@@ -527,9 +541,7 @@ final class ExtensionBridge {
         }
         let raw = SessionTimeline.segments(from: session.events)
         let totals = Self.totals(raw)
-        let backTo = appState.tracker.lastFocusBundleId.flatMap {
-            NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
-        }
+        let backTo = appState.backToAppName()
         return .init(
             name: session.displayName,
             startedAt: BrowserProtocol.millis(session.startedAt),
