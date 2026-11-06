@@ -538,6 +538,9 @@ final class IslandTests: XCTestCase {
         let tipped = EveningWrapUp(focusedMinutes: 100, goalMinutes: 240, streak: 0, best: nil, tomorrowStart: nil, tip: tip)
         presenter.nudgeContext = { NudgeContext(sessionName: "Evening", minutesLeft: 18, backTo: "Xcode", bundleId: "com.x") }
 
+        let week = WeekReady(overview: WeekOverview.make(model: .empty(DateInterval(start: slot, duration: 86_400)), report: nil,
+                                                          goal: { _ in 0 }, weekendsCount: false),
+                             update: WeekUpdate(done: [], going: [], check: [], also: [], leftOut: []))
         let cases: [(IslandKind, () -> Void, [NotificationCommand?])] = [
             (.drift, { self.presenter.presentDistractionWarning(appName: "Chrome", currentURL: "https://x.com/a") },
              [.backToWork, .allowForSession(url: "https://x.com/a", bundleId: "com.x")]),
@@ -553,6 +556,7 @@ final class IslandTests: XCTestCase {
              [.startFromOffer(since: since, minutes: 50), .snoozeAutoStart]),
             (.wrapUp, { self.presenter.presentEveningWrapUp(wrapUp) }, [.openToday, nil]),
             (.wrapUp, { self.presenter.presentEveningWrapUp(tipped) }, [.planSessions([slot]), nil]),
+            (.weekReady, { self.presenter.presentWeekReady(week) }, [.openYourWeek, nil]),
             (.trial, { self.presenter.presentTrialEndingSoon(endsAt: slot) }, [.openPlans, nil])
         ]
         for (kind, present, commands) in cases {

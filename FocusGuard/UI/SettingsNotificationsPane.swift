@@ -12,6 +12,7 @@ struct SettingsNotificationsPane: View {
     @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
     @AppStorage(HabitSettings.morningPlan) private var morningPlan = true
     @AppStorage(HabitSettings.eveningWrapUp) private var eveningWrapUp = true
+    @AppStorage(HabitSettings.fridayWeek) private var fridayWeek = true
 
     var body: some View {
         SettingsColumns {
@@ -37,6 +38,12 @@ struct SettingsNotificationsPane: View {
                                detail: String(localized: "After \(Self.hour(HabitSchedule.wrapUpHour)): focused time against your goal, and when to start tomorrow"),
                                isOn: $eveningWrapUp)
                 SettingsDivider()
+                if FeatureFlags.debrief && Entitlements.shared.isUnlocked(.workLog) {
+                    SettingsToggle(title: String(localized: "Friday wrap-up"),
+                                   detail: String(localized: "From \(Self.hour(HabitsCoordinator.weekReadyHour)) on Fridays, between sessions: your week, written up"),
+                                   isOn: $fridayWeek)
+                    SettingsDivider()
+                }
                 SettingsToggle(title: String(localized: "Offer to start a session"),
                                detail: String(localized: "After 5 focused minutes outside a session. It counts from when you began"),
                                isOn: $autoStartOffer)

@@ -244,9 +244,17 @@ struct WeekOverview: Equatable {
     ///   - remembered: the colour each project had last.
     static func make(model: WorkLogModel, report: ReportsModel?, goal: (Date) -> TimeInterval, weekendsCount: Bool,
                      remembered: [String: Int] = [:], calendar: Calendar = .current) -> WeekOverview {
-        let sheet = model.timesheet
         var allFocus: [Date: TimeInterval] = [:]
         for bucket in report?.data.buckets ?? [] { allFocus[calendar.startOfDay(for: bucket.interval.start)] = bucket.focus }
+        return make(model: model, allFocus: allFocus, focused: report?.data.breakdown.focus, before: report?.data.previous.focus,
+                    goalDays: report?.goal, goalLine: report?.data.goalPerBucket, goal: goal, weekendsCount: weekendsCount,
+                    remembered: remembered, calendar: calendar)
+    }
+
+    static func make(model: WorkLogModel, allFocus: [Date: TimeInterval], focused: TimeInterval?, before: TimeInterval?,
+                     goalDays reportGoal: GoalDays?, goalLine: TimeInterval?, goal: (Date) -> TimeInterval, weekendsCount: Bool,
+                     remembered: [String: Int] = [:], calendar: Calendar = .current) -> WeekOverview {
+        let sheet = model.timesheet
 
         // Monday to Friday, and a weekend day with time on it.
         var dates = sheet.days
@@ -289,14 +297,14 @@ struct WeekOverview: Equatable {
             series.append(Series(id: otherID, title: String(localized: "Other", comment: "Focus that isn't one of the week's main projects"),
                                  slot: nil, seconds: totals[otherID] ?? 0))
         }
-        let focused = report?.data.breakdown.focus ?? model.focused
-        let before = report?.data.previous.focus ?? 0
+        let total = focused ?? model.focused
+        let earlier = before ?? 0
         return WeekOverview(
-            focused: focused,
-            change: before >= 60 ? focused - before : nil,
-            goalMet: report?.goal.met ?? days.filter(\.metGoal).count,
-            goalCounted: report?.goal.counted ?? days.count,
-            goal: report?.data.goalPerBucket ?? goal(model.interval.start),
+            focused: total,
+            change: earlier >= 60 ? total - earlier : nil,
+            goalMet: reportGoal?.met ?? days.filter(\.metGoal).count,
+            goalCounted: reportGoal?.counted ?? days.count,
+            goal: goalLine ?? goal(model.interval.start),
             series: series,
             days: days,
             goalDays: days.filter { weekendsCount || !calendar.isDateInWeekend($0.date) }
@@ -337,4 +345,39 @@ struct WeekColourStore {
     }
 
     func erase() { defaults.removeObject(forKey: Self.key) }
+}
+
+/// What Friday's card says about the week, kept with the card across a quit.
+struct WeekReady: Equatable {
+    let focused: TimeInterval
+    let projects: Int
+    let toCheck: Int
+    let chart: IslandWeekChart
+
+    init(overview: WeekOverview, update: WeekUpdate) {
+        focused = overview.focused
+        projects = overview.series.filter { $0.slot != nil }.count
+        toCheck = update.check.count
+        chart = IslandWeekChart(days: overview.days.map { day in
+            IslandWeekChart.Day(label: day.date.formatted(.dateTime.weekday(.abbreviated)),
+                                parts: overview.series.compactMap { series in
+                                    day.seconds[series.id].map { IslandWeekChart.Part(slot: series.slot, seconds: $0) }
+                                })
+        })
+    }
+
+    /// "22h 40m on 3 projects, and 1 line to check."
+    var body: String {
+        let hours = WindowFormat.hm(focused)
+        switch (projects > 0, toCheck > 0) {
+        case (true, true):
+            return String(localized: "\(hours) on \(projects) projects, and \(toCheck) lines to check.", comment: "Plural on both: 22h 40m on 1 project, and 1 line to check.")
+        case (true, false):
+            return String(localized: "\(hours) on \(projects) projects. Ready to share.", comment: "Plural on projects: 22h 40m on 1 project. Ready to share.")
+        case (false, true):
+            return String(localized: "\(hours) focused, and \(toCheck) lines to check.", comment: "Plural on toCheck: 22h 40m focused, and 1 line to check.")
+        case (false, false):
+            return String(localized: "\(hours) focused. Ready to share.")
+        }
+    }
 }

@@ -290,7 +290,7 @@ final class NotificationCategories {
 enum NotificationCategory: String, CaseIterable {
     case nudge, sessionComplete, breakOver, driftPrompt
     case morningPlan, plannedSession, autoStart, wrapUp, trialEnding
-    case limit, experimentDone
+    case limit, experimentDone, weekReady
 
     static let separator = "|"
 
@@ -306,12 +306,12 @@ enum NotificationAction: String, CaseIterable {
     case backToWork, forWork
     case takeBreak, startSession, extendBreak
     case planThem, notToday, skip, notNow
-    case seeToday, seePlans, seeResult, ok
+    case seeToday, seePlans, seeResult, readWeek, ok
 
     /// Buttons that open a window bring FocusGuard forward.
     var options: UNNotificationActionOptions {
         switch self {
-        case .seeToday, .seePlans, .seeResult: return [.foreground]
+        case .seeToday, .seePlans, .seeResult, .readWeek: return [.foreground]
         default: return []
         }
     }

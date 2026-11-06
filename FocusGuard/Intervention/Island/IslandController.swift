@@ -156,6 +156,11 @@ final class IslandController {
     }
 
     func press(_ button: IslandButton) {
+        if button.command == nil, queue.current?.moment.kind == .weekReady {
+            queue.tuck(now: clock())
+            refresh()
+            return
+        }
         closeCurrent()
         if let command = button.command { perform(command) }
     }

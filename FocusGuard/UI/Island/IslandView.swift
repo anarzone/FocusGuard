@@ -271,6 +271,9 @@ struct IslandCardBody: View {
                 }
                 IslandCloseButton(action: onClose)
             }
+            if let chart = moment.weekChart {
+                IslandWeekBars(chart: chart, animates: animatesRing)
+            }
             Text(moment.shownBody(at: now))
                 .font(.system(size: 12))
                 .lineSpacing(2.5)
@@ -280,6 +283,51 @@ struct IslandCardBody: View {
                             secondary: moment.buttons.dropFirst().first.map { button in (button.title, { onPress(button) }) })
         }
         .padding(14)
+    }
+}
+
+/// Friday's bars growing in, day by day, in the dark card's colours: the
+/// page's three, a step lighter, and white for Other.
+struct IslandWeekBars: View {
+    let chart: IslandWeekChart
+    let animates: Bool
+    @State private var grown = false
+
+    /// #8378F0, #0E9FB2, #C03D97: passes the colour-blind checks on the card.
+    private static let colours = [Color(red: 0x83 / 255, green: 0x78 / 255, blue: 0xF0 / 255),
+                                  Color(red: 0x0E / 255, green: 0x9F / 255, blue: 0xB2 / 255),
+                                  Color(red: 0xC0 / 255, green: 0x3D / 255, blue: 0x97 / 255)]
+    private let height: CGFloat = 66
+    private let labelHeight: CGFloat = 15
+
+    var body: some View {
+        let most = max(1, chart.days.map(\.total).max() ?? 1)
+        let scale = (height - labelHeight) / most
+        HStack(alignment: .bottom, spacing: 8) {
+            ForEach(Array(chart.days.enumerated()), id: \.offset) { index, day in
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    VStack(spacing: 1) {
+                        ForEach(Array(day.parts.reversed().enumerated()), id: \.offset) { position, part in
+                            UnevenRoundedRectangle(topLeadingRadius: position == 0 ? 4 : 0, topTrailingRadius: position == 0 ? 4 : 0)
+                                .fill(part.slot.map { Self.colours[min($0, Self.colours.count - 1)] } ?? Color.white.opacity(0.34))
+                                .frame(width: 24, height: max(2, part.seconds * scale - (position == day.parts.count - 1 ? 0 : 1)))
+                        }
+                    }
+                    .scaleEffect(y: !animates || grown ? 1 : 0, anchor: .bottom)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.72).delay(0.18 + Double(index) * 0.06), value: grown)
+                    Text(day.label)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(IslandStyle.secondaryOpacity))
+                        .lineLimit(1)
+                        .frame(height: labelHeight)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(height: height)
+        .onAppear { grown = true }
+        .accessibilityHidden(true)
     }
 }
 

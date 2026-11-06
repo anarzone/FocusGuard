@@ -330,3 +330,91 @@ final class WeekUpdateTests: XCTestCase {
         XCTAssertEqual(on.goalDays.count, 6)
     }
 }
+
+/// Friday's card: when it comes, what it says, and how it folds away.
+final class WeekReadyTests: XCTestCase {
+    private var calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        return calendar
+    }()
+
+    /// Friday 6 November 2026, 16:30 UTC.
+    private let friday = Date(timeIntervalSince1970: 1_793_982_600)
+
+    private func due(_ now: Date, lastSent: String? = nil, enabled: Bool = true, unlocked: Bool = true, available: Bool = true) -> Bool {
+        HabitsCoordinator.weekReadyDue(now: now, lastSentDay: lastSent, enabled: enabled, unlocked: unlocked, available: available, calendar: calendar)
+    }
+
+    func testItComesOnFridayAfternoonOnly() {
+        XCTAssertEqual(calendar.component(.weekday, from: friday), 6)
+        XCTAssertTrue(due(friday))
+        XCTAssertFalse(due(friday.addingTimeInterval(-3 * 3600)), "Before 15:00")
+        XCTAssertFalse(due(friday.addingTimeInterval(86_400)), "Saturday")
+        XCTAssertFalse(due(friday.addingTimeInterval(-86_400)), "Thursday")
+    }
+
+    func testItNeverBreaksASessionAndNeedsPro() {
+        XCTAssertFalse(due(friday, available: false))
+        XCTAssertFalse(due(friday, unlocked: false))
+        XCTAssertFalse(due(friday, enabled: false))
+    }
+
+    func testItComesOnce() {
+        XCTAssertFalse(due(friday, lastSent: HabitFormat.dayKey(friday, calendar: calendar)))
+        XCTAssertTrue(due(friday, lastSent: HabitFormat.dayKey(friday.addingTimeInterval(-7 * 86_400), calendar: calendar)))
+    }
+
+    private func moment() -> IslandMoment {
+        IslandMoment(kind: .weekReady, key: "weekReady", pillName: "Your week", pillValue: "Written", kicker: "Friday wrap-up",
+                     title: "Your week is written", body: "22h 40m", fill: 1,
+                     buttons: [IslandButton(title: "Read it", command: .openYourWeek), IslandButton(title: "Later")], startsOpen: true,
+                     weekChart: IslandWeekChart(days: [.init(label: "Mon", parts: [.init(slot: 0, seconds: 3600), .init(slot: nil, seconds: 1800)])]))
+    }
+
+    private func conditions(_ now: Date, idle: TimeInterval = 10) -> IslandConditions {
+        IslandConditions(now: now, frontApp: "Xcode", idleSeconds: idle)
+    }
+
+    func testItWaitsForAPauseThenOpensAndFoldsToAPill() {
+        var queue = IslandQueue(calendar: calendar)
+        queue.post(moment(), now: friday)
+        XCTAssertEqual(queue.step(conditions(friday, idle: 0)), .none, "Mid-typing it waits")
+        guard case .showed = queue.step(conditions(friday.addingTimeInterval(5))) else { return XCTFail("It should show at the pause") }
+        XCTAssertTrue(queue.isOpen)
+        _ = queue.step(conditions(friday.addingTimeInterval(5 + 13)))
+        XCTAssertNotNil(queue.current, "It stays as a pill")
+        XCTAssertFalse(queue.isOpen)
+        _ = queue.step(conditions(friday.addingTimeInterval(5 + 13 + IslandRules.tuckedFor + 1)))
+        XCTAssertNil(queue.current, "A pill doesn't stay forever")
+    }
+
+    func testHoveringKeepsItOpen() {
+        var queue = IslandQueue(calendar: calendar)
+        queue.post(moment(), now: friday)
+        _ = queue.step(conditions(friday.addingTimeInterval(5)))
+        queue.setHover(true, now: friday.addingTimeInterval(6))
+        _ = queue.step(conditions(friday.addingTimeInterval(120)))
+        XCTAssertTrue(queue.isOpen)
+    }
+
+    func testTheChartSurvivesAQuit() throws {
+        let data = try JSONEncoder().encode(moment())
+        XCTAssertEqual(try JSONDecoder().decode(IslandMoment.self, from: data).weekChart, moment().weekChart)
+    }
+
+    func testTheBodySaysWhatsThere() {
+        let interval = DateInterval(start: friday.addingTimeInterval(-4 * 86_400), duration: 7 * 86_400)
+        let start = friday.addingTimeInterval(-3600)
+        let entry = WorkLogEntry(id: UUID(), start: start, end: friday, name: "S", focusRate: 1, hasRate: true, title: "Goal", hasGoal: true,
+                                 project: "Acme", state: .verdict(.done), note: nil, apps: "", focused: 3600)
+        let day = calendar.startOfDay(for: start)
+        let model = WorkLogModel(interval: interval, days: [WorkLogDay(day: day, entries: [entry])],
+                                 projects: [WorkLogProject(name: "Acme", seconds: 3600)],
+                                 timesheet: Timesheet(days: [day], rows: [.init(project: "Acme", seconds: [3600])]))
+        let overview = WeekOverview.make(model: model, report: nil, goal: { _ in 0 }, weekendsCount: false, calendar: calendar)
+        let ready = WeekReady(overview: overview, update: WeekUpdate(done: [], going: [], check: [], also: [], leftOut: []))
+        XCTAssertEqual(ready.body, "1h on 1 project. Ready to share.")
+        XCTAssertEqual(ready.chart.days.first?.parts, [.init(slot: 0, seconds: 3600)])
+    }
+}

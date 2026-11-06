@@ -43,6 +43,7 @@ final class NotificationCommandTests: XCTestCase {
         XCTAssertEqual(command(.startSession, "plannedSession|Start 50 minutes|Skip this one", [NotificationInfo.minutes: 50]),
                        .startSession(minutes: 50))
         XCTAssertEqual(command(.seeToday, "wrapUp|See today"), .openToday)
+        XCTAssertEqual(command(.readWeek, "weekReady|Read it"), .openYourWeek)
         XCTAssertEqual(command(.seePlans, "trialEnding|See Free and Pro"), .openPlans)
     }
 
