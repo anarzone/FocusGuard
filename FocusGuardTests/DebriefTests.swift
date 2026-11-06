@@ -424,8 +424,8 @@ final class WorkLogTests: XCTestCase {
         let focusGuard = sheet.rows.first { $0.project == "FocusGuard" }
         XCTAssertEqual(focusGuard?.seconds[4] ?? 0, 110 * 60, accuracy: 1)
         XCTAssertEqual(sheet.total, 185 * 60, accuracy: 3)
-        XCTAssertEqual(Timesheet.hours(110 * 60), "1.8")
-        XCTAssertEqual(Timesheet.hours(0), "–")
+        XCTAssertEqual(Timesheet.hours(110 * 60), "1.83")
+        XCTAssertEqual(Timesheet.hours(0), "")
 
         let csv = sheet.csv(calendar: calendar).split(separator: "\n").map(String.init)
         XCTAssertEqual(csv.first, "Project,2026-10-19,2026-10-20,2026-10-21,2026-10-22,2026-10-23,Total")
@@ -482,19 +482,6 @@ final class WorkLogTests: XCTestCase {
         let withSunday = WorkLogBuilder.build([session(day: 18, project: "X"), session(day: 23, project: "X")],
                                               interval: week, calendar: us)
         XCTAssertEqual(withSunday.timesheet.days.map { us.component(.weekday, from: $0) }, [1, 2, 3, 4, 5, 6])
-    }
-
-    func testTheStandupIsForTheNextWorkingDay() {
-        let standup = model().standup
-        XCTAssertEqual(standup.map { calendar.component(.weekday, from: $0.day) }, 2)   // Friday's is for Monday
-        XCTAssertEqual(standup?.done, ["Reply to beta testers", "Review PR #52"])
-        XCTAssertEqual(standup?.next, ["Day strip hover", "Finish the Today page"])
-        XCTAssertEqual(standup?.text.split(separator: "\n").first, "Done: Reply to beta testers; Review PR #52.")
-    }
-
-    func testAnEmptyWeekSaysSo() {
-        let empty = WorkLogBuilder.build([], interval: week, calendar: calendar)
-        XCTAssertNil(empty.standup)
     }
 
     func testTheSidebarBadgeShowsUntilTheLogOpens() {

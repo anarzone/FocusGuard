@@ -1046,3 +1046,225 @@ enum WeekSessionText {
                           days: [calendar.startOfDay(for: entry.start)], items: items)
     }
 }
+
+// MARK: - Standup
+
+/// Three columns: the last day worked, what's on today, and what's blocking.
+struct WeekStandupCard: View {
+    let standup: WeekStandup
+    let blockers: [String]
+    let copied: Bool
+    let onAddBlocker: (String) -> Void
+    let onRemoveBlocker: (String) -> Void
+    let onCopy: () -> Void
+    @State private var adding = false
+    @State private var blocker = ""
+    @FocusState private var fieldFocused: Bool
+    @ReduceMotion private var reduced
+
+    var body: some View {
+        WindowCard(padding: EdgeInsets(top: 13, leading: 16, bottom: 11, trailing: 16), radius: 16) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 8) {
+                    column(standup.lastTitle, index: 0) {
+                        ForEach(standup.last) { item($0) }
+                        if standup.last.isEmpty { note(String(localized: "Nothing to look back on yet.")) }
+                    }
+                    column(standup.nextTitle, index: 1) {
+                        ForEach(standup.next) { item($0) }
+                        if standup.next.isEmpty { note(String(localized: "Nothing open. Set a goal when you start.")) }
+                    }
+                    column(String(localized: "Blocked", comment: "A standup's column for what's in the way"), index: 2) {
+                        ForEach(blockers, id: \.self) { blockerRow($0) }
+                        addBlocker
+                    }
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+                HStack(spacing: 8) {
+                    WeekReadiness(ready: true, text: String(localized: "Ready to share. Only on this Mac until you copy it."))
+                    Spacer(minLength: 8)
+                    Button(copied ? String(localized: "Copied") : String(localized: "Copy for Slack"), action: onCopy)
+                        .buttonStyle(.capsule(.primary, height: 30))
+                        .disabled(standup.isEmpty && blockers.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func column<Content: View>(_ title: String, index: Int, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Theme.primaryText)
+                .accessibilityAddTraits(.isHeader)
+            content()
+            Spacer(minLength: 0)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.inset))
+        .modifier(WeekRise(delay: Double(index) * 0.09))
+    }
+
+    private func item(_ item: WeekStandup.Item) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(item.text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(item.from)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.windowCard))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func blockerRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button { onRemoveBlocker(text) } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Theme.secondaryText)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(Theme.track))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Remove \(text)", comment: "Taking a blocker off a standup"))
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.windowCard))
+        .transition(reduced ? .opacity : .opacity.combined(with: .offset(y: 6)))
+    }
+
+    @ViewBuilder private var addBlocker: some View {
+        if adding {
+            TextField("What's in the way?", text: $blocker)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 12))
+                .focused($fieldFocused)
+                .onSubmit(saveBlocker)
+                .onExitCommand { adding = false }
+        } else {
+            Button {
+                blocker = ""
+                adding = true
+                fieldFocused = true
+            } label: {
+                Label("Add a blocker", systemImage: "plus")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.link)
+                    .frame(maxWidth: .infinity, minHeight: 30)
+                    .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(Theme.hairline, style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func saveBlocker() {
+        withAnimation(reduced ? nil : WeekMotion.slide) { onAddBlocker(blocker) }
+        adding = false
+    }
+}
+
+// MARK: - Timesheet
+
+/// Hours per project and day as a grid, each cell shaded by how many hours are
+/// in it: one hue, light to dark, with the number on it.
+struct WeekTimesheetCard: View {
+    let sheet: Timesheet
+    let onExport: () -> Void
+
+    private var most: TimeInterval { max(1, sheet.rows.flatMap(\.seconds).max() ?? 1) }
+
+    var body: some View {
+        WindowCard(padding: EdgeInsets(top: 13, leading: 16, bottom: 11, trailing: 16), radius: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                if sheet.rows.isEmpty {
+                    Text("Focused hours per project and day show here.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.secondaryText)
+                } else {
+                    grid
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                    WeekReadiness(ready: true, text: String(localized: "Ready to share. Only on this Mac until you copy it."))
+                    Spacer(minLength: 8)
+                    Button("Export CSV", action: onExport)
+                        .buttonStyle(.capsule(.primary, height: 30))
+                        .disabled(sheet.rows.isEmpty)
+                }
+            }
+        }
+    }
+
+    private var grid: some View {
+        Grid(horizontalSpacing: 4, verticalSpacing: 4) {
+            GridRow {
+                Text("Project")
+                    .gridColumnAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(sheet.days, id: \.self) { Text($0.formatted(.dateTime.weekday(.abbreviated))).frame(maxWidth: .infinity) }
+                Text("Total").frame(maxWidth: .infinity)
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Theme.secondaryText)
+            .lineLimit(1)
+            ForEach(Array(sheet.rows.enumerated()), id: \.element.title) { index, row in
+                GridRow {
+                    Text(row.title)
+                        .foregroundStyle(row.project == nil ? Theme.secondaryText : Theme.primaryText)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
+                    ForEach(Array(row.seconds.enumerated()), id: \.offset) { column, seconds in
+                        cell(seconds, day: sheet.days[column], project: row.title)
+                    }
+                    Text(Timesheet.hours(row.total))
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                }
+                .modifier(WeekRise(delay: Double(index) * 0.05))
+            }
+            GridRow {
+                Text("Total")
+                    .fontWeight(.bold)
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                ForEach(Array(sheet.dayTotals.enumerated()), id: \.offset) { _, seconds in
+                    Text(Timesheet.hours(seconds)).fontWeight(.semibold).frame(maxWidth: .infinity)
+                }
+                Text(Timesheet.hours(sheet.total)).fontWeight(.bold).frame(maxWidth: .infinity)
+            }
+            .modifier(WeekRise(delay: Double(sheet.rows.count) * 0.05))
+        }
+        .font(.system(size: 13).monospacedDigit())
+        .foregroundStyle(Theme.primaryText)
+    }
+
+    private func cell(_ seconds: TimeInterval, day: Date, project: String) -> some View {
+        Text(Timesheet.hours(seconds))
+            .frame(maxWidth: .infinity, minHeight: 34)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(seconds < 1 ? AnyShapeStyle(Theme.inset) : AnyShapeStyle(Theme.focus.opacity(0.1 + seconds / most * 0.55))))
+            .accessibilityLabel("\(project), \(day.formatted(.dateTime.weekday(.wide))), \(WindowFormat.hm(seconds))")
+    }
+}

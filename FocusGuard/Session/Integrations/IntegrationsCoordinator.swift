@@ -122,6 +122,20 @@ final class IntegrationsCoordinator {
         if next != nextMeeting { nextMeeting = next }
     }
 
+    /// Today's meetings still to come, for the standup, soonest first. It
+    /// never asks for calendar access; without it there are none.
+    func meetingsLeftToday(now: Date = .now, calendar: Calendar = .current) async -> [NextMeeting] {
+        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let own = Set(calendarWriter.ownIDs)
+        let entries = await self.calendar.events(from: now, to: end,
+                                                 calendarIDs: IntegrationSettings.ids(IntegrationSettings.readCalendars, defaults),
+                                                 ownIDs: own)
+        return (entries ?? [])
+            .filter { !$0.isAllDay && !$0.isOwn && !$0.isDeclined && !own.contains($0.id) && $0.start > now && !$0.title.isEmpty }
+            .sorted { $0.start < $1.start }
+            .map { NextMeeting(id: $0.id, title: $0.title, start: $0.start) }
+    }
+
     /// Tasks (Pro) and the Git branch, for the goal field.
     func refreshGoalSources(now: Date = .now) async {
         async let tasks: Void = refreshTasks(now: now)

@@ -41,8 +41,13 @@ private struct WorkLogView: View {
 
     private let edits = WeekEditStore()
     private let colours = WeekColourStore()
+    private let blockerStore = WeekBlockerStore()
     /// Bumped when a decision changes, to rebuild the update.
     @State private var editCount = 0
+    @State private var blockers = WeekBlockerStore().blockers
+    @State private var meetings: [NextMeeting] = []
+    /// The week before, for a Monday with nothing yet this week.
+    @State private var earlier: WorkLogModel?
 
     init(appState: AppState, calendar: Calendar = .current) {
         self._appState = Bindable(wrappedValue: appState)
@@ -64,9 +69,14 @@ private struct WorkLogView: View {
                                        links: appState.integrations.taskLinks, calendar: calendar)
     }
 
+    private var standup: WeekStandup {
+        WeekStandup.make(model: model, earlier: earlier, isCurrent: offset == 0, tasks: appState.integrations.taskGoals,
+                         meetings: meetings, calendar: calendar)
+    }
+
     var body: some View {
         WorkLogContent(
-            model: model, overview: overview, update: update, offset: $offset, calendar: calendar,
+            model: model, overview: overview, update: update, standup: standup, blockers: blockers, offset: $offset, calendar: calendar,
             onCorrect: { entry, verdict in
                 guard let session = appState.debriefs.session(id: entry.id) else { return }
                 appState.debriefs.correct(session, to: verdict)
@@ -75,6 +85,20 @@ private struct WorkLogView: View {
             onDecide: { line, decision in
                 edits.set(decision, line: line, week: model.interval.start)
                 editCount += 1
+            },
+            onAddBlocker: {
+                blockerStore.add($0)
+                blockers = blockerStore.blockers
+            },
+            onRemoveBlocker: {
+                blockerStore.remove($0)
+                blockers = blockerStore.blockers
+            },
+            onOpenStandup: {
+                Task {
+                    await appState.integrations.refreshGoalSources()
+                    meetings = await appState.integrations.meetingsLeftToday()
+                }
             }
         )
         // Every minute while the window can be seen.
@@ -88,6 +112,11 @@ private struct WorkLogView: View {
         model = WorkLogBuilder.load(interval: interval, context: appState.container.mainContext,
                                     isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
         appState.windowPages.workLog[interval.start] = model
+        let lastWeek = ReportPeriod.week.interval(offset: offset + 1, calendar: calendar)
+        earlier = offset == 0 && !model.days.contains { $0.day < calendar.startOfDay(for: .now) }
+            ? WorkLogBuilder.load(interval: lastWeek, context: appState.container.mainContext,
+                                  isOptedOut: appState.optOutCache.isOptedOut, calendar: calendar)
+            : nil
         let key = WindowPageCache.reportsKey(.week, offset)
         report = appState.windowPages.reports[key]
         let weekOffset = offset
@@ -116,6 +145,8 @@ struct WorkLogContent: View {
     let model: WorkLogModel
     let overview: WeekOverview
     let update: WeekUpdate
+    var standup = WeekStandup(lastDay: nil, lastTitle: "", last: [], nextTitle: "", next: [])
+    var blockers: [String] = []
     @Binding var offset: Int
     /// The one the model was built with, for the CSV's dates.
     var calendar: Calendar = .current
@@ -123,14 +154,16 @@ struct WorkLogContent: View {
     var onCorrect: (WorkLogEntry, GoalVerdict) -> Void = { _, _ in }
     /// The user's call on a guess; nil takes it back.
     var onDecide: (String, WeekDecision?) -> Void = { _, _ in }
+    var onAddBlocker: (String) -> Void = { _ in }
+    var onRemoveBlocker: (String) -> Void = { _ in }
+    /// Looks up the task list and today's meetings, which take a moment.
+    var onOpenStandup: () -> Void = {}
 
     @State private var tab = WeekTab.week
     @State private var pickedLine: String?
     @State private var pickedSession: UUID?
     @State private var hoverProject: String?
     @State private var pinnedProject: String?
-    @State private var editingStandup = false
-    @State private var standupText = ""
     @State private var copied = false
     @ReduceMotion private var reduced
 
@@ -166,12 +199,10 @@ struct WorkLogContent: View {
             }
             .frame(maxHeight: .infinity)
         }
-        .onAppear { standupText = model.standup?.text ?? "" }
-        .onChange(of: model.standup) {
-            standupText = model.standup?.text ?? ""
-            editingStandup = false
+        .onChange(of: tab) {
+            copied = false
+            if tab == .standup { onOpenStandup() }
         }
-        .onChange(of: tab) { copied = false }
     }
 
     // MARK: Header
@@ -247,9 +278,11 @@ struct WorkLogContent: View {
                            onSelect: { pickedLine = $0.id }, onCopy: { copy(update.text(interval: model.interval)) },
                            onBringBack: { update.leftOut.forEach { onDecide($0.id, nil) } }, onCorrect: onCorrect)
         case .standup:
-            standup
+            WeekStandupCard(standup: standup, blockers: blockers, copied: copied,
+                            onAddBlocker: onAddBlocker, onRemoveBlocker: onRemoveBlocker,
+                            onCopy: { copy(standup.text(blockers: blockers)) })
         case .sheet:
-            timesheet
+            WeekTimesheetCard(sheet: model.timesheet, onExport: exportTimesheet)
         case .log:
             WeekSessionsCard(model: model, overview: overview, selected: pickedSession, copied: copied, calendar: calendar,
                              onSelect: { pickedSession = $0.id }, onCopy: { copy(WorkLogText.make(model)) })
@@ -263,10 +296,12 @@ struct WorkLogContent: View {
                 if let line = currentLine { lineActions(line) }
             }
         case .standup:
-            WeekSourcePanel(source: note(id: "standup", title: String(localized: "Your standup"), [
-                ("checkmark", String(localized: "Done comes from the goals you marked")),
-                ("clock", String(localized: "Next comes from goals still open")),
-                ("questionmark", String(localized: "Only you can say what's blocking you")),
+            WeekSourcePanel(source: WeekSource(id: "standup", title: String(localized: "Your standup"),
+                                               days: standup.lastDay.map { [$0] } ?? [], items: [
+                .init(symbol: "checkmark", text: String(localized: "What's behind you comes from your goals")),
+                .init(symbol: "checklist", text: String(localized: "Today comes from open goals and your task list")),
+                .init(symbol: "calendar", text: String(localized: "Meetings come from your calendar")),
+                .init(symbol: "questionmark", text: String(localized: "Only you can say what's blocking you")),
             ]), days: chartDays) { EmptyView() }
         case .sheet:
             WeekSourcePanel(source: note(id: "sheet", title: String(localized: "Your timesheet"), [
@@ -310,64 +345,6 @@ struct WorkLogContent: View {
         return WeekVerdictPicker(current: current) { onCorrect(entry, $0) }
     }
 
-    // MARK: Standup
-
-    private var standup: some View {
-        WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let draft = model.standup {
-                    WindowCardTitle(String(localized: "Standup draft"),
-                                    note: String(localized: "for \(draft.day.formatted(.dateTime.weekday(.wide)))", comment: "The day a standup draft is for: for Monday"))
-                    Group {
-                        if editingStandup {
-                            TextEditor(text: $standupText)
-                                .font(.system(size: 12))
-                                .scrollContentBackground(.hidden)
-                                .frame(minHeight: 78)
-                        } else {
-                            VStack(alignment: .leading, spacing: 5) {
-                                ForEach(standupText.split(separator: "\n").map(String.init), id: \.self) { line in
-                                    standupLine(line)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.inset))
-                    HStack(spacing: 8) {
-                        Button(copied ? "Copied" : "Copy") { copy(standupText) }
-                            .buttonStyle(.capsule(.primary, height: 28))
-                        Button(editingStandup ? "Done" : "Edit") { editingStandup.toggle() }
-                            .buttonStyle(.capsule(.secondary, height: 28))
-                        Spacer(minLength: 8)
-                        Text("Worked out on this Mac").font(.system(size: 11)).foregroundStyle(Theme.tertiaryText)
-                    }
-                } else {
-                    WindowCardTitle(String(localized: "Standup draft"))
-                    Text("After a session with a goal, a draft of done, next and blocked shows here.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.secondaryText)
-                }
-            }
-        }
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// "Done:" in bold, then the rest.
-    private func standupLine(_ line: String) -> some View {
-        let parts = line.split(separator: ":", maxSplits: 1).map(String.init)
-        let text = parts.count == 2
-            ? Text(parts[0] + ":").fontWeight(.semibold) + Text(parts[1])
-            : Text(line)
-        return text
-            .font(.system(size: 12))
-            .foregroundStyle(Theme.primaryText)
-            .lineSpacing(2)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
     /// Puts it on the clipboard, and turns the button into "Copied" for a moment.
     private func copy(_ text: String) {
         NSPasteboard.general.clearContents()
@@ -380,62 +357,6 @@ struct WorkLogContent: View {
     }
 
     // MARK: Timesheet
-
-    private var timesheet: some View {
-        WindowCard(padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18)) {
-            VStack(alignment: .leading, spacing: 8) {
-                WindowCardTitle(String(localized: "Timesheet"), note: String(localized: "focused hours"))
-                let sheet = model.timesheet
-                if sheet.rows.isEmpty {
-                    Text("Focused hours per project and day show here.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.secondaryText)
-                } else {
-                    Grid(alignment: .trailing, horizontalSpacing: 8, verticalSpacing: 6) {
-                        GridRow {
-                            Text("Project").gridColumnAlignment(.leading)
-                            ForEach(sheet.days, id: \.self) { Text($0.formatted(.dateTime.weekday(.abbreviated))) }
-                            Text("Total").fontWeight(.semibold).foregroundStyle(Theme.primaryText)
-                        }
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.secondaryText)
-                        ForEach(sheet.rows, id: \.title) { row in
-                            Divider().gridCellUnsizedAxes(.horizontal)
-                            GridRow {
-                                Text(row.title)
-                                    .fontWeight(row.project == nil ? .regular : .semibold)
-                                    .foregroundStyle(row.project == nil ? Theme.secondaryText : Theme.primaryText)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                ForEach(Array(row.seconds.enumerated()), id: \.offset) { Text(Timesheet.hours($0.element)) }
-                                Text(Timesheet.hours(row.total)).fontWeight(.semibold)
-                            }
-                        }
-                        Divider().gridCellUnsizedAxes(.horizontal)
-                        GridRow {
-                            Text("Total").fontWeight(.bold)
-                            ForEach(Array(sheet.dayTotals.enumerated()), id: \.offset) {
-                                Text(Timesheet.hours($0.element)).fontWeight(.semibold)
-                            }
-                            Text(Timesheet.hours(sheet.total)).fontWeight(.bold)
-                        }
-                    }
-                    .font(.system(size: 12).monospacedDigit())
-                    .foregroundStyle(Theme.primaryText)
-                }
-                Spacer(minLength: 0)
-                HStack(spacing: 8) {
-                    Text("Projects come from your goals and apps.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.tertiaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("Export CSV") { exportTimesheet() }
-                        .buttonStyle(.capsule(.secondary, height: 28))
-                        .disabled(sheet.rows.isEmpty)
-                }
-            }
-        }
-    }
 
     private func exportTimesheet() {
         let csv = model.timesheet.csv(calendar: calendar)

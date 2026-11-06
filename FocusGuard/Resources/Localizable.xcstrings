@@ -3694,6 +3694,29 @@
         }
       }
     },
+    "%@, %@, %@" : {
+      "comment" : "A timesheet cell read aloud: Onboarding, Monday, 1h 30m",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, %3$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, %3$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
     "%@, %@, playing" : {
       "localizations" : {
         "az" : {
@@ -9365,6 +9388,22 @@
         }
       }
     },
+    "Add a blocker" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blocker hinzufügen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maneə əlavə et"
+          }
+        }
+      }
+    },
     "After 2 minutes or more on a distracting site" : {
       "localizations" : {
         "az" : {
@@ -12160,6 +12199,23 @@
         }
       }
     },
+    "Blocked" : {
+      "comment" : "A standup's column for what's in the way",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blockiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mane olanlar"
+          }
+        }
+      }
+    },
     "Blocked sites unlock once it ends." : {
       "localizations" : {
         "az" : {
@@ -12841,6 +12897,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Control Wahltaste R"
+          }
+        }
+      }
+    },
+    "Copy for Slack" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für Slack kopieren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slack üçün kopyala"
           }
         }
       }
@@ -15538,22 +15610,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fertig"
-          }
-        }
-      }
-    },
-    "Done comes from the goals you marked" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fertig kommt von den Zielen, die du markiert hast"
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hazır olanlar qeyd etdiyiniz hədəflərdəndir"
           }
         }
       }
@@ -23735,6 +23791,23 @@
         }
       }
     },
+    "Marked done, %@" : {
+      "comment" : "Where a standup line came from: Marked done, 2h 40m",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als fertig markiert, %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hazır kimi qeyd olunub, %@"
+          }
+        }
+      }
+    },
     "Marked not yet in %@'s session" : {
       "comment" : "Marked not yet in Wednesday's session",
       "localizations" : {
@@ -23865,6 +23938,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meeting-Lücken"
+          }
+        }
+      }
+    },
+    "Meetings come from your calendar" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termine kommen aus deinem Kalender"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görüşlər təqviminizdən götürülür"
           }
         }
       }
@@ -25240,18 +25329,19 @@
         }
       }
     },
-    "Next comes from goals still open" : {
+    "Next" : {
+      "comment" : "A standup's column for what comes next",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Als Nächstes kommt von noch offenen Zielen"
+            "value" : "Als Nächstes"
           }
         },
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Növbəti işlər hələ açıq hədəflərdəndir"
+            "value" : "Növbəti"
           }
         }
       }
@@ -25300,6 +25390,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nächster Monat"
+          }
+        }
+      }
+    },
+    "Next on %@" : {
+      "comment" : "Where a standup line came from: Next on Linear",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes in %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ üzrə növbəti"
           }
         }
       }
@@ -25438,22 +25545,6 @@
         }
       }
     },
-    "Next: pick up from Your week." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Als Nächstes: bei „Deine Woche“ weitermachen."
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Növbəti: Həftəniz bölməsindən davam edin."
-          }
-        }
-      }
-    },
     "Nice work. Let your eyes rest." : {
       "localizations" : {
         "az" : {
@@ -25546,6 +25637,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch kein klarer Grund"
+          }
+        }
+      }
+    },
+    "No goals set" : {
+      "comment" : "Where a standup line came from: sessions without goals",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ziele gesetzt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hədəf qoyulmayıb"
           }
         }
       }
@@ -26628,6 +26736,22 @@
         }
       }
     },
+    "Nothing open. Set a goal when you start." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts offen. Setz dir beim Start ein Ziel."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Açıq iş yoxdur. Başlayanda hədəf qoyun."
+          }
+        }
+      }
+    },
     "Nothing playing" : {
       "localizations" : {
         "az" : {
@@ -26688,6 +26812,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch nichts zum Vergleichen."
+          }
+        }
+      }
+    },
+    "Nothing to look back on yet." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nichts, worauf du zurückblicken kannst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ geriyə baxmaq üçün heç nə yoxdur."
           }
         }
       }
@@ -36125,6 +36265,23 @@
         }
       }
     },
+    "Still open" : {
+      "comment" : "Where a standup line came from: a goal that isn't done",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch offen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ açıqdır"
+          }
+        }
+      }
+    },
     "Still open in %@" : {
       "localizations" : {
         "az" : {
@@ -39108,6 +39265,22 @@
         }
       }
     },
+    "Today comes from open goals and your task list" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute kommt von offenen Zielen und deiner Aufgabenliste"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu gün açıq hədəflərdən və tapşırıq siyahınızdan götürülür"
+          }
+        }
+      }
+    },
     "Today doesn't count. Result on %@." : {
       "localizations" : {
         "az" : {
@@ -39305,6 +39478,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Aktivität und die Sessions von heute werden von diesem Mac entfernt. Frühere Tage bleiben."
+          }
+        }
+      }
+    },
+    "Today's goal" : {
+      "comment" : "Where a standup line came from",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heutiges Ziel"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bugünkü hədəf"
           }
         }
       }
@@ -41496,6 +41686,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Was du bekommst"
+          }
+        }
+      }
+    },
+    "What's behind you comes from your goals" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was hinter dir liegt, kommt von deinen Zielen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Görülən işlər hədəflərinizdən götürülür"
+          }
+        }
+      }
+    },
+    "What's in the way?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was steht im Weg?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nə mane olur?"
           }
         }
       }
