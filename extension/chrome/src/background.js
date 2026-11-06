@@ -198,6 +198,9 @@ async function onNativeMessage(message) {
     case 'redirectTab':
       redirectTab(message);
       break;
+    case 'showTab':
+      showTab(message.host);
+      break;
     case 'refresh':
       reportActiveTab(true);
       break;
@@ -230,6 +233,7 @@ async function onState(next) {
   await enforceOnOpenTabs();
   updateToolbar();
   broadcast();
+  syncPassPills();
 }
 
 // A worker that has just woken knows nothing until the app's state comes. A
@@ -346,7 +350,13 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     if (!change.url.startsWith(BLOCK_PAGE)) forgetPausedTab(tabId);
     enforceOnTab(tab);
   }
-  if (change.status === 'complete' && isWebURL(tab.url || '')) showPillIfPassing(tab);
+  if (change.status === 'complete' && isWebURL(tab.url || '')) {
+    // Again once loaded: an address the rules can't see (an escaped path,
+    // /%73horts) is only caught here, and one sent to the block page while
+    // the tab was still starting to load can be lost.
+    enforceOnTab(tab);
+    showPillIfPassing(tab);
+  }
   if (tab.active && (change.url || change.title || change.status === 'complete')) reportActiveTab();
 });
 chrome.tabs.onRemoved.addListener((tabId) => forgetPausedTab(tabId));
@@ -519,6 +529,53 @@ async function showPillIfPassing(tab) {
   await stateKnown();
   const pass = passFor(state, hostname(tab.url));
   if (pass) showPassPill(tab.id, pass.until);
+}
+
+// The pill counts down on its own in the page, so a pass that ends early (the
+// session ended, or the app took it back) has to take its pill away here, and
+// a pass that changed has to put up a new one. Only tabs on the hosts involved
+// are touched: going through every tab would hold up the rules for the next
+// page. The hosts are kept for a worker that wakes after a pass has gone.
+let lastPasses = null;
+
+async function syncPassPills() {
+  const passes = state?.blocking?.passes || [];
+  if (lastPasses === null) lastPasses = (await chrome.storage.session.get('passes')).passes || [];
+  const changed = [...passes, ...lastPasses].filter((pass) => {
+    const before = lastPasses.find((p) => p.host === pass.host);
+    const now = passes.find((p) => p.host === pass.host);
+    return before?.until !== now?.until;
+  });
+  lastPasses = passes;
+  chrome.storage.session.set({ passes });
+  if (!changed.length || !(await chrome.permissions.contains(SITE_ACCESS))) return;
+  const hosts = [...new Set(changed.map((p) => p.host))];
+  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+  for (const tab of tabs) {
+    const host = hostname(tab.url);
+    if (!hosts.some((h) => hostMatches(host, h))) continue;
+    const pass = passFor(state, host);
+    if (pass) {
+      showPassPill(tab.id, pass.until);
+    } else {
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => document.getElementById('focusguard-pass')?.remove(),
+      }).catch(() => {});
+    }
+  }
+}
+
+// "Back to claude.ai": the work was a page in this browser, so its tab comes
+// to the front: the most recently used one on that site.
+async function showTab(host) {
+  if (!host) return;
+  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+  const matching = tabs.filter((tab) => !tab.incognito && hostMatches(hostname(tab.url), host));
+  const tab = matching.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0))[0];
+  if (!tab) return;
+  await chrome.tabs.update(tab.id, { active: true }).catch(() => {});
+  await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
 }
 
 // The in-page countdown while a pass runs (needs site access).

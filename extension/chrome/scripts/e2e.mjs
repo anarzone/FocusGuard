@@ -1086,6 +1086,32 @@ group('pass countdown', {}, async ({ tb, app, it }) => {
     app.passMs = 120000;
   });
 
+  await it('the pill goes when the session ends', async () => {
+    app.startSession({ preset: 'gentle', sites });
+    const page = await tb.tab('https://x.com/ended');
+    await takePass(page);
+    await until('the pill', () => hasPill(page), 3000);
+    app.endSession();
+    await until('the pill to go', async () => !(await hasPill(page)), 3000);
+    await waitAt(page, 'https://x.com/ended');
+  });
+
+  await it('Back to a page brings its tab to the front', async () => {
+    app.startSession({ preset: 'gentle', sites });
+    const work = await tb.tab('https://docs.test/work');
+    const page = await tb.tab('https://x.com/back');
+    await takePass(page);
+    await until('the pill', () => hasPill(page), 3000);
+    const worker = await tb.worker();
+    app.sendAll({ type: 'showTab', host: 'docs.test' });
+    await until('the work tab in front', async () => {
+      const [tab] = await worker.evaluate(() => chrome.tabs.query({ active: true, lastFocusedWindow: true }));
+      return tab && /docs\.test\/work/.test(tab.url);
+    }, 3000);
+    await work.close();
+    await page.close();
+  });
+
   await it('another tab on the host: goes through during the pass, blocks with it', async () => {
     app.startSession({ preset: 'gentle', sites });
     app.passMs = 5000;

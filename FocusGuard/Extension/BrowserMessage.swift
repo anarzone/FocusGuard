@@ -378,6 +378,14 @@ struct RedirectTabCommand: Encodable {
     private enum CodingKeys: String, CodingKey { case type, pauseId, fragment, url }
 }
 
+/// "Back to claude.ai": brings the most recently used tab on `host` to the front.
+struct ShowTabCommand: Encodable {
+    let type = "showTab"
+    var host: String
+
+    private enum CodingKeys: String, CodingKey { case type, host }
+}
+
 /// Asks the extension to report its active tab again.
 struct RefreshCommand: Encodable {
     let type = "refresh"

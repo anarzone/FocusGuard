@@ -321,11 +321,21 @@ extension AppState {
         )
     }
 
-    /// Name of the app "Back to …" returns to, if it's still running.
+    /// Name of the app "Back to …" returns to, if it's still running: the
+    /// site instead when the work was in a browser the extension can switch
+    /// tabs in. "Back to Google Chrome" means nothing from inside Chrome.
     func backToAppName() -> String? {
-        tracker.lastFocusBundleId.flatMap {
+        if let page = backToPage() { return page }
+        return tracker.lastFocusBundleId.flatMap {
             NSRunningApplication.runningApplications(withBundleIdentifier: $0).first?.localizedName
         }
+    }
+
+    /// The site to go back to, when the last focus was a page in a browser
+    /// with the extension connected.
+    func backToPage() -> String? {
+        BackToWork.page(lastFocus: tracker.lastFocusBundleId, host: tracker.lastFocusHost,
+                        hasExtension: { self.extensionBridge.isConnected(browser: $0) })
     }
 
     /// Bring back the last app the user was focused in; failing that, just
@@ -340,6 +350,7 @@ extension AppState {
         switch target {
         case .activate(let id):
             NSRunningApplication.runningApplications(withBundleIdentifier: id).first?.activate()
+            if let host = backToPage() { extensionBridge.showTab(host: host, browser: id) }
         case .hide(let id):
             NSRunningApplication.runningApplications(withBundleIdentifier: id).forEach { $0.hide() }
         case .none:
@@ -374,6 +385,14 @@ enum BackToWork: Equatable {
     case activate(String)
     case hide(String)
     case none
+
+    /// The site when the last focus app is a browser that can be asked to
+    /// switch tabs; nil means going back to the app itself.
+    static func page(lastFocus: String?, host: String?, hasExtension: (String) -> Bool) -> String? {
+        guard let id = lastFocus, let host, !host.isEmpty,
+              BrowserTabReader.isBrowser(bundleIdentifier: id), hasExtension(id) else { return nil }
+        return host
+    }
 
     static func target(lastFocus: String?, isRunning: (String) -> Bool,
                        distraction: String?, selfId: String) -> BackToWork {

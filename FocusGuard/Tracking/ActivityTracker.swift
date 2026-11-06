@@ -64,6 +64,9 @@ final class ActivityTracker {
     private(set) var currentSnapshot: ActivitySnapshot?
     /// Most recent app classified as focus — where "Back to work" returns to.
     private(set) var lastFocusBundleId: String?
+    /// When that app is a browser, the site it was on: "claude.ai". Back to
+    /// work then means that tab, not the browser the drift is in too.
+    private(set) var lastFocusHost: String?
     /// True while FocusGuard itself is frontmost. Its own windows aren't
     /// tracked, can't count as drift, and keep the session from looking idle.
     private(set) var isFrontmostSelf = false
@@ -382,8 +385,10 @@ final class ActivityTracker {
         )
 
         let classification = classifier.classify(bundleId: bundleId, windowTitle: title, url: url)
-        if classification == .focus, lastFocusBundleId != bundleId {
-            lastFocusBundleId = bundleId
+        if classification == .focus {
+            if lastFocusBundleId != bundleId { lastFocusBundleId = bundleId }
+            let host = isBrowser ? url.flatMap { URL(string: $0)?.host?.lowercased() }.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 } : nil
+            if lastFocusHost != host { lastFocusHost = host }
         }
 
         let snapshot = ActivitySnapshot(
