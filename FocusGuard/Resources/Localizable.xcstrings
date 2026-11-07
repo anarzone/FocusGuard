@@ -12768,6 +12768,23 @@
         }
       }
     },
+    "Browser" : {
+      "comment" : "Settings section with the browser extension",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browser"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brauzer"
+          }
+        }
+      }
+    },
     "Browser access" : {
       "localizations" : {
         "az" : {

@@ -21,6 +21,8 @@ final class FlowHabitsTests: XCTestCase {
         defaults = UserDefaults(suiteName: suite)
         defaults.set(false, forKey: HabitSettings.morningPlan)
         defaults.set(false, forKey: HabitSettings.eveningWrapUp)
+        // Off by default now; these tests are about the offer.
+        defaults.set(true, forKey: HabitSettings.autoStartOffer)
     }
 
     override func tearDown() {

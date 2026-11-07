@@ -53,11 +53,38 @@ struct GoalSuggestion: Equatable, Identifiable {
         return out
     }
 
+    /// The menu's few: the unfinished last goal and the calendar event on now
+    /// come first, as the likeliest; then the best task, then the branch. Two
+    /// at most: more is a list to read before starting.
+    static func shortList(_ all: [GoalSuggestion], limit: Int = 2) -> [GoalSuggestion] {
+        func rank(_ suggestion: GoalSuggestion) -> Int {
+            switch suggestion.source {
+            case .lastGoal: return 0
+            case .calendar: return 1
+            case .task:     return 2
+            case .git:      return 3
+            }
+        }
+        var tookTask = false
+        return all.enumerated()
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map(\.element)
+            .filter { suggestion in
+                guard case .task = suggestion.source else { return true }
+                defer { tookTask = true }
+                return !tookTask
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     /// The heading over a run of suggestions from one place: "Reminders ·
     /// Work", "Todoist · Inbox", "Calendar", "Git · focusguard", "Last time".
     var group: String {
         switch source {
-        case .task(let from, _, let list): return list.isEmpty ? from.name : "\(from.name) · \(list)"
+        case .task(let from, _, let list):
+            // Reminders' own list is called "Reminders": not "Reminders · Reminders".
+            return list.isEmpty || list.caseInsensitiveCompare(from.name) == .orderedSame ? from.name : "\(from.name) · \(list)"
         case .calendar:                    return String(localized: "Calendar", comment: "Heading over goals suggested from the calendar")
         case .git(let repo):               return "Git · \(repo)"
         case .lastGoal:                    return String(localized: "Last time", comment: "Heading over the last session's unfinished goal")

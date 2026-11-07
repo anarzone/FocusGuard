@@ -41,11 +41,13 @@ struct SettingsIntegrationsPane: View {
         } right: {
             SettingsStatusSection()
             macSection
-            SettingsSection(String(localized: "Browser and music")) {
+            SettingsSection(FeatureFlags.music ? String(localized: "Browser and music") : String(localized: "Browser")) {
                 browserRow
-                SettingsDivider()
-                SettingsRow(title: String(localized: "Focus music"), detail: musicDetail) {
-                    Text("In the menu").font(.system(size: 12)).foregroundStyle(Theme.bodyText)
+                if FeatureFlags.music {
+                    SettingsDivider()
+                    SettingsRow(title: String(localized: "Focus music"), detail: musicDetail) {
+                        Text("In the menu").font(.system(size: 12)).foregroundStyle(Theme.bodyText)
+                    }
                 }
             }
             SettingsNote(text: String(localized: "The browser extension is free: sharper tracking, and tabs pause straight away. Pro adds blocking before pages load. Adding it never starts a trial."))

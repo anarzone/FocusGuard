@@ -9,9 +9,9 @@ struct SettingsNotificationsPane: View {
     @AppStorage(SettingsKeys.showNotifications) private var allowed = true
     @AppStorage(SettingsKeys.Escalation.notificationsEnabled) private var nudges = true
     @AppStorage(HabitSettings.meetingAwareness) private var quietInCalls = true
-    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
-    @AppStorage(HabitSettings.morningPlan) private var morningPlan = true
-    @AppStorage(HabitSettings.eveningWrapUp) private var eveningWrapUp = true
+    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = false
+    @AppStorage(HabitSettings.morningPlan) private var morningPlan = false
+    @AppStorage(HabitSettings.eveningWrapUp) private var eveningWrapUp = false
     @AppStorage(HabitSettings.fridayWeek) private var fridayWeek = true
 
     var body: some View {

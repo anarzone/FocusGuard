@@ -1,6 +1,6 @@
 import Foundation
 
-/// The habit switches. The app window's settings show them; all default to on.
+/// The habit switches. The app window's settings show them; most default to on (`offByDefault`).
 enum HabitSettings {
     /// A morning notification with today's free slots.
     static let morningPlan = "habits.morningPlan.enabled"
@@ -17,8 +17,12 @@ enum HabitSettings {
     /// The weekly coach moves it for an experiment.
     static let morningPlanHour = "habits.morningPlan.hour"
 
+    /// Off until the user turns them on: each is one more interruption, in
+    /// an app that's meant to protect focus.
+    static let offByDefault: Set<String> = [morningPlan, eveningWrapUp, autoStartOffer]
+
     static func isOn(_ key: String, _ defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: key) as? Bool ?? true
+        defaults.object(forKey: key) as? Bool ?? !offByDefault.contains(key)
     }
 }
 

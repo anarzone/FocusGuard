@@ -27,7 +27,6 @@ struct SessionGoalField: View {
                 Text("Optional")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.secondaryText)
-                ProBadge()
             }
             TextField(suggestions.isEmpty ? "e.g. Ship the session-names PR" : "A task, or type your own", text: $goal)
                 .textFieldStyle(.plain)
