@@ -318,6 +318,23 @@
         }
       }
     },
+    "%@ is done" : {
+      "comment" : "The tool, which said it finished: Codex is done",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist fertig"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bitirdi"
+          }
+        }
+      }
+    },
     "%@ is probably done" : {
       "comment" : "The tool: Codex is probably done",
       "localizations" : {
@@ -9729,6 +9746,54 @@
         }
       }
     },
+    "Add this to your shell, then run them as “fgwait ./my-agent.sh”." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge das deiner Shell hinzu und starte sie dann mit „fgwait ./my-agent.sh“."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunu shell-ə əlavə edin, sonra onları “fgwait ./my-agent.sh” kimi işə salın."
+          }
+        }
+      }
+    },
+    "Adds 2 hooks to its settings, so FocusGuard knows exactly when it starts and finishes. They share the folder’s name and the time, never what you type." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fügt seinen Einstellungen 2 Hooks hinzu, damit FocusGuard genau weiß, wann es anfängt und fertig ist. Sie teilen den Namen des Ordners und die Uhrzeit, nie das, was du tippst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onun ayarlarına 2 hook əlavə edir ki, FocusGuard nə vaxt başladığını və bitirdiyini dəqiq bilsin. Onlar qovluğun adını və vaxtı paylaşır, heç vaxt yazdıqlarınızı yox."
+          }
+        }
+      }
+    },
+    "Adds a notify command to its settings, so FocusGuard knows exactly when a turn ends. It shares the folder’s name and the time, never what you type." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fügt seinen Einstellungen einen Notify-Befehl hinzu, damit FocusGuard genau weiß, wann eine Runde endet. Er teilt den Namen des Ordners und die Uhrzeit, nie das, was du tippst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onun ayarlarına notify əmri əlavə edir ki, FocusGuard növbənin nə vaxt bitdiyini dəqiq bilsin. O, qovluğun adını və vaxtı paylaşır, heç vaxt yazdıqlarınızı yox."
+          }
+        }
+      }
+    },
     "After 2 minutes or more on a distracting site" : {
       "localizations" : {
         "az" : {
@@ -13324,6 +13389,22 @@
         }
       }
     },
+    "Codex already runs a notify command of yours, which FocusGuard won’t replace. Its waits are worked out from what’s in front." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex führt schon einen eigenen Notify-Befehl von dir aus, den FocusGuard nicht ersetzt. Seine Wartezeiten werden an dem erkannt, was im Vordergrund ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex artıq sizin öz notify əmrinizi işlədir, FocusGuard onu əvəz etməyəcək. Onun gözləmələri öndə olandan anlaşılır."
+          }
+        }
+      }
+    },
     "Coming back" : {
       "localizations" : {
         "az" : {
@@ -13336,6 +13417,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zurückkommen"
+          }
+        }
+      }
+    },
+    "Connected: its waits are exact." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbunden: seine Wartezeiten sind genau."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qoşulub: onun gözləmələri dəqiqdir."
           }
         }
       }
@@ -13384,6 +13481,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht erkennbar"
+          }
+        }
+      }
+    },
+    "Couldn’t change %@’s settings. Its file may not be valid JSON or TOML." : {
+      "comment" : "The tool's name: Claude Code",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Einstellungen von %@ ließen sich nicht ändern. Die Datei ist vielleicht kein gültiges JSON oder TOML."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ayarlarını dəyişmək alınmadı. Onun faylı düzgün JSON və ya TOML olmaya bilər."
           }
         }
       }
@@ -27439,6 +27553,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht jetzt"
+          }
+        }
+      }
+    },
+    "Not on this Mac. Its waits are worked out from what’s in front." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht auf diesem Mac. Seine Wartezeiten werden an dem erkannt, was im Vordergrund ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Mac-da yoxdur. Onun gözləmələri öndə olandan anlaşılır."
           }
         }
       }
@@ -45396,6 +45526,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine längste Phase am Stück, ohne Calls"
+          }
+        }
+      }
+    },
+    "Your own scripts and agents" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine eigenen Skripte und Agenten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öz skriptləriniz və agentləriniz"
           }
         }
       }
