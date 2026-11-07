@@ -54,13 +54,26 @@ final class WaitCoordinator {
             lastCardAt = now
             island?.post(.waitReach(reach, usual: log.usualWait(for: reach.tool.name), next: nextTask(reach.project),
                                     lastDrift: log.lastDrift(for: reach.tool.name), now: now))
-        case .probablyDone(let reach):
-            island?.post(.waitDone(reach, now: now))
+        case .probablyDone(let reach, let exact):
+            island?.post(.waitDone(reach, exact: exact, now: now))
         case .ended(let record, let back):
             log.add(record)
             DecisionLog.shared.record(.wait, record.drifted ? "drifted" : "stayed", detail: back ? "back" : "gone")
             if back { island?.remove(key: IslandMoment.waitKey) }
         }
+    }
+
+    /// A tool said it started: `focusguard://wait/start`, from its hook.
+    func started(tool: String, project: String?, now: Date = .now) {
+        guard isOn() else { return }
+        DecisionLog.shared.record(.wait, "started", detail: "exact")
+        watcher.started(tool: tool, project: project, front: currentMoment().front, at: now)
+    }
+
+    /// A tool said it finished: `focusguard://wait/done`.
+    func finished(tool: String, now: Date = .now) {
+        guard isOn() else { return }
+        for event in watcher.finished(tool: tool, at: now) { handle(event, now: now) }
     }
 
     private func startTimer() {
@@ -85,28 +98,38 @@ extension IslandMoment {
     /// One wait card at a time: the done card takes the reach card's place.
     static let waitKey = "wait"
 
-    /// "While Codex works on Curiplay": the next step, and the way back.
+    /// What it cost last time, or that the site won't make the tool any
+    /// faster; then something real to do meanwhile, and the way back.
     static func waitReach(_ reach: WaitReach, usual: TimeInterval, next: TaskItem?, lastDrift: WaitRecord?, now: Date) -> IslandMoment {
         let place = reach.project ?? reach.tool.name
+        let tool = reach.tool.name
+        let usualMinutes = max(1, Int((usual / 60).rounded()))
         let kicker = reach.project.map {
-            String(localized: "While \(reach.tool.name) works on \($0)", comment: "The tool, then the project: While Codex works on Curiplay")
-        } ?? String(localized: "While \(reach.tool.name) works", comment: "The tool: While Codex works")
+            String(localized: "\(tool) is still working on \($0)", comment: "The tool, then the project: Codex is still working on Curiplay")
+        } ?? String(localized: "\(tool) is still working", comment: "The tool: Codex is still working")
+        let title: String
+        if let lastDrift, lastDrift.drift >= 60 {
+            title = String(localized: "Last time, \(lastDrift.to ?? reach.to) took \(Int(lastDrift.drift / 60)) min.",
+                           comment: "Warning on the wait card. The site, then minutes: Last time, x.com took 9 min.")
+        } else {
+            title = String(localized: "\(reach.to) won’t make \(tool) any faster.",
+                           comment: "Warning on the wait card. The site, then the tool: x.com won't make Codex any faster.")
+        }
         let body: String
         if let next {
-            body = String(localized: "Next on \(place): \(next.title)", comment: "The project, then an open task's title")
-        } else if let lastDrift, lastDrift.drift >= 60 {
-            body = String(localized: "Last time you opened \(lastDrift.to ?? reach.to) in a wait, you were gone \(Int(lastDrift.drift / 60)) min.",
-                          comment: "The site, then minutes: Last time you opened x.com in a wait, you were gone 9 min.")
+            body = String(localized: "Read “\(next.title)” while you wait, so you’re ready when \(tool) is.",
+                          comment: "The open task's title, then the tool")
         } else {
-            body = String(localized: "It usually takes about \(max(1, Int((usual / 60).rounded()))) min. A minute on \(reach.to) tends to become more.",
-                          comment: "Minutes, then the site")
+            body = String(localized: "\(tool) usually needs about \(usualMinutes) min. Stay close and you’ll catch it the moment it’s done.",
+                          comment: "The tool, then minutes")
         }
         let ends = reach.since.addingTimeInterval(usual)
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
             kicker: kicker,
-            title: String(localized: "Use the wait for the next step?", comment: "Card title when the user reaches for a distraction while a tool works"),
+            title: title,
             body: body,
+            tone: .attention,
             buttons: [IslandButton(title: String(localized: "Back to \(place)", comment: "Button: the project or tool to go back to"),
                                    command: .backTo(bundleId: reach.tool.bundleId, host: reach.tool.host)),
                       IslandButton(title: String(localized: "Open \(reach.to) anyway", comment: "Button: the site, kept open"))],
@@ -115,16 +138,20 @@ extension IslandMoment {
         )
     }
 
-    /// "Codex is probably done": the usual wait is up and they're still away.
-    static func waitDone(_ reach: WaitReach, now: Date) -> IslandMoment {
+    /// "Codex has probably finished.": the usual wait is up and they are still away.
+    /// "Codex just finished." when it said so itself.
+    static func waitDone(_ reach: WaitReach, exact: Bool = false, now: Date) -> IslandMoment {
         let place = reach.project ?? reach.tool.name
         let minutes = max(1, Int(now.timeIntervalSince(reach.since) / 60))
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
-            pillValue: String(localized: "Done?", comment: "Pill: the tool has probably finished"),
-            kicker: String(localized: "\(minutes) min since you left it", comment: "Minutes since the user left the tool"),
-            title: String(localized: "\(reach.tool.name) is probably done", comment: "The tool: Codex is probably done"),
-            body: String(localized: "\(place) is where you left it.", comment: "The project or tool"),
+            pillValue: exact ? String(localized: "Done", comment: "Pill: the tool has finished")
+                             : String(localized: "Done?", comment: "Pill: the tool has probably finished"),
+            kicker: String(localized: "\(minutes) min on \(reach.to)", comment: "Minutes, then the site the user went to: 4 min on x.com"),
+            title: exact ? String(localized: "\(reach.tool.name) just finished.", comment: "The tool, which said it finished: Codex just finished.")
+                         : String(localized: "\(reach.tool.name) has probably finished.", comment: "The tool: Codex has probably finished."),
+            body: String(localized: "Its work is waiting in \(place). Go now, while what you asked is still fresh.",
+                         comment: "The project or tool"),
             tone: .attention,
             buttons: [IslandButton(title: String(localized: "Back to \(place)", comment: "Button: the project or tool to go back to"),
                                    command: .backTo(bundleId: reach.tool.bundleId, host: reach.tool.host)),

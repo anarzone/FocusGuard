@@ -16,6 +16,9 @@ enum FocusGuardURL: Equatable {
     /// Slack's sign-in coming back (`SlackAccount`): a code, or an error
     /// such as "access_denied", with the state FocusGuard sent.
     case slackAuth(code: String?, state: String, error: String?)
+    /// A tool's hook: it started working (`start`) or finished (`done`).
+    /// The tool's name and the project's folder, nothing else.
+    case wait(started: Bool, tool: String, project: String?)
 
     static let scheme = "focusguard"
     static let breakMinutes = 1...60
@@ -46,6 +49,13 @@ enum FocusGuardURL: Equatable {
         case "slack-auth":
             guard let state = value("state") else { return nil }
             self = .slackAuth(code: value("code"), state: state, error: value("error"))
+        case "wait/start", "wait/done":
+            func clean(_ text: String?, _ most: Int) -> String? {
+                let trimmed = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : String(trimmed.prefix(most))
+            }
+            guard let tool = clean(value("tool"), 40) else { return nil }
+            self = .wait(started: route == "wait/start", tool: tool, project: clean(value("project"), 60))
         default:
             return nil
         }
@@ -72,6 +82,11 @@ enum FocusGuardURL: Equatable {
             components.host = "slack-auth"
             components.queryItems = [URLQueryItem(name: "code", value: code), URLQueryItem(name: "state", value: state),
                                      URLQueryItem(name: "error", value: error)].filter { $0.value != nil }
+        case .wait(let started, let tool, let project):
+            components.host = "wait"
+            components.path = started ? "/start" : "/done"
+            components.queryItems = [URLQueryItem(name: "tool", value: tool), URLQueryItem(name: "project", value: project)]
+                .filter { $0.value != nil }
         }
         return components.url ?? URL(string: "\(Self.scheme)://back")!
     }
