@@ -87,6 +87,9 @@ extension AppState {
         switch command {
         case .backToWork:
             backToWork()
+        case .backTo(let bundleId, let host):
+            NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first?.activate()
+            if let host, extensionBridge.isConnected(browser: bundleId) { extensionBridge.showTab(host: host, browser: bundleId) }
         case .allowForSession(let url, let bundleId):
             // Strict asks for a wait first; that happens on the block screen.
             guard sessionManager.currentSession != nil, escalationEngine.policy.forWorkWaitSeconds == 0 else { return }

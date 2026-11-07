@@ -20,6 +20,8 @@ final class DecisionLog {
         case block
         /// The browser's block page: shown, and what was pressed.
         case browserBlock
+        /// A wait on a tool: reached for a distraction in it, and how it ended.
+        case wait
     }
 
     struct Entry: Codable, Equatable {

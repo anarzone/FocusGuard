@@ -34,6 +34,10 @@ enum FeatureFlags {
     /// drift, and the menu's last places. Free.
     static let pickUp = true
 
+    /// Waits on a tool (an AI agent, a chat, a build): the card when the user
+    /// reaches for a distraction in one, and what waits turn into. Free.
+    static let waits = true
+
     /// The Analyzer: why focus gets lost, one fix, and a fair test of it. Fixed
     /// rules, no model.
     static let analyzer = true

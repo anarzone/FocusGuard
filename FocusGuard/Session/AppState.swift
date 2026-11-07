@@ -32,6 +32,8 @@ final class AppState {
     /// "Pick up where you left off".
     let pickUp: PickUpCoordinator
     let pickUpHotKey = PickUpHotKey()
+    /// Waits on a tool: the card when the user reaches for a distraction in one.
+    let waits: WaitCoordinator
     /// The block and daily-limit screens.
     let blockOverlay: BlockOverlayController
     /// Sessions on the calendar, the next meeting, reminders and the Git
@@ -131,6 +133,7 @@ final class AppState {
         presenter.island = island
         self.pickUp = PickUpCoordinator(opener: UITestMode.isOn ? NoPickUpOpener() : pickUpOpener,
                                         presenter: island.map { IslandPickUpPresenter(island: $0) })
+        self.waits = WaitCoordinator(island: island)
         self.blockOverlay = blockOverlay
         // Starts Sparkle's updater + scheduled background checks.
         self.updater = UpdaterController()
@@ -193,6 +196,7 @@ final class AppState {
             self?.maybeAutoPauseOrResume()
             self?.extensionBridge.tick()
             if let self, FeatureFlags.pickUp { self.pickUp.observe(self.pickUpMoment()) }
+            if let self, FeatureFlags.waits, !UITestMode.isOn { self.waits.observe(self.waitMoment()) }
         }
         // Every second while something is timed to the second or FocusGuard
         // is on screen; otherwise tracking follows events (see TrackingCadence).
@@ -291,6 +295,7 @@ final class AppState {
             wireIsland()
             wireIntegrations()
             if FeatureFlags.pickUp { wirePickUp(opener: pickUpOpener) }
+            if FeatureFlags.waits { wireWaits() }
             tracker.start()
             bridge.start(appState: self)
         }

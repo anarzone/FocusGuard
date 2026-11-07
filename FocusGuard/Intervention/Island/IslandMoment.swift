@@ -3,7 +3,7 @@ import SwiftUI
 
 /// What the island is showing. The order is `IslandRules.rank`'s.
 enum IslandKind: String, CaseIterable, Codable {
-    case drift, limit, sessionFinished, pickUp, plannedSession, breakOver
+    case drift, wait, limit, sessionFinished, pickUp, plannedSession, breakOver
     case autoStart, driftPrompt, morningPlan, wrapUp, weekReady, reminder, trial
     case sample
 
@@ -12,7 +12,7 @@ enum IslandKind: String, CaseIterable, Codable {
     /// an offer counts from a stretch of work the relaunch ended.
     var survivesRelaunch: Bool {
         switch self {
-        case .drift, .pickUp, .autoStart, .sample: return false
+        case .drift, .wait, .pickUp, .autoStart, .sample: return false
         default: return true
         }
     }

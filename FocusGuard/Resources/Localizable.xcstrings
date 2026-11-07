@@ -318,6 +318,40 @@
         }
       }
     },
+    "%@ is probably done" : {
+      "comment" : "The tool: Codex is probably done",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist wahrscheinlich fertig"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ yəqin ki, bitirdi"
+          }
+        }
+      }
+    },
+    "%@ is where you left it." : {
+      "comment" : "The project or tool",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist da, wo du aufgehört hast."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ qoyduğunuz yerdədir."
+          }
+        }
+      }
+    },
     "%@ Keep it or pick another." : {
       "comment" : "The bold first part is: FocusGuard guessed focus.",
       "localizations" : {
@@ -6530,6 +6564,23 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld min left today. After that the tab pauses until %2$@."
+          }
+        }
+      }
+    },
+    "%lld min since you left it" : {
+      "comment" : "Minutes since the user left the tool",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Min., seit du es verlassen hast"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayrılandan bəri %lld dəq"
           }
         }
       }
@@ -16130,6 +16181,23 @@
         }
       }
     },
+    "Done?" : {
+      "comment" : "Pill: the tool has probably finished",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fertig?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitdi?"
+          }
+        }
+      }
+    },
     "Down %@ on the same days last week." : {
       "localizations" : {
         "az" : {
@@ -21600,6 +21668,23 @@
         }
       }
     },
+    "In a minute" : {
+      "comment" : "Button: close the card, go back later",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gleich"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir dəqiqəyə"
+          }
+        }
+      }
+    },
     "In FocusGuard's folder in your Library" : {
       "localizations" : {
         "az" : {
@@ -22249,6 +22334,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Es nutzt die Aktivität, die FocusGuard ohnehin erfasst, aus den letzten 7 Tagen und nur auf diesem Mac. Private Fenster und Titel, die du ausgeschlossen hast, bleiben außen vor. Safari sagt nicht, welche seiner Fenster privat sind, darum lassen die sich nicht ausschließen."
+          }
+        }
+      }
+    },
+    "It usually takes about %lld min. A minute on %@ tends to become more." : {
+      "comment" : "Minutes, then the site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It usually takes about %1$lld min. A minute on %2$@ tends to become more."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das dauert meist etwa %1$lld Min. Eine Minute auf %2$@ wird oft mehr."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adətən təxminən %1$lld dəq çəkir. %2$@ saytında bir dəqiqə çox vaxt uzanır."
           }
         }
       }
@@ -23054,6 +23162,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Letztes Mal"
+          }
+        }
+      }
+    },
+    "Last time you opened %@ in a wait, you were gone %lld min." : {
+      "comment" : "The site, then minutes: Last time you opened x.com in a wait, you were gone 9 min.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last time you opened %1$@ in a wait, you were gone %2$lld min."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letztes Mal, als du beim Warten %1$@ geöffnet hast, warst du %2$lld Min. weg."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keçən dəfə gözləyərkən %1$@ açanda %2$lld dəq getdiniz."
           }
         }
       }
@@ -26191,6 +26322,29 @@
         }
       }
     },
+    "Next on %@: %@" : {
+      "comment" : "The project, then an open task's title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next on %1$@: %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes bei %1$@: %2$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ üzrə növbəti: %2$@"
+          }
+        }
+      }
+    },
     "Next on your list" : {
       "localizations" : {
         "az" : {
@@ -28172,6 +28326,22 @@
         }
       }
     },
+    "Offer the next step during a wait" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Warten den nächsten Schritt anbieten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləmə zamanı növbəti addımı təklif et"
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "az" : {
@@ -28907,6 +29077,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ öffnen"
+          }
+        }
+      }
+    },
+    "Open %@ anyway" : {
+      "comment" : "Button: the site, kept open",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ trotzdem öffnen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yenə də %@ aç"
           }
         }
       }
@@ -41825,6 +42012,23 @@
         }
       }
     },
+    "Use the wait for the next step?" : {
+      "comment" : "Card title when the user reaches for a distraction while a tool works",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Wartezeit für den nächsten Schritt nutzen?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləməni növbəti addım üçün istifadə edək?"
+          }
+        }
+      }
+    },
     "Used" : {
       "comment" : "Tab: the apps and sites that were used",
       "localizations" : {
@@ -43102,6 +43306,22 @@
         }
       }
     },
+    "When you leave Claude Code, Codex, an AI chat, a running command or a build for a distracting site. Worked out from what’s in front, never from what you type." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du Claude Code, Codex, einen KI-Chat, einen laufenden Befehl oder einen Build für eine ablenkende Website verlässt. Erkannt an dem, was im Vordergrund ist, nie an dem, was du tippst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude Code, Codex, AI söhbəti, işləyən əmr və ya build-i yayındırıcı sayt üçün tərk edəndə. Öndə olandan anlaşılır, heç vaxt yazdıqlarınızdan yox."
+          }
+        }
+      }
+    },
     "Where does this belong?" : {
       "localizations" : {
         "de" : {
@@ -43198,6 +43418,46 @@
         }
       }
     },
+    "While %@ works" : {
+      "comment" : "The tool: While Codex works",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während %@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ işləyərkən"
+          }
+        }
+      }
+    },
+    "While %@ works on %@" : {
+      "comment" : "The tool, then the project: While Codex works on Curiplay",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "While %1$@ works on %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während %1$@ an %2$@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ üzərində işləyərkən"
+          }
+        }
+      }
+    },
     "While a session runs, your teammates see you're focusing. When it ends, your status clears and notifications come back." : {
       "localizations" : {
         "az" : {
@@ -43210,6 +43470,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Während einer Session sieht dein Team, dass du dich fokussierst. Danach wird dein Status gelöscht und Mitteilungen kommen wieder."
+          }
+        }
+      }
+    },
+    "While a tool works" : {
+      "comment" : "Settings section: waits on an AI agent, a chat or a build",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während ein Werkzeug arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alət işləyərkən"
           }
         }
       }
@@ -45135,6 +45412,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dein Plan"
+          }
+        }
+      }
+    },
+    "Your script" : {
+      "comment" : "A command the user runs in a terminal, waited on",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Skript"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizin skript"
           }
         }
       }

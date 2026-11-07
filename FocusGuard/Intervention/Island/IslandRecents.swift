@@ -110,7 +110,7 @@ final class IslandRecents {
             guard !ahead.isEmpty else { return nil }
             button.command = .planSessions(ahead)
             return button
-        case .backToWork, .allowForSession, .snoozeAutoStart, .skipPlannedSession:
+        case .backToWork, .backTo, .allowForSession, .snoozeAutoStart, .skipPlannedSession:
             return nil
         }
     }

@@ -98,9 +98,10 @@ final class IslandTests: XCTestCase {
 
     // MARK: - Showing at once, or at a pause
 
-    func testOnlyTheNudgeAndTheLimitShowAtOnce() {
+    func testOnlyTheNudgeTheWaitAndTheLimitShowAtOnce() {
+        // The wait card is about the moment the user reaches for a distraction.
         for kind in IslandKind.allCases where kind != .pickUp && kind != .sample {
-            XCTAssertEqual(IslandRules.timing(kind).atOnce, kind == .drift || kind == .limit, "\(kind)")
+            XCTAssertEqual(IslandRules.timing(kind).atOnce, [.drift, .wait, .limit].contains(kind), "\(kind)")
         }
         island.post(moment(.drift))
         XCTAssertEqual(currentKind, .drift)
@@ -219,10 +220,11 @@ final class IslandTests: XCTestCase {
         XCTAssertEqual(island.queue.waiting.count, 2)
     }
 
-    func testTheOrderIsDriftLimitSessionThenTheRest() {
-        XCTAssertLessThan(IslandRules.rank(.drift), IslandRules.rank(.limit))
+    func testTheOrderIsDriftWaitLimitSessionThenTheRest() {
+        XCTAssertLessThan(IslandRules.rank(.drift), IslandRules.rank(.wait))
+        XCTAssertLessThan(IslandRules.rank(.wait), IslandRules.rank(.limit))
         XCTAssertLessThan(IslandRules.rank(.limit), IslandRules.rank(.sessionFinished))
-        for kind in IslandKind.allCases where ![.drift, .limit, .sessionFinished, .sample].contains(kind) {
+        for kind in IslandKind.allCases where ![.drift, .wait, .limit, .sessionFinished, .sample].contains(kind) {
             XCTAssertLessThan(IslandRules.rank(.sessionFinished), IslandRules.rank(kind), "\(kind)")
         }
     }
