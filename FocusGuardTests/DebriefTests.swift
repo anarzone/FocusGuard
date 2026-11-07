@@ -490,3 +490,23 @@ final class WorkLogTests: XCTestCase {
         XCTAssertTrue(WorkLogAccess.isOpen(shipped: true, unlocked: true))
     }
 }
+
+/// The menu offers two suggestions at most, the likeliest first.
+final class GoalShortListTests: XCTestCase {
+    private func task(_ title: String, list: String = "Work", source: TaskSource = .reminders) -> GoalSuggestion {
+        GoalSuggestion(text: title, source: .task(source, id: title, list: list))
+    }
+
+    func testTheLastGoalAndOneTaskAtMost() {
+        let all = [task("A"), task("B"), GoalSuggestion(text: "Branch", source: .git(repo: "app")),
+                   GoalSuggestion(text: "Last", source: .lastGoal)]
+        XCTAssertEqual(GoalSuggestion.shortList(all).map(\.text), ["Last", "A"])
+        XCTAssertEqual(GoalSuggestion.shortList([task("A"), task("B")]).map(\.text), ["A"])
+        XCTAssertEqual(GoalSuggestion.shortList([GoalSuggestion(text: "Standup", source: .calendar), task("A")]).map(\.text), ["Standup", "A"])
+    }
+
+    func testAListNamedLikeItsAppIsntSaidTwice() {
+        XCTAssertEqual(task("A", list: "Reminders").group, "Reminders")
+        XCTAssertEqual(task("A", list: "Work").group, "Reminders · Work")
+    }
+}

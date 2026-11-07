@@ -356,6 +356,8 @@ final class MonthReviewer {
     @ObservationIgnored var locale: Locale = .current
 
     private let defaults: UserDefaults
+    /// Whether the month review is shown; tests turn it on before it ships.
+    var isShipped = FeatureFlags.monthlyReview
     let calendar: Calendar
 
     init(coach: WeeklyCoach = .shared, defaults: UserDefaults = .standard, calendar: Calendar = .current) {
@@ -395,7 +397,7 @@ final class MonthReviewer {
 
     /// Works out a finished month's review, once.
     func load(_ month: DateInterval) async {
-        guard FeatureFlags.monthlyReview, isUnlocked(), month.end <= now(), reviews[month.start] == nil,
+        guard isShipped, isUnlocked(), month.end <= now(), reviews[month.start] == nil,
               !loading.contains(month.start),
               let beforeStart = calendar.date(byAdding: .month, value: -1, to: month.start) else { return }
         loading.insert(month.start)

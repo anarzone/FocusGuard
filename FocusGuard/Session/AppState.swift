@@ -205,10 +205,10 @@ final class AppState {
             self?.analyzerSessionStarted(manager?.currentSession)
             self?.integrationsSessionStarted(manager?.currentSession)
             SystemFocusBridge.onSessionStarted()
-            self?.music.sessionStarted()
+            if FeatureFlags.music { self?.music.sessionStarted() }
         }
         manager.onSessionPauseChanged = { [weak self] paused in
-            if paused { self?.music.sessionPaused() } else { self?.music.sessionResumed() }
+            if FeatureFlags.music { if paused { self?.music.sessionPaused() } else { self?.music.sessionResumed() } }
             // Resumed, by anyone: a pause after this one is the user's own.
             if !paused { self?.autoPausedAt = nil }
         }
@@ -218,7 +218,7 @@ final class AppState {
             self?.tabPause.sessionEnded()
             SystemFocusBridge.onSessionEnded()
             guard let self else { return }
-            self.music.sessionEnded()
+            if FeatureFlags.music { self.music.sessionEnded() }
             self.recap = SessionRecap(session: session, bestZoneToday: self.bestZoneToday(fresh: true))
             self.debriefs.sessionEnded(session)
             Task { await self.integrations.sessionEnded(session) }

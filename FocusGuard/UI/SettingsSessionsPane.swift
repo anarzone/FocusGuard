@@ -19,7 +19,7 @@ struct SettingsSessionsPane: View {
     /// Read so a weekday's own goal coming or going redraws the pane.
     @AppStorage(SettingsKeys.Goal.weekdayFocusMinutes) private var weekdayGoalsData: Data?
     @AppStorage(SettingsKeys.Breaks.strictMode) private var breakStrictMode = false
-    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = true
+    @AppStorage(HabitSettings.autoStartOffer) private var autoStartOffer = false
     @AppStorage(HabitSettings.meetingAwareness) private var meetingAwareness = true
 
     @State private var preset: DriftResponse? = DriftResponse.current

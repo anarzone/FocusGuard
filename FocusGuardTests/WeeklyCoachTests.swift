@@ -60,6 +60,7 @@ final class WeeklyCoachTests: XCTestCase {
 
     private func makeCoach() -> WeeklyCoach {
         let coach = WeeklyCoach(defaults: defaults, calendar: F.calendar)
+        coach.isShipped = true
         coach.reader = { [unowned self] interval in self.fixture.data(from: -21, to: 28).clipped(to: interval) }
         coach.applier = LiveCoachApplier(limits: limits, preset: { [unowned self] in self.preset }, defaults: defaults,
                                          canReadCalendar: { [unowned self] in self.canReadCalendar })
@@ -378,6 +379,8 @@ final class WeeklyCoachTests: XCTestCase {
     func test_callHeavyDays_putASessionBeforeTheFirstCall_whenTheCalendarCanBeRead() async throws {
         fixture = F.callHeavy()
         canReadCalendar = true
+        // The session before the first call comes with the morning plan, off by default now.
+        defaults.set(true, forKey: HabitSettings.morningPlan)
         await coach.refresh()
         XCTAssertEqual(coach.note?.experiment, .sessionBeforeFirstCall(minutes: 25))
 
@@ -398,6 +401,7 @@ final class WeeklyCoachTests: XCTestCase {
 
     private func makeReviewer() -> MonthReviewer {
         let reviewer = MonthReviewer(coach: coach, defaults: defaults, calendar: F.calendar)
+        reviewer.isShipped = true
         reviewer.now = { [unowned self] in self.clock }
         reviewer.isUnlocked = { [unowned self] in self.unlocked }
         reviewer.model = { nil }

@@ -139,6 +139,8 @@ final class WeeklyCoach {
     @ObservationIgnored var locale: Locale = .current
 
     private let defaults: UserDefaults
+    /// Whether the coach is shown; tests turn it on before it ships.
+    var isShipped = FeatureFlags.coach
     private let calendar: Calendar
     /// One-shot, for when something next comes due (`nextRefresh`).
     @ObservationIgnored private var timer: Timer?
@@ -267,7 +269,7 @@ final class WeeklyCoach {
         CoachRules.pruneExpired(now: at, defaults)
         await finishTrialIfDue(at: at)
         await finishMonthTrialsIfDue(at: at)
-        guard FeatureFlags.coach, isUnlocked(), let week = calendar.dateInterval(of: .weekOfYear, for: at),
+        guard isShipped, isUnlocked(), let week = calendar.dateInterval(of: .weekOfYear, for: at),
               state.week != week.start else { return }
         isMakingNote = true
         await makeNote(for: week)

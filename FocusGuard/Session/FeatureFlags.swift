@@ -10,17 +10,21 @@ enum FeatureFlags {
     static let smartCategories = true
     /// The session goal, the debrief after a session and the work log.
     static let debrief = true
-    /// The weekly coach note and its experiment.
-    static let coach = true
-    /// Ask: questions about your own focus, answered on this Mac.
-    static let ask = true
+    /// The weekly coach note and its experiment. Off before launch: the
+    /// Analyzer does its job, one change to try and a fair test of it.
+    static let coach = false
+    /// Ask: questions about your own focus, answered on this Mac. Off
+    /// before launch, to keep the first version small.
+    static let ask = false
 
     /// Open reminders as session goals, ticked off when the session's done
     /// (Settings › Integrations › Tasks as session goals).
     static let taskGoals = true
 
-    /// The month in review, in Reports › Month.
-    static let monthlyReview = true
+    /// The month in review, in Reports › Month. Off before launch.
+    static let monthlyReview = false
+    /// Music that starts with a session, from the menu. Off before launch.
+    static let music = false
 
     /// Slack status and Discord activity while a session runs (Settings ›
     /// Integrations › Status in Slack and Discord). Each app's row also
