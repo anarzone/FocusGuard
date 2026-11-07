@@ -52,6 +52,7 @@ enum IslandRules {
     static func timing(_ kind: IslandKind) -> Timing {
         switch kind {
         case .drift:           return Timing(atOnce: true, expiry: 2 * minute, onScreen: nil)  // or the block's time
+        case .wait:            return Timing(atOnce: true, expiry: 10 * minute, onScreen: 30)  // `WaitCoordinator` closes it
         case .limit:           return Timing(atOnce: true, expiry: 5 * minute, onScreen: 20)
         case .sessionFinished: return Timing(maxWait: 30, expiry: 30 * minute, onScreen: 30)
         case .pickUp:          return Timing(atOnce: true, expiry: 60 * minute, onScreen: nil) // `PickUpRules` closes it

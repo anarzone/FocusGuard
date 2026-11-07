@@ -31,6 +31,7 @@ struct SettingsSessionsPane: View {
             namesSection
             defaultsSection
             if FeatureFlags.pickUp { SettingsPickUpSection(pickUp: appState.pickUp, hotKey: appState.pickUpHotKey) }
+            if FeatureFlags.waits { SettingsWaitsSection() }
         } right: {
             driftSection
             SettingsSection(String(localized: "Breaks", comment: "Rest breaks between sessions")) {

@@ -5,6 +5,9 @@ import UserNotifications
 enum NotificationCommand: Equatable, Codable {
     /// "Back to Xcode".
     case backToWork
+    /// "Back to Curiplay" on a wait card: the tool the user left, and its tab
+    /// when it's a chat in a browser.
+    case backTo(bundleId: String, host: String?)
     /// "It's for work": stop nudging about this page or app this session.
     case allowForSession(url: String?, bundleId: String?)
     case takeBreak(minutes: Int)
