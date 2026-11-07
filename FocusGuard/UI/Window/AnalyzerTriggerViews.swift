@@ -15,10 +15,10 @@ struct AnalyzerTriggersCard: View {
         AnalyzerCard {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(String(localized: "What sets it off", comment: "Analyzer card: what the user was doing right before losing focus"))
+                    Text(String(localized: "What pulls you away", comment: "Analyzer card: what the user was doing right before losing focus"))
                         .font(.system(size: 13, weight: .semibold))
                     Spacer()
-                    Text(String(localized: "Right before focus was lost", comment: "Analyzer card subtitle"))
+                    Text(String(localized: "What you did right before you drifted", comment: "Analyzer card subtitle"))
                         .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
                 }
                 VStack(spacing: 2) {
@@ -98,8 +98,8 @@ struct AnalyzerTriggersCard: View {
                 .opacity(moment.isRuledOut ? 0.55 : 1)
             }
             if trigger.isWait {
-                Label(String(localized: "Next time, the wait card offers the project’s next step when you reach for \(trigger.steps.last?.label ?? "it").",
-                             comment: "Analyzer: what FocusGuard now does about a wait trigger; the site"),
+                Label(String(localized: "Next time you open \(trigger.steps.last?.label ?? "it") while \(trigger.steps.first?.label ?? "it") works, FocusGuard will warn you what it cost here.",
+                             comment: "Analyzer: what FocusGuard now does about a wait trigger; the site, then the tool"),
                       systemImage: "sparkles")
                     .font(.system(size: 12)).foregroundStyle(Theme.primaryText)
                     .padding(.top, 2)
@@ -245,7 +245,7 @@ struct AnalyzerWaitsCard: View {
                                  comment: "Analyzer: the usual wait, then the usual drift")
         }
         if let pulls = summary.pullsAway {
-            text += " " + String(localized: "\(pulls.tool) waits pull you away most: \(pulls.drifted) of \(pulls.of).",
+            text += " " + String(localized: "You drift most while \(pulls.tool) works: \(pulls.drifted) of \(pulls.of) waits.",
                                  comment: "Analyzer: the tool, then drifted waits of all its waits")
         }
         return text

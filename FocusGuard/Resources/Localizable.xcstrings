@@ -2762,29 +2762,6 @@
         }
       }
     },
-    "%@ waits pull you away most: %lld of %lld." : {
-      "comment" : "Analyzer: the tool, then drifted waits of all its waits",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ waits pull you away most: %2$lld of %3$lld."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beim Warten auf %1$@ schweifst du am meisten ab: %2$lld von %3$lld."
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ gözləmələri sizi ən çox yayındırır: %3$lld-dən %2$lld."
-          }
-        }
-      }
-    },
     "%@ was %@| of it." : {
       "comment" : "The | ends the bold start",
       "localizations" : {
@@ -26626,19 +26603,25 @@
         }
       }
     },
-    "Next time, the wait card offers the project’s next step when you reach for %@." : {
-      "comment" : "Analyzer: what FocusGuard now does about a wait trigger; the site",
+    "Next time you open %@ while %@ works, FocusGuard will warn you what it cost here." : {
+      "comment" : "Analyzer: what FocusGuard now does about a wait trigger; the site, then the tool",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next time you open %1$@ while %2$@ works, FocusGuard will warn you what it cost here."
+          }
+        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nächstes Mal bietet die Wartekarte den nächsten Schritt des Projekts an, wenn du zu %@ greifst."
+            "value" : "Wenn du das nächste Mal %1$@ öffnest, während %2$@ arbeitet, warnt dich FocusGuard, was es dich hier gekostet hat."
           }
         },
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Növbəti dəfə %@ saytına əl atanda gözləmə kartı layihənin növbəti addımını təklif edəcək."
+            "value" : "Növbəti dəfə %2$@ işləyərkən %1$@ açsanız, FocusGuard bunun burada nəyə başa gəldiyini xəbərdar edəcək."
           }
         }
       }
@@ -33089,23 +33072,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sofort"
-          }
-        }
-      }
-    },
-    "Right before focus was lost" : {
-      "comment" : "Analyzer card subtitle",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direkt bevor der Fokus verloren ging"
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diqqət itirilməzdən dərhal əvvəl"
           }
         }
       }
@@ -43168,6 +43134,23 @@
         }
       }
     },
+    "What pulls you away" : {
+      "comment" : "Analyzer card: what the user was doing right before losing focus",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was dich wegzieht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizi nə yayındırır"
+          }
+        }
+      }
+    },
     "What really happened?" : {
       "localizations" : {
         "az" : {
@@ -43200,23 +43183,6 @@
         }
       }
     },
-    "What sets it off" : {
-      "comment" : "Analyzer card: what the user was doing right before losing focus",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Was es auslöst"
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nə səbəb olur"
-          }
-        }
-      }
-    },
     "What teammates see" : {
       "localizations" : {
         "az" : {
@@ -43245,6 +43211,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu nə idi?"
+          }
+        }
+      }
+    },
+    "What you did right before you drifted" : {
+      "comment" : "Analyzer card subtitle",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du direkt vor dem Abschweifen gemacht hast"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınmazdan dərhal əvvəl nə edirdiniz"
           }
         }
       }
@@ -44702,6 +44685,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du kannst die Vorschläge in den Einstellungen wieder einschalten"
+          }
+        }
+      }
+    },
+    "You drift most while %@ works: %lld of %lld waits." : {
+      "comment" : "Analyzer: the tool, then drifted waits of all its waits",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You drift most while %1$@ works: %2$lld of %3$lld waits."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Am meisten schweifst du ab, während %1$@ arbeitet: bei %2$lld von %3$lld Wartezeiten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən çox %1$@ işləyərkən yayınırsınız: %3$lld gözləmədən %2$lld."
           }
         }
       }
