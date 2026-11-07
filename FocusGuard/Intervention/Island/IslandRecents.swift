@@ -25,7 +25,7 @@ final class IslandRecents {
     static let key = "island.recents"
     /// More than the menu shows, but not a log.
     static let keep = 12
-    static let shownInMenu = 3
+    static let shownInMenu = 2
 
     private(set) var items: [IslandRecent] = []
 
