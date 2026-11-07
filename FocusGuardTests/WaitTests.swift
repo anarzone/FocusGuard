@@ -191,14 +191,17 @@ final class WaitTests: XCTestCase {
         let card = IslandMoment.waitReach(reach, usual: 90, next: task, lastDrift: nil, now: now.addingTimeInterval(30))
         XCTAssertEqual(card.kind, .wait)
         XCTAssertTrue(card.startsOpen)
-        XCTAssertTrue(card.body.contains("CUR-38"))
+        XCTAssertEqual(card.title, "x.com won’t make Codex any faster.", "No drift on record: say what it won't do")
+        XCTAssertEqual(card.body, "Read “CUR-38 Waiter wipes the table” while you wait, so you’re ready when Codex is.")
         XCTAssertEqual(card.buttons.first?.command, .backTo(bundleId: terminal, host: nil))
         XCTAssertNil(card.buttons.last?.command, "Opening it anyway only closes the card")
         XCTAssertEqual(card.countdown?.secondsLeft(at: now.addingTimeInterval(30)), 60)
 
         let done = IslandMoment.waitDone(reach, now: now.addingTimeInterval(200))
         XCTAssertEqual(done.key, card.key, "The done card takes the reach card's place")
-        XCTAssertTrue(done.title.contains("Codex"))
+        XCTAssertEqual(done.title, "Codex has probably finished.")
+        XCTAssertEqual(done.shownKicker, "3 min on x.com")
+        XCTAssertEqual(IslandMoment.waitDone(reach, exact: true, now: now).title, "Codex just finished.")
     }
 
     func testWithNoTaskTheCardRemindsWhatTheLastDriftCost() {
@@ -206,7 +209,8 @@ final class WaitTests: XCTestCase {
         let reach = WaitReach(tool: tool, project: nil, since: now, to: "youtube.com")
         let last = WaitRecord(start: now, tool: "OpenRouter", seconds: 600, drift: 540, to: "youtube.com")
         let card = IslandMoment.waitReach(reach, usual: 40, next: nil, lastDrift: last, now: now)
-        XCTAssertTrue(card.body.contains("9"))
+        XCTAssertEqual(card.title, "Last time, youtube.com took 9 min.", "What the last drift cost, in so many minutes")
+        XCTAssertTrue(card.body.contains("about 1 min"))
         XCTAssertEqual(card.buttons.first?.command, .backTo(bundleId: chrome, host: "openrouter.ai"))
     }
 }
