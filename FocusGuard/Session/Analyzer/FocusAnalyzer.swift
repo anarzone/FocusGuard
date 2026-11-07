@@ -463,8 +463,10 @@ extension AppState {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         let from = calendar.startOfDay(-2 * AnalyzerRules.periodDays, from: today)
+        let waits = WaitLog.shared.records(from: calendar.startOfDay(-AnalyzerRules.periodDays, from: today), to: today)
         return await stats.analyzerReport(now: now, weekendsCount: weekendsCount, muted: FocusAnalyzer.shared.muted,
-                                          busy: analyzerBusy(from: from, to: today), calendar: calendar)
+                                          busy: analyzerBusy(from: from, to: today), waits: waits,
+                                          ruledOut: AnalyzerRuledOut.load(), calendar: calendar)
     }
 
     /// On an On day, a session with no goal asks for one line in the window.

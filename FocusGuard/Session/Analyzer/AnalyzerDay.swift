@@ -25,6 +25,10 @@ struct AnalyzerLoss: Equatable, Sendable {
     let places: [AnalyzerPlace]
     /// It starts in the late part of its day.
     var isLate = false
+    /// What the user was in just before it: the trigger's first step.
+    var before: AnalyzerPlace?
+    /// Where it began, when that wasn't the distraction itself: Slack, before YouTube.
+    var opening: AnalyzerPlace?
 
     /// Who to name on its row: site names from an app the person opted out of
     /// are dropped. There's no title here to show: rows are apps and sites only.
@@ -168,7 +172,9 @@ enum AnalyzerDayBuilder {
                 result.losses.append(AnalyzerLoss(
                     start: start, end: end, seconds: seconds,
                     cause: cause(slices, start: start, end: end, segments: segments, callSpans: callSpans, churn: inChurn),
-                    switches: switchCount(slices), places: places(slices), isLate: start >= lateFrom))
+                    switches: switchCount(slices), places: places(slices), isLate: start >= lateFrom,
+                    before: place(before: start, segments),
+                    opening: slices.first.flatMap { $0.source.kind == .distraction ? nil : places([$0]).first }))
                 for slice in slices {
                     result.earlyLost += max(0, min(slice.end, lateFrom).timeIntervalSince(slice.start))
                     result.lateLost += max(0, slice.end.timeIntervalSince(max(slice.start, lateFrom)))
@@ -355,6 +361,16 @@ enum AnalyzerDayBuilder {
 
     private static func switchCount(_ slices: [Slice]) -> Int {
         zip(slices, slices.dropFirst()).filter { $0.source.target != $1.source.target }.count
+    }
+
+    /// The app or site the user was in right before `start`: work or neutral,
+    /// not a call. Nil when nothing was, or there was a gap.
+    static func place(before start: Date, _ segments: [Segment]) -> AnalyzerPlace? {
+        guard let segment = segments.last(where: { $0.start < start && $0.end <= start.addingTimeInterval(1) }),
+              start.timeIntervalSince(segment.end) <= AnalyzerRules.sameEventGap,
+              segment.kind != .distraction, !segment.isCall else { return nil }
+        return AnalyzerPlace(name: segment.name, target: segment.target, isSite: segment.isSite, bundleId: segment.bundleId,
+                             isDistraction: false, seconds: segment.duration)
     }
 
     private static func places(_ slices: [Slice]) -> [AnalyzerPlace] {

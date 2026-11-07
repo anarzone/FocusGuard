@@ -22,6 +22,8 @@ final class DecisionLog {
         case browserBlock
         /// A wait on a tool: reached for a distraction in it, and how it ended.
         case wait
+        /// The Analyzer: a moment ruled out as not a distraction, or put back.
+        case analyzer
     }
 
     struct Entry: Codable, Equatable {

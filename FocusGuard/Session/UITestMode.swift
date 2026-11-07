@@ -31,6 +31,7 @@ enum UITestMode {
         case "empty": return
         case "big": return seedBig(context, now: now, calendar: calendar)
         case "week": return seedWeek(context, now: now, calendar: calendar)
+        case "analyzer": return MainActor.assumeIsolated { seedAnalyzer(context, now: now, calendar: calendar) }
         case "limits":
             for (index, site) in ["first.example", "second.example", "third.example"].enumerated() {
                 context.insert(DailyLimit(target: site, isSite: true, name: site, minutes: 30,
@@ -107,6 +108,48 @@ enum UITestMode {
         }
         try? context.save()
         WeekProjectStore().save(WeekProjectSettings(clients: ["Onboarding": "Acme", "Login": "Acme", "Pricing": "Acme"]))
+    }
+
+    /// Three weeks of work with the same drifts again and again: x.com while
+    /// Claude Code works, YouTube after Slack. And the waits behind them, for
+    /// the Analyzer's triggers and its waits card.
+    @MainActor
+    private static func seedAnalyzer(_ context: ModelContext, now: Date, calendar: Calendar) {
+        let today = calendar.startOfDay(for: now)
+        func add(_ start: Date, _ minutes: Double, _ app: String, site: String? = nil, title: String? = nil, _ kind: Classification) {
+            let event = ActivityEvent(startedAt: start, endedAt: start.addingTimeInterval(minutes * 60),
+                                      bundleIdentifier: site == nil ? "com.example.\(app)" : "com.google.Chrome",
+                                      appName: site == nil ? app : "Google Chrome", url: site.map { "https://\($0)/" })
+            event.windowTitle = title
+            event.classification = kind
+            context.insert(event)
+        }
+        var made = 0
+        for back in 1...21 {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: today),
+                  !calendar.isDateInWeekend(day) else { continue }
+            made += 1
+            let at = { (hour: Double) in day.addingTimeInterval(hour * 3600) }
+            add(at(9), 80, "Xcode", .focus)
+            add(at(10 + 20 / 60), 3, "Terminal", title: "~/Projects/curiplay — claude", .focus)
+            let drift = Double(6 + made % 6)
+            add(at(10 + 23 / 60), drift, "Chrome", site: "x.com", .distraction)
+            WaitLog.shared.add(WaitRecord(start: at(10 + 23 / 60), tool: "Claude Code", project: "Curiplay",
+                                          seconds: drift * 60, drift: drift * 60, to: "x.com"))
+            add(at(10 + (23 + drift) / 60), 90, "Xcode", .focus)
+            if made % 2 == 0 {
+                add(at(12), 3, "Slack", .neutral)
+                add(at(12 + 3 / 60), 8, "Chrome", site: "youtube.com", .distraction)
+            }
+            add(at(12.25), 75, "Xcode", .focus)
+            for (index, hour) in [14.0, 14.5, 15.0].enumerated() {
+                let tool = index == 1 ? "Codex" : "Claude Code"
+                WaitLog.shared.add(WaitRecord(start: at(hour), tool: tool, project: index == 2 ? "FocusGuard" : "Curiplay",
+                                              seconds: 95, drift: 0))
+            }
+            add(at(14), 120, "Xcode", .focus)
+        }
+        try? context.save()
     }
 
     /// Three years of long days under long names: what the pages have to

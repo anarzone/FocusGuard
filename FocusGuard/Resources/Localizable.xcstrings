@@ -113,6 +113,29 @@
         }
       }
     },
+    "%@ after %@" : {
+      "comment" : "Analyzer trigger: the distraction, then the app before it",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ after %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ nach %2$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ sonra %1$@"
+          }
+        }
+      }
+    },
     "%@ are back" : {
       "comment" : "Two or three apps were brought back to the front",
       "localizations" : {
@@ -143,6 +166,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ um %2$@"
+          }
+        }
+      }
+    },
+    "%@ came right after %@, with no work in between. Seen on %lld of %lld days." : {
+      "comment" : "Analyzer: the distraction, the app before it, then days seen and working days",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ came right after %2$@, with no work in between. Seen on %3$lld of %4$lld days."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ kam direkt nach %2$@, ohne Arbeit dazwischen. An %3$lld von %4$lld Tagen gesehen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ arada iş olmadan %2$@ dərhal sonra gəldi. %4$lld gündən %3$lld günündə görüldü."
           }
         }
       }
@@ -2871,6 +2917,29 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ were your strongest.| %2$@ ran at %3$@."
+          }
+        }
+      }
+    },
+    "%@ while you wait on %@" : {
+      "comment" : "Analyzer trigger: the site, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ while you wait on %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, während du auf %2$@ wartest"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ gözləyərkən %1$@"
           }
         }
       }
@@ -8299,6 +8368,29 @@
         }
       }
     },
+    "%lld stayed · %lld drifted" : {
+      "comment" : "Analyzer: waits stayed with, then drifted",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld stayed · %2$lld drifted"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld geblieben · %2$lld abgeschweift"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld qaldı · %2$lld yayındı"
+          }
+        }
+      }
+    },
     "%lld switches" : {
       "localizations" : {
         "az" : {
@@ -8702,6 +8794,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld Sek"
+          }
+        }
+      }
+    },
+    "%lld×" : {
+      "comment" : "How many times a trigger happened: 14×",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld×"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld×"
           }
         }
       }
@@ -9753,6 +9862,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "an einem typischen Tag"
+          }
+        }
+      }
+    },
+    "A wait takes about %@; a drift lasts %@." : {
+      "comment" : "Analyzer: the usual wait, then the usual drift",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A wait takes about %1$@; a drift lasts %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Wartezeit dauert etwa %1$@, ein Abschweifen %2$@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləmə təxminən %1$@ çəkir; yayınma %2$@ davam edir."
           }
         }
       }
@@ -16779,6 +16911,29 @@
         }
       }
     },
+    "Each time, %@ was working: you had just left it, and %@ came within a minute and a half. Seen on %lld of %lld days." : {
+      "comment" : "Analyzer: the tool, the site, then days seen and working days",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each time, %1$@ was working: you had just left it, and %2$@ came within a minute and a half. Seen on %3$lld of %4$lld days."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal arbeitete %1$@: Du hattest es gerade verlassen, und %2$@ kam innerhalb von anderthalb Minuten. An %3$lld von %4$lld Tagen gesehen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər dəfə %1$@ işləyirdi: siz onu təzəcə tərk etmişdiniz və bir yarım dəqiqə ərzində %2$@ gəldi. %4$lld gündən %3$lld günündə görüldü."
+          }
+        }
+      }
+    },
     "Earlier hours" : {
       "localizations" : {
         "az" : {
@@ -16823,6 +16978,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Heute, etwas früher"
+          }
+        }
+      }
+    },
+    "Early: could change" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Früh: kann sich noch ändern"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erkən: dəyişə bilər"
           }
         }
       }
@@ -17955,6 +18126,22 @@
         }
       }
     },
+    "Fairly sure" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziemlich sicher"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kifayət qədər əmin"
+          }
+        }
+      }
+    },
     "Few and quiet." : {
       "localizations" : {
         "az" : {
@@ -18035,6 +18222,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Günlər və layihələr üzrə fokus"
+          }
+        }
+      }
+    },
+    "Focus ended on %@, with nothing just before it. Seen on %lld of %lld days." : {
+      "comment" : "Analyzer: the distraction, then days seen and working days",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus ended on %1$@, with nothing just before it. Seen on %2$lld of %3$lld days."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Fokus endete auf %1$@, ohne etwas direkt davor. An %2$lld von %3$lld Tagen gesehen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diqqət %1$@ üzərində bitdi, ondan dərhal əvvəl heç nə yox idi. %3$lld gündən %2$lld günündə görüldü."
           }
         }
       }
@@ -26553,6 +26763,29 @@
         }
       }
     },
+    "Next time you open %@ while %@ works, FocusGuard will warn you what it cost here." : {
+      "comment" : "Analyzer: what FocusGuard now does about a wait trigger; the site, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next time you open %1$@ while %2$@ works, FocusGuard will warn you what it cost here."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du das nächste Mal %1$@ öffnest, während %2$@ arbeitet, warnt dich FocusGuard, was es dich hier gekostet hat."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti dəfə %2$@ işləyərkən %1$@ açsanız, FocusGuard bunun burada nəyə başa gəldiyini xəbərdar edəcək."
+          }
+        }
+      }
+    },
     "Next track" : {
       "localizations" : {
         "az" : {
@@ -27455,6 +27688,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keine. Limits lassen sich nur für morgen ändern"
+          }
+        }
+      }
+    },
+    "Not a distraction" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ablenkung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayındırıcı deyil"
           }
         }
       }
@@ -33090,6 +33339,23 @@
         }
       }
     },
+    "Ruled-out moments don’t count here." : {
+      "comment" : "Analyzer: after the user said a moment wasn't a distraction",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgeschlossene Momente zählen hier nicht."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çıxarılmış anlar burada sayılmır."
+          }
+        }
+      }
+    },
     "Rules decide how new activity is sorted. Yours win over built-in ones." : {
       "localizations" : {
         "az" : {
@@ -37421,6 +37687,22 @@
         }
       }
     },
+    "Stayed with it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dabeigeblieben"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İşdə qaldı"
+          }
+        }
+      }
+    },
     "Stays on after this week" : {
       "localizations" : {
         "az" : {
@@ -38094,6 +38376,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "sonntags"
+          }
+        }
+      }
+    },
+    "Sure: seen on most days" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sicher: an den meisten Tagen gesehen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əmin: əksər günlərdə görüldü"
           }
         }
       }
@@ -40510,6 +40808,22 @@
         }
       }
     },
+    "Times a day: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mal am Tag: %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gündə neçə dəfə: %@"
+          }
+        }
+      }
+    },
     "Times it happened" : {
       "localizations" : {
         "az" : {
@@ -42427,6 +42741,23 @@
         }
       }
     },
+    "Waiting on %@" : {
+      "comment" : "Analyzer chip: a tool that was working",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten auf %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ gözlənilir"
+          }
+        }
+      }
+    },
     "Walk to another room and back." : {
       "localizations" : {
         "az" : {
@@ -42985,6 +43316,23 @@
         }
       }
     },
+    "What pulls you away" : {
+      "comment" : "Analyzer card: what the user was doing right before losing focus",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was dich wegzieht"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizi nə yayındırır"
+          }
+        }
+      }
+    },
     "What really happened?" : {
       "localizations" : {
         "az" : {
@@ -43045,6 +43393,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bu nə idi?"
+          }
+        }
+      }
+    },
+    "What you did right before you drifted" : {
+      "comment" : "Analyzer card subtitle",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du direkt vor dem Abschweifen gemacht hast"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınmazdan dərhal əvvəl nə edirdiniz"
           }
         }
       }
@@ -43645,6 +44010,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Solange der Fokus aktiv ist"
+          }
+        }
+      }
+    },
+    "While your tools work" : {
+      "comment" : "Analyzer card: waits on an AI agent, a chat or a build",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während deine Werkzeuge arbeiten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alətləriniz işləyərkən"
           }
         }
       }
@@ -44449,6 +44831,29 @@
         }
       }
     },
+    "You drift most while %@ works: %lld of %lld waits." : {
+      "comment" : "Analyzer: the tool, then drifted waits of all its waits",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You drift most while %1$@ works: %2$lld of %3$lld waits."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Am meisten schweifst du ab, während %1$@ arbeitet: bei %2$lld von %3$lld Wartezeiten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən çox %1$@ işləyərkən yayınırsınız: %3$lld gözləmədən %2$lld."
+          }
+        }
+      }
+    },
     "You drifted %@ %@, on %lld days tracked." : {
       "comment" : "Plural on the number of days: 1 day / 2 days. When: between 12:00 and 17:00, or in the last 4 weeks",
       "localizations" : {
@@ -44688,6 +45093,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du hast nicht ohne Grund angefangen. Mach weiter."
+          }
+        }
+      }
+    },
+    "You stayed with %lld of %lld waits." : {
+      "comment" : "Analyzer: waits stayed with, of all waits",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You stayed with %1$lld of %2$lld waits."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei %1$lld von %2$lld Wartezeiten bist du dabeigeblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld gözləmədən %1$lld-də işdə qaldınız."
           }
         }
       }
