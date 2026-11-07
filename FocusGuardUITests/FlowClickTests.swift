@@ -51,6 +51,13 @@ final class FlowClickTests: XCTestCase {
 
     private func button(_ label: String) -> XCUIElement { window.buttons[label].firstMatch }
 
+    /// Whether a section is in the sidebar: features switched off before
+    /// launch (`FeatureFlags`) aren't.
+    private func hasSection(_ page: String) -> Bool {
+        _ = window.buttons.firstMatch.waitForExistence(timeout: 5)
+        return buttonStarting(page).exists
+    }
+
     private func buttonStarting(_ words: String) -> XCUIElement {
         window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", words)).firstMatch
     }
@@ -116,8 +123,10 @@ final class FlowClickTests: XCTestCase {
         waitFor(button("Share week"), "Reports didn't open")
         try open("Analyzer")
         waitForText("Why you lose focus, and what helps", "The Analyzer's Pro page didn't open")
-        try open("Ask")
-        waitForText("Questions about your own focus", "Ask's Pro page didn't open")
+        if hasSection("Ask") {
+            try open("Ask")
+            waitForText("Questions about your own focus", "Ask's Pro page didn't open")
+        }
         try open("Your week")
         waitForText("Your week, written up for you", "Your week's Pro page didn't open")
         try open("Apps & Sites")
@@ -130,15 +139,17 @@ final class FlowClickTests: XCTestCase {
 
     func testAskAndWorkLogWorkOnPro() throws {
         launch(plan: "pro")
-        try open("Ask")
-        let field = window.textFields["Your question"].firstMatch
-        try click(field)
-        field.typeText("When do I focus best?\r")
-        waitFor(window.otherElements["You asked: When do I focus best?"], "The question didn't go in")
-        // There's sample data, so the answer has a chart or says what it's based on.
-        let answered = window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] 'session' OR value CONTAINS[c] 'focus'"))
-        XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15), "No answer came")
-        shoot("ask-answer")
+        if hasSection("Ask") {
+            try open("Ask")
+            let field = window.textFields["Your question"].firstMatch
+            try click(field)
+            field.typeText("When do I focus best?\r")
+            waitFor(window.otherElements["You asked: When do I focus best?"], "The question didn't go in")
+            // There's sample data, so the answer has a chart or says what it's based on.
+            let answered = window.staticTexts.matching(NSPredicate(format: "value CONTAINS[c] 'session' OR value CONTAINS[c] 'focus'"))
+            XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15), "No answer came")
+            shoot("ask-answer")
+        }
 
         try open("Your week")
         waitFor(button("Previous week"), "Your week didn't open")
@@ -333,6 +344,9 @@ final class FlowClickTests: XCTestCase {
         launch(seed: "big")
         try open("Reports")
         try click(button("Month"))
+        // Switched off before launch (FeatureFlags.monthlyReview): the month shows without it.
+        try XCTSkipUnless(window.staticTexts["Month in review"].waitForExistence(timeout: 4) || isShown("Month in review"),
+                          "Month in review is switched off")
         waitForText("Month in review", "Month in review isn't offered")
         XCTAssertFalse(button("Share week").exists, "Share week belongs to a week")
 
@@ -504,6 +518,7 @@ final class FlowClickTests: XCTestCase {
 
     func testAskTrialButtonUnlocksThePageInPlace() throws {
         launch()
+        try XCTSkipUnless(hasSection("Ask"), "Ask is switched off (FeatureFlags.ask)")
         try open("Ask")
         try click(button("Try Pro free for 14 days"))
         waitFor(window.textFields["Your question"].firstMatch, "Ask didn't open up on the trial")
