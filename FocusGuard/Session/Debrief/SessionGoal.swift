@@ -29,6 +29,16 @@ struct GoalSuggestion: Equatable, Identifiable {
 
     var id: String { "\(source)-\(text)" }
 
+    /// Its kind for the decision log, never its text: "lastGoal", "task.linear".
+    var logKind: String {
+        switch source {
+        case .lastGoal:             return "lastGoal"
+        case .calendar:             return "calendar"
+        case .task(let from, _, _): return "task.\(from.rawValue)"
+        case .git:                  return "git"
+        }
+    }
+
     /// In the field's order: up to two tasks (best first, from any
     /// source), the calendar event, the Git branch, then the unfinished
     /// last goal. A text already offered isn't offered again.

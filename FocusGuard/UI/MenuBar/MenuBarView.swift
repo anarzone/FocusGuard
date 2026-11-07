@@ -247,7 +247,12 @@ struct MenuBarView: View {
                 if FeatureFlags.debrief {
                     if entitlements.isUnlocked(.debrief) {
                         SessionGoalField(goal: $sessionGoal, suggestions: goalSuggestions,
-                                         onPick: { appState.integrations.goalPicked($0) }, onSubmit: start)
+                                         onPick: { suggestion in
+                                             appState.integrations.goalPicked(suggestion)
+                                             DecisionLog.shared.notePicked(kind: suggestion.logKind,
+                                                                           position: goalSuggestions.firstIndex(of: suggestion) ?? 0,
+                                                                           text: suggestion.text)
+                                         }, onSubmit: start)
                     } else {
                         LockedProRow(feature: .debrief, title: String(localized: "Add a goal for this session"),
                                      detail: String(localized: "Say what the session is for. When it ends, the debrief checks whether you got there."),
@@ -340,6 +345,7 @@ struct MenuBarView: View {
 
     private func start() {
         lastSessionMinutes = minutes
+        DecisionLog.shared.noteOffered(goalSuggestions.map(\.logKind))
         appState.sessionManager.startSession(
             label: defaultLabel.isEmpty ? nil : defaultLabel,
             plannedDurationMinutes: minutes

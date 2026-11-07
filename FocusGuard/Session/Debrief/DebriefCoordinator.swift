@@ -182,6 +182,7 @@ final class DebriefCoordinator {
         guard session.goal != nil else { return }
         session.goalVerdict = verdict
         Persistence.save(context)
+        DecisionLog.shared.record(.verdict, verdict.rawValue, session: session.id)
         onVerdict(session, true)
     }
 

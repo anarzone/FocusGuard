@@ -49,6 +49,7 @@ enum DataEraser {
         WeeklyCoach.shared.erase()
         MonthReviewer.shared.erase()
         Task { await FocusAnalyzer.shared.erase() }
+        DecisionLog.shared.erase()
         WeekEditStore().erase()
         WeekColourStore().erase()
         WeekBlockerStore().erase()

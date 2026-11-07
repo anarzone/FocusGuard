@@ -237,10 +237,13 @@ final class ExtensionBridge {
             case .failure(let reason): reply(id, requestId, error: reason.rawValue)
             }
         case .allowForWork(let requestId, let host):
-            reply(id, requestId, error: allowForWork(host: host))
+            let refusal = allowForWork(host: host)
+            if refusal == nil { DecisionLog.shared.record(.browserBlock, "forWork") }
+            reply(id, requestId, error: refusal)
         case .requestExtraTime(let requestId, let site):
             reply(id, requestId, error: takeExtraTime(site: site))
         case .blockedVisit(let host):
+            DecisionLog.shared.record(.browserBlock, "shown")
             resetCountersIfNeeded()
             blockShownAt[Self.bare(host)] = .now
             if appState?.sessionManager.currentSession != nil { stoppedVisits += 1 }
@@ -307,6 +310,7 @@ final class ExtensionBridge {
               let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first
         else { return nil }
         app.activate()
+        DecisionLog.shared.record(.browserBlock, "backToWork")
         if let host = appState.backToPage() {
             showTab(host: host, browser: id)
             return host
@@ -349,6 +353,7 @@ final class ExtensionBridge {
         let key = host.lowercased()
         let until = now.addingTimeInterval(policy.passSeconds)
         passes[key] = until
+        DecisionLog.shared.record(.browserBlock, "letThrough")
         grantEnginePass(ActivitySnapshot(
             bundleIdentifier: appState?.tracker.currentSnapshot?.bundleIdentifier ?? "",
             appName: "", windowTitle: nil, url: "https://\(key)/",

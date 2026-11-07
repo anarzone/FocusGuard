@@ -287,7 +287,14 @@ final class ActivityTracker {
 
     /// Looks at what's in front and records it.
     func tick(now: Date = .now) {
-        defer { reschedule() }
+        let started = ContinuousClock.now
+        let interval = DecisionLog.signposter.beginInterval("tick")
+        defer {
+            DecisionLog.signposter.endInterval("tick", interval)
+            let took = ContinuousClock.now - started
+            DecisionLog.shared.noteTick(Double(took.components.seconds) + Double(took.components.attoseconds) / 1e18)
+            reschedule()
+        }
         guard let app = NSWorkspace.shared.frontmostApplication,
               let bundleId = app.bundleIdentifier else { return }
         // While suspended, input since then means someone's using the Mac

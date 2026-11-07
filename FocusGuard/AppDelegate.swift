@@ -154,6 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         appState?.tracker.flush()
         appState?.extensionBridge.stop()
+        DecisionLog.shared.save()
     }
 
     /// Fired when the user clicks the app in Finder or Dock while it's already

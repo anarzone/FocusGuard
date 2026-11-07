@@ -202,6 +202,7 @@ final class AppState {
         manager.onSessionStarted = { [weak self, weak manager] in
             self?.recap = nil
             self?.debriefs.sessionStarted(manager?.currentSession)
+            if let session = manager?.currentSession { DecisionLog.shared.sessionStarted(session.id, goal: session.goal) }
             self?.analyzerSessionStarted(manager?.currentSession)
             self?.integrationsSessionStarted(manager?.currentSession)
             SystemFocusBridge.onSessionStarted()
@@ -253,10 +254,22 @@ final class AppState {
         blockOverlay.backToAppProvider = { [weak self] in self?.backToAppName() }
         classifier.isBlockListLocked = { [weak self] in self?.isStrictLocked ?? false }
         smartCategories.attach(tracker: tracker)
-        blockOverlay.onBackToWork = { [weak self] in self?.backToWork() }
-        blockOverlay.onAllowForSession = { [weak self] in self?.allowCurrentDriftForSession() }
-        blockOverlay.onPresent = { [weak self] request in self?.pauseTab(behind: request) }
-        blockOverlay.onLetThrough = { [weak self] in self?.tabPause.letThrough() }
+        blockOverlay.onBackToWork = { [weak self] in
+            DecisionLog.shared.record(.block, "backToWork")
+            self?.backToWork()
+        }
+        blockOverlay.onAllowForSession = { [weak self] in
+            DecisionLog.shared.record(.block, "forWork")
+            self?.allowCurrentDriftForSession()
+        }
+        blockOverlay.onPresent = { [weak self] request in
+            DecisionLog.shared.record(.block, "shown")
+            self?.pauseTab(behind: request)
+        }
+        blockOverlay.onLetThrough = { [weak self] in
+            DecisionLog.shared.record(.block, "letThrough")
+            self?.tabPause.letThrough()
+        }
         wireMoments(blockOverlay: blockOverlay)
 
         // Browser extension: its tab reports replace AppleScript while it's

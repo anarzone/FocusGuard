@@ -118,6 +118,7 @@ final class IslandController {
     func tick() {
         switch queue.step(conditions(), allowed: isAllowed) {
         case .showed(let moment):
+            DecisionLog.shared.record(.island, "shown", detail: moment.kind.rawValue)
             surface.show(moment, open: queue.isOpen, now: clock())
             surface.announce(moment.announcement(at: clock()), urgent: moment.kind == .drift || moment.kind == .limit)
             if IslandSettings.hasSound(moment.kind), defaults.bool(forKey: IslandSettings.softSound) { playSound(moment.kind) }
@@ -156,19 +157,22 @@ final class IslandController {
     }
 
     func press(_ button: IslandButton) {
-        if button.command == nil, queue.current?.moment.kind == .weekReady {
+        let kind = queue.current?.moment.kind
+        DecisionLog.shared.record(.island, button.command == nil ? "dismissed" : "pressed", detail: kind?.rawValue)
+        if button.command == nil, kind == .weekReady {
             queue.tuck(now: clock())
             refresh()
             return
         }
-        closeCurrent()
+        if let key = queue.current?.moment.key { remove(key: key) }
         if let command = button.command { perform(command) }
     }
 
     /// The close button.
     func closeCurrent() {
-        guard let key = queue.current?.moment.key else { return }
-        remove(key: key)
+        guard let moment = queue.current?.moment else { return }
+        DecisionLog.shared.record(.island, "closed", detail: moment.kind.rawValue)
+        remove(key: moment.key)
     }
 
     private func refresh() {

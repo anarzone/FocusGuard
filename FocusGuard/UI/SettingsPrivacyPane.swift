@@ -21,6 +21,37 @@ struct SettingsPrivacyPane: View {
 
     private var context: ModelContext { appState.container.mainContext }
 
+    @State private var decisions = DecisionLog.shared.summary()
+
+    /// How FocusGuard's own choices are doing: counts from the decision log.
+    private var decisionsSection: some View {
+        SettingsSection(String(localized: "How its choices are doing", comment: "Settings section: how often FocusGuard's suggestions, cards and blocks worked, last 7 days")) {
+            decisionRow(String(localized: "Goal picked from a suggestion"), decisions.fromSuggestion, decisions.offeredSuggestions)
+            SettingsDivider()
+            decisionRow(String(localized: "Goals done"), decisions.done, decisions.verdicts)
+            SettingsDivider()
+            decisionRow(String(localized: "Island cards answered"), decisions.cardsAnswered, decisions.cardsShown)
+            SettingsDivider()
+            decisionRow(String(localized: "Blocks you went back to work from"), decisions.backToWork, decisions.blocksShown)
+            SettingsDivider()
+            SettingsRow(title: String(localized: "Each look at the app in front"),
+                        detail: String(localized: "Counts from the last 7 days, kept on this Mac only: never goals, titles or sites.")) {
+                Text(String(localized: "\(String(format: "%.1f", decisions.timing.average * 1000)) ms", comment: "How long something took, in milliseconds"))
+                    .font(.system(size: 12).monospacedDigit())
+                    .foregroundStyle(Theme.bodyText)
+            }
+        }
+        .onAppear { decisions = DecisionLog.shared.summary() }
+    }
+
+    private func decisionRow(_ title: String, _ count: Int, _ of: Int) -> some View {
+        SettingsRow(title: title) {
+            Text(of == 0 ? String(localized: "Nothing yet") : String(localized: "\(count) of \(of)", comment: "A count out of a total: 3 of 40"))
+                .font(.system(size: 12).monospacedDigit())
+                .foregroundStyle(Theme.bodyText)
+        }
+    }
+
     var body: some View {
         SettingsColumns {
             SettingsSection(String(localized: "Kept on this Mac")) {
@@ -39,6 +70,7 @@ struct SettingsPrivacyPane: View {
                 .padding(.vertical, 12)
             }
             titlesSection
+            decisionsSection
             SettingsSection(String(localized: "Something wrong?")) {
                 SettingsRow(title: String(localized: "Send diagnostics"),
                             detail: String(localized: "App logs and settings only, never your activity, titles or sites. You see it all before it's sent.")) {
@@ -257,6 +289,7 @@ enum DiagnosticsReport {
                           ("Daily limits", "\(appState.limits.statuses.count)")]),
             ("Browser extension", [("Connected browsers", "\(appState.extensionBridge.connectedBrowsers.count)")]),
             ("Energy, this run", EnergyUsage.sinceLaunch()?.rows ?? [("Usage", "unavailable")]),
+            ("Decisions, last 7 days", DecisionLog.shared.summary().rows),
         ]
     }
 
