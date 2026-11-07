@@ -271,6 +271,7 @@ actor StatsStore {
 
     /// The Analyzer page: the last 4 weeks of finished days against the 4 before.
     func analyzerReport(now: Date, weekendsCount: Bool, muted: Set<AnalyzerCause>, busy: [DateInterval],
+                        waits: [WaitRecord] = [], ruledOut: Set<String> = [],
                         calendar: Calendar = .current) -> AnalyzerReport {
         read { context in
             let today = calendar.startOfDay(for: now)
@@ -280,7 +281,8 @@ actor StatsStore {
             return AnalyzerReport.make(period: DateInterval(start: from, end: today),
                                        days: analyzerDays(context, days: summaries.days(from: from, to: today), busy: busy, calendar: calendar),
                                        before: analyzerDays(context, days: summaries.days(from: earlier, to: from), busy: busy, calendar: calendar),
-                                       muted: muted, weekendsCount: weekendsCount, calendar: calendar)
+                                       muted: muted, weekendsCount: weekendsCount, waits: waits, ruledOut: ruledOut,
+                                       calendar: calendar)
         }
     }
 

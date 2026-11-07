@@ -43,6 +43,7 @@ private struct AnalyzerView: View {
     @Bindable var appState: AppState
     var analyzer: FocusAnalyzer = .shared
     @State private var report: AnalyzerReport?
+    @State private var waits = AnalyzerWaitsSummary()
     @State private var sheet: AnalyzerSheet?
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
 
@@ -52,9 +53,14 @@ private struct AnalyzerView: View {
     }
 
     var body: some View {
-        AnalyzerContent(report: report, analyzer: analyzer, openSheet: { sheet = $0 },
+        AnalyzerContent(report: report, analyzer: analyzer, waits: waits, openSheet: { sheet = $0 },
                         undoCorrection: { cause in
                             analyzer.restore(cause)
+                            Task { await reload() }
+                        },
+                        ruleOut: { moment in
+                            AnalyzerRuledOut.toggle(moment)
+                            DecisionLog.shared.record(.analyzer, moment.isRuledOut ? "restored" : "ruledOut")
                             Task { await reload() }
                         })
             .task(id: analyzer.muted) { await reload() }
@@ -74,6 +80,8 @@ private struct AnalyzerView: View {
     }
 
     private func reload() async {
+        let week = Date.now.addingTimeInterval(-7 * 86_400)
+        waits = AnalyzerWaitsSummary.make(WaitLog.shared.records(from: week, to: .now))
         let fresh = await appState.analyzerReport(weekendsCount: weekendsCount)
         appState.windowPages.analyzer = fresh
         report = fresh
@@ -108,9 +116,11 @@ private struct AnalyzerView: View {
 struct AnalyzerContent: View {
     let report: AnalyzerReport?
     let analyzer: FocusAnalyzer
+    var waits = AnalyzerWaitsSummary()
     var now: Date = .now
     var openSheet: (AnalyzerSheet) -> Void = { _ in }
     var undoCorrection: (AnalyzerCause) -> Void = { _ in }
+    var ruleOut: (AnalyzerTrigger.Moment) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -120,6 +130,15 @@ struct AnalyzerContent: View {
             ScrollView {
                 Group {
                     if let report {
+                        // What set it off and what the waits turned into come
+                        // first: they say what to do differently.
+                        if !report.triggers.isEmpty {
+                            AnalyzerTriggersCard(triggers: report.triggers, workingDays: report.workingDays, ruleOut: ruleOut)
+                                .padding(.bottom, 10)
+                        }
+                        if waits.waits > 0 {
+                            AnalyzerWaitsCard(summary: waits).padding(.bottom, 10)
+                        }
                         if case .learning(let left) = report.finding {
                             AnalyzerEarlyBody(report: report, daysLeft: left)
                         } else {
@@ -148,7 +167,10 @@ struct AnalyzerContent: View {
 
     private func fullBody(_ report: AnalyzerReport) -> some View {
         VStack(spacing: 10) {
-            AnalyzerFindingCard(report: report, openSheet: openSheet)
+            // "No clear reason yet" says nothing next to triggers that are clear.
+            if report.finding != .nothingClear || report.triggers.isEmpty {
+                AnalyzerFindingCard(report: report, openSheet: openSheet)
+            }
             AnalyzerMeasureGrid(measures: report.measures, previous: report.previous, early: false)
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 10) {

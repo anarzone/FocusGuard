@@ -88,11 +88,14 @@ struct AnalyzerReport: Equatable, Sendable {
     var rows: [AnalyzerCauseRow] = []
     var finding: AnalyzerFinding
     var details: [AnalyzerCause: AnalyzerCauseDetail] = [:]
+    /// What set the lost focus off, most time first (`AnalyzerTriggers`).
+    var triggers: [AnalyzerTrigger] = []
 
     /// Everything from the rules: `days` and `before` are the period's and the
     /// one before's days with anything tracked, `muted` what the person ruled out.
     static func make(period: DateInterval, days: [AnalyzerDay], before: [AnalyzerDay], muted: Set<AnalyzerCause>,
-                     weekendsCount: Bool, calendar: Calendar = .current) -> AnalyzerReport {
+                     weekendsCount: Bool, waits: [WaitRecord] = [], ruledOut: Set<String> = [],
+                     calendar: Calendar = .current) -> AnalyzerReport {
         let working = days.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }.sorted { $0.day < $1.day }
         let earlier = before.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }
         var report = AnalyzerReport(period: period, workingDays: working.count,
@@ -101,9 +104,9 @@ struct AnalyzerReport: Equatable, Sendable {
         if working.count >= AnalyzerRules.compareDays, earlier.count >= AnalyzerRules.compareDays {
             report.previous = AnalyzerMeasures.make(earlier)
         }
-        guard working.count >= AnalyzerRules.namingDays else { return report }
-
         let labelled = label(working)
+        report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, calendar: calendar)
+        guard working.count >= AnalyzerRules.namingDays else { return report }
         report.rows = rows(labelled, muted: muted)
         report.finding = finding(report.rows, workingDays: labelled.count)
         for row in report.rows {

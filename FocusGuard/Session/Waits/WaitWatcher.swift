@@ -43,7 +43,7 @@ struct WaitReach: Equatable {
 }
 
 /// One wait, once it's over: what it turned into.
-struct WaitRecord: Codable, Equatable {
+struct WaitRecord: Codable, Equatable, Sendable {
     let start: Date
     let tool: String
     var project: String?
