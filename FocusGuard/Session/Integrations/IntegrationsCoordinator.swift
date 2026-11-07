@@ -141,6 +141,8 @@ final class IntegrationsCoordinator {
         async let tasks: Void = refreshTasks(now: now)
         await refreshGitGoal()
         _ = await tasks
+        // Again with the branch now known, which can move a task up.
+        publishTasks(now: now)
     }
 
     private func refreshGitGoal() async {
@@ -257,8 +259,13 @@ final class IntegrationsCoordinator {
         }
     }
 
+    /// What's being worked on, to put the tasks that fit it first.
+    private var workContext: [String] {
+        [gitGoal?.repo, gitGoal?.branch, frontWindow()?.title].compactMap { $0 }
+    }
+
     private func publishTasks(now: Date) {
-        let ordered = TaskGoals.ordered(tasksBySource.values.flatMap { $0 }, now: now)
+        let ordered = TaskGoals.ordered(tasksBySource.values.flatMap { $0 }, now: now, context: workContext)
         if ordered != taskGoals { taskGoals = ordered }
     }
 
@@ -339,7 +346,7 @@ final class IntegrationsCoordinator {
         if ticked { tasksBySource[source]?.removeAll { $0.isSame(as: link.task) } }
         if isOn(source), let open = try? await store.openTasks() { tasksBySource[source] = open }
         publishTasks(now: now)
-        nextTasks[id] = ticked ? TaskGoals.next(after: link.task, in: taskGoals, now: now) : nil
+        nextTasks[id] = ticked ? TaskGoals.next(after: link.task, in: taskGoals, now: now, context: workContext) : nil
     }
 
     private func saveLinks() {

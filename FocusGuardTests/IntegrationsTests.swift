@@ -470,6 +470,8 @@ final class IntegrationsCoordinatorTests: XCTestCase {
         if pro { entitlements.startTrialIfNeeded(for: .taskGoals) }
         defaults.set(remindersOn, forKey: IntegrationSettings.reminders)
         defaults.set(false, forKey: IntegrationSettings.gitBranch)
+        // Reminders are only read from lists the user picked.
+        defaults.set(["work"], forKey: IntegrationSettings.reminderLists)
         let coordinator = IntegrationsCoordinator(calendar: calendarStore, reminders: reminderStore,
                                                   tasks: [ReminderTasks(store: reminderStore, defaults: defaults)],
                                                   entitlements: entitlements, defaults: defaults)
