@@ -129,9 +129,9 @@ struct MenuBarView: View {
 
     // MARK: - Header
 
-    /// Title on one row, the subtitle on its own row below so it never
-    /// truncates. The music button, when music is on, sits on the left, the
-    /// side its pane opens from. The window has everything else.
+    /// Buttons and title on one row, the subtitle on its own row below so it
+    /// never truncates. The music button sits on the left, the side its pane
+    /// opens from; the other panes' buttons on the right.
     private func header(for phase: MenuPhase) -> some View {
         let (glyph, tint, title, subtitle) = headerContent(for: phase)
         let hasMusic = FeatureFlags.music && !appState.music.availableServices.isEmpty
@@ -146,6 +146,7 @@ struct MenuBarView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
                 Spacer(minLength: 4)
+                PaneButtons(open: $openPane)
             }
             .zIndex(1)
             Text(subtitle)
@@ -260,6 +261,8 @@ struct MenuBarView: View {
                 CapsuleButton(title: startTitle, prominent: true) { start() }
                     .padding(.horizontal, 4)
             }
+
+            NowRow(snapshot: appState.tracker.currentSnapshot, reachedLimit: limit?.isUsedUp == true ? limit : nil)
         }
     }
 
@@ -731,10 +734,28 @@ struct MenuBarView: View {
                     .padding(.horizontal, 10)
                     .frame(height: 24)
             }
+            if let recents = appState.island?.recents {
+                MenuRecentList(recents: recents, isBusy: appState.sessionManager.currentSession != nil || appState.breakManager.isOnBreak) { item, button in
+                    dismiss()
+                    recents.noteAnswered(key: item.key)
+                    if let command = button.command { appState.perform(command) }
+                }
+            }
+            if FeatureFlags.pickUp, !appState.pickUp.menuPlaces.isEmpty, !appState.breakManager.isOnBreak {
+                MenuItemRow(title: String(localized: "Where you left off")) {
+                    dismiss()
+                    Task { await appState.pickUp.showLastPlaces() }
+                }
+            }
             MenuItemRow(title: String(localized: "Open FocusGuard")) {
                 dismiss()
                 onOpenMain(.home)
             }
+            MenuItemRow(title: String(localized: "Settings…"), shortcut: "⌘,") {
+                dismiss()
+                onOpenMain(.settings)
+            }
+            MenuSeparator()
             MenuItemRow(title: String(localized: "Quit FocusGuard"), shortcut: "⌘Q") {
                 appState.tracker.flush()
                 NSApplication.shared.terminate(nil)
