@@ -86,21 +86,35 @@ extension TaskItem {
 }
 
 /// Open tasks offered as session goals (Pro), from every source switched
-/// on: the ones due today first, then overdue ones, then ones being worked
-/// on, then ones due later, then the rest, oldest first.
+/// on. What fits the work in front comes first: a task that names the repo,
+/// branch or window being worked in, then one already in progress, then one
+/// due today, then one overdue by a week at most, then one due later, then
+/// the rest, oldest first. Overdue by more than a week isn't offered: it's
+/// been put off, and leading with it is noise.
 enum TaskGoals {
     /// At most this many are offered under the goal field, whatever the source.
     static let offered = 2
+    /// Overdue by more than this, a task stops being offered.
+    static let staleAfterDays = 7
 
-    static func ordered(_ items: [TaskItem], now: Date, calendar: Calendar = .current) -> [TaskItem] {
+    /// - Parameter context: what's being worked on: the repo, the branch, the
+    ///   front window's title.
+    static func ordered(_ items: [TaskItem], now: Date, context: [String] = [], calendar: Calendar = .current) -> [TaskItem] {
         let today = calendar.startOfDay(for: now)
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today.addingTimeInterval(86_400)
+        let stale = calendar.date(byAdding: .day, value: -staleAfterDays, to: today) ?? today
+        let words = contextWords(context)
         func rank(_ item: TaskItem) -> Int {
-            if let due = item.due, due < tomorrow { return due < today ? 1 : 0 }
-            if item.started { return 2 }
-            return item.due == nil ? 4 : 3
+            if !words.isEmpty, !Self.words(in: "\(item.title) \(item.list)").isDisjoint(with: words) { return 0 }
+            if item.started { return 1 }
+            if let due = item.due, due < tomorrow { return due < today ? 3 : 2 }
+            return item.due == nil ? 5 : 4
         }
-        return items.sorted { a, b in
+        return items.filter { item in
+            guard let due = item.due, !item.started else { return true }
+            return due >= stale
+        }
+        .sorted { a, b in
             let (ra, rb) = (rank(a), rank(b))
             if ra != rb { return ra < rb }
             if let da = a.due, let db = b.due, da != db { return da < db }
@@ -112,6 +126,28 @@ enum TaskGoals {
         }
     }
 
+    /// Words that can tie a task to the work: four letters or more, or an
+    /// issue number, lowercased, without the everyday ones.
+    static func words(in text: String) -> Set<String> {
+        let parts = text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        return Set(parts.filter { word in
+            guard !common.contains(word) else { return false }
+            return word.count >= 4 || (word.count >= 2 && word.allSatisfy(\.isNumber))
+        })
+    }
+
+    private static func contextWords(_ context: [String]) -> Set<String> {
+        context.reduce(into: Set<String>()) { $0.formUnion(words(in: $1)) }
+    }
+
+    /// Too common to tie a task to anything.
+    private static let common: Set<String> = [
+        "the", "and", "with", "from", "this", "that", "into", "about", "when", "your", "have", "will", "make",
+        "main", "master", "develop", "feature", "branch", "task", "tasks", "issue", "issues", "todo", "page",
+        "window", "untitled", "edited", "google", "chrome", "safari", "xcode", "code", "visual", "studio",
+        "inbox", "today", "reminders", "work", "home", "project", "projects", "update", "review",
+    ]
+
     /// "today", "overdue", or nothing.
     static func dueNote(_ item: TaskItem, now: Date, calendar: Calendar = .current) -> String? {
         guard let due = item.due else { return nil }
@@ -120,8 +156,8 @@ enum TaskGoals {
     }
 
     /// The first open task that isn't the one just done.
-    static func next(after done: TaskItem, in items: [TaskItem], now: Date, calendar: Calendar = .current) -> TaskItem? {
-        ordered(items.filter { !$0.isSame(as: done) }, now: now, calendar: calendar).first
+    static func next(after done: TaskItem, in items: [TaskItem], now: Date, context: [String] = [], calendar: Calendar = .current) -> TaskItem? {
+        ordered(items.filter { !$0.isSame(as: done) }, now: now, context: context, calendar: calendar).first
     }
 }
 

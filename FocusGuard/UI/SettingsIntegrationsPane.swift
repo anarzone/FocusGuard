@@ -292,31 +292,28 @@ struct SettingsIntegrationsPane: View {
         }
     }
 
+    /// Only the lists ticked here are read: none until the user picks some.
     private var listsMenu: some View {
         Menu {
-            Toggle("All lists", isOn: Binding(get: { chosenLists.isEmpty }, set: { if $0 { setLists([]) } }))
-            Divider()
             ForEach(lists) { list in
                 Toggle(Self.label(list, among: lists), isOn: Binding(
-                    get: { chosenLists.isEmpty || chosenLists.contains(list.id) },
+                    get: { chosenLists.contains(list.id) },
                     set: { on in setList(list.id, on) }))
             }
         } label: {
-            Text(Self.summary(chosen: chosenLists, of: lists, all: String(localized: "All lists")))
+            Text(Self.summary(chosen: chosenLists, of: lists, all: String(localized: "Choose lists", comment: "Reminders lists: none picked yet")))
         }
         .fixedSize()
     }
 
     private func setList(_ id: String, _ on: Bool) {
-        let all = lists.map(\.id)
-        var chosen = chosenLists.isEmpty ? all : chosenLists
+        var chosen = chosenLists
         if on {
             if !chosen.contains(id) { chosen.append(id) }
         } else {
             chosen.removeAll { $0 == id }
-            guard !chosen.isEmpty else { return }
         }
-        setLists(Set(chosen) == Set(all) ? [] : chosen)
+        setLists(chosen)
     }
 
     private func setLists(_ ids: [String]) {

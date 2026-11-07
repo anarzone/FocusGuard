@@ -13143,6 +13143,23 @@
         }
       }
     },
+    "Choose lists" : {
+      "comment" : "Reminders lists: none picked yet",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listen wählen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siyahıları seçin"
+          }
+        }
+      }
+    },
     "Choose what to exclude" : {
       "localizations" : {
         "az" : {

@@ -210,15 +210,15 @@ final class TaskItemTests: XCTestCase {
             TaskItem(source: .jira, id: "today", title: "ENG-5 Today", list: "ENG", due: at(0), created: nil, state: "1"),
         ]
         XCTAssertEqual(TaskGoals.ordered(items, now: at(10), calendar: berlin).map(\.id),
-                       ["today", "going", "dated", "acme/app#1", "new", "someday"])
+                       ["going", "today", "dated", "acme/app#1", "new", "someday"])
         let offered = GoalSuggestion.make(lastGoal: nil, lastVerdict: nil, calendarTitle: nil,
                                           tasks: TaskGoals.ordered(items, now: at(10), calendar: berlin),
                                           now: at(10), calendar: berlin)
-        XCTAssertEqual(offered.map(\.text), ["ENG-5 Today", "ENG-3 Going"])
+        XCTAssertEqual(offered.map(\.text), ["ENG-3 Going", "ENG-5 Today"])
         XCTAssertEqual(GoalSuggestion(text: "app#1 Old", source: .task(.github, id: "acme/app#1", list: "app")).group, "GitHub · app")
     }
 
-    func testStartedIssuesComeAfterWhatsDueButBeforeTheRest() {
+    func testWorkInProgressComesBeforeWhatsDue() {
         let items = [
             TaskItem(source: .reminders, id: "someday", title: "Someday", list: "", due: nil, created: at(9, day: 1)),
             TaskItem(source: .todoist, id: "later", title: "Next week", list: "Inbox", due: at(9, day: 30), created: nil),
@@ -227,8 +227,56 @@ final class TaskItemTests: XCTestCase {
             TaskItem(source: .todoist, id: "rent", title: "Pay rent", list: "Home", due: at(0), created: nil),
         ]
         XCTAssertEqual(TaskGoals.ordered(items, now: at(10), calendar: berlin).map(\.id),
-                       ["rent", "late", "eng", "later", "someday"])
+                       ["eng", "rent", "late", "later", "someday"])
     }
+
+    func testATaskThatNamesTheWorkInFrontComesFirst() {
+        let items = [
+            TaskItem(source: .todoist, id: "rent", title: "Pay rent", list: "Home", due: at(0), created: nil),
+            TaskItem(source: .linear, id: "eng", title: "ENG-142 Fix login", list: "Engineering", due: nil, created: nil, started: true),
+            TaskItem(source: .github, id: "curi", title: "Character walk cycle", list: "curiplay", due: nil, created: nil),
+        ]
+        let context = ["curiplay", "feature/walk-cycle", "Xcode — Curiplay — Walker.swift"]
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), context: context, calendar: berlin).map(\.id), ["curi", "eng", "rent"])
+        // An issue number in the branch is enough.
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), context: ["eng-142-login"], calendar: berlin).first?.id, "eng")
+        // Everyday words in a window title don't count.
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), context: ["Google Chrome — Inbox"], calendar: berlin).first?.id, "eng")
+    }
+
+    func testTasksOverdueByMoreThanAWeekAreNotOffered() {
+        let items = [
+            TaskItem(source: .reminders, id: "old", title: "Start publishing", list: "Reminders", due: at(9, day: 10), created: nil),
+            TaskItem(source: .reminders, id: "recent", title: "Call the bank", list: "Reminders", due: at(9, day: 21), created: nil),
+            TaskItem(source: .linear, id: "going", title: "ENG-9 Old but going", list: "ENG", due: at(9, day: 1), created: nil, started: true),
+        ]
+        XCTAssertEqual(TaskGoals.ordered(items, now: at(10), calendar: berlin).map(\.id), ["going", "recent"])
+    }
+
+    func testRemindersReadsNothingUntilListsArePicked() async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "TaskSourcesTests.reminders"))
+        defaults.removePersistentDomain(forName: "TaskSourcesTests.reminders")
+        let store = ListedReminderStore()
+        let tasks = ReminderTasks(store: store, defaults: defaults)
+        let none = try await tasks.openTasks()
+        XCTAssertTrue(none.isEmpty)
+        XCTAssertNil(store.askedFor, "No list chosen: Reminders isn't read at all")
+        defaults.set(["work"], forKey: IntegrationSettings.reminderLists)
+        _ = try await tasks.openTasks()
+        XCTAssertEqual(store.askedFor, ["work"])
+    }
+}
+
+/// Remembers which lists it was asked for.
+private final class ListedReminderStore: ReminderStore, @unchecked Sendable {
+    var askedFor: [String]?
+    func lists() async -> [CalendarChoice] { [] }
+    func incomplete(listIDs: [String]) async -> [TaskItem]? {
+        askedFor = listIDs
+        return []
+    }
+    func setCompleted(_ id: String, _ completed: Bool) async -> Bool { true }
+    func requestAccess() async -> Bool { true }
 
     func testTwoTasksAreOfferedAtMostEachUnderItsSource() {
         let tasks = [
@@ -1244,7 +1292,7 @@ final class TaskSourcesCoordinatorTests: XCTestCase {
     func testTasksFromEverySourceComeTogetherBestFirst() async {
         let coordinator = make()
         await coordinator.refreshGoalSources()
-        XCTAssertEqual(coordinator.taskGoals.map(\.id), ["rent", "bank", "eng", "plan"])
+        XCTAssertEqual(coordinator.taskGoals.map(\.id), ["eng", "rent", "bank", "plan"])
 
         defaults.set(false, forKey: IntegrationSettings.todoist)
         await coordinator.refreshTasks()

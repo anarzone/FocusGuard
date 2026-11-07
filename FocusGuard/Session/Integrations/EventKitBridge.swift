@@ -63,7 +63,8 @@ protocol CalendarStore: AnyObject {
 /// Reminders, for goals and ticking them off.
 protocol ReminderStore: AnyObject {
     func lists() async -> [CalendarChoice]
-    /// Open reminders in the chosen lists (all when empty); nil without access.
+    /// Open reminders in these lists (all when empty: `ReminderTasks` never
+    /// asks with none); nil without access.
     func incomplete(listIDs: [String]) async -> [TaskItem]?
     /// Ticks a reminder off, or back on. True when it's saved.
     func setCompleted(_ id: String, _ completed: Bool) async -> Bool
