@@ -1872,6 +1872,23 @@
         }
       }
     },
+    "%@ ms" : {
+      "comment" : "How long something took, in milliseconds",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ms"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ms"
+          }
+        }
+      }
+    },
     "%@ no longer takes this sign-in" : {
       "localizations" : {
         "az" : {
@@ -12538,6 +12555,22 @@
         }
       }
     },
+    "Blocks you went back to work from" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sperren, nach denen du zur Arbeit zurückgekehrt bist"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonra işə qayıtdığınız bloklar"
+          }
+        }
+      }
+    },
     "Both misses were %@." : {
       "localizations" : {
         "az" : {
@@ -13283,6 +13316,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nicht erkennbar"
+          }
+        }
+      }
+    },
+    "Counts from the last 7 days, kept on this Mac only: never goals, titles or sites." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zahlen der letzten 7 Tage, nur auf diesem Mac: nie Ziele, Titel oder Websites."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son 7 günün saylarıdır, yalnız bu Mac-da saxlanılır: heç vaxt hədəflər, başlıqlar və ya saytlar yox."
           }
         }
       }
@@ -16436,6 +16485,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Währenddessen"
+          }
+        }
+      }
+    },
+    "Each look at the app in front" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Blick auf die App im Vordergrund"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öndəki tətbiqə hər baxış"
           }
         }
       }
@@ -20955,6 +21020,22 @@
         }
       }
     },
+    "Goal picked from a suggestion" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel aus einem Vorschlag gewählt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Təklifdən seçilmiş hədəf"
+          }
+        }
+      }
+    },
     "Goal: %@" : {
       "localizations" : {
         "az" : {
@@ -20999,6 +21080,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ziele und Rückblicke"
+          }
+        }
+      }
+    },
+    "Goals done" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erledigte Ziele"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamamlanmış hədəflər"
           }
         }
       }
@@ -21257,6 +21354,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wie war diese Woche im Vergleich zur letzten?"
+          }
+        }
+      }
+    },
+    "How its choices are doing" : {
+      "comment" : "Settings section: how often FocusGuard's suggestions, cards and blocks worked, last 7 days",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie gut seine Entscheidungen sind"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seçimləri necə işləyir"
           }
         }
       }
@@ -21759,6 +21873,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Integrationen"
+          }
+        }
+      }
+    },
+    "Island cards answered" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beantwortete Karten auf der Insel"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cavablanan ada kartları"
           }
         }
       }
@@ -27701,6 +27831,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gestern wurde nichts erfasst."
+          }
+        }
+      }
+    },
+    "Nothing yet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nichts"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ heç nə"
           }
         }
       }
