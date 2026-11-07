@@ -55,6 +55,8 @@ struct WaitRecord: Codable, Equatable {
     var to: String?
     /// The tool said when it finished, rather than being timed from the user.
     var exact = false
+    /// How long the tool worked, when it said: from the prompt to its answer.
+    var worked: TimeInterval?
 
     var drifted: Bool { drift > 0 }
 }
@@ -62,8 +64,9 @@ struct WaitRecord: Codable, Equatable {
 enum WaitEvent: Equatable {
     /// They reached for a distraction during the wait.
     case reached(WaitReach)
-    /// Still on it when the tool's usual wait is up.
-    case probablyDone(WaitReach)
+    /// Still on it when the tool's usual wait is up, or when the tool said
+    /// it finished (`exact`).
+    case probablyDone(WaitReach, exact: Bool = false)
     /// The wait's over: back in the tool, or gone too long.
     case ended(WaitRecord, back: Bool)
 }
@@ -82,7 +85,13 @@ struct WaitWatcher: Equatable {
         var to: String?
         var reach: WaitReach?
         var doneSent = false
+        /// The tool said it finished.
+        var finishedAt: Date?
     }
+
+    /// Tools that said they started and haven't said they're done: their
+    /// name, the app they're in, the project, and when.
+    private var running: [String: (bundleId: String?, project: String?, since: Date)] = [:]
 
     /// The tool in front, and since when.
     private var inTool: (tool: WaitTool, project: String?, since: Date)?
@@ -90,6 +99,7 @@ struct WaitWatcher: Equatable {
 
     static func == (a: WaitWatcher, b: WaitWatcher) -> Bool {
         a.open == b.open && a.inTool?.tool == b.inTool?.tool && a.inTool?.since == b.inTool?.since
+            && a.running.keys == b.running.keys
     }
 
     /// The project last seen in a tool, for a chat that has none.
@@ -99,6 +109,8 @@ struct WaitWatcher: Equatable {
     var isWaiting: Bool { open != nil }
 
     mutating func observe(_ moment: WaitMoment, usualWait: (WaitTool) -> TimeInterval) -> [WaitEvent] {
+        // A start with no finish: the tool went quiet, or its hook was taken out.
+        running = running.filter { moment.now.timeIntervalSince($0.value.since) < WaitRules.longestWait }
         // Away, asleep, a call or a block screen: whatever wait there was is over.
         if moment.isAway || moment.inCall || moment.screenUp {
             inTool = nil
@@ -107,7 +119,7 @@ struct WaitWatcher: Equatable {
         // FocusGuard's own window says nothing either way.
         guard !moment.frontIsSelf, let front = moment.front else { return [] }
         var events: [WaitEvent] = []
-        let tool = WaitTools.tool(for: front)
+        let tool = WaitTools.tool(for: front) ?? runningTool(in: front) ?? openTool(in: front)
 
         if let tool {
             let project = WaitTools.project(for: front, tool: tool)
@@ -153,7 +165,9 @@ struct WaitWatcher: Equatable {
             current.drift += moment.now.timeIntervalSince(since)
             current.driftSince = nil
         }
-        if drifting, let reach = current.reach, !current.doneSent, elapsed >= usualWait(current.tool) {
+        // A tool that says when it's done isn't guessed at.
+        let guessed = running[current.tool.name] == nil && current.finishedAt == nil
+        if drifting, let reach = current.reach, !current.doneSent, guessed, elapsed >= usualWait(current.tool) {
             current.doneSent = true
             events.append(.probablyDone(reach))
         }
@@ -169,9 +183,62 @@ struct WaitWatcher: Equatable {
         if let since = current.driftSince { current.drift += now.timeIntervalSince(since) }
         let seconds = min(now.timeIntervalSince(current.left), WaitRules.longestWait)
         guard seconds >= WaitRules.shortestWait, back || current.drift > 0 else { return nil }
-        let record = WaitRecord(start: current.left, tool: current.tool.name, project: current.project,
+        var record = WaitRecord(start: current.left, tool: current.tool.name, project: current.project,
                                 seconds: seconds, drift: min(current.drift, seconds), to: current.to)
+        if let finished = current.finishedAt {
+            record.exact = true
+            record.worked = workedSince.map { finished.timeIntervalSince($0) }
+        }
+        workedSince = nil
         return .ended(record, back: back)
+    }
+
+    // MARK: - Exact, from the tool itself
+
+    /// When the tool in the wait last said it started.
+    private var workedSince: Date?
+
+    /// A tool said it started (Claude Code's prompt, a script's `fgwait`):
+    /// the app in front is where it runs, whatever its window is called.
+    mutating func started(tool name: String, project: String?, front: ActivitySnapshot?, at now: Date) {
+        let bundleId = front.flatMap { $0.bundleIdentifier == Bundle.main.bundleIdentifier ? nil : $0.bundleIdentifier }
+        running[name] = (bundleId, project, now)
+        if let project { lastProject = project }
+        // Asked just now, from the app in front: that's the tool, long enough.
+        if let bundleId, front.map({ WaitTools.tool(for: $0) == nil }) ?? false {
+            inTool = (WaitTool(name: name, kind: .agent, bundleId: bundleId), project, now.addingTimeInterval(-WaitRules.shortestInTool))
+        }
+    }
+
+    /// A tool said it finished. Mid-wait and away on a distraction: the
+    /// card can say so for certain. Still at the tool: nothing to say.
+    mutating func finished(tool name: String, at now: Date) -> [WaitEvent] {
+        let since = running.removeValue(forKey: name)?.since
+        guard var current = open, current.tool.name == name, current.finishedAt == nil else { return [] }
+        current.finishedAt = now
+        workedSince = since
+        var events: [WaitEvent] = []
+        if current.driftSince != nil, let reach = current.reach, !current.doneSent {
+            current.doneSent = true
+            events.append(.probablyDone(reach, exact: true))
+        }
+        open = current
+        return events
+    }
+
+    /// Back in the app the wait's tool lives in, when its window can't say
+    /// so: a tool that told FocusGuard it started, and has since finished.
+    private func openTool(in front: ActivitySnapshot) -> WaitTool? {
+        guard let tool = open?.tool, tool.bundleId == front.bundleIdentifier, tool.host == nil else { return nil }
+        return tool
+    }
+
+    /// The front app is where a tool said it's running, though its window
+    /// doesn't say so.
+    private func runningTool(in front: ActivitySnapshot) -> WaitTool? {
+        guard let match = running.first(where: { $0.value.bundleId == front.bundleIdentifier }),
+              let bundleId = match.value.bundleId else { return nil }
+        return WaitTool(name: match.key, kind: .agent, bundleId: bundleId)
     }
 
     static func name(of front: ActivitySnapshot) -> String {

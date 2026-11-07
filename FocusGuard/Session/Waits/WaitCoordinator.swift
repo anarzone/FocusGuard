@@ -54,13 +54,26 @@ final class WaitCoordinator {
             lastCardAt = now
             island?.post(.waitReach(reach, usual: log.usualWait(for: reach.tool.name), next: nextTask(reach.project),
                                     lastDrift: log.lastDrift(for: reach.tool.name), now: now))
-        case .probablyDone(let reach):
-            island?.post(.waitDone(reach, now: now))
+        case .probablyDone(let reach, let exact):
+            island?.post(.waitDone(reach, exact: exact, now: now))
         case .ended(let record, let back):
             log.add(record)
             DecisionLog.shared.record(.wait, record.drifted ? "drifted" : "stayed", detail: back ? "back" : "gone")
             if back { island?.remove(key: IslandMoment.waitKey) }
         }
+    }
+
+    /// A tool said it started: `focusguard://wait/start`, from its hook.
+    func started(tool: String, project: String?, now: Date = .now) {
+        guard isOn() else { return }
+        DecisionLog.shared.record(.wait, "started", detail: "exact")
+        watcher.started(tool: tool, project: project, front: currentMoment().front, at: now)
+    }
+
+    /// A tool said it finished: `focusguard://wait/done`.
+    func finished(tool: String, now: Date = .now) {
+        guard isOn() else { return }
+        for event in watcher.finished(tool: tool, at: now) { handle(event, now: now) }
     }
 
     private func startTimer() {
@@ -116,14 +129,17 @@ extension IslandMoment {
     }
 
     /// "Codex is probably done": the usual wait is up and they're still away.
-    static func waitDone(_ reach: WaitReach, now: Date) -> IslandMoment {
+    /// "Codex is done" when it said so itself.
+    static func waitDone(_ reach: WaitReach, exact: Bool = false, now: Date) -> IslandMoment {
         let place = reach.project ?? reach.tool.name
         let minutes = max(1, Int(now.timeIntervalSince(reach.since) / 60))
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
-            pillValue: String(localized: "Done?", comment: "Pill: the tool has probably finished"),
+            pillValue: exact ? String(localized: "Done", comment: "Pill: the tool has finished")
+                             : String(localized: "Done?", comment: "Pill: the tool has probably finished"),
             kicker: String(localized: "\(minutes) min since you left it", comment: "Minutes since the user left the tool"),
-            title: String(localized: "\(reach.tool.name) is probably done", comment: "The tool: Codex is probably done"),
+            title: exact ? String(localized: "\(reach.tool.name) is done", comment: "The tool, which said it finished: Codex is done")
+                         : String(localized: "\(reach.tool.name) is probably done", comment: "The tool: Codex is probably done"),
             body: String(localized: "\(place) is where you left it.", comment: "The project or tool"),
             tone: .attention,
             buttons: [IslandButton(title: String(localized: "Back to \(place)", comment: "Button: the project or tool to go back to"),
