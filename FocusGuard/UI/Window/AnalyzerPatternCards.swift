@@ -28,12 +28,7 @@ struct AnalyzerPatternCards: View {
                 let most = max(1, patterns.breaks.max() ?? 1)
                 HStack(alignment: .bottom, spacing: 3) {
                     ForEach(patterns.breaks.indices, id: \.self) { index in
-                        RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(index == patterns.commonBreak ? Theme.distraction : Theme.gridFuture)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: max(2, CGFloat(patterns.breaks[index]) / CGFloat(most) * 48))
-                            .help(String(localized: "Minute \(index * 5) to \(index * 5 + 5): \(patterns.breaks[index])",
-                                         comment: "Analyzer bar: a 5-minute slice of a session, then how many broke in it"))
+                        breakBar(index, most: most)
                     }
                 }
                 .frame(height: 48, alignment: .bottom)
@@ -43,6 +38,18 @@ struct AnalyzerPatternCards: View {
                      String(localized: "60 min", comment: "Analyzer axis: an hour into a session"))
             }
         }
+    }
+
+    private func breakBar(_ index: Int, most: Int) -> some View {
+        let count = patterns.breaks[index]
+        let height = max(2, CGFloat(count) / CGFloat(most) * 48)
+        let from = index * 5
+        return RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(index == patterns.commonBreak ? Theme.distraction : Theme.gridFuture)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .help(String(localized: "Minute \(from) to \(from + 5): \(count)",
+                         comment: "Analyzer bar: a 5-minute slice of a session, then how many broke in it"))
     }
 
     private var breakTitle: String {
@@ -63,14 +70,7 @@ struct AnalyzerPatternCards: View {
                 Text(hoursTitle).font(.system(size: 14, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 3) {
                     ForEach(patterns.hourRates.indices, id: \.self) { index in
-                        let rate = patterns.hourRates[index]
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(rate.map { Theme.focus.opacity(0.12 + 0.88 * max(0, min(1, ($0 - 0.3) / 0.6))) } ?? Theme.gridFuture)
-                            .frame(maxWidth: .infinity).frame(height: 40)
-                            .help(rate.map { String(localized: "\(AnalyzerPatterns.firstHour + index):00, \(Int(($0 * 100).rounded()))% focused",
-                                                    comment: "Analyzer: an hour, then its focus rate") }
-                                  ?? String(localized: "\(AnalyzerPatterns.firstHour + index):00, too little tracked",
-                                            comment: "Analyzer: an hour with too little data"))
+                        hourCell(index)
                     }
                 }
                 .accessibilityElement(children: .ignore)
@@ -78,6 +78,27 @@ struct AnalyzerPatternCards: View {
                 axis("\(AnalyzerPatterns.firstHour):00", "\(AnalyzerPatterns.lastHour):00")
             }
         }
+    }
+
+    private func hourCell(_ index: Int) -> some View {
+        let hour = AnalyzerPatterns.firstHour + index
+        let rate = patterns.hourRates[index]
+        let fill: Color
+        let help: String
+        if let rate {
+            let strength = max(0, min(1, (rate - 0.3) / 0.6))
+            fill = Theme.focus.opacity(0.12 + 0.88 * strength)
+            let percent = Int((rate * 100).rounded())
+            help = String(localized: "\(hour):00, \(percent)% focused", comment: "Analyzer: an hour, then its focus rate")
+        } else {
+            fill = Theme.gridFuture
+            help = String(localized: "\(hour):00, too little tracked", comment: "Analyzer: an hour with too little data")
+        }
+        return RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(fill)
+            .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .help(help)
     }
 
     private var hoursTitle: String {
