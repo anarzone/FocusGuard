@@ -27,9 +27,8 @@ final class WaitTests: XCTestCase {
     }
 
     private func look(_ watcher: inout WaitWatcher, _ front: ActivitySnapshot?, at seconds: TimeInterval,
-                      usual: TimeInterval = 90, away: Bool = false) -> [WaitEvent] {
-        watcher.observe(WaitMoment(now: now.addingTimeInterval(seconds), front: front, isAway: away),
-                        usualWait: { _ in usual })
+                      away: Bool = false) -> [WaitEvent] {
+        watcher.observe(WaitMoment(now: now.addingTimeInterval(seconds), front: front, isAway: away))
     }
 
     // MARK: - Tools
@@ -119,15 +118,11 @@ final class WaitTests: XCTestCase {
         XCTAssertEqual(look(&other, codex, at: 15), [], "Five seconds away is a look, not a wait")
     }
 
-    func testStillAwayWhenTheUsualWaitIsUpSaysItsProbablyDoneOnce() {
+    func testATimedGuessNeverSaysItsDone() {
         var watcher = WaitWatcher()
         _ = look(&watcher, codex, at: 0)
         _ = look(&watcher, x(at: 10), at: 10)
-        XCTAssertEqual(look(&watcher, x(at: 10), at: 60, usual: 90), [])
-        let events = look(&watcher, x(at: 10), at: 101, usual: 90)
-        guard case .probablyDone(let reach, _)? = events.first else { return XCTFail("Expected done, got \(events)") }
-        XCTAssertEqual(reach.tool.name, "Codex")
-        XCTAssertEqual(look(&watcher, x(at: 10), at: 130, usual: 90), [])
+        XCTAssertEqual(look(&watcher, x(at: 10), at: 600), [], "Only the tool itself can say it's done")
     }
 
     func testADistractionLongAfterLeavingIsNoReachButStillCounts() {
@@ -150,14 +145,24 @@ final class WaitTests: XCTestCase {
         XCTAssertFalse(watcher.isWaiting)
     }
 
-    func testAChatTakesTheProjectLastSeen() {
-        var watcher = WaitWatcher()
-        _ = look(&watcher, codex, at: 0)
-        _ = look(&watcher, snap(chrome, url: "https://openrouter.ai/chat"), at: 20)
-        let events = look(&watcher, x(at: 40), at: 40)
-        guard case .reached(let reach)? = events.first else { return XCTFail("Expected a reach, got \(events)") }
-        XCTAssertEqual(reach.tool.name, "OpenRouter")
-        XCTAssertEqual(reach.project, "curiplay")
+    func testLeavingAChatOrAnEditorIsNoWait() {
+        // Nothing says they're working: the Claude app, a chat tab, Cursor.
+        for front in [snap("com.anthropic.claudefordesktop", title: "Claude"), snap(chrome, url: "https://openrouter.ai/chat"),
+                      snap("com.todesktop.230313mzl4w4u92", title: "tray.js — curiplay")] {
+            var watcher = WaitWatcher()
+            _ = look(&watcher, front, at: 0)
+            XCTAssertEqual(look(&watcher, x(at: 30), at: 30), [], "\(front.bundleIdentifier)")
+            XCTAssertFalse(watcher.isWaiting)
+        }
+    }
+
+    func testOnlyAFolderPathInATitleNamesTheProject() {
+        let script = snap(terminal, title: "Home / X — python3")
+        let tool = WaitTools.tool(for: script)
+        XCTAssertEqual(tool?.kind, .command)
+        XCTAssertNil(tool.flatMap { WaitTools.project(for: script, tool: $0) }, "A slash in a page title isn't a folder")
+        let path = snap(terminal, title: "~/Projects/lexis-app — python3")
+        XCTAssertEqual(WaitTools.tool(for: path).flatMap { WaitTools.project(for: path, tool: $0) }, "lexis-app")
     }
 
     // MARK: - Log
@@ -173,6 +178,17 @@ final class WaitTests: XCTestCase {
         XCTAssertEqual(log.lastDrift(for: "Codex")?.to, "x.com")
         XCTAssertEqual(log.driftShare(for: "Codex").drifted, 1)
         XCTAssertEqual(log.driftShare(for: "Codex").of, 4)
+    }
+
+    func testWaitsGuessedFromAChatAreDroppedOnLoad() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("waits-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let writer = WaitLog(url: url, now: { self.now })
+        writer.add(WaitRecord(start: now, tool: "Claude", seconds: 40, drift: 0))
+        writer.add(WaitRecord(start: now, tool: "Claude Code", seconds: 60, drift: 0, exact: true))
+        writer.add(WaitRecord(start: now, tool: "Codex", seconds: 60, drift: 0))
+        let reader = WaitLog(url: url, now: { self.now })
+        XCTAssertEqual(reader.records.map(\.tool), ["Claude Code", "Codex"], "A guessed chat wait goes; an agent's stays")
     }
 
     func testOldWaitsAreDropped() {
@@ -197,11 +213,13 @@ final class WaitTests: XCTestCase {
         XCTAssertNil(card.buttons.last?.command, "Opening it anyway only closes the card")
         XCTAssertEqual(card.countdown?.secondsLeft(at: now.addingTimeInterval(30)), 60)
 
-        let done = IslandMoment.waitDone(reach, now: now.addingTimeInterval(200))
+        let done = IslandMoment.waitDone(reach, project: nil, needsInput: false, now: now.addingTimeInterval(200))
         XCTAssertEqual(done.key, card.key, "The done card takes the reach card's place")
-        XCTAssertEqual(done.title, "Codex has probably finished.")
+        XCTAssertEqual(done.title, "Codex just finished.")
         XCTAssertEqual(done.shownKicker, "3 min on x.com")
-        XCTAssertEqual(IslandMoment.waitDone(reach, exact: true, now: now).title, "Codex just finished.")
+        let asks = IslandMoment.waitDone(reach, project: "lexis-app", needsInput: true, now: now)
+        XCTAssertEqual(asks.title, "Codex needs your answer.")
+        XCTAssertEqual(asks.buttons.first?.title, "Back to lexis-app")
     }
 
     func testWithNoTaskTheCardRemindsWhatTheLastDriftCost() {
@@ -260,7 +278,7 @@ final class WaitConnectorTests: XCTestCase {
     }
 
     private func look(_ watcher: inout WaitWatcher, _ front: ActivitySnapshot, at seconds: TimeInterval) -> [WaitEvent] {
-        watcher.observe(WaitMoment(now: now.addingTimeInterval(seconds), front: front), usualWait: { _ in 90 })
+        watcher.observe(WaitMoment(now: now.addingTimeInterval(seconds), front: front))
     }
 
     func testAStartFromTheToolMakesAnyTerminalItsHome() {
@@ -281,9 +299,9 @@ final class WaitConnectorTests: XCTestCase {
         watcher.started(tool: "Claude Code", project: nil, front: plain, at: now)
         _ = look(&watcher, x(at: 2), at: 2)
         XCTAssertEqual(look(&watcher, x(at: 2), at: 200), [], "No guess past the usual wait")
-        let events = watcher.finished(tool: "Claude Code", at: now.addingTimeInterval(210))
-        guard case .probablyDone(_, let exact)? = events.first else { return XCTFail("Expected done, got \(events)") }
-        XCTAssertTrue(exact)
+        let events = watcher.finished(tool: "Claude Code", project: nil, needsInput: false, at: now.addingTimeInterval(210))
+        guard case .done(_, _, let needsInput)? = events.first else { return XCTFail("Expected done, got \(events)") }
+        XCTAssertFalse(needsInput)
         let back = look(&watcher, plain, at: 260)
         guard case .ended(let record, true)? = back.first else { return XCTFail("Expected an end, got \(back)") }
         XCTAssertTrue(record.exact)
@@ -294,7 +312,62 @@ final class WaitConnectorTests: XCTestCase {
         var watcher = WaitWatcher()
         let codex = front("~/Projects/curiplay — codex")
         _ = look(&watcher, codex, at: 0)
-        XCTAssertEqual(watcher.finished(tool: "Codex", at: now.addingTimeInterval(30)), [])
+        XCTAssertEqual(watcher.finished(tool: "Codex", project: nil, needsInput: false, at: now.addingTimeInterval(30)), [])
+    }
+
+    // MARK: - Claude Code in the Claude app
+
+    private let claudeApp = "com.anthropic.claudefordesktop"
+    private var claude: ActivitySnapshot {
+        ActivitySnapshot(bundleIdentifier: claudeApp, appName: "Claude", windowTitle: "Claude", url: nil, classification: .focus, observedAt: now)
+    }
+
+    func testClaudeCodeInTheClaudeAppIsClaudeCodeNotAChat() {
+        var watcher = WaitWatcher()
+        _ = look(&watcher, claude, at: 0)
+        watcher.started(tool: "Claude Code", project: "lexis-app", front: claude, at: now.addingTimeInterval(5))
+        let events = look(&watcher, x(at: 8), at: 8)
+        guard case .reached(let reach)? = events.first else { return XCTFail("Expected a reach, got \(events)") }
+        XCTAssertEqual(reach.tool.name, "Claude Code", "The hook's name, not the app's")
+        XCTAssertEqual(reach.tool.bundleId, claudeApp, "Back to the Claude app")
+        XCTAssertEqual(reach.project, "lexis-app")
+        let done = watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(90))
+        guard case .done(_, let project, false)? = done.first else { return XCTFail("Expected done, got \(done)") }
+        XCTAssertEqual(project, "lexis-app")
+    }
+
+    func testOnceClaudeCodeIsDoneLeavingTheClaudeAppIsNoWait() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: "Claude Code", project: "lexis-app", front: claude, at: now)
+        _ = watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(60))
+        _ = look(&watcher, claude, at: 70)
+        XCTAssertEqual(look(&watcher, x(at: 100), at: 100), [], "Nothing's running: you're free")
+        XCTAssertFalse(watcher.isWaiting)
+    }
+
+    func testAnotherSessionStillRunningKeepsTheWaitGoing() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: "Claude Code", project: "lexis-app", front: claude, at: now)
+        watcher.started(tool: "Claude Code", project: "expadu-app", front: claude, at: now.addingTimeInterval(5))
+        _ = look(&watcher, x(at: 10), at: 10)
+        XCTAssertEqual(watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(60)), [],
+                       "expadu-app is still working")
+        let asks = watcher.finished(tool: "Claude Code", project: "expadu-app", needsInput: true, at: now.addingTimeInterval(80))
+        guard case .done(_, let project, true)? = asks.first else { return XCTFail("Expected needs-input, got \(asks)") }
+        XCTAssertEqual(project, "expadu-app")
+    }
+
+    func testClosedWaitCardsQuietThemForAnHour() {
+        var clock = now
+        let coordinator = WaitCoordinator(log: WaitLog(url: nil), island: nil)
+        coordinator.now = { clock }
+        XCTAssertTrue(coordinator.mayShowReachCard(at: clock))
+        coordinator.answered(wentBack: false)
+        XCTAssertTrue(coordinator.mayShowReachCard(at: clock), "One closed card isn't a pattern")
+        coordinator.answered(wentBack: false)
+        XCTAssertFalse(coordinator.mayShowReachCard(at: clock.addingTimeInterval(30 * 60)))
+        clock = clock.addingTimeInterval(61 * 60)
+        XCTAssertTrue(coordinator.mayShowReachCard(at: clock))
     }
 
     // MARK: - Claude Code
@@ -314,6 +387,8 @@ final class WaitConnectorTests: XCTestCase {
         let start = ((hooks?["UserPromptSubmit"] as? [[String: Any]])?.first?["hooks"] as? [[String: Any]])?.first?["command"] as? String
         XCTAssertTrue(start?.contains("focusguard://wait/start?tool=Claude%20Code") ?? false)
         XCTAssertTrue(start?.contains("$CLAUDE_PROJECT_DIR") ?? false)
+        let asks = ((hooks?["Notification"] as? [[String: Any]])?.first?["hooks"] as? [[String: Any]])?.first?["command"] as? String
+        XCTAssertTrue(asks?.contains("wait/done?tool=Claude%20Code&input=1") ?? false, "Asking for an answer ends the wait too")
 
         try files.connect(.claudeCode)
         json = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as? [String: Any]
@@ -325,6 +400,21 @@ final class WaitConnectorTests: XCTestCase {
         let left = json?["hooks"] as? [String: Any]
         XCTAssertNil(left?["UserPromptSubmit"])
         XCTAssertEqual((left?["Stop"] as? [Any])?.count, 1)
+    }
+
+    func testHooksFromBeforeAskingForAnAnswerAreUpgraded() throws {
+        let settings = home.appendingPathComponent(".claude/settings.json")
+        try FileManager.default.createDirectory(at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let old = WaitConnector.command(started: false, tool: "Claude Code", folderVariable: "$CLAUDE_PROJECT_DIR")
+        let json: [String: Any] = ["hooks": ["Stop": [["hooks": [["type": "command", "command": old]]]]]]
+        try JSONSerialization.data(withJSONObject: json).write(to: settings)
+        files.upgradeIfConnected()
+        XCTAssertTrue(try String(contentsOf: settings, encoding: .utf8).contains("input=1"))
+
+        let never = home.appendingPathComponent("never")
+        let untouched = WaitConnectorFiles(home: never)
+        untouched.upgradeIfConnected()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: untouched.claudeSettings.path), "Not connected: nothing is written")
     }
 
     func testClaudeCodesSettingsThatArentJSONAreLeftAlone() throws {

@@ -331,23 +331,6 @@
         }
       }
     },
-    "%@ has probably finished." : {
-      "comment" : "The tool: Codex has probably finished.",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ ist wahrscheinlich fertig."
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ yəqin ki, bitirib."
-          }
-        }
-      }
-    },
     "%@ is back" : {
       "comment" : "An app was brought back to the front",
       "localizations" : {
@@ -2028,6 +2011,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ms"
+          }
+        }
+      }
+    },
+    "%@ needs your answer." : {
+      "comment" : "The tool, which asked the user something: Claude Code needs your answer.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ braucht deine Antwort."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ cavabınızı gözləyir."
           }
         }
       }
@@ -16736,23 +16736,6 @@
         }
       }
     },
-    "Done?" : {
-      "comment" : "Pill: the tool has probably finished",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fertig?"
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bitdi?"
-          }
-        }
-      }
-    },
     "Down %@ on the same days last week." : {
       "localizations" : {
         "az" : {
@@ -22751,6 +22734,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dir zugewiesene Issues, beim Abschließen auf „Done“ gesetzt"
+          }
+        }
+      }
+    },
+    "It asked you something in %@ and can’t go on until you answer." : {
+      "comment" : "The project or tool",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es hat dich in %@ etwas gefragt und kann erst weitermachen, wenn du antwortest."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ daxilində sizdən nəsə soruşdu və cavab verməyincə davam edə bilməz."
           }
         }
       }
@@ -44120,18 +44120,18 @@
         }
       }
     },
-    "When Claude Code, Codex, an AI chat, a running command or a build is working and you open a distracting site, FocusGuard tells you what it cost last time and takes you back. Worked out from what’s in front, never from what you type." : {
+    "When a tool is working and you open a distracting site, FocusGuard tells you what it cost last time and takes you back. Connected tools below say exactly when they work and finish; otherwise only a command running in a terminal counts. Never what you type." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wenn Claude Code, Codex, ein KI-Chat, ein laufender Befehl oder ein Build arbeitet und du eine ablenkende Website öffnest, sagt dir FocusGuard, was es dich letztes Mal gekostet hat, und bringt dich zurück. Erkannt an dem, was im Vordergrund ist, nie an dem, was du tippst."
+            "value" : "Wenn ein Werkzeug arbeitet und du eine ablenkende Website öffnest, sagt dir FocusGuard, was es dich letztes Mal gekostet hat, und bringt dich zurück. Verbundene Werkzeuge unten melden genau, wann sie arbeiten und fertig sind; sonst zählt nur ein laufender Befehl im Terminal. Nie das, was du tippst."
           }
         },
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Claude Code, Codex, AI söhbəti, işləyən əmr və ya build işləyərkən yayındırıcı sayt açsanız, FocusGuard keçən dəfə bunun nəyə başa gəldiyini deyir və sizi geri aparır. Öndə olandan anlaşılır, heç vaxt yazdıqlarınızdan yox."
+            "value" : "Alət işləyərkən yayındırıcı sayt açsanız, FocusGuard keçən dəfə bunun nəyə başa gəldiyini deyir və sizi geri aparır. Aşağıda qoşulan alətlər nə vaxt işlədiyini və bitirdiyini dəqiq bildirir; əks halda yalnız terminalda işləyən əmr sayılır. Heç vaxt yazdıqlarınız yox."
           }
         }
       }

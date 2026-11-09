@@ -36,7 +36,8 @@ final class WaitLog {
     /// stayed with (a drift says how long the drift was, not the tool), or
     /// the default until there are enough of them.
     func usualWait(for tool: String) -> TimeInterval {
-        let stayed = records.filter { $0.tool == tool && !$0.drifted }.map(\.seconds).sorted()
+        // How long the tool said it worked, where it said; else how long the user stayed away.
+        let stayed = records.filter { $0.tool == tool && ($0.worked != nil || !$0.drifted) }.map { $0.worked ?? $0.seconds }.sorted()
         guard stayed.count >= WaitRules.enoughWaits else { return WaitRules.usualWait }
         let middle = stayed.count / 2
         let median = stayed.count % 2 == 0 ? (stayed[middle - 1] + stayed[middle]) / 2 : stayed[middle]
@@ -70,7 +71,12 @@ final class WaitLog {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         records = (try? decoder.decode([WaitRecord].self, from: data)) ?? []
+        // Waits guessed from a chat or an editor, before only working tools counted.
+        let guessed = WaitTools.guessedOnly
+        let before = records.count
+        records.removeAll { !$0.exact && guessed.contains($0.tool) }
         prune()
+        if records.count != before { save() }
     }
 
     private func save() {

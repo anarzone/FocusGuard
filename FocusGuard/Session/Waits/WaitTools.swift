@@ -71,6 +71,12 @@ enum WaitTools {
         "com.microsoft.VSCode": "VS Code", "dev.zed.Zed": "Zed", "com.apple.dt.Xcode": "Xcode",
     ]
 
+    /// Chats and editors: leaving one used to count as a wait, guessed. Their
+    /// guessed waits are dropped from the log; an agent's own name is kept.
+    static var guessedOnly: Set<String> {
+        Set(chatSites.values).union(chatApps.values).union(editors.values).subtracting(agentWords.map(\.name))
+    }
+
     static func tool(for snapshot: ActivitySnapshot) -> WaitTool? {
         // A private window says nothing, and its title isn't for reading.
         guard !snapshot.isPrivateWindow else { return nil }
@@ -112,9 +118,10 @@ enum WaitTools {
     static func project(for snapshot: ActivitySnapshot, tool: WaitTool) -> String? {
         guard tool.kind != .chat, let title = snapshot.windowTitle, !title.isEmpty else { return nil }
         let parts = segments(title.trimmingCharacters(in: CharacterSet(charactersIn: " ").union(.init(charactersIn: String(claudeCodeMarks)))))
-        if let path = parts.first(where: { $0.contains("/") || $0.hasPrefix("~") }) {
-            let folder = path.split(separator: "/").last.map(String.init) ?? path
-            return folder == "~" ? nil : folder
+        // A folder path, as terminals show it: "~/Projects/curiplay", "/Users/me/app".
+        if let path = parts.first(where: { $0.hasPrefix("~") || $0.hasPrefix("/") }) {
+            let folder = (path.split(separator: "/").last.map(String.init) ?? path).trimmingCharacters(in: .whitespaces)
+            return folder.isEmpty || folder == "~" ? nil : folder
         }
         switch tool.kind {
         case .editor:

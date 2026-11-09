@@ -40,9 +40,10 @@ enum WaitConnector: String, CaseIterable, Identifiable {
         "$(basename \"\(variable)\" | sed \"s/ /%20/g\")"
     }
 
-    static func command(started: Bool, tool: String, folderVariable: String) -> String {
+    static func command(started: Bool, tool: String, folderVariable: String, needsInput: Bool = false) -> String {
         let name = tool.replacingOccurrences(of: " ", with: "%20")
-        return "open -g \"\(marker)/\(started ? "start" : "done")?tool=\(name)&project=\(folder(folderVariable))\""
+        let input = needsInput ? "&input=1" : ""
+        return "open -g \"\(marker)/\(started ? "start" : "done")?tool=\(name)\(input)&project=\(folder(folderVariable))\""
     }
 
     /// The shell function for the user's own scripts: `fgwait ./agent.sh`.
@@ -63,14 +64,31 @@ struct WaitConnectorFiles {
         switch connector {
         case .claudeCode:
             guard fileManager.fileExists(atPath: claudeSettings.deletingLastPathComponent().path) else { return .notInstalled }
-            let text = (try? String(contentsOf: claudeSettings, encoding: .utf8)) ?? ""
-            return text.contains(WaitConnector.marker) ? .connected : .notConnected
+            return claudeCommands().contains { $0.contains(WaitConnector.marker) } ? .connected : .notConnected
         case .codex:
             guard fileManager.fileExists(atPath: codexConfig.deletingLastPathComponent().path) else { return .notInstalled }
             let text = (try? String(contentsOf: codexConfig, encoding: .utf8)) ?? ""
             if text.contains(WaitConnector.marker) { return .connected }
             return Self.topLevelNotify(in: text) ? .hasOwnNotify : .notConnected
         }
+    }
+
+    /// Connected with an older set of FocusGuard's lines: put the current
+    /// ones in, as the user already said yes to.
+    func upgradeIfConnected() {
+        let ours = claudeCommands().filter { $0.contains(WaitConnector.marker) }
+        if !ours.isEmpty, !ours.contains(where: { $0.contains("input=1") }) { try? connect(.claudeCode) }
+    }
+
+    /// Every hook command in Claude Code's settings, read as JSON: however
+    /// the file was written (escaped slashes and all).
+    func claudeCommands() -> [String] {
+        guard let data = try? Data(contentsOf: claudeSettings),
+              let settings = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let hooks = settings["hooks"] as? [String: Any] else { return [] }
+        return hooks.values.compactMap { $0 as? [[String: Any]] }.flatMap { $0 }
+            .flatMap { $0["hooks"] as? [[String: Any]] ?? [] }
+            .compactMap { $0["command"] as? String }
     }
 
     func connect(_ connector: WaitConnector) throws {
@@ -105,10 +123,11 @@ struct WaitConnectorFiles {
     }
 
     /// The hooks with FocusGuard's taken out, and put back in when connecting:
-    /// a prompt sent starts the wait, Claude stopping ends it.
+    /// a prompt sent starts the wait, Claude stopping ends it, and Claude
+    /// asking for permission or an answer ends it too: it can't go on alone.
     static func claudeHooks(_ hooks: [String: Any], connect: Bool) -> [String: Any] {
         var hooks = hooks
-        for (event, started) in [("UserPromptSubmit", true), ("Stop", false)] {
+        for (event, started, needsInput) in [("UserPromptSubmit", true, false), ("Stop", false, false), ("Notification", false, true)] {
             var groups = (hooks[event] as? [[String: Any]] ?? []).compactMap { group -> [String: Any]? in
                 var group = group
                 let kept = (group["hooks"] as? [[String: Any]] ?? []).filter {
@@ -119,7 +138,8 @@ struct WaitConnectorFiles {
                 return group
             }
             if connect {
-                let command = WaitConnector.command(started: started, tool: WaitConnector.claudeCode.name, folderVariable: "$CLAUDE_PROJECT_DIR")
+                let command = WaitConnector.command(started: started, tool: WaitConnector.claudeCode.name,
+                                                    folderVariable: "$CLAUDE_PROJECT_DIR", needsInput: needsInput)
                 groups.append(["hooks": [["type": "command", "command": command]]])
             }
             hooks[event] = groups.isEmpty ? nil : groups
