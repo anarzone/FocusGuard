@@ -169,7 +169,7 @@ final class WaitTests: XCTestCase {
 
     func testAToolsUsualWaitIsTheMedianOfWaitsStayedWith() {
         let log = WaitLog(url: nil, now: { self.now })
-        XCTAssertEqual(log.usualWait(for: "Codex"), WaitRules.usualWait, "Too few of its own yet")
+        XCTAssertNil(log.usualWait(for: "Codex"), "Too few of its own yet: no number is made up")
         for seconds in [60.0, 120, 100] {
             log.add(WaitRecord(start: now, tool: "Codex", seconds: seconds, drift: 0))
         }
@@ -204,7 +204,7 @@ final class WaitTests: XCTestCase {
         let tool = WaitTool(name: "Codex", kind: .agent, bundleId: terminal)
         let reach = WaitReach(tool: tool, project: "Curiplay", since: now, to: "x.com")
         let task = TaskItem(source: .linear, id: "1", title: "CUR-38 Waiter wipes the table", list: "Curiplay", due: nil, created: nil)
-        let card = IslandMoment.waitReach(reach, usual: 90, next: task, lastDrift: nil, now: now.addingTimeInterval(30))
+        let card = IslandMoment.waitReach(reach, estimate: .left(60), next: task, lastDrift: nil, now: now.addingTimeInterval(30))
         XCTAssertEqual(card.kind, .wait)
         XCTAssertTrue(card.startsOpen)
         XCTAssertEqual(card.title, "x.com won’t make Codex any faster.", "No drift on record: say what it won't do")
@@ -226,9 +226,9 @@ final class WaitTests: XCTestCase {
         let tool = WaitTool(name: "OpenRouter", kind: .chat, bundleId: chrome, host: "openrouter.ai")
         let reach = WaitReach(tool: tool, project: nil, since: now, to: "youtube.com")
         let last = WaitRecord(start: now, tool: "OpenRouter", seconds: 600, drift: 540, to: "youtube.com")
-        let card = IslandMoment.waitReach(reach, usual: 40, next: nil, lastDrift: last, now: now)
+        let card = IslandMoment.waitReach(reach, estimate: .left(100), next: nil, lastDrift: last, now: now)
         XCTAssertEqual(card.title, "Last time, youtube.com took 9 min.", "What the last drift cost, in so many minutes")
-        XCTAssertTrue(card.body.contains("about 1 min"))
+        XCTAssertTrue(card.body.contains("about 2 more min"), card.body)
         XCTAssertEqual(card.buttons.first?.command, .backTo(bundleId: chrome, host: "openrouter.ai"))
     }
 }
@@ -253,7 +253,7 @@ final class WaitConnectorTests: XCTestCase {
 
     // MARK: - Links
 
-    func testWaitLinksCarryTheToolAndTheFolderOnly() {
+    func testWaitLinksCarryTheToolTheFolderAndWhichSessionOnly() {
         XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/start?tool=Claude%20Code&project=curiplay")!),
                        .wait(started: true, tool: "Claude Code", project: "curiplay"))
         XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/done?tool=Codex&project=")!),
@@ -261,6 +261,17 @@ final class WaitConnectorTests: XCTestCase {
         XCTAssertNil(FocusGuardURL(URL(string: "focusguard://wait/start")!), "No tool, no wait")
         let route = FocusGuardURL.wait(started: false, tool: "Codex", project: "my app")
         XCTAssertEqual(FocusGuardURL(route.url), route)
+
+        XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/start?tool=Claude%20Code&project=curiplay&s=a1b2c3d4-e5f")!),
+                       .wait(started: true, tool: "Claude Code", project: "curiplay", session: "a1b2c3d4-e5f"))
+        XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/done?tool=Claude%20Code&idle=1&project=curiplay&s=a1b2")!),
+                       .wait(started: false, tool: "Claude Code", project: "curiplay", session: "a1b2", quiet: true))
+        XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/start?tool=Codex&idle=1&input=1&s=")!),
+                       .wait(started: true, tool: "Codex", project: nil), "A start is never quiet, and an empty session is none")
+        XCTAssertEqual(FocusGuardURL(URL(string: "focusguard://wait/done?tool=Codex&s=what%20I%20typed")!),
+                       .wait(started: false, tool: "Codex", project: nil), "Only an id's letters pass as a session")
+        let quiet = FocusGuardURL.wait(started: false, tool: "Claude Code", project: "my app", needsInput: true, session: "ab-12_c", quiet: true)
+        XCTAssertEqual(FocusGuardURL(quiet.url), quiet)
     }
 
     // MARK: - Watcher
@@ -279,6 +290,12 @@ final class WaitConnectorTests: XCTestCase {
 
     private func look(_ watcher: inout WaitWatcher, _ front: ActivitySnapshot, at seconds: TimeInterval) -> [WaitEvent] {
         watcher.observe(WaitMoment(now: now.addingTimeInterval(seconds), front: front))
+    }
+
+    /// The "it's done" or "it needs you" among what happened, if any.
+    private func done(in events: [WaitEvent]) -> (project: String?, needsInput: Bool)? {
+        for case .done(_, let project, let needsInput) in events { return (project, needsInput) }
+        return nil
     }
 
     func testAStartFromTheToolMakesAnyTerminalItsHome() {
@@ -300,8 +317,8 @@ final class WaitConnectorTests: XCTestCase {
         _ = look(&watcher, x(at: 2), at: 2)
         XCTAssertEqual(look(&watcher, x(at: 2), at: 200), [], "No guess past the usual wait")
         let events = watcher.finished(tool: "Claude Code", project: nil, needsInput: false, at: now.addingTimeInterval(210))
-        guard case .done(_, _, let needsInput)? = events.first else { return XCTFail("Expected done, got \(events)") }
-        XCTAssertFalse(needsInput)
+        guard let said = done(in: events) else { return XCTFail("Expected done, got \(events)") }
+        XCTAssertFalse(said.needsInput)
         let back = look(&watcher, plain, at: 260)
         guard case .ended(let record, true)? = back.first else { return XCTFail("Expected an end, got \(back)") }
         XCTAssertTrue(record.exact)
@@ -331,9 +348,9 @@ final class WaitConnectorTests: XCTestCase {
         XCTAssertEqual(reach.tool.name, "Claude Code", "The hook's name, not the app's")
         XCTAssertEqual(reach.tool.bundleId, claudeApp, "Back to the Claude app")
         XCTAssertEqual(reach.project, "lexis-app")
-        let done = watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(90))
-        guard case .done(_, let project, false)? = done.first else { return XCTFail("Expected done, got \(done)") }
-        XCTAssertEqual(project, "lexis-app")
+        let finished = watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(90))
+        guard let said = done(in: finished), !said.needsInput else { return XCTFail("Expected done, got \(finished)") }
+        XCTAssertEqual(said.project, "lexis-app")
     }
 
     func testOnceClaudeCodeIsDoneLeavingTheClaudeAppIsNoWait() {
@@ -350,11 +367,11 @@ final class WaitConnectorTests: XCTestCase {
         watcher.started(tool: "Claude Code", project: "lexis-app", front: claude, at: now)
         watcher.started(tool: "Claude Code", project: "expadu-app", front: claude, at: now.addingTimeInterval(5))
         _ = look(&watcher, x(at: 10), at: 10)
-        XCTAssertEqual(watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(60)), [],
-                       "expadu-app is still working")
+        let first = watcher.finished(tool: "Claude Code", project: "lexis-app", needsInput: false, at: now.addingTimeInterval(60))
+        XCTAssertNil(done(in: first), "expadu-app, the one asked last, is still working")
         let asks = watcher.finished(tool: "Claude Code", project: "expadu-app", needsInput: true, at: now.addingTimeInterval(80))
-        guard case .done(_, let project, true)? = asks.first else { return XCTFail("Expected needs-input, got \(asks)") }
-        XCTAssertEqual(project, "expadu-app")
+        guard let said = done(in: asks), said.needsInput else { return XCTFail("Expected needs-input, got \(asks)") }
+        XCTAssertEqual(said.project, "expadu-app")
     }
 
     func testClosedWaitCardsQuietThemForAnHour() {
@@ -372,7 +389,7 @@ final class WaitConnectorTests: XCTestCase {
 
     // MARK: - Claude Code
 
-    func testClaudeCodeGetsTwoHooksBesideTheUsersOwnAndLosesOnlyThose() throws {
+    func testClaudeCodeGetsItsHooksBesideTheUsersOwnAndLosesOnlyThose() throws {
         let settings = home.appendingPathComponent(".claude/settings.json")
         try FileManager.default.createDirectory(at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data(#"{"model":"opus","hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}"#.utf8).write(to: settings)
@@ -387,8 +404,17 @@ final class WaitConnectorTests: XCTestCase {
         let start = ((hooks?["UserPromptSubmit"] as? [[String: Any]])?.first?["hooks"] as? [[String: Any]])?.first?["command"] as? String
         XCTAssertTrue(start?.contains("focusguard://wait/start?tool=Claude%20Code") ?? false)
         XCTAssertTrue(start?.contains("$CLAUDE_PROJECT_DIR") ?? false)
-        let asks = ((hooks?["Notification"] as? [[String: Any]])?.first?["hooks"] as? [[String: Any]])?.first?["command"] as? String
-        XCTAssertTrue(asks?.contains("wait/done?tool=Claude%20Code&input=1") ?? false, "Asking for an answer ends the wait too")
+        func command(_ group: [String: Any]?) -> String { ((group?["hooks"] as? [[String: Any]])?.first?["command"] as? String) ?? "" }
+        let notes = hooks?["Notification"] as? [[String: Any]] ?? []
+        XCTAssertEqual(notes.count, 2)
+        XCTAssertEqual(notes.first?["matcher"] as? String, "permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input",
+                       "Only a notification that asks for an answer ends the run: any other says nothing")
+        XCTAssertTrue(command(notes.first).contains("wait/done?tool=Claude%20Code&input=1"), "Asking for an answer ends the wait too")
+        XCTAssertEqual(notes.last?["matcher"] as? String, "idle_prompt")
+        XCTAssertTrue(command(notes.last).contains("wait/done?tool=Claude%20Code&idle=1"), "Gone idle: over, with nothing to say")
+        XCTAssertTrue(command((hooks?["SessionEnd"] as? [[String: Any]])?.first).contains("&idle=1"))
+        XCTAssertTrue(files.claudeCommands().filter { $0.contains(WaitConnector.marker) }.allSatisfy { $0.contains("&s=$(sed") },
+                      "Each says which session it is")
 
         try files.connect(.claudeCode)
         json = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as? [String: Any]
@@ -399,17 +425,30 @@ final class WaitConnectorTests: XCTestCase {
         json = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as? [String: Any]
         let left = json?["hooks"] as? [String: Any]
         XCTAssertNil(left?["UserPromptSubmit"])
+        XCTAssertNil(left?["Notification"])
+        XCTAssertNil(left?["SessionEnd"])
         XCTAssertEqual((left?["Stop"] as? [Any])?.count, 1)
     }
 
-    func testHooksFromBeforeAskingForAnAnswerAreUpgraded() throws {
+    func testHooksFromBeforeSessionsWereToldApartAreUpgraded() throws {
         let settings = home.appendingPathComponent(".claude/settings.json")
         try FileManager.default.createDirectory(at: settings.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let old = WaitConnector.command(started: false, tool: "Claude Code", folderVariable: "$CLAUDE_PROJECT_DIR")
-        let json: [String: Any] = ["hooks": ["Stop": [["hooks": [["type": "command", "command": old]]]]]]
+        // As the last version wrote them: no session, and every notification ending the run.
+        let stop = WaitConnector.command(started: false, tool: "Claude Code", folderVariable: "$CLAUDE_PROJECT_DIR")
+        let asks = WaitConnector.command(started: false, tool: "Claude Code", folderVariable: "$CLAUDE_PROJECT_DIR", needsInput: true)
+        let json: [String: Any] = ["hooks": [
+            "Stop": [["hooks": [["type": "command", "command": stop]]]],
+            "Notification": [["hooks": [["type": "command", "command": asks]]],
+                             ["matcher": "auth_success", "hooks": [["type": "command", "command": "say hello"]]]],
+        ]]
         try JSONSerialization.data(withJSONObject: json).write(to: settings)
         files.upgradeIfConnected()
-        XCTAssertTrue(try String(contentsOf: settings, encoding: .utf8).contains("input=1"))
+        XCTAssertTrue(try String(contentsOf: settings, encoding: .utf8).contains("&s="))
+        let after = try JSONSerialization.jsonObject(with: Data(contentsOf: settings)) as? [String: Any]
+        let notes = (after?["hooks"] as? [String: Any])?["Notification"] as? [[String: Any]] ?? []
+        XCTAssertEqual(notes.count, 3, "The user's own, and FocusGuard's two")
+        XCTAssertTrue(notes.allSatisfy { $0["matcher"] != nil }, "The old hook on every notification is gone")
+        XCTAssertEqual(((after?["hooks"] as? [String: Any])?["Stop"] as? [Any])?.count, 1, "Replaced, not added to")
 
         let never = home.appendingPathComponent("never")
         let untouched = WaitConnectorFiles(home: never)

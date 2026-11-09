@@ -14,7 +14,7 @@ extension AppState {
             guard kind == .wait else { return }
             if case .backTo = command { self?.waits.answered(wentBack: true) } else { self?.waits.answered(wentBack: false) }
         }
-        // Connected before Claude Code could say it needs an answer: add that hook too.
+        // Connected by an earlier build: bring its hooks up to what this one goes by.
         WaitConnectorFiles().upgradeIfConnected()
         waits.holdSeconds = { FocusAnalyzer.shared.holdSeconds(tool: $0.tool.name, site: $0.to) }
         waits.hold = { [weak self] reach, until in

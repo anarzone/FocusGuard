@@ -71,6 +71,18 @@ enum WaitTools {
         "com.microsoft.VSCode": "VS Code", "dev.zed.Zed": "Zed", "com.apple.dt.Xcode": "Xcode",
     ]
 
+    /// More places an agent is run from, which give no sign of their own.
+    static let otherToolApps: Set<String> = [
+        "com.google.android.studio", "dev.warp.Warp-Preview", "com.panic.Nova", "com.sublimetext.4",
+        "com.termius-dmg.mac", "com.microsoft.VSCodeInsiders", "com.vscodium", "dev.kiro.desktop",
+    ]
+
+    /// An app a tool can run in: a terminal, an editor, or a tool's own app.
+    static func isToolApp(_ id: String) -> Bool {
+        terminals.contains(id) || chatApps[id] != nil || editors[id] != nil || otherToolApps.contains(id)
+            || id.hasPrefix("com.jetbrains.")
+    }
+
     /// Chats and editors: leaving one used to count as a wait, guessed. Their
     /// guessed waits are dropped from the log; an agent's own name is kept.
     static var guessedOnly: Set<String> {

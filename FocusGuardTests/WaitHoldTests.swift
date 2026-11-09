@@ -48,7 +48,7 @@ final class WaitHoldTests: XCTestCase {
         let tool = WaitTool(name: "Claude Code", kind: .agent, bundleId: "com.apple.Terminal")
         let reach = WaitReach(tool: tool, project: "Curiplay", since: now, to: "x.com")
         let held = now.addingTimeInterval(120)
-        let card = IslandMoment.waitReach(reach, usual: 60, next: nil, lastDrift: nil, heldUntil: held, now: now.addingTimeInterval(10))
+        let card = IslandMoment.waitReach(reach, estimate: .left(60), next: nil, lastDrift: nil, heldUntil: held, now: now.addingTimeInterval(10))
         XCTAssertEqual(card.title, "x.com is on hold for 2 min.")
         XCTAssertEqual(card.countdown?.ends, held, "The ring runs to the end of the hold, not the usual wait")
         XCTAssertEqual(card.buttons.last?.title, "OK", "Nothing to open anyway: the tab does that itself")

@@ -17,8 +17,10 @@ enum FocusGuardURL: Equatable {
     /// such as "access_denied", with the state FocusGuard sent.
     case slackAuth(code: String?, state: String, error: String?)
     /// A tool's hook: it started working (`start`) or finished (`done`).
-    /// The tool's name and the project's folder, nothing else.
-    case wait(started: Bool, tool: String, project: String?, needsInput: Bool = false)
+    /// The tool's name, the project's folder and which of its sessions it
+    /// is (a short id, to tell two apart), nothing else. `quiet`: it went
+    /// idle or was closed, rather than finishing.
+    case wait(started: Bool, tool: String, project: String?, needsInput: Bool = false, session: String? = nil, quiet: Bool = false)
 
     static let scheme = "focusguard"
     static let breakMinutes = 1...60
@@ -55,8 +57,12 @@ enum FocusGuardURL: Equatable {
                 return trimmed.isEmpty ? nil : String(trimmed.prefix(most))
             }
             guard let tool = clean(value("tool"), 40) else { return nil }
-            self = .wait(started: route == "wait/start", tool: tool, project: clean(value("project"), 60),
-                         needsInput: route == "wait/done" && value("input") == "1")
+            // A session's id is letters, digits, "-" and "_": anything else isn't one.
+            let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+            let session = clean(value("s"), 40).flatMap { $0.unicodeScalars.allSatisfy(allowed.contains) ? $0 : nil }
+            let done = route == "wait/done"
+            self = .wait(started: !done, tool: tool, project: clean(value("project"), 60),
+                         needsInput: done && value("input") == "1", session: session, quiet: done && value("idle") == "1")
         default:
             return nil
         }
@@ -83,11 +89,13 @@ enum FocusGuardURL: Equatable {
             components.host = "slack-auth"
             components.queryItems = [URLQueryItem(name: "code", value: code), URLQueryItem(name: "state", value: state),
                                      URLQueryItem(name: "error", value: error)].filter { $0.value != nil }
-        case .wait(let started, let tool, let project, let needsInput):
+        case .wait(let started, let tool, let project, let needsInput, let session, let quiet):
             components.host = "wait"
             components.path = started ? "/start" : "/done"
             components.queryItems = [URLQueryItem(name: "tool", value: tool), URLQueryItem(name: "project", value: project),
-                                     URLQueryItem(name: "input", value: needsInput ? "1" : nil)]
+                                     URLQueryItem(name: "input", value: needsInput ? "1" : nil),
+                                     URLQueryItem(name: "idle", value: quiet ? "1" : nil),
+                                     URLQueryItem(name: "s", value: session)]
                 .filter { $0.value != nil }
         }
         return components.url ?? URL(string: "\(Self.scheme)://back")!

@@ -331,6 +331,29 @@
         }
       }
     },
+    "%@ has been working for %lld min, longer than most of its runs. It could be done any moment." : {
+      "comment" : "Wait card. The tool, then the minutes it has worked so far",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ has been working for %2$lld min, longer than most of its runs. It could be done any moment."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ arbeitet seit %2$lld Min., länger als die meisten seiner Läufe. Es kann jeden Moment fertig sein."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ artıq %2$lld dəq işləyir, əksər işlərindən uzun. İstənilən an bitə bilər."
+          }
+        }
+      }
+    },
     "%@ is back" : {
       "comment" : "An app was brought back to the front",
       "localizations" : {
@@ -423,6 +446,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ hələ %2$@ üzərində işləyir"
+          }
+        }
+      }
+    },
+    "%@ is usually done within a minute from here. Stay and you’ll catch it." : {
+      "comment" : "Wait card. The tool, which is about to finish going by its past runs",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist ab hier meist in einer Minute fertig. Bleib dran, dann bist du da."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ adətən buradan sonra bir dəqiqəyə bitir. Qalın, bitəndə hazır olacaqsınız."
           }
         }
       }
@@ -2768,25 +2808,25 @@
         }
       }
     },
-    "%@ usually needs about %lld min. Stay close and you’ll catch it the moment it’s done." : {
-      "comment" : "The tool, then minutes",
+    "%@ usually needs about %lld more min from here. Stay close and you’ll catch it the moment it’s done." : {
+      "comment" : "Wait card. The tool, then minutes still to go, from its own past runs",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ usually needs about %2$lld min. Stay close and you’ll catch it the moment it’s done."
+            "value" : "%1$@ usually needs about %2$lld more min from here. Stay close and you’ll catch it the moment it’s done."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ braucht meist etwa %2$lld Min. Bleib dran, dann bist du da, sobald es fertig ist."
+            "value" : "%1$@ braucht ab hier meist noch etwa %2$lld Min. Bleib dran, dann bist du da, sobald es fertig ist."
           }
         },
         "az" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ adətən təxminən %2$lld dəq çəkir. Yaxında qalın, bitən kimi hazır olacaqsınız."
+            "value" : "%1$@ adətən buradan sonra təxminən %2$lld dəq daha çəkir. Yaxında qalın, bitən kimi hazır olacaqsınız."
           }
         }
       }
@@ -10186,22 +10226,6 @@
         }
       }
     },
-    "Adds 2 hooks to its settings, so FocusGuard knows exactly when it starts and finishes. They share the folder’s name and the time, never what you type." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fügt seinen Einstellungen 2 Hooks hinzu, damit FocusGuard genau weiß, wann es anfängt und fertig ist. Sie teilen den Namen des Ordners und die Uhrzeit, nie das, was du tippst."
-          }
-        },
-        "az" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Onun ayarlarına 2 hook əlavə edir ki, FocusGuard nə vaxt başladığını və bitirdiyini dəqiq bilsin. Onlar qovluğun adını və vaxtı paylaşır, heç vaxt yazdıqlarınızı yox."
-          }
-        }
-      }
-    },
     "Adds a notify command to its settings, so FocusGuard knows exactly when a turn ends. It shares the folder’s name and the time, never what you type." : {
       "localizations" : {
         "de" : {
@@ -10214,6 +10238,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Onun ayarlarına notify əmri əlavə edir ki, FocusGuard növbənin nə vaxt bitdiyini dəqiq bilsin. O, qovluğun adını və vaxtı paylaşır, heç vaxt yazdıqlarınızı yox."
+          }
+        }
+      }
+    },
+    "Adds hooks to its settings, so FocusGuard knows exactly when it starts, finishes or needs you. They share the folder’s name, which session it is and the time, never what you type." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fügt seinen Einstellungen Hooks hinzu, damit FocusGuard genau weiß, wann es anfängt, fertig ist oder dich braucht. Sie teilen den Namen des Ordners, welche Sitzung es ist und die Uhrzeit, nie das, was du tippst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onun ayarlarına hook-lar əlavə edir ki, FocusGuard nə vaxt başladığını, bitirdiyini və ya sizi gözlədiyini dəqiq bilsin. Onlar qovluğun adını, hansı sessiya olduğunu və vaxtı paylaşır, heç vaxt yazdıqlarınızı yox."
           }
         }
       }
@@ -38096,6 +38136,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Status in Slack und Discord"
+          }
+        }
+      }
+    },
+    "Stay close and you’ll catch it the moment it’s done." : {
+      "comment" : "Wait card, when the tool's usual time isn't known yet",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bleib dran, dann bist du da, sobald es fertig ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yaxında qalın, bitən kimi hazır olacaqsınız."
           }
         }
       }

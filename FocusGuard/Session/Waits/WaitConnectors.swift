@@ -3,8 +3,9 @@ import Foundation
 /// Tools that can tell FocusGuard exactly when they start and finish, by
 /// opening a `focusguard://wait/…` link from their own hooks. Each is set up
 /// only when the user presses Connect, and Disconnect takes out only what
-/// FocusGuard put in. The links carry the tool's name and the project's
-/// folder name, nothing else.
+/// FocusGuard put in. The links carry the tool's name, the project's folder
+/// name and the start of the session's id (to tell two sessions apart),
+/// nothing else.
 enum WaitConnector: String, CaseIterable, Identifiable {
     case claudeCode, codex
 
@@ -40,15 +41,26 @@ enum WaitConnector: String, CaseIterable, Identifiable {
         "$(basename \"\(variable)\" | sed \"s/ /%20/g\")"
     }
 
-    static func command(started: Bool, tool: String, folderVariable: String, needsInput: Bool = false) -> String {
+    /// The start of the session's id, picked out of what Claude Code hands
+    /// its hooks. Nothing else of it is read or kept.
+    static let sessionFromInput = #"$(sed -n 's/.*"session_id" *: *"\([A-Za-z0-9_-]*\)".*/\1/p' | head -c 12)"#
+
+    /// - Parameters:
+    ///   - needsInput: it stopped to ask the user something.
+    ///   - quiet: it went idle or was closed, rather than finishing.
+    ///   - session: tell its sessions apart, for a tool that names them as Claude Code does.
+    static func command(started: Bool, tool: String, folderVariable: String, needsInput: Bool = false,
+                        quiet: Bool = false, session: Bool = false) -> String {
         let name = tool.replacingOccurrences(of: " ", with: "%20")
-        let input = needsInput ? "&input=1" : ""
-        return "open -g \"\(marker)/\(started ? "start" : "done")?tool=\(name)\(input)&project=\(folder(folderVariable))\""
+        let flags = (needsInput ? "&input=1" : "") + (quiet ? "&idle=1" : "")
+        let which = session ? "&s=\(sessionFromInput)" : ""
+        return "open -g \"\(marker)/\(started ? "start" : "done")?tool=\(name)\(flags)&project=\(folder(folderVariable))\(which)\""
     }
 
     /// The shell function for the user's own scripts: `fgwait ./agent.sh`.
+    /// Each run gets a number of its own, so two at once aren't mixed up.
     static let shellFunction = """
-    fgwait() { local t; t=$(basename "$1" | sed "s/ /%20/g"); open -g "\(marker)/start?tool=$t&project=\(folder("$PWD"))"; "$@"; local s=$?; open -g "\(marker)/done?tool=$t"; return $s; }
+    fgwait() { local t p r; t=$(basename "$1" | sed "s/ /%20/g"); p=\(folder("$PWD")); r=$RANDOM$RANDOM; open -g "\(marker)/start?tool=$t&project=$p&s=$r"; "$@"; local s=$?; open -g "\(marker)/done?tool=$t&project=$p&s=$r"; return $s; }
     """
 }
 
@@ -73,11 +85,11 @@ struct WaitConnectorFiles {
         }
     }
 
-    /// Connected with an older set of FocusGuard's lines: put the current
-    /// ones in, as the user already said yes to.
+    /// Connected with an older set of FocusGuard's lines (before it told
+    /// sessions apart): put the current ones in, as the user already said yes to.
     func upgradeIfConnected() {
         let ours = claudeCommands().filter { $0.contains(WaitConnector.marker) }
-        if !ours.isEmpty, !ours.contains(where: { $0.contains("input=1") }) { try? connect(.claudeCode) }
+        if !ours.isEmpty, !ours.contains(where: { $0.contains("&s=") }) { try? connect(.claudeCode) }
     }
 
     /// Every hook command in Claude Code's settings, read as JSON: however
@@ -105,7 +117,7 @@ struct WaitConnectorFiles {
         }
     }
 
-    // MARK: - Claude Code: two hooks in ~/.claude/settings.json
+    // MARK: - Claude Code: hooks in ~/.claude/settings.json
 
     private func writeClaude(connect: Bool) throws {
         var settings: [String: Any] = [:]
@@ -122,27 +134,55 @@ struct WaitConnectorFiles {
         try data.write(to: claudeSettings, options: .atomic)
     }
 
-    /// The hooks with FocusGuard's taken out, and put back in when connecting:
-    /// a prompt sent starts the wait, Claude stopping ends it, and Claude
-    /// asking for permission or an answer ends it too: it can't go on alone.
+    private struct ClaudeHook {
+        let event: String
+        /// Which of the event's kinds: only these notifications.
+        var matcher: String?
+        var started = false
+        var needsInput = false
+        var quiet = false
+    }
+
+    /// A prompt sent starts a run and Claude stopping ends it. Claude asking
+    /// for permission or an answer ends it too: it can't go on alone. Going
+    /// idle (after an interrupt, which has no event of its own) or the
+    /// session closing ends it with nothing to time. Any other notification
+    /// says nothing about whether it's working.
+    private static let claudeEvents: [ClaudeHook] = [
+        ClaudeHook(event: "UserPromptSubmit", started: true),
+        ClaudeHook(event: "Stop"),
+        ClaudeHook(event: "Notification", matcher: "permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input",
+                   needsInput: true),
+        ClaudeHook(event: "Notification", matcher: "idle_prompt", quiet: true),
+        ClaudeHook(event: "SessionEnd", quiet: true),
+    ]
+
+    /// The hooks with FocusGuard's taken out, wherever an older version put
+    /// them, and the current ones put in when connecting. The user's own
+    /// hooks stay as they are.
     static func claudeHooks(_ hooks: [String: Any], connect: Bool) -> [String: Any] {
         var hooks = hooks
-        for (event, started, needsInput) in [("UserPromptSubmit", true, false), ("Stop", false, false), ("Notification", false, true)] {
-            var groups = (hooks[event] as? [[String: Any]] ?? []).compactMap { group -> [String: Any]? in
+        for (event, value) in hooks {
+            guard let groups = value as? [[String: Any]] else { continue }
+            let kept = groups.compactMap { group -> [String: Any]? in
+                guard let commands = group["hooks"] as? [[String: Any]] else { return group }
+                let own = commands.filter { !(($0["command"] as? String)?.contains(WaitConnector.marker) ?? false) }
+                guard own.count != commands.count else { return group }
+                guard !own.isEmpty else { return nil }
                 var group = group
-                let kept = (group["hooks"] as? [[String: Any]] ?? []).filter {
-                    !(($0["command"] as? String)?.contains(WaitConnector.marker) ?? false)
-                }
-                guard !kept.isEmpty else { return nil }
-                group["hooks"] = kept
+                group["hooks"] = own
                 return group
             }
-            if connect {
-                let command = WaitConnector.command(started: started, tool: WaitConnector.claudeCode.name,
-                                                    folderVariable: "$CLAUDE_PROJECT_DIR", needsInput: needsInput)
-                groups.append(["hooks": [["type": "command", "command": command]]])
-            }
-            hooks[event] = groups.isEmpty ? nil : groups
+            hooks[event] = kept.isEmpty ? nil : kept
+        }
+        guard connect else { return hooks }
+        for hook in claudeEvents {
+            let command = WaitConnector.command(started: hook.started, tool: WaitConnector.claudeCode.name,
+                                                folderVariable: "$CLAUDE_PROJECT_DIR", needsInput: hook.needsInput,
+                                                quiet: hook.quiet, session: true)
+            var group: [String: Any] = ["hooks": [["type": "command", "command": command]]]
+            if let matcher = hook.matcher { group["matcher"] = matcher }
+            hooks[hook.event] = (hooks[hook.event] as? [[String: Any]] ?? []) + [group]
         }
         return hooks
     }
