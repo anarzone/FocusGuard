@@ -134,6 +134,7 @@ struct AnalyzerTriggersCard: View {
                                          measure: .longestStretch))
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(Theme.focus)
                     .controlSize(.small)
                     .padding(.top, 2)
                 }
@@ -193,9 +194,21 @@ struct AnalyzerWaitsSummary: Equatable {
         var waits = 0
         var drifted = 0
         var driftSeconds: TimeInterval = 0
+        /// Each of the last 7 days, oldest first: waits stayed with, and drifted.
+        var byDay: [(stayed: Int, drifted: Int)] = Array(repeating: (0, 0), count: 7)
+        /// Its next open task, when one fits the project: "CUR-38 Waiter wipes the table".
+        var next: String?
         var id: String { name }
         var stayed: Int { waits - drifted }
+
+        static func == (a: Project, b: Project) -> Bool {
+            a.name == b.name && a.waits == b.waits && a.drifted == b.drifted && a.next == b.next
+                && a.byDay.map(\.stayed) == b.byDay.map(\.stayed) && a.byDay.map(\.drifted) == b.byDay.map(\.drifted)
+        }
     }
+
+    /// The first of the 7 days the bars show.
+    var firstDay: Date?
 
     var projects: [Project] = []
     var waits = 0
@@ -209,9 +222,12 @@ struct AnalyzerWaitsSummary: Equatable {
         a.projects == b.projects && a.waits == b.waits && a.drifted == b.drifted && a.pullsAway?.tool == b.pullsAway?.tool
     }
 
-    static func make(_ records: [WaitRecord]) -> AnalyzerWaitsSummary {
+    static func make(_ records: [WaitRecord], now: Date = .now, calendar: Calendar = .current) -> AnalyzerWaitsSummary {
         var summary = AnalyzerWaitsSummary()
         guard !records.isEmpty else { return summary }
+        let today = calendar.startOfDay(for: now)
+        let first = calendar.date(byAdding: .day, value: -6, to: today) ?? today
+        summary.firstDay = first
         var byProject: [String: Project] = [:]
         let other = String(localized: "Other", comment: "Analyzer: waits with no project")
         for record in records {
@@ -221,6 +237,10 @@ struct AnalyzerWaitsSummary: Equatable {
             if record.drifted {
                 project.drifted += 1
                 project.driftSeconds += record.drift
+            }
+            let day = calendar.dateComponents([.day], from: first, to: calendar.startOfDay(for: record.start)).day ?? -1
+            if project.byDay.indices.contains(day) {
+                if record.drifted { project.byDay[day].drifted += 1 } else { project.byDay[day].stayed += 1 }
             }
             byProject[name] = project
         }
@@ -247,6 +267,11 @@ struct AnalyzerWaitsSummary: Equatable {
 /// "While your tools work": stayed with it, or drifted, by project.
 struct AnalyzerWaitsCard: View {
     let summary: AnalyzerWaitsSummary
+    @State private var pickedName: String?
+
+    private var picked: AnalyzerWaitsSummary.Project? {
+        summary.projects.first { $0.name == pickedName } ?? summary.projects.first
+    }
 
     var body: some View {
         AnalyzerCard {
@@ -260,8 +285,14 @@ struct AnalyzerWaitsCard: View {
                 }
                 Text(headline).font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
                 ForEach(summary.projects.prefix(4)) { project in
-                    projectRow(project)
+                    Button { pickedName = project.name } label: { projectRow(project) }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(project.name == picked?.name && summary.projects.count > 1 ? Theme.focusTint : Color.clear))
+                        .accessibilityAddTraits(project.name == picked?.name ? .isSelected : [])
                 }
+                if let picked { week(picked) }
                 HStack(spacing: 14) {
                     legend(Theme.focus, String(localized: "Stayed with it"))
                     legend(Theme.distraction, String(localized: "Drifted"))
@@ -305,6 +336,64 @@ struct AnalyzerWaitsCard: View {
                 .frame(minWidth: 120, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// The picked project's week: a bar a day, stayed with below drifted, and what's next on it.
+    private func week(_ project: AnalyzerWaitsSummary.Project) -> some View {
+        let most = max(1, project.byDay.map { $0.stayed + $0.drifted }.max() ?? 1)
+        let calendar = Calendar.current
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(String(localized: "\(project.name) this week", comment: "Analyzer: a project's last 7 days of waits"))
+                .font(.system(size: 12, weight: .semibold))
+            HStack(alignment: .bottom, spacing: 10) {
+                ForEach(project.byDay.indices, id: \.self) { index in
+                    dayBar(project.byDay[index], index: index, most: most, calendar: calendar)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    if project.driftSeconds > 0 {
+                        Text(String(localized: "Drifting in waits cost \(WindowFormat.hm(project.driftSeconds)) of \(project.name) this week.",
+                                    comment: "Analyzer: time lost to drifting during waits, then the project"))
+                            .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(String(localized: "You stayed with every wait on \(project.name) this week.", comment: "Analyzer: no drifts in waits on the project"))
+                            .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let next = project.next {
+                        Text(String(localized: "Next up: \(next)", comment: "Analyzer: the project's next open task"))
+                            .font(.system(size: 12, weight: .medium)).lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: 360, alignment: .leading)
+                .padding(.leading, 14)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    /// One day's waits: drifted on top of stayed with, and the weekday under it.
+    private func dayBar(_ day: (stayed: Int, drifted: Int), index: Int, most: Int, calendar: Calendar) -> some View {
+        let date = summary.firstDay.flatMap { calendar.date(byAdding: .day, value: index, to: $0) }
+        let short = date.map { $0.formatted(.dateTime.weekday(.abbreviated)) } ?? ""
+        let long = date.map { $0.formatted(.dateTime.weekday(.wide)) } ?? ""
+        let unit = 56 / CGFloat(most)
+        return VStack(spacing: 4) {
+            VStack(spacing: 2) {
+                if day.drifted > 0 {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Theme.distraction)
+                        .frame(height: CGFloat(day.drifted) * unit)
+                }
+                if day.stayed > 0 {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Theme.focus)
+                        .frame(height: CGFloat(day.stayed) * unit)
+                }
+            }
+            .frame(width: 18, height: 60, alignment: .bottom)
+            Text(short).font(.system(size: 10)).foregroundStyle(Theme.secondaryText)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "\(long): \(day.stayed) stayed, \(day.drifted) drifted",
+                                   comment: "Analyzer: a day, then waits stayed with and drifted"))
     }
 
     private func legend(_ color: Color, _ label: String) -> some View {

@@ -80,8 +80,12 @@ private struct AnalyzerView: View {
     }
 
     private func reload() async {
-        let week = Date.now.addingTimeInterval(-7 * 86_400)
-        waits = AnalyzerWaitsSummary.make(WaitLog.shared.records(from: week, to: .now))
+        let week = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: .now)) ?? .now
+        var summary = AnalyzerWaitsSummary.make(WaitLog.shared.records(from: week, to: .now))
+        for index in summary.projects.indices {
+            summary.projects[index].next = appState.waits.nextTask(summary.projects[index].name)?.title
+        }
+        waits = summary
         let fresh = await appState.analyzerReport(weekendsCount: weekendsCount)
         appState.windowPages.analyzer = fresh
         report = fresh
