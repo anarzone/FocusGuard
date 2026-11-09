@@ -62,6 +62,9 @@ final class IslandController {
     var playSound: (IslandKind) -> Void = { _ in NSSound(named: "Tink")?.play() }
     /// A moment really showed. The trial reminder counts as sent only now.
     var didShow: (IslandMoment) -> Void = { _ in }
+    /// A card was answered: the button's command, nil when it was closed or
+    /// a button that only closes was pressed.
+    var didAnswer: (IslandKind, NotificationCommand?) -> Void = { _, _ in }
     /// The menu's Recent list.
     let recents: IslandRecents
 
@@ -159,6 +162,7 @@ final class IslandController {
     func press(_ button: IslandButton) {
         let kind = queue.current?.moment.kind
         DecisionLog.shared.record(.island, button.command == nil ? "dismissed" : "pressed", detail: kind?.rawValue)
+        if let kind { didAnswer(kind, button.command) }
         if button.command == nil, kind == .weekReady {
             queue.tuck(now: clock())
             refresh()
@@ -172,6 +176,7 @@ final class IslandController {
     func closeCurrent() {
         guard let moment = queue.current?.moment else { return }
         DecisionLog.shared.record(.island, "closed", detail: moment.kind.rawValue)
+        didAnswer(moment.kind, nil)
         remove(key: moment.key)
     }
 

@@ -57,6 +57,11 @@ final class HabitTimingTests: XCTestCase {
         XCTAssertFalse(HabitsCoordinator.mayOffer(now: now, lastOfferAt: at(9, 45), pausedUntil: .distantPast))
         XCTAssertTrue(HabitsCoordinator.mayOffer(now: now, lastOfferAt: at(9, 30), pausedUntil: .distantPast))
         XCTAssertFalse(HabitsCoordinator.mayOffer(now: now, lastOfferAt: .distantPast, pausedUntil: at(11)))
+        // Unanswered offers stretch the wait: 1 hour after one, 2 after two, never past 4.
+        XCTAssertFalse(HabitsCoordinator.mayOffer(now: now, lastOfferAt: at(9, 30), pausedUntil: .distantPast, ignored: 1))
+        XCTAssertTrue(HabitsCoordinator.mayOffer(now: now, lastOfferAt: at(9), pausedUntil: .distantPast, ignored: 1))
+        XCTAssertFalse(HabitsCoordinator.mayOffer(now: now, lastOfferAt: at(9), pausedUntil: .distantPast, ignored: 2))
+        XCTAssertTrue(HabitsCoordinator.mayOffer(now: at(14), lastOfferAt: at(10), pausedUntil: .distantPast, ignored: 9))
     }
 
     func testDayKeysAndLists() {

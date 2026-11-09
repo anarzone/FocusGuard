@@ -10,9 +10,12 @@ enum WaitSettings {
 }
 
 /// Turns what the watcher notices into the island's card: when the user
-/// reaches for a distraction while a tool works, the project's next step and
-/// a way back; when the tool's usual wait is up and they're still away, that
-/// it's probably done. Every wait that ends goes in the log.
+/// reaches for a distraction while a tool works, what it cost last time and
+/// a way back; when the tool says it's done or needs them, that. Every wait
+/// that ends goes in the log.
+///
+/// It stays quiet when it isn't wanted: one card in ten minutes, and after
+/// two closed in a row without going back, none for an hour.
 @MainActor
 final class WaitCoordinator {
     private var watcher = WaitWatcher()
@@ -20,6 +23,8 @@ final class WaitCoordinator {
     private let island: IslandController?
     private var timer: Timer?
     private var lastCardAt: Date?
+    private var ignoredInARow = 0
+    private var quietUntil: Date?
 
     /// What's going on now, for the looks between the tracker's.
     var currentMoment: () -> WaitMoment = { WaitMoment(now: .now) }
@@ -31,6 +36,8 @@ final class WaitCoordinator {
     var holdSeconds: (WaitReach) -> Int? = { _ in nil }
     /// Puts the site's tab on hold until the given time.
     var hold: (WaitReach, Date) -> Void = { _, _ in }
+    /// The clock, for the quiet times.
+    var now: () -> Date = { .now }
 
     init(log: WaitLog = .shared, island: IslandController?) {
         self.log = log
@@ -42,31 +49,53 @@ final class WaitCoordinator {
             stopTimer()
             return
         }
-        for event in watcher.observe(moment, usualWait: { [log] in log.usualWait(for: $0.name) }) {
+        for event in watcher.observe(moment) {
             handle(event, now: moment.now)
         }
         // The tracker may look rarely when nothing's timed: keep an eye on
-        // the wait's end while one is going.
+        // the wait while one is going.
         watcher.isWaiting ? startTimer() : stopTimer()
+    }
+
+    /// A wait card was answered: going back (true) or closing it (false).
+    func answered(wentBack: Bool) {
+        if wentBack {
+            ignoredInARow = 0
+            return
+        }
+        ignoredInARow += 1
+        if ignoredInARow >= WaitRules.ignoredInARow {
+            ignoredInARow = 0
+            quietUntil = now().addingTimeInterval(WaitRules.quietAfterIgnored)
+            DecisionLog.shared.record(.wait, "quieted")
+        }
+    }
+
+    /// Whether a card on reaching for a distraction may show now.
+    func mayShowReachCard(at now: Date) -> Bool {
+        if let quietUntil, now < quietUntil { return false }
+        if let lastCardAt, now.timeIntervalSince(lastCardAt) < WaitRules.gapBetweenCards { return false }
+        return true
     }
 
     private func handle(_ event: WaitEvent, now: Date) {
         switch event {
         case .reached(let reach):
             DecisionLog.shared.record(.wait, "reached", detail: reach.tool.kind.rawValue)
-            // Quick waits back to back: one card is enough for a while.
             // A held site is held every time, card or not.
             let held = holdSeconds(reach).map { reach.since.addingTimeInterval(TimeInterval($0)) }.flatMap { $0 > now ? $0 : nil }
             if let held {
                 DecisionLog.shared.record(.wait, "held", detail: reach.tool.kind.rawValue)
                 hold(reach, held)
             }
-            if let lastCardAt, now.timeIntervalSince(lastCardAt) < WaitRules.gapBetweenCards { return }
+            guard held != nil || mayShowReachCard(at: now) else { return }
             lastCardAt = now
             island?.post(.waitReach(reach, usual: log.usualWait(for: reach.tool.name), next: nextTask(reach.project),
                                     lastDrift: log.lastDrift(for: reach.tool.name), heldUntil: held, now: now))
-        case .probablyDone(let reach, let exact):
-            island?.post(.waitDone(reach, exact: exact, now: now))
+        case .done(let reach, let project, let needsInput):
+            // The tool's own word, while they're away: always worth a card.
+            DecisionLog.shared.record(.wait, needsInput ? "needsInput" : "done", detail: reach.tool.kind.rawValue)
+            island?.post(.waitDone(reach, project: project, needsInput: needsInput, now: now))
         case .ended(let record, let back):
             log.add(record)
             DecisionLog.shared.record(.wait, record.drifted ? "drifted" : "stayed", detail: back ? "back" : "gone")
@@ -81,10 +110,10 @@ final class WaitCoordinator {
         watcher.started(tool: tool, project: project, front: currentMoment().front, at: now)
     }
 
-    /// A tool said it finished: `focusguard://wait/done`.
-    func finished(tool: String, now: Date = .now) {
+    /// A tool said it finished, or that it needs an answer: `focusguard://wait/done`.
+    func finished(tool: String, project: String?, needsInput: Bool = false, now: Date = .now) {
         guard isOn() else { return }
-        for event in watcher.finished(tool: tool, at: now) { handle(event, now: now) }
+        for event in watcher.finished(tool: tool, project: project, needsInput: needsInput, at: now) { handle(event, now: now) }
     }
 
     private func startTimer() {
@@ -155,20 +184,21 @@ extension IslandMoment {
         )
     }
 
-    /// "Codex has probably finished.": the usual wait is up and they are still away.
-    /// "Codex just finished." when it said so itself.
-    static func waitDone(_ reach: WaitReach, exact: Bool = false, now: Date) -> IslandMoment {
-        let place = reach.project ?? reach.tool.name
+    /// "Claude Code just finished.", or "Claude Code needs your answer.":
+    /// the tool said so while the user was away.
+    static func waitDone(_ reach: WaitReach, project: String?, needsInput: Bool, now: Date) -> IslandMoment {
+        let place = project ?? reach.project ?? reach.tool.name
         let minutes = max(1, Int(now.timeIntervalSince(reach.since) / 60))
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
-            pillValue: exact ? String(localized: "Done", comment: "Pill: the tool has finished")
-                             : String(localized: "Done?", comment: "Pill: the tool has probably finished"),
+            pillValue: needsInput ? String(localized: "Needs you", comment: "Pill: the tool is waiting for the user's answer")
+                                  : String(localized: "Done", comment: "Pill: the tool has finished"),
             kicker: String(localized: "\(minutes) min on \(reach.to)", comment: "Minutes, then the site the user went to: 4 min on x.com"),
-            title: exact ? String(localized: "\(reach.tool.name) just finished.", comment: "The tool, which said it finished: Codex just finished.")
-                         : String(localized: "\(reach.tool.name) has probably finished.", comment: "The tool: Codex has probably finished."),
-            body: String(localized: "Its work is waiting in \(place). Go now, while what you asked is still fresh.",
-                         comment: "The project or tool"),
+            title: needsInput ? String(localized: "\(reach.tool.name) needs your answer.", comment: "The tool, which asked the user something: Claude Code needs your answer.")
+                              : String(localized: "\(reach.tool.name) just finished.", comment: "The tool, which said it finished: Codex just finished."),
+            body: needsInput ? String(localized: "It asked you something in \(place) and can’t go on until you answer.", comment: "The project or tool")
+                             : String(localized: "Its work is waiting in \(place). Go now, while what you asked is still fresh.",
+                                      comment: "The project or tool"),
             tone: .attention,
             buttons: [IslandButton(title: String(localized: "Back to \(place)", comment: "Button: the project or tool to go back to"),
                                    command: .backTo(bundleId: reach.tool.bundleId, host: reach.tool.host)),

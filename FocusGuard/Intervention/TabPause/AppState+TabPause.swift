@@ -29,9 +29,13 @@ extension AppState {
             startBreak(durationMinutes: minutes)
         case .slackAuth(let code, let state, let error):
             finishSlackSignIn(code: code, state: state, error: error)
-        case .wait(let started, let tool, let project):
+        case .wait(let started, let tool, let project, let needsInput):
             guard FeatureFlags.waits else { return }
-            if started { waits.started(tool: tool, project: project) } else { waits.finished(tool: tool) }
+            if started {
+                waits.started(tool: tool, project: project)
+            } else {
+                waits.finished(tool: tool, project: project, needsInput: needsInput)
+            }
         }
     }
 

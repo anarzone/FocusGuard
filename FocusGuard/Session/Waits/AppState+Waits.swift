@@ -10,6 +10,12 @@ extension AppState {
             guard !words.isEmpty else { return nil }
             return self.integrations.taskGoals.first { !TaskGoals.words(in: "\($0.title) \($0.list)").isDisjoint(with: words) }
         }
+        island?.didAnswer = { [weak self] kind, command in
+            guard kind == .wait else { return }
+            if case .backTo = command { self?.waits.answered(wentBack: true) } else { self?.waits.answered(wentBack: false) }
+        }
+        // Connected before Claude Code could say it needs an answer: add that hook too.
+        WaitConnectorFiles().upgradeIfConnected()
         waits.holdSeconds = { FocusAnalyzer.shared.holdSeconds(tool: $0.tool.name, site: $0.to) }
         waits.hold = { [weak self] reach, until in
             guard let self else { return }

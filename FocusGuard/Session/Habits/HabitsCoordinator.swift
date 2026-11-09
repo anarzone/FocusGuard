@@ -45,6 +45,9 @@ final class HabitsCoordinator {
     @ObservationIgnored private var dayChecksAt: Date = .distantPast
     @ObservationIgnored private var lastOfferAt: Date = .distantPast
     @ObservationIgnored private var offersPausedUntil: Date = .distantPast
+    /// Offers in a row that went unanswered: each doubles the wait for the next.
+    @ObservationIgnored private var offersIgnored = 0
+    @ObservationIgnored private var lastOfferAnswered = true
     /// Who's recording, given the page in front. Tests pass their own.
     @ObservationIgnored var readMicrophone: (String?) -> CallDetector.Reading = { frontURL in
         let recording = MicrophoneActivity.recordingProcesses()
@@ -151,19 +154,27 @@ final class HabitsCoordinator {
             autoStartOffer = nil
             presenter.withdrawAutoStartOffer()
         }
-        guard let offer, Self.mayOffer(now: now, lastOfferAt: lastOfferAt, pausedUntil: offersPausedUntil) else { return }
+        // A new day starts fresh.
+        if !Calendar.current.isDate(lastOfferAt, inSameDayAs: now) { offersIgnored = 0; lastOfferAnswered = true }
+        guard let offer, Self.mayOffer(now: now, lastOfferAt: lastOfferAt, pausedUntil: offersPausedUntil, ignored: offersIgnored) else { return }
+        if !lastOfferAnswered { offersIgnored += 1 }
+        lastOfferAnswered = false
         lastOfferAt = now
         autoStartOffer = offer
         presenter.presentAutoStartOffer(offer, now: now)
     }
 
-    nonisolated static func mayOffer(now: Date, lastOfferAt: Date, pausedUntil: Date) -> Bool {
-        now >= pausedUntil && now.timeIntervalSince(lastOfferAt) >= offerCooldown
+    /// The wait after an offer doubles for each one left unanswered before
+    /// it, up to four hours: an offer nobody takes shouldn't keep coming.
+    nonisolated static func mayOffer(now: Date, lastOfferAt: Date, pausedUntil: Date, ignored: Int = 0) -> Bool {
+        let cooldown = offerCooldown * pow(2, Double(min(ignored, 3)))
+        return now >= pausedUntil && now.timeIntervalSince(lastOfferAt) >= cooldown
     }
 
     /// "Not now", in the menu or the notification: no offers for a while.
     func dismissAutoStartOffer(now: Date = .now) {
         autoStartOffer = nil
+        lastOfferAnswered = true
         offersPausedUntil = now.addingTimeInterval(Self.notNowPause)
     }
 
@@ -179,6 +190,8 @@ final class HabitsCoordinator {
     /// taken either way.
     func takeAutoStartOffer(since: Date) -> Date? {
         autoStartOffer = nil
+        lastOfferAnswered = true
+        offersIgnored = 0
         return detector.isOngoing(since: since) ? since : nil
     }
 

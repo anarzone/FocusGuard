@@ -18,7 +18,7 @@ enum FocusGuardURL: Equatable {
     case slackAuth(code: String?, state: String, error: String?)
     /// A tool's hook: it started working (`start`) or finished (`done`).
     /// The tool's name and the project's folder, nothing else.
-    case wait(started: Bool, tool: String, project: String?)
+    case wait(started: Bool, tool: String, project: String?, needsInput: Bool = false)
 
     static let scheme = "focusguard"
     static let breakMinutes = 1...60
@@ -55,7 +55,8 @@ enum FocusGuardURL: Equatable {
                 return trimmed.isEmpty ? nil : String(trimmed.prefix(most))
             }
             guard let tool = clean(value("tool"), 40) else { return nil }
-            self = .wait(started: route == "wait/start", tool: tool, project: clean(value("project"), 60))
+            self = .wait(started: route == "wait/start", tool: tool, project: clean(value("project"), 60),
+                         needsInput: route == "wait/done" && value("input") == "1")
         default:
             return nil
         }
@@ -82,10 +83,11 @@ enum FocusGuardURL: Equatable {
             components.host = "slack-auth"
             components.queryItems = [URLQueryItem(name: "code", value: code), URLQueryItem(name: "state", value: state),
                                      URLQueryItem(name: "error", value: error)].filter { $0.value != nil }
-        case .wait(let started, let tool, let project):
+        case .wait(let started, let tool, let project, let needsInput):
             components.host = "wait"
             components.path = started ? "/start" : "/done"
-            components.queryItems = [URLQueryItem(name: "tool", value: tool), URLQueryItem(name: "project", value: project)]
+            components.queryItems = [URLQueryItem(name: "tool", value: tool), URLQueryItem(name: "project", value: project),
+                                     URLQueryItem(name: "input", value: needsInput ? "1" : nil)]
                 .filter { $0.value != nil }
         }
         return components.url ?? URL(string: "\(Self.scheme)://back")!
