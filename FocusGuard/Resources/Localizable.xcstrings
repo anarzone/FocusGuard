@@ -5287,6 +5287,29 @@
         }
       }
     },
+    "%@: %lld stayed, %lld drifted" : {
+      "comment" : "Analyzer: a day, then waits stayed with and drifted",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$lld stayed, %3$lld drifted"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$lld geblieben, %3$lld abgeschweift"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$lld qaldı, %3$lld yayındı"
+          }
+        }
+      }
+    },
     "%@: a new app %@| in sessions, %lld changes in all." : {
       "comment" : "Plural on changes: 1 change / 2 changes. The | ends the bold start",
       "localizations" : {
@@ -16994,6 +17017,29 @@
         }
       }
     },
+    "Drifting in waits cost %@ of %@ this week." : {
+      "comment" : "Analyzer: time lost to drifting during waits, then the project",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drifting in waits cost %1$@ of %2$@ this week."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschweifen beim Warten hat %2$@ diese Woche %1$@ gekostet."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləmələrdə yayınmaq bu həftə %2$@ üçün %1$@ apardı."
+          }
+        }
+      }
+    },
     "Drifting to %@?" : {
       "localizations" : {
         "az" : {
@@ -27095,6 +27141,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nächster Titel"
+          }
+        }
+      }
+    },
+    "Next up: %@" : {
+      "comment" : "Analyzer: the project's next open task",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes: %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti: %@"
           }
         }
       }
@@ -45584,6 +45647,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$lld gözləmədən %1$lld-də işdə qaldınız."
+          }
+        }
+      }
+    },
+    "You stayed with every wait on %@ this week." : {
+      "comment" : "Analyzer: no drifts in waits on the project",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist diese Woche bei jeder Wartezeit an %@ dabeigeblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə %@ üzrə hər gözləmədə işdə qaldınız."
           }
         }
       }

@@ -67,6 +67,24 @@ final class AnalyzerPatternTests: XCTestCase {
         XCTAssertEqual(patterns.afterCall, 660)
     }
 
+    func testAProjectsWeekCountsEachDaysWaits() {
+        let now = F.at(6, 18)
+        let records = [
+            WaitRecord(start: F.at(6, 10), tool: "Codex", project: "Curiplay", seconds: 90, drift: 0),
+            WaitRecord(start: F.at(6, 11), tool: "Codex", project: "Curiplay", seconds: 600, drift: 500, to: "x.com"),
+            WaitRecord(start: F.at(4, 10), tool: "Codex", project: "Curiplay", seconds: 90, drift: 0),
+            WaitRecord(start: F.at(0, 10), tool: "Codex", project: "Curiplay", seconds: 90, drift: 0),
+        ]
+        let summary = AnalyzerWaitsSummary.make(records, now: now, calendar: calendar)
+        let week = try? XCTUnwrap(summary.projects.first?.byDay)
+        XCTAssertEqual(week?.count, 7)
+        XCTAssertEqual(week?.last?.stayed, 1, "Today: one stayed with")
+        XCTAssertEqual(week?.last?.drifted, 1, "and one drifted")
+        XCTAssertEqual(week?[4].stayed, 1, "Two days ago")
+        XCTAssertEqual(week?.first?.stayed, 1, "Six days ago is the first bar")
+        XCTAssertEqual(summary.firstDay, calendar.startOfDay(for: F.at(0, 12)))
+    }
+
     func testTriggersOverAShorterRangeKeepOnlyItsMoments() {
         let now = F.at(10, 12)
         let old = AnalyzerTrigger.Moment(start: F.at(1, 10), seconds: 600)
