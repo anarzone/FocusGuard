@@ -14,6 +14,8 @@ enum PausedPage {
         case over
         /// A daily limit ran out: paused until midnight.
         case limit
+        /// Held while a tool works: counts down, then opens the site itself.
+        case hold
     }
 
     static var fileURL: URL? { Bundle.main.url(forResource: "paused", withExtension: "html") }
@@ -28,6 +30,7 @@ enum PausedPage {
         if let ends = tab.endsAt { fields.append(("ends", seconds(ends))) }
         if let back = tab.backTo { fields.append(("back", back)) }
         if case .limit(let minutes) = tab.reason { fields.append(("minutes", String(minutes))) }
+        if case .hold(let tool) = tab.reason { fields.append(("tool", tool)) }
         if let label = tab.sessionLabel { fields.append(("label", label)) }
         if let start = tab.startedAt { fields.append(("start", seconds(start))) }
         if state == .over, let summary {
@@ -79,6 +82,8 @@ struct PausedTab: Equatable {
         case session
         /// A daily limit of this many minutes ran out; paused until midnight.
         case limit(minutes: Int)
+        /// Held while a tool works (an Analyzer test); the page opens the site by itself.
+        case hold(tool: String)
     }
 
     let id: String
@@ -173,6 +178,19 @@ final class TabPauseCoordinator {
                 self.lastPausedID = nil
             }
         }
+    }
+
+    /// The user left `tool` for this site while it works, on a day the site
+    /// is held: its tab counts down to `endsAt`, then opens the site again.
+    /// The page does that by itself, so nothing here has to put it back.
+    func hold(snapshot: ActivitySnapshot?, tool: String, project: String?, startedAt: Date, endsAt: Date) {
+        guard isEnabled, let page, let snapshot, pauser.canPause(browser: snapshot.bundleIdentifier),
+              let original = snapshot.url.flatMap(URL.init(string:)),
+              ["http", "https"].contains(original.scheme?.lowercased() ?? ""),
+              let host = BlockRequest.displayHost(snapshot.url) else { return }
+        let tab = PausedTab(id: PausedPage.newID(), browser: snapshot.bundleIdentifier, host: host,
+                            originalURL: original, reason: .hold(tool: tool), endsAt: endsAt, backTo: project, startedAt: startedAt)
+        pauser.pauseFrontTab(in: tab.browser, showing: host, with: PausedPage.url(base: page, for: tab, state: .hold)) { _ in }
     }
 
     /// The block screen let the site through (a pass, "It's for work",

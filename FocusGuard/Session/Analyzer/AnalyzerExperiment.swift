@@ -14,6 +14,9 @@ enum AnalyzerChange: Codable, Hashable, Sendable {
     /// The day's first session says the plan again, and the morning plan comes
     /// at this hour if it can come earlier.
     case hardestFirst(morningHour: Int?)
+    /// Leaving this tool for this site while it works puts the site on hold
+    /// for a while: its tab counts down, then opens by itself.
+    case holdInWait(tool: String, site: String, seconds: Int)
 
     /// The if-then plan.
     var plan: String {
@@ -28,6 +31,9 @@ enum AnalyzerChange: Codable, Hashable, Sendable {
             return String(localized: "If a day has calls, then I'll keep \(minutes) minutes for one deep block.")
         case .hardestFirst:
             return String(localized: "If a task is hard, then I'll do it in my first session of the day.")
+        case let .holdInWait(tool, site, seconds):
+            return String(localized: "If \(tool) is working, then I'll wait \(max(1, seconds / 60)) minutes before \(site).",
+                          comment: "An if-then plan. The tool, minutes, then the site")
         }
     }
 
@@ -47,6 +53,9 @@ enum AnalyzerChange: Codable, Hashable, Sendable {
             return String(localized: "The morning plan comes at \(time), and your first session reminds you of this plan")
         case .hardestFirst(nil):
             return String(localized: "Your first session of the day reminds you of this plan")
+        case let .holdInWait(tool, site, seconds):
+            return String(localized: "\(site) waits \(max(1, seconds / 60)) minutes when you leave \(tool) for it",
+                          comment: "What happens on On days. The site, minutes, then the tool")
         }
     }
 }

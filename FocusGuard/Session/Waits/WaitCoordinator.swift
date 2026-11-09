@@ -26,6 +26,11 @@ final class WaitCoordinator {
     /// The open task that fits the project, if any: "CUR-38 Waiter wipes the table".
     var nextTask: (_ project: String?) -> TaskItem? = { _ in nil }
     var isOn: () -> Bool = { WaitSettings.isOn() }
+    /// Seconds the site is held when the user leaves this tool for it today
+    /// (an Analyzer test or a kept fix), nil when it isn't.
+    var holdSeconds: (WaitReach) -> Int? = { _ in nil }
+    /// Puts the site's tab on hold until the given time.
+    var hold: (WaitReach, Date) -> Void = { _, _ in }
 
     init(log: WaitLog = .shared, island: IslandController?) {
         self.log = log
@@ -50,10 +55,16 @@ final class WaitCoordinator {
         case .reached(let reach):
             DecisionLog.shared.record(.wait, "reached", detail: reach.tool.kind.rawValue)
             // Quick waits back to back: one card is enough for a while.
+            // A held site is held every time, card or not.
+            let held = holdSeconds(reach).map { reach.since.addingTimeInterval(TimeInterval($0)) }.flatMap { $0 > now ? $0 : nil }
+            if let held {
+                DecisionLog.shared.record(.wait, "held", detail: reach.tool.kind.rawValue)
+                hold(reach, held)
+            }
             if let lastCardAt, now.timeIntervalSince(lastCardAt) < WaitRules.gapBetweenCards { return }
             lastCardAt = now
             island?.post(.waitReach(reach, usual: log.usualWait(for: reach.tool.name), next: nextTask(reach.project),
-                                    lastDrift: log.lastDrift(for: reach.tool.name), now: now))
+                                    lastDrift: log.lastDrift(for: reach.tool.name), heldUntil: held, now: now))
         case .probablyDone(let reach, let exact):
             island?.post(.waitDone(reach, exact: exact, now: now))
         case .ended(let record, let back):
@@ -100,7 +111,8 @@ extension IslandMoment {
 
     /// What it cost last time, or that the site won't make the tool any
     /// faster; then something real to do meanwhile, and the way back.
-    static func waitReach(_ reach: WaitReach, usual: TimeInterval, next: TaskItem?, lastDrift: WaitRecord?, now: Date) -> IslandMoment {
+    static func waitReach(_ reach: WaitReach, usual: TimeInterval, next: TaskItem?, lastDrift: WaitRecord?,
+                          heldUntil: Date? = nil, now: Date) -> IslandMoment {
         let place = reach.project ?? reach.tool.name
         let tool = reach.tool.name
         let usualMinutes = max(1, Int((usual / 60).rounded()))
@@ -108,7 +120,11 @@ extension IslandMoment {
             String(localized: "\(tool) is still working on \($0)", comment: "The tool, then the project: Codex is still working on Curiplay")
         } ?? String(localized: "\(tool) is still working", comment: "The tool: Codex is still working")
         let title: String
-        if let lastDrift, lastDrift.drift >= 60 {
+        if let heldUntil {
+            let minutes = max(1, Int((heldUntil.timeIntervalSince(now) / 60).rounded(.up)))
+            title = String(localized: "\(reach.to) is on hold for \(minutes) min.",
+                           comment: "Wait card when the site is held by the user's Analyzer test. The site, then minutes")
+        } else if let lastDrift, lastDrift.drift >= 60 {
             title = String(localized: "Last time, \(lastDrift.to ?? reach.to) took \(Int(lastDrift.drift / 60)) min.",
                            comment: "Warning on the wait card. The site, then minutes: Last time, x.com took 9 min.")
         } else {
@@ -123,7 +139,7 @@ extension IslandMoment {
             body = String(localized: "\(tool) usually needs about \(usualMinutes) min. Stay close and you’ll catch it the moment it’s done.",
                           comment: "The tool, then minutes")
         }
-        let ends = reach.since.addingTimeInterval(usual)
+        let ends = heldUntil ?? reach.since.addingTimeInterval(usual)
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
             kicker: kicker,
@@ -132,7 +148,8 @@ extension IslandMoment {
             tone: .attention,
             buttons: [IslandButton(title: String(localized: "Back to \(place)", comment: "Button: the project or tool to go back to"),
                                    command: .backTo(bundleId: reach.tool.bundleId, host: reach.tool.host)),
-                      IslandButton(title: String(localized: "Open \(reach.to) anyway", comment: "Button: the site, kept open"))],
+                      IslandButton(title: heldUntil == nil ? String(localized: "Open \(reach.to) anyway", comment: "Button: the site, kept open")
+                                                           : String(localized: "OK", comment: "Button: close the card"))],
             countdown: ends > now ? IslandCountdown(ends: ends, total: ends.timeIntervalSince(now)) : nil,
             startsOpen: true
         )
