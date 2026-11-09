@@ -7,6 +7,24 @@ enum IslandKind: String, CaseIterable, Codable {
     case autoStart, driftPrompt, morningPlan, wrapUp, weekReady, reminder, trial
     case sample
 
+    /// About this moment only: once seen, it never comes back, even when
+    /// something else pushed it off the island or a quiet time held it.
+    var isMomentary: Bool {
+        switch self {
+        case .wait, .autoStart, .driftPrompt: return true
+        default: return false
+        }
+    }
+
+    /// Suggestions about a drift or a stretch of work. After one shows,
+    /// the others keep away for a while (`IslandRules.betweenSuggestions`).
+    var isSuggestion: Bool {
+        switch self {
+        case .wait, .autoStart, .driftPrompt, .pickUp: return true
+        default: return false
+        }
+    }
+
     /// Whether it still means something after a quit and relaunch. A nudge is
     /// about this moment's drift, Pick up has its own card and coordinator, and
     /// an offer counts from a stretch of work the relaunch ended.

@@ -239,6 +239,33 @@ final class IslandTests: XCTestCase {
         XCTAssertEqual(currentKind, .trial)
     }
 
+    func testASeenWaitCardPushedOffDoesNotComeBack() {
+        island.post(moment(.wait, key: "wait"))
+        XCTAssertEqual(currentKind, .wait)
+        island.post(moment(.drift))
+        XCTAssertEqual(currentKind, .drift, "The nudge goes first")
+        island.closeCurrent()
+        wait(IslandRules.gapBetween + 1)
+        XCTAssertNil(currentKind, "It was about that moment: seen once is enough")
+        XCTAssertTrue(island.queue.waiting.isEmpty)
+    }
+
+    func testAnotherSuggestionRightAfterOneIsSkipped() {
+        island.post(moment(.wait, key: "wait"))
+        island.closeCurrent()
+        wait(60)
+        island.post(moment(.driftPrompt))
+        XCTAssertNil(currentKind, "Two suggestions about the same stretch, one after the other")
+        island.post(moment(.wait, key: "wait"))
+        XCTAssertEqual(currentKind, .wait, "The wait card's own update still comes")
+        island.closeCurrent()
+        wait(IslandRules.betweenSuggestions + 1)
+        island.post(moment(.autoStart))
+        conditions.idleSeconds = 10  // it waits for a pause
+        island.tick()
+        XCTAssertEqual(currentKind, .autoStart, "Later, another kind is fine")
+    }
+
     // MARK: - Repeats
 
     func testARepeatUpdatesInPlace() {
