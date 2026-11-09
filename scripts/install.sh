@@ -6,6 +6,10 @@
 #
 # Usage:  ./scripts/install.sh [version]
 #
+# This is the owner's own copy: it's built with OWNER_COPY, which opens
+# every Pro feature (`Entitlements`). Releases are built by release.yml
+# without it.
+#
 # The build is stamped like a release (see release.sh) so Sparkle never sees
 # a local install as older than the published appcast and "updates" it back:
 #   CFBundleShortVersionString = [version], default: latest v* tag
@@ -39,6 +43,7 @@ xcodebuild \
     -derivedDataPath build/release \
     MARKETING_VERSION="$VERSION" \
     CURRENT_PROJECT_VERSION="$BUILD" \
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) OWNER_COPY' \
     -quiet \
     build
 
