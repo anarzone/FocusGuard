@@ -116,10 +116,11 @@ enum UITestMode {
     @MainActor
     private static func seedAnalyzer(_ context: ModelContext, now: Date, calendar: Calendar) {
         let today = calendar.startOfDay(for: now)
-        func add(_ start: Date, _ minutes: Double, _ app: String, site: String? = nil, title: String? = nil, _ kind: Classification) {
+        func add(_ start: Date, _ minutes: Double, _ app: String, site: String? = nil, title: String? = nil, bundle: String? = nil,
+                 session: Session? = nil, _ kind: Classification) {
             let event = ActivityEvent(startedAt: start, endedAt: start.addingTimeInterval(minutes * 60),
-                                      bundleIdentifier: site == nil ? "com.example.\(app)" : "com.google.Chrome",
-                                      appName: site == nil ? app : "Google Chrome", url: site.map { "https://\($0)/" })
+                                      bundleIdentifier: site == nil ? bundle ?? "com.example.\(app)" : "com.google.Chrome",
+                                      appName: site == nil ? app : "Google Chrome", url: site.map { "https://\($0)/" }, session: session)
             event.windowTitle = title
             event.classification = kind
             context.insert(event)
@@ -147,7 +148,20 @@ enum UITestMode {
                 WaitLog.shared.add(WaitRecord(start: at(hour), tool: tool, project: index == 2 ? "FocusGuard" : "Curiplay",
                                               seconds: 95, drift: 0))
             }
-            add(at(14), 120, "Xcode", .focus)
+            // A call before lunch, and the work after it a little late.
+            if made % 3 != 0 {
+                add(at(11.75), 15, "Zoom", bundle: "us.zoom.xos", .neutral)
+                add(at(12), 8, "Notes", .neutral)
+            }
+            // The afternoon's session breaks around minute 30.
+            let session = Session(startedAt: at(14), status: .completed)
+            session.endedAt = at(15)
+            context.insert(session)
+            let broke = Double(25 + (made % 3) * 5)
+            add(at(14), broke, "Xcode", session: session, .focus)
+            add(at(14 + broke / 60), 4, "Chrome", site: "youtube.com", session: session, .distraction)
+            add(at(14 + (broke + 4) / 60), 60 - broke - 4, "Xcode", session: session, .focus)
+            add(at(15), 60, "Xcode", .focus)
         }
         try? context.save()
     }

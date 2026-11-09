@@ -10,9 +10,17 @@ struct AnalyzerTriggersCard: View {
     /// A test can start: none is running. Wait triggers offer to test a hold.
     var canTest = false
     var test: (AnalyzerFix) -> Void = { _ in }
+    var now: Date = .now
     @State private var pickedID: String?
+    @AppStorage("analyzer.triggerDays", store: UITestMode.defaults) private var days = 28
 
-    private var picked: AnalyzerTrigger? { triggers.first { $0.id == pickedID } ?? triggers.first }
+    /// The ranges the switch offers, in days.
+    static let ranges = [7, 14, 28]
+
+    private var shown: [AnalyzerTrigger] { days >= 28 ? triggers : AnalyzerTriggers.recent(triggers, days: days, now: now) }
+    private var picked: AnalyzerTrigger? { shown.first { $0.id == pickedID } ?? shown.first }
+    /// Working days in the range, for how sure a trigger is.
+    private var rangeDays: Int { days >= 28 ? workingDays : min(workingDays, max(1, Int((Double(days) * 5 / 7).rounded()))) }
 
     var body: some View {
         AnalyzerCard {
@@ -20,12 +28,24 @@ struct AnalyzerTriggersCard: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(String(localized: "What pulls you away", comment: "Analyzer card: what the user was doing right before losing focus"))
                         .font(.system(size: 13, weight: .semibold))
-                    Spacer()
                     Text(String(localized: "What you did right before you drifted", comment: "Analyzer card subtitle"))
                         .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    Spacer()
+                    Picker(String(localized: "Range", comment: "Analyzer: how many days the triggers cover"), selection: $days) {
+                        Text(String(localized: "1 week")).tag(7)
+                        Text(String(localized: "2 weeks")).tag(14)
+                        Text(String(localized: "4 weeks")).tag(28)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                if shown.isEmpty {
+                    Text(String(localized: "Nothing came up twice in these days.", comment: "Analyzer: no trigger in a short range"))
+                        .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                 }
                 VStack(spacing: 2) {
-                    ForEach(Array(triggers.enumerated()), id: \.element.id) { index, trigger in
+                    ForEach(Array(shown.enumerated()), id: \.element.id) { index, trigger in
                         row(trigger, rank: index + 1)
                     }
                 }
@@ -36,7 +56,7 @@ struct AnalyzerTriggersCard: View {
 
     private func row(_ trigger: AnalyzerTrigger, rank: Int) -> some View {
         let isPicked = trigger.id == picked?.id
-        let sure = trigger.sureness(workingDays: workingDays)
+        let sure = trigger.sureness(workingDays: rangeDays)
         return Button { pickedID = trigger.id } label: {
             HStack(spacing: 10) {
                 Text("\(rank)")
@@ -81,7 +101,7 @@ struct AnalyzerTriggersCard: View {
 
     private func evidence(_ trigger: AnalyzerTrigger) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(AnalyzerTriggers.because(trigger, workingDays: workingDays))
+            Text(AnalyzerTriggers.because(trigger, workingDays: rangeDays))
                 .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             ForEach(trigger.moments.prefix(6)) { moment in
@@ -154,10 +174,10 @@ struct AnalyzerTriggerBars: View {
     var body: some View {
         let most = max(1, perDay.max() ?? 1)
         HStack(alignment: .bottom, spacing: 2) {
-            ForEach(Array(perDay.suffix(14).enumerated()), id: \.offset) { _, value in
+            ForEach(Array(perDay.suffix(28).enumerated()), id: \.offset) { _, value in
                 RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                     .fill(value > 0 ? Theme.distraction : Theme.gridFuture)
-                    .frame(width: 4, height: max(2, CGFloat(value) / CGFloat(most) * 20))
+                    .frame(width: perDay.count > 14 ? 3 : (perDay.count <= 7 ? 6 : 4), height: max(2, CGFloat(value) / CGFloat(most) * 20))
             }
         }
         .frame(height: 20, alignment: .bottom)

@@ -109,6 +109,23 @@ enum AnalyzerTriggers {
             .map { $0 }
     }
 
+    /// The same triggers over the last `days` days only: their moments, a bar
+    /// a day, and only those still a pattern there, most time first.
+    static func recent(_ triggers: [AnalyzerTrigger], days: Int, now: Date, calendar: Calendar = .current) -> [AnalyzerTrigger] {
+        let today = calendar.startOfDay(for: now)
+        guard let from = calendar.date(byAdding: .day, value: -days, to: today) else { return triggers }
+        return triggers.compactMap { trigger in
+            var trigger = trigger
+            trigger.moments = trigger.moments.filter { $0.start >= from && $0.start < today }
+            trigger.perDay = (0..<days).map { offset in
+                guard let day = calendar.date(byAdding: .day, value: offset, to: from) else { return 0 }
+                return trigger.counted.filter { calendar.isDate($0.start, inSameDayAs: day) }.count
+            }
+            return trigger.count >= fewestTimes ? trigger : nil
+        }
+        .sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.id < $1.id }
+    }
+
     /// What the rule saw, in words: never why.
     static func because(_ trigger: AnalyzerTrigger, workingDays: Int) -> String {
         let days = trigger.daysSeen

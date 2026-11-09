@@ -8453,6 +8453,29 @@
         }
       }
     },
+    "%lld to %lld: %lld%% focused" : {
+      "comment" : "Analyzer: the best two hours, then their focus rate: 9 to 11: 86% focused",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld to %2$lld: %3$lld%% focused"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld bis %2$lld Uhr: %3$lld %% fokussiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-dan %2$lld-dək: %3$lld%% diqqətli"
+          }
+        }
+      }
+    },
     "%lld working days so far · worked out on this Mac" : {
       "localizations" : {
         "az" : {
@@ -8724,6 +8747,46 @@
     "%lld:00" : {
       "shouldTranslate" : false
     },
+    "%lld:00, %lld%% focused" : {
+      "comment" : "Analyzer: an hour, then its focus rate",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld:00, %2$lld%% focused"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld:00, %2$lld %% fokussiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld:00, %2$lld%% diqqətli"
+          }
+        }
+      }
+    },
+    "%lld:00, too little tracked" : {
+      "comment" : "Analyzer: an hour with too little data",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld:00, zu wenig erfasst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld:00, çox az qeydə alınıb"
+          }
+        }
+      }
+    },
     "%lldh" : {
       "comment" : "Compact duration",
       "localizations" : {
@@ -8941,6 +9004,23 @@
     "00:00" : {
       "shouldTranslate" : false
     },
+    "1 week" : {
+      "comment" : "Analyzer range",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Woche"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 həftə"
+          }
+        }
+      }
+    },
     "1 working day so far · worked out on this Mac" : {
       "localizations" : {
         "az" : {
@@ -8970,6 +9050,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 Jahr"
+          }
+        }
+      }
+    },
+    "2 weeks" : {
+      "comment" : "Analyzer range",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 Wochen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 həftə"
           }
         }
       }
@@ -9104,6 +9201,23 @@
         }
       }
     },
+    "4 weeks" : {
+      "comment" : "Analyzer range",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 Wochen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4 həftə"
+          }
+        }
+      }
+    },
     "45 to 74 min" : {
       "localizations" : {
         "az" : {
@@ -9181,6 +9295,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "6 Monate"
+          }
+        }
+      }
+    },
+    "60 min" : {
+      "comment" : "Analyzer axis: an hour into a session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60 Min."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60 dəq"
           }
         }
       }
@@ -9967,6 +10098,23 @@
         }
       }
     },
+    "About %lld minutes after a call" : {
+      "comment" : "Analyzer: usual minutes back to work after a call",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwa %lld Minuten nach einem Anruf"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zəngdən sonra təxminən %lld dəqiqə"
+          }
+        }
+      }
+    },
     "About the same: %@ on %@, %@ on %@." : {
       "localizations" : {
         "az" : {
@@ -10091,6 +10239,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nach einem Anruf"
+          }
+        }
+      }
+    },
+    "After a drift" : {
+      "comment" : "Analyzer: back to work after drifting",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach dem Abschweifen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yayınmadan sonra"
           }
         }
       }
@@ -20992,6 +21157,23 @@
         }
       }
     },
+    "Getting back after a call" : {
+      "comment" : "Analyzer card: time back to work after a call",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück nach einem Anruf"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zəngdən sonra işə qayıtmaq"
+          }
+        }
+      }
+    },
     "Getting set up · %lld of %lld done" : {
       "localizations" : {
         "az" : {
@@ -25230,6 +25412,29 @@
         }
       }
     },
+    "Minute %lld to %lld: %lld" : {
+      "comment" : "Analyzer bar: a 5-minute slice of a session, then how many broke in it",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minute %1$lld to %2$lld: %3$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minute %1$lld bis %2$lld: %3$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-%2$lld-ci dəqiqə: %3$lld"
+          }
+        }
+      }
+    },
     "Minutes" : {
       "localizations" : {
         "az" : {
@@ -25904,6 +26109,29 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Most of today's drift came in sessions: %1$@ of %2$@."
+          }
+        }
+      }
+    },
+    "Most often between minute %lld and %lld" : {
+      "comment" : "Analyzer: the 5-minute slice of a session where focus most often breaks",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most often between minute %1$lld and %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meist zwischen Minute %1$lld und %2$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən çox %1$lld-%2$lld-ci dəqiqələr arasında"
           }
         }
       }
@@ -27005,6 +27233,23 @@
         }
       }
     },
+    "No calls seen yet" : {
+      "comment" : "Analyzer: no calls in the period",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Anrufe gesehen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ zəng görülməyib"
+          }
+        }
+      }
+    },
     "No clear difference" : {
       "localizations" : {
         "az" : {
@@ -27841,6 +28086,23 @@
         }
       }
     },
+    "Not enough tracked yet" : {
+      "comment" : "Analyzer: too little data for best hours",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch zu wenig erfasst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ kifayət qədər qeydə alınmayıb"
+          }
+        }
+      }
+    },
     "Not in the Chrome Web Store yet; the guide shows how" : {
       "localizations" : {
         "az" : {
@@ -28096,6 +28358,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nichts ist zurückgekommen"
+          }
+        }
+      }
+    },
+    "Nothing came up twice in these days." : {
+      "comment" : "Analyzer: no trigger in a short range",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In diesen Tagen kam nichts zweimal vor."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu günlərdə heç nə iki dəfə təkrarlanmayıb."
           }
         }
       }
@@ -32458,6 +32737,23 @@
         }
       }
     },
+    "Range" : {
+      "comment" : "Analyzer: how many days the triggers cover",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitraum"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aralıq"
+          }
+        }
+      }
+    },
     "Rate limited (HTTP 429). The provider is throttling requests — wait a minute and try again." : {
       "localizations" : {
         "az" : {
@@ -36729,6 +37025,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Standup-Entwurf und Stundenzettel"
+          }
+        }
+      }
+    },
+    "start" : {
+      "comment" : "Analyzer axis: the start of a session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "başlanğıc"
           }
         }
       }
@@ -41372,6 +41685,29 @@
         }
       }
     },
+    "Too few calls yet: %lld of %lld" : {
+      "comment" : "Analyzer: calls so far, of those needed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too few calls yet: %1$lld of %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch zu wenige Anrufe: %1$lld von %2$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ az zəng var: %2$lld-dən %1$lld"
+          }
+        }
+      }
+    },
     "Too few days counted to compare fairly: %lld On and %lld Off. This says nothing for or against it." : {
       "localizations" : {
         "az" : {
@@ -41400,6 +41736,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch zu wenige Sessions für eine Aussage."
+          }
+        }
+      }
+    },
+    "Too few sessions yet: %lld of %lld" : {
+      "comment" : "Analyzer: sessions that broke so far, of those needed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too few sessions yet: %1$lld of %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch zu wenige Sessions: %1$lld von %2$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələ az sessiya var: %2$lld-dən %1$lld"
           }
         }
       }
@@ -43843,6 +44202,23 @@
         }
       }
     },
+    "When sessions break" : {
+      "comment" : "Analyzer card: how far into a session the first drift comes",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann Sessions abbrechen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyalar nə vaxt qırılır"
+          }
+        }
+      }
+    },
     "When the pause screen shows, the tab switches to a calm FocusGuard page and any video stops." : {
       "localizations" : {
         "az" : {
@@ -45834,6 +46210,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Deine 10 Arbeitstage"
+          }
+        }
+      }
+    },
+    "Your best hours" : {
+      "comment" : "Analyzer card: focus by hour of the day",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine besten Stunden"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ən yaxşı saatlarınız"
           }
         }
       }
