@@ -349,8 +349,10 @@ extension AppState {
         )
         switch target {
         case .activate(let id):
-            NSRunningApplication.runningApplications(withBundleIdentifier: id).first?.activate()
-            if let host = backToPage() { extensionBridge.showTab(host: host, browser: id) }
+            let page = backToPage()
+            AppActivator.bringForward(id) { [weak self] in
+                if let page { self?.extensionBridge.showTab(host: page, browser: id) }
+            }
         case .hide(let id):
             NSRunningApplication.runningApplications(withBundleIdentifier: id).forEach { $0.hide() }
         case .none:

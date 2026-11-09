@@ -97,8 +97,18 @@ final class IslandController {
         tick()
     }
 
+    /// When a suggestion last showed, and which: another kind keeps away for a while.
+    private var lastSuggestion: (kind: IslandKind, at: Date)?
+
     func post(_ moment: IslandMoment) {
         let now = clock()
+        // Another suggestion right after one about the same stretch says the
+        // same thing twice. The wait card's own updates (done, needs you) pass.
+        if moment.kind.isSuggestion, !moment.requested, let last = lastSuggestion, last.kind != moment.kind,
+           now.timeIntervalSince(last.at) < IslandRules.betweenSuggestions {
+            DecisionLog.shared.record(.island, "skipped", detail: moment.kind.rawValue)
+            return
+        }
         if queue.post(moment, now: now), let entry = queue.current {
             surface.update(entry.moment, open: entry.isOpen, now: now)
         }
@@ -122,6 +132,7 @@ final class IslandController {
         switch queue.step(conditions(), allowed: isAllowed) {
         case .showed(let moment):
             DecisionLog.shared.record(.island, "shown", detail: moment.kind.rawValue)
+            if moment.kind.isSuggestion { lastSuggestion = (moment.kind, clock()) }
             surface.show(moment, open: queue.isOpen, now: clock())
             surface.announce(moment.announcement(at: clock()), urgent: moment.kind == .drift || moment.kind == .limit)
             if IslandSettings.hasSound(moment.kind), defaults.bool(forKey: IslandSettings.softSound) { playSound(moment.kind) }

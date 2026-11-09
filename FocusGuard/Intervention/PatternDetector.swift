@@ -14,6 +14,9 @@ final class PatternDetector {
     private let windowSeconds: TimeInterval = 600   // 10 min
     private let triggerCount = 3
     private let perHostCooldown: TimeInterval = 3600 // 1 hour
+    /// One prompt, whatever the site, then none for this long.
+    static let anyHostCooldown: TimeInterval = 2 * 3600
+    private var lastPromptAt: Date?
 
     private var visits: [String: [Date]] = [:]   // host → recent visit timestamps
     private var lastSuggestedAt: [String: Date] = [:]
@@ -48,7 +51,9 @@ final class PatternDetector {
 
         guard times.count >= triggerCount else { return }
         if let last = lastSuggestedAt[host], now.timeIntervalSince(last) < perHostCooldown { return }
+        if let lastPromptAt, now.timeIntervalSince(lastPromptAt) < Self.anyHostCooldown { return }
         lastSuggestedAt[host] = now
+        lastPromptAt = now
         visits[host] = []  // reset so we don't re-suggest mid-cooldown
 
         presenter.presentDriftPrompt(host: host)

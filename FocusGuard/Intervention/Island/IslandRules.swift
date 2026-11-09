@@ -47,6 +47,8 @@ enum IslandRules {
     static let afterOpening: TimeInterval = 60
     /// How long Friday's card stays as a pill after folding away.
     static let tuckedFor: TimeInterval = 30 * 60
+    /// After one suggestion, how long before another of a different kind.
+    static let betweenSuggestions: TimeInterval = 10 * 60
     private static let minute: TimeInterval = 60
 
     static func timing(_ kind: IslandKind) -> Timing {
@@ -121,6 +123,8 @@ struct IslandQueue {
         var hoveredSince: Date?
         /// Opened by a click or VoiceOver, so it stays open until the pointer leaves.
         var openedByHand = false
+        /// It has been on screen.
+        var wasShown = false
 
         var isOpen: Bool { moment.startsOpen || hoveredSince != nil || openedByHand }
     }
@@ -318,6 +322,8 @@ struct IslandQueue {
     }
 
     private mutating func waitAgain(_ entry: Entry) {
+        // Seen already, and only about that moment: it's done, not postponed.
+        if entry.wasShown, entry.moment.kind.isMomentary { return }
         var entry = entry
         entry.shownUntil = nil
         entry.hoveredSince = nil
@@ -331,6 +337,7 @@ struct IslandQueue {
         // It really was held: one that came during a pause only happened to.
         entry.moment.shownAtPause = isPause(now: now) && now > entry.arrived
         entry.shownUntil = IslandRules.timing(entry.moment.kind).onScreen.map { now.addingTimeInterval($0) }
+        entry.wasShown = true
         current = entry
     }
 
