@@ -88,6 +88,8 @@ struct AnalyzerReport: Equatable, Sendable {
     var rows: [AnalyzerCauseRow] = []
     var finding: AnalyzerFinding
     var details: [AnalyzerCause: AnalyzerCauseDetail] = [:]
+    /// When sessions break, the best hours, getting back after a call.
+    var patterns = AnalyzerPatterns()
     /// What set the lost focus off, most time first (`AnalyzerTriggers`).
     var triggers: [AnalyzerTrigger] = []
 
@@ -106,6 +108,7 @@ struct AnalyzerReport: Equatable, Sendable {
         }
         let labelled = label(working)
         report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, calendar: calendar)
+        report.patterns = AnalyzerPatterns.make(working)
         guard working.count >= AnalyzerRules.namingDays else { return report }
         report.rows = rows(labelled, muted: muted)
         report.finding = finding(report.rows, workingDays: labelled.count)

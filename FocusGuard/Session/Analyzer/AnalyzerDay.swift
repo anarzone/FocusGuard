@@ -43,6 +43,8 @@ struct AnalyzerLoss: Equatable, Sendable {
 struct AnalyzerSessionStat: Equatable, Sendable {
     let hasGoal: Bool
     let longest: TimeInterval
+    /// How far into the session the first distraction came; nil when none did.
+    var brokeAt: TimeInterval?
 }
 
 /// One day's attention, worked out once from its events. Finished days don't
@@ -62,6 +64,11 @@ struct AnalyzerDay: Equatable, Sendable {
     var gettingStarted: TimeInterval?
     var losses: [AnalyzerLoss] = []
     var sessions: [AnalyzerSessionStat] = []
+    /// Focused and tracked time in each hour of the day (0–23), calls left out.
+    var hourFocus: [Int: TimeInterval] = [:]
+    var hourTracked: [Int: TimeInterval] = [:]
+    /// How long each return to work took after a call ended.
+    var afterCalls: [TimeInterval] = []
     /// Focused and lost time on each side of where the day's late part starts.
     var earlyFocus: TimeInterval = 0
     var earlyLost: TimeInterval = 0
@@ -132,6 +139,8 @@ enum AnalyzerDayBuilder {
         result.longest = stretches.map(\.focused).max() ?? 0
         result.deepBlocks = stretches.filter { $0.focused >= AnalyzerRules.deepBlock }.count
         result.sessions = sessionStats(sessions, events: events, span: span)
+        (result.hourFocus, result.hourTracked) = hours(segments, calendar: calendar)
+        result.afterCalls = afterCalls(callSpans, segments: segments)
 
         let solid = stretches.filter { $0.focused >= AnalyzerRules.solidStretch }
         guard let first = solid.first, let last = solid.last else { return result }
@@ -393,7 +402,40 @@ enum AnalyzerDayBuilder {
         sessions.filter { span.start <= $0.start && $0.start < span.end }.map { session in
             let own = segments(events.filter { $0.session == session.id }, in: span)
             let churn = Set(churnRuns(own).flatMap { Array($0) })
-            return AnalyzerSessionStat(hasGoal: session.hasGoal, longest: stretches(own, churn: churn).map(\.focused).max() ?? 0)
+            let firstDrift = own.first { $0.kind == .distraction }?.start
+            return AnalyzerSessionStat(hasGoal: session.hasGoal, longest: stretches(own, churn: churn).map(\.focused).max() ?? 0,
+                                       brokeAt: firstDrift.map { max(0, $0.timeIntervalSince(session.start)) })
+        }
+    }
+
+    /// Focused and tracked seconds in each clock hour, a run split where it
+    /// crosses an hour. Calls count for neither.
+    static func hours(_ segments: [Segment], calendar: Calendar) -> (focus: [Int: TimeInterval], tracked: [Int: TimeInterval]) {
+        var focus: [Int: TimeInterval] = [:], tracked: [Int: TimeInterval] = [:]
+        for segment in segments where !segment.isCall {
+            var cursor = segment.start
+            while cursor < segment.end {
+                let hour = calendar.component(.hour, from: cursor)
+                let next = calendar.dateInterval(of: .hour, for: cursor)?.end ?? segment.end
+                let end = min(next, segment.end)
+                let seconds = end.timeIntervalSince(cursor)
+                tracked[hour, default: 0] += seconds
+                if segment.kind == .focus { focus[hour, default: 0] += seconds }
+                cursor = end
+            }
+        }
+        return (focus, tracked)
+    }
+
+    /// From each call's end to the next focused work, when that comes within
+    /// the hour and before another call.
+    static func afterCalls(_ calls: [DateInterval], segments: [Segment]) -> [TimeInterval] {
+        calls.enumerated().compactMap { index, call in
+            guard let next = segments.first(where: { $0.kind == .focus && !$0.isCall && $0.start >= call.end.addingTimeInterval(-1) })?.start
+            else { return nil }
+            let wait = max(0, next.timeIntervalSince(call.end))
+            if index + 1 < calls.count, calls[index + 1].start < next { return nil }
+            return wait <= 3600 ? wait : nil
         }
     }
 
