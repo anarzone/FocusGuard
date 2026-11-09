@@ -49,7 +49,7 @@ struct SettingsWaitsSection: View {
             return String(localized: "Not on this Mac. Its waits are worked out from what’s in front.")
         case .notConnected:
             return connector == .claudeCode
-                ? String(localized: "Adds 2 hooks to its settings, so FocusGuard knows exactly when it starts and finishes. They share the folder’s name and the time, never what you type.")
+                ? String(localized: "Adds hooks to its settings, so FocusGuard knows exactly when it starts, finishes or needs you. They share the folder’s name, which session it is and the time, never what you type.")
                 : String(localized: "Adds a notify command to its settings, so FocusGuard knows exactly when a turn ends. It shares the folder’s name and the time, never what you type.")
         case .connected:
             return String(localized: "Connected: its waits are exact.")

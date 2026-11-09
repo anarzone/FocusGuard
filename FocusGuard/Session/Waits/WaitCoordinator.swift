@@ -10,9 +10,10 @@ enum WaitSettings {
 }
 
 /// Turns what the watcher notices into the island's card: when the user
-/// reaches for a distraction while a tool works, what it cost last time and
-/// a way back; when the tool says it's done or needs them, that. Every wait
-/// that ends goes in the log.
+/// reaches for a distraction while a tool works, what it cost last time,
+/// how much longer the tool usually needs from here and a way back; when the
+/// tool says it's done or needs them, that. Every wait that ends goes in the
+/// log, and so does every run a tool times itself.
 ///
 /// It stays quiet when it isn't wanted: one card in ten minutes, and after
 /// two closed in a row without going back, none for an hour.
@@ -38,6 +39,9 @@ final class WaitCoordinator {
     var hold: (WaitReach, Date) -> Void = { _, _ in }
     /// The clock, for the quiet times.
     var now: () -> Date = { .now }
+    /// How long the Mac has been awake: it stands still while it sleeps, so
+    /// a run the Mac slept through shows.
+    var uptime: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
 
     init(log: WaitLog = .shared, island: IslandController?) {
         self.log = log
@@ -80,6 +84,8 @@ final class WaitCoordinator {
 
     private func handle(_ event: WaitEvent, now: Date) {
         switch event {
+        case .ran(let run):
+            log.add(run)
         case .reached(let reach):
             DecisionLog.shared.record(.wait, "reached", detail: reach.tool.kind.rawValue)
             // A held site is held every time, card or not.
@@ -90,7 +96,7 @@ final class WaitCoordinator {
             }
             guard held != nil || mayShowReachCard(at: now) else { return }
             lastCardAt = now
-            island?.post(.waitReach(reach, usual: log.usualWait(for: reach.tool.name), next: nextTask(reach.project),
+            island?.post(.waitReach(reach, estimate: estimate(for: reach, now: now), next: nextTask(reach.project),
                                     lastDrift: log.lastDrift(for: reach.tool.name), heldUntil: held, now: now))
         case .done(let reach, let project, let needsInput):
             // The tool's own word, while they're away: always worth a card.
@@ -103,17 +109,38 @@ final class WaitCoordinator {
         }
     }
 
+    /// How much longer the tool has to go. A tool that said when it started
+    /// is judged by its own past runs that got this far; one that didn't, by
+    /// how long the user usually stays away from it.
+    func estimate(for reach: WaitReach, now: Date) -> WaitEstimate {
+        if let started = reach.runStarted {
+            return log.estimate(tool: reach.tool.name, project: reach.project, elapsed: now.timeIntervalSince(started))
+        }
+        guard let usual = log.usualWait(for: reach.tool.name) else { return .unknown }
+        let left = usual - now.timeIntervalSince(reach.since)
+        return left > 0 ? .left(left) : .unknown
+    }
+
     /// A tool said it started: `focusguard://wait/start`, from its hook.
-    func started(tool: String, project: String?, now: Date = .now) {
+    func started(tool: String, project: String?, session: String? = nil, now: Date = .now) {
         guard isOn() else { return }
-        DecisionLog.shared.record(.wait, "started", detail: "exact")
-        watcher.started(tool: tool, project: project, front: currentMoment().front, at: now)
+        // With no word that it's done, it's believed for as long as its
+        // longest run here and half as much again: a long job is still a wait.
+        let longest = log.longestRun(tool: tool, project: project) ?? 0
+        let believed = min(WaitRules.longestBelieved, max(WaitRules.believedWorking, WaitRules.believedMargin * longest))
+        let hasHome = watcher.started(tool: tool, project: project, session: session, front: currentMoment().front,
+                                      believeFor: believed, uptime: uptime(), at: now)
+        DecisionLog.shared.record(.wait, "started", detail: hasHome ? "exact" : "elsewhere")
     }
 
     /// A tool said it finished, or that it needs an answer: `focusguard://wait/done`.
-    func finished(tool: String, project: String?, needsInput: Bool = false, now: Date = .now) {
+    /// - Parameter quiet: it went idle or was closed, rather than finishing.
+    func finished(tool: String, project: String?, session: String? = nil, needsInput: Bool = false, quiet: Bool = false,
+                  now: Date = .now) {
         guard isOn() else { return }
-        for event in watcher.finished(tool: tool, project: project, needsInput: needsInput, at: now) { handle(event, now: now) }
+        let events = watcher.finished(tool: tool, project: project, session: session, needsInput: needsInput, quiet: quiet,
+                                      uptime: uptime(), at: now)
+        for event in events { handle(event, now: now) }
     }
 
     private func startTimer() {
@@ -139,12 +166,12 @@ extension IslandMoment {
     static let waitKey = "wait"
 
     /// What it cost last time, or that the site won't make the tool any
-    /// faster; then something real to do meanwhile, and the way back.
-    static func waitReach(_ reach: WaitReach, usual: TimeInterval, next: TaskItem?, lastDrift: WaitRecord?,
+    /// faster; then something real to do meanwhile, or how much longer the
+    /// tool usually needs from here, and the way back.
+    static func waitReach(_ reach: WaitReach, estimate: WaitEstimate, next: TaskItem?, lastDrift: WaitRecord?,
                           heldUntil: Date? = nil, now: Date) -> IslandMoment {
         let place = reach.project ?? reach.tool.name
         let tool = reach.tool.name
-        let usualMinutes = max(1, Int((usual / 60).rounded()))
         let kicker = reach.project.map {
             String(localized: "\(tool) is still working on \($0)", comment: "The tool, then the project: Codex is still working on Curiplay")
         } ?? String(localized: "\(tool) is still working", comment: "The tool: Codex is still working")
@@ -165,10 +192,11 @@ extension IslandMoment {
             body = String(localized: "Read “\(next.title)” while you wait, so you’re ready when \(tool) is.",
                           comment: "The open task's title, then the tool")
         } else {
-            body = String(localized: "\(tool) usually needs about \(usualMinutes) min. Stay close and you’ll catch it the moment it’s done.",
-                          comment: "The tool, then minutes")
+            body = waitBody(tool: tool, estimate: estimate)
         }
-        let ends = heldUntil ?? reach.since.addingTimeInterval(usual)
+        // Counted down only when there's something to count: a hold, or the tool's own usual time.
+        var ends = heldUntil
+        if ends == nil, case .left(let seconds) = estimate { ends = now.addingTimeInterval(seconds) }
         return IslandMoment(
             kind: .wait, key: waitKey, pillName: place,
             kicker: kicker,
@@ -179,9 +207,29 @@ extension IslandMoment {
                                    command: .backTo(bundleId: reach.tool.bundleId, host: reach.tool.host)),
                       IslandButton(title: heldUntil == nil ? String(localized: "Open \(reach.to) anyway", comment: "Button: the site, kept open")
                                                            : String(localized: "OK", comment: "Button: close the card"))],
-            countdown: ends > now ? IslandCountdown(ends: ends, total: ends.timeIntervalSince(now)) : nil,
+            countdown: ends.flatMap { $0 > now ? IslandCountdown(ends: $0, total: $0.timeIntervalSince(now)) : nil },
             startsOpen: true
         )
+    }
+
+    /// How much longer the tool needs, in its own numbers; with none yet, no number at all.
+    private static func waitBody(tool: String, estimate: WaitEstimate) -> String {
+        switch estimate {
+        case .left(let seconds) where seconds >= 45:
+            let minutes = max(1, Int((seconds / 60).rounded()))
+            return String(localized: "\(tool) usually needs about \(minutes) more min from here. Stay close and you’ll catch it the moment it’s done.",
+                          comment: "Wait card. The tool, then minutes still to go, from its own past runs")
+        case .overdue(let worked) where worked >= 90:
+            let minutes = Int((worked / 60).rounded())
+            return String(localized: "\(tool) has been working for \(minutes) min, longer than most of its runs. It could be done any moment.",
+                          comment: "Wait card. The tool, then the minutes it has worked so far")
+        case .left, .overdue:
+            return String(localized: "\(tool) is usually done within a minute from here. Stay and you’ll catch it.",
+                          comment: "Wait card. The tool, which is about to finish going by its past runs")
+        case .unknown:
+            return String(localized: "Stay close and you’ll catch it the moment it’s done.",
+                          comment: "Wait card, when the tool's usual time isn't known yet")
+        }
     }
 
     /// "Claude Code just finished.", or "Claude Code needs your answer.":
