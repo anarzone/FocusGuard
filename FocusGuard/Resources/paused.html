@@ -11,9 +11,10 @@
      fragment when the state changes; the buttons call the app through
      focusguard:// links.
 
-     Fields: id, host, url, state (paused | queued | over | limit), ends and
+     Fields: id, host, url, state (paused | queued | over | limit | hold), ends and
      start (Unix seconds), back (the app "Back to …" returns to), label (the
-     session's name), minutes (a daily limit's length), lang (the app's
+     session's name), minutes (a daily limit's length), tool (what a hold waits
+     on), lang (the app's
      language when it isn't English). The "over" state can also carry name,
      auto (1 for an automatic name), end, focus, drift and other (minutes)
      and rate (the focus rate in percent). Every field but id can be missing;
@@ -229,6 +230,12 @@
       limitBodyUsed: "You’ve used your {limit}. It opens again at midnight.",
       limitBody: "It opens again at midnight.",
       limitFooter: "Paused by FocusGuard. Daily limits reset at midnight.",
+      holdTitle: "{host} is on hold while {tool} works",
+      holdBody: "It opens right here in {left}. {tool} is usually done before that.",
+      holdBodyNow: "Opening {host}…",
+      holdOpenNow: "Open {host} now",
+      holdFooter: "Your test from the Analyzer: on some days, {host} waits while {tool} works.",
+      titleHold: "On hold · FocusGuard",
       pausedTitle: "{host} is paused while you focus",
       pausedLeftNamed: "{label} has {left} left.",
       pausedLeft: "Your session has {left} left.",
@@ -277,6 +284,12 @@
       limitBodyUsed: "Du hast deine {limit} aufgebraucht. Um Mitternacht öffnet sich die Website wieder.",
       limitBody: "Um Mitternacht öffnet sich die Website wieder.",
       limitFooter: "Von FocusGuard pausiert. Tageslimits werden um Mitternacht zurückgesetzt.",
+      holdTitle: "{host} wartet, während {tool} arbeitet",
+      holdBody: "Es öffnet sich hier in {left}. {tool} ist meist schon vorher fertig.",
+      holdBodyNow: "{host} wird geöffnet …",
+      holdOpenNow: "{host} jetzt öffnen",
+      holdFooter: "Dein Test aus dem Analyzer: an manchen Tagen wartet {host}, während {tool} arbeitet.",
+      titleHold: "Wartet · FocusGuard",
       pausedTitle: "{host} ist pausiert, solange du dich fokussierst",
       pausedLeftNamed: "„{label}“ läuft noch {left}.",
       pausedLeft: "Deine Session läuft noch {left}.",
@@ -325,6 +338,12 @@
       limitBodyUsed: "{limit} limitinizi işlətmisiniz. Gecə yarısı yenidən açılacaq.",
       limitBody: "Gecə yarısı yenidən açılacaq.",
       limitFooter: "FocusGuard tərəfindən dayandırılıb. Gündəlik limitlər gecə yarısı sıfırlanır.",
+      holdTitle: "{tool} işləyərkən {host} gözləyir",
+      holdBody: "{left} sonra burada açılacaq. {tool} adətən ondan əvvəl bitir.",
+      holdBodyNow: "{host} açılır…",
+      holdOpenNow: "{host} saytını indi aç",
+      holdFooter: "Analyzer-dəki testiniz: bəzi günlərdə {tool} işləyərkən {host} gözləyir.",
+      titleHold: "Gözləyir · FocusGuard",
       pausedTitle: "Siz fokusda olanda {host} saytı dayandırılır",
       pausedLeftNamed: "“{label}” bitməsinə {left} qalıb.",
       pausedLeft: "Sessiyanızın bitməsinə {left} qalıb.",
@@ -480,6 +499,30 @@
       var reopen = safeWebURL(p.url);
       setButton($("secondary"), reopen ? t("reopen", { host: host }) : null, reopen);
       footer = t("overFooter");
+    } else if (state === "hold") {
+      var tool = p.tool || "";
+      var target = safeWebURL(p.url);
+      if (left !== null && left <= 0 && target) {
+        // The hold is over: the site comes back in this tab by itself.
+        title = t("holdTitle", { host: host, tool: tool });
+        body = t("holdBodyNow", { host: host });
+        location.replace(target);
+      } else {
+        var secondsLeft = Math.max(0, Math.ceil(left || 0));
+        var clock = Math.floor(secondsLeft / 60) + ":" + String(secondsLeft % 60).padStart(2, "0");
+        title = t("holdTitle", { host: host, tool: tool });
+        body = t("holdBody", { left: clock, tool: tool });
+      }
+      showProgress = running !== null;
+      if (showProgress) {
+        $("bar").style.width = Math.round(Math.max(0, Math.min(1, running)) * 100) + "%";
+        $("from").textContent = time(start);
+        $("to").textContent = time(ends);
+        $("progress").setAttribute("aria-label", t("holdTitle", { host: host, tool: tool }));
+      }
+      setButton($("primary"), back, app("back"));
+      setButton($("secondary"), target ? t("holdOpenNow", { host: host }) : null, target);
+      footer = t("holdFooter", { host: host, tool: tool });
     } else if (state === "limit") {
       title = t("limitTitle", { host: host });
       var limit = Number(p.minutes) || 0;
@@ -527,7 +570,7 @@
     setText($("note"), note);
     $("footer-text").textContent = footer;
     $("footer-pro").hidden = !pro;
-    document.title = t(state === "over" ? "titleOver" : "titlePaused");
+    document.title = t(state === "over" ? "titleOver" : state === "hold" ? "titleHold" : "titlePaused");
 
     clearTimeout(timer);
     if (ends && state !== "over") timer = setTimeout(render, 1000);

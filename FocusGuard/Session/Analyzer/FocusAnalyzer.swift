@@ -240,6 +240,23 @@ final class FocusAnalyzer {
         }
     }
 
+    // MARK: - Waits
+
+    /// How long to hold `site` when the user leaves `tool` for it today: a
+    /// kept hold, or one under test on an On day. Nil when there's none.
+    func holdSeconds(tool: String, site: String) -> Int? {
+        guard isUnlocked() else { return nil }
+        var changes = state.kept.map(\.fix.change)
+        if let experiment = state.experiment, experiment.slot(on: today)?.arm == .on { changes.append(experiment.fix.change) }
+        for change in changes {
+            if case let .holdInWait(heldTool, heldSite, seconds) = change, heldTool == tool,
+               site == heldSite || Classifier.host(site, matches: heldSite) {
+                return seconds
+            }
+        }
+        return nil
+    }
+
     // MARK: - Sessions
 
     /// A session started. What it does depends on today being an On day, or
@@ -395,7 +412,7 @@ final class LiveAnalyzerApplier: AnalyzerApplying {
     func apply(_ change: AnalyzerChange, on day: Date) async -> AnalyzerUndo? {
         guard let appState else { return nil }
         switch change {
-        case .askForGoal, .messageReminder:
+        case .askForGoal, .messageReminder, .holdInWait:
             return .nothing
         case let .dailyLimit(target, true, _, minutes):
             return coach.apply(.siteLimit(host: target, minutes: minutes), until: nil).map { .coach($0) }

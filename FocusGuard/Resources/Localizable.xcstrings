@@ -381,6 +381,29 @@
         }
       }
     },
+    "%@ is on hold for %lld min." : {
+      "comment" : "Wait card when the site is held by the user's Analyzer test. The site, then minutes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is on hold for %2$lld min."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wartet noch %2$lld Min."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$lld dəq gözləyir."
+          }
+        }
+      }
+    },
     "%@ is still working" : {
       "comment" : "The tool: Codex is still working",
       "localizations" : {
@@ -2821,6 +2844,29 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ vs the same days in %2$@"
+          }
+        }
+      }
+    },
+    "%@ waits %lld minutes when you leave %@ for it" : {
+      "comment" : "What happens on On days. The site, minutes, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ waits %2$lld minutes when you leave %3$@ for it"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wartet %2$lld Minuten, wenn du %3$@ dafür verlässt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%3$@-i onun üçün tərk edəndə %1$@ %2$lld dəqiqə gözləyir"
           }
         }
       }
@@ -22105,6 +22151,29 @@
         }
       }
     },
+    "If %@ is working, then I'll wait %lld minutes before %@." : {
+      "comment" : "An if-then plan. The tool, minutes, then the site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If %1$@ is working, then I'll wait %2$lld minutes before %3$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn %1$@ arbeitet, warte ich %2$lld Minuten, bevor ich %3$@ öffne."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ işləyirsə, %3$@ açmazdan əvvəl %2$lld dəqiqə gözləyəcəyəm."
+          }
+        }
+      }
+    },
     "If a day has calls, then I'll keep %lld minutes for one deep block." : {
       "localizations" : {
         "az" : {
@@ -39116,6 +39185,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verbindung testen"
+          }
+        }
+      }
+    },
+    "Test holding %@ for %lld min while %@ works" : {
+      "comment" : "Analyzer button: start a test. The site, minutes, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test holding %1$@ for %2$lld min while %3$@ works"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Testen: %1$@ %2$lld Min. warten lassen, während %3$@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sınayın: %3$@ işləyərkən %1$@ %2$lld dəq gözləsin"
           }
         }
       }

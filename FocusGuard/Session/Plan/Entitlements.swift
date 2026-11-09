@@ -64,6 +64,10 @@ final class Entitlements {
         licenceKey = defaults.string(forKey: Key.licenceKey)
         #if DEBUG
         overridePlan = Self.decodeOverride(defaults.string(forKey: Key.debugOverride), now: now())
+        #elseif OWNER_COPY
+        // The owner's own copy, built and installed on their Mac by
+        // scripts/install.sh: everything is open. Releases never set this.
+        overridePlan = .pro
         #endif
         // Timers don't count time asleep, so look at the clock again on wake.
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(

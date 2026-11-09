@@ -48,6 +48,9 @@ enum AnalyzerTriggers {
     /// Fewer than this and it's not a pattern yet.
     static let fewestTimes = 2
     static let shown = 4
+    /// How long a tested hold keeps the site waiting: most waits on a tool
+    /// are over by then.
+    static let holdMinutes = 2
     /// The ruled-out moments, by start.
     static let ruledOutKey = "analyzer.notDistraction"
 

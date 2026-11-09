@@ -7,6 +7,9 @@ struct AnalyzerTriggersCard: View {
     let triggers: [AnalyzerTrigger]
     let workingDays: Int
     var ruleOut: (AnalyzerTrigger.Moment) -> Void = { _ in }
+    /// A test can start: none is running. Wait triggers offer to test a hold.
+    var canTest = false
+    var test: (AnalyzerFix) -> Void = { _ in }
     var now: Date = .now
     @State private var pickedID: String?
     @AppStorage("analyzer.triggerDays", store: UITestMode.defaults) private var days = 28
@@ -123,6 +126,17 @@ struct AnalyzerTriggersCard: View {
                       systemImage: "sparkles")
                     .font(.system(size: 12)).foregroundStyle(Theme.primaryText)
                     .padding(.top, 2)
+                if canTest, let tool = trigger.steps.first?.label, let site = trigger.steps.last?.label {
+                    let minutes = AnalyzerTriggers.holdMinutes
+                    Button(String(localized: "Test holding \(site) for \(minutes) min while \(tool) works",
+                                  comment: "Analyzer button: start a test. The site, minutes, then the tool")) {
+                        test(AnalyzerFix(cause: .habit, change: .holdInWait(tool: tool, site: site, seconds: minutes * 60),
+                                         measure: .longestStretch))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .padding(.top, 2)
+                }
             }
             if trigger.moments.contains(where: \.isRuledOut) {
                 Text(String(localized: "Ruled-out moments don’t count here.", comment: "Analyzer: after the user said a moment wasn't a distraction"))

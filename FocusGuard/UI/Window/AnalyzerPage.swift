@@ -133,7 +133,8 @@ struct AnalyzerContent: View {
                         // What set it off and what the waits turned into come
                         // first: they say what to do differently.
                         if !report.triggers.isEmpty {
-                            AnalyzerTriggersCard(triggers: report.triggers, workingDays: report.workingDays, ruleOut: ruleOut)
+                            AnalyzerTriggersCard(triggers: report.triggers, workingDays: report.workingDays, ruleOut: ruleOut,
+                                                 canTest: analyzer.state.experiment == nil) { openSheet(.setup($0)) }
                                 .padding(.bottom, 10)
                         }
                         if waits.waits > 0 {
