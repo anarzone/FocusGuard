@@ -44,6 +44,8 @@ struct AnalyzerState: Codable, Equatable, Sendable {
     var tested: [AnalyzerCause] = []
     /// The day the last session started, for "first session of the day".
     var lastSessionDay: Date?
+    /// What the corrections taught. Optional: states saved before it have none.
+    var lessons: AnalyzerLessons?
 
     struct Applied: Codable, Equatable, Sendable {
         let day: Date
@@ -87,7 +89,9 @@ protocol AnalyzerApplying: AnyObject {
 @MainActor
 @Observable
 final class FocusAnalyzer {
-    static let shared = FocusAnalyzer()
+    /// The test copy shares the app's bundle id: what it learns and tests
+    /// stays in its own settings, never the real app's.
+    static let shared = FocusAnalyzer(defaults: UITestMode.defaults)
 
     private(set) var state: AnalyzerState
     /// Why something didn't happen, for a moment.
@@ -384,6 +388,19 @@ final class FocusAnalyzer {
         save()
     }
 
+    // MARK: - Lessons
+
+    var lessons: AnalyzerLessons { state.lessons ?? AnalyzerLessons() }
+
+    /// Changes what the corrections taught, and keeps it.
+    func learn(_ change: (inout AnalyzerLessons) -> Void) {
+        var lessons = self.lessons
+        change(&lessons)
+        guard lessons != self.lessons else { return }
+        state.lessons = lessons.isEmpty ? nil : lessons
+        save()
+    }
+
     /// "Erase all data": what was worked out from it goes, and a test running
     /// is undone. Kept fixes stay on, and can still be stopped.
     func erase() async {
@@ -480,10 +497,12 @@ extension AppState {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         let from = calendar.startOfDay(-2 * AnalyzerRules.periodDays, from: today)
-        let waits = WaitLog.shared.records(from: calendar.startOfDay(-AnalyzerRules.periodDays, from: today), to: today)
+        // Both periods' waits: a pattern that's fine comes out of the one before too.
+        let waits = WaitLog.shared.records(from: from, to: today)
         return await stats.analyzerReport(now: now, weekendsCount: weekendsCount, muted: FocusAnalyzer.shared.muted,
                                           busy: analyzerBusy(from: from, to: today), waits: waits,
-                                          ruledOut: AnalyzerRuledOut.load(), calendar: calendar)
+                                          ruledOut: AnalyzerRuledOut.load(), lessons: FocusAnalyzer.shared.lessons,
+                                          calendar: calendar)
     }
 
     /// On an On day, a session with no goal asks for one line in the window.

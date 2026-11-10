@@ -138,6 +138,9 @@ struct WaitWatcher: Equatable {
         var run: String?
         var drift: TimeInterval = 0
         var driftSince: Date?
+        /// On a site the user said is fine while this tool works, since then.
+        /// No drift, but the tool's word that it's done still reaches them.
+        var fineSince: Date?
         var to: String?
         var reach: WaitReach?
         var doneSent = false
@@ -182,6 +185,9 @@ struct WaitWatcher: Equatable {
     /// The app each session was first seen in: its later prompts may be sent
     /// with something else in front (queued, or from a phone).
     private var sessionHomes: [String: String] = [:]
+    /// Patterns the user said are fine (`AnalyzerLessons.fineWaits`): going to
+    /// that site while that tool works isn't a drift.
+    var fine: Set<String> = []
     private var inTool: InTool?
     private var open: Open?
     private var lastProject: (name: String, at: Date)?
@@ -249,7 +255,10 @@ struct WaitWatcher: Equatable {
             return events
         }
 
-        let drifting = front.classification == .distraction && !front.isPrivateWindow
+        let onDistraction = front.classification == .distraction && !front.isPrivateWindow
+        let isFine = onDistraction && fine.contains(AnalyzerLessonRules.waitID(tool: current.tool.name, site: Self.name(of: front)))
+        let drifting = onDistraction && !isFine
+        current.fineSince = isFine ? (current.fineSince ?? moment.now) : nil
         if drifting {
             if current.driftSince == nil { current.driftSince = front.observedAt < current.left ? current.left : front.observedAt }
             current.to = Self.name(of: front)
@@ -393,7 +402,7 @@ struct WaitWatcher: Equatable {
             // asks for an answer in the same app, which is worth going back for.
             return events
         }
-        if !quiet, let onItSince = current.driftSince, !current.doneSent {
+        if !quiet, let onItSince = current.driftSince ?? current.fineSince, !current.doneSent {
             // On a distraction when it finished, however long after leaving
             // the tool they got there: its own word is always worth saying.
             var reach = current.reach ?? WaitReach(tool: current.tool, project: current.project, since: onItSince,

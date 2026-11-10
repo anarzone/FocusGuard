@@ -11,7 +11,11 @@ struct AnalyzerTriggersCard: View {
     var canTest = false
     var test: (AnalyzerFix) -> Void = { _ in }
     var now: Date = .now
+    /// What the corrections taught, and the question a second one raises.
+    var lessons = AnalyzerLessonActions()
     @State private var pickedID: String?
+    /// The pattern just answered "just those times", for the line that says so.
+    @State private var declinedID: String?
     @AppStorage("analyzer.triggerDays", store: UITestMode.defaults) private var days = 28
 
     /// The ranges the switch offers, in days.
@@ -91,6 +95,20 @@ struct AnalyzerTriggersCard: View {
         .accessibilityAddTraits(isPicked ? .isSelected : [])
     }
 
+    /// Under the moments, once one is ruled out: what that did, and what one
+    /// more would do.
+    private func ruledOutNote(_ trigger: AnalyzerTrigger) -> String {
+        if declinedID == trigger.id {
+            return String(localized: "Only the ones you marked don’t count. It won’t ask about this pattern again.",
+                          comment: "Analyzer: after “No, just those times”")
+        }
+        let base = String(localized: "Ruled-out moments don’t count here.", comment: "Analyzer: after the user said a moment wasn't a distraction")
+        let marked = trigger.moments.filter(\.isRuledOut).count
+        guard marked < AnalyzerLessonRules.asksAfter, !lessons.lessons.declined.contains(trigger.id) else { return base }
+        return base + " " + String(localized: "Mark one more and it asks if the whole pattern is fine for you.",
+                                   comment: "Analyzer: after one moment was ruled out")
+    }
+
     static func sureLabel(_ sure: Int) -> String {
         switch sure {
         case 3:  return String(localized: "Sure: seen on most days")
@@ -120,6 +138,18 @@ struct AnalyzerTriggersCard: View {
                 }
                 .opacity(moment.isRuledOut ? 0.55 : 1)
             }
+            if lessons.lessons.asks(about: trigger) {
+                AnalyzerLessonQuestion(trigger: trigger) {
+                    lessons.teach(trigger)
+                } decline: {
+                    declinedID = trigger.id
+                    lessons.decline(trigger)
+                }
+            } else if trigger.moments.contains(where: \.isRuledOut) {
+                Text(ruledOutNote(trigger))
+                    .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if trigger.isWait {
                 Label(String(localized: "Next time you open \(trigger.steps.last?.label ?? "it") while \(trigger.steps.first?.label ?? "it") works, FocusGuard will warn you what it cost here.",
                              comment: "Analyzer: what FocusGuard now does about a wait trigger; the site, then the tool"),
@@ -138,10 +168,6 @@ struct AnalyzerTriggersCard: View {
                     .controlSize(.small)
                     .padding(.top, 2)
                 }
-            }
-            if trigger.moments.contains(where: \.isRuledOut) {
-                Text(String(localized: "Ruled-out moments don’t count here.", comment: "Analyzer: after the user said a moment wasn't a distraction"))
-                    .font(.system(size: 11)).foregroundStyle(Theme.secondaryText)
             }
         }
         .padding(.top, 2)

@@ -28,6 +28,9 @@ struct AnalyzerTrigger: Equatable, Identifiable, Sendable {
     var perDay: [Int]
     /// The cause the existing fixes are keyed by, when there is one.
     var cause: AnalyzerCause?
+    /// Enough of it is ruled out to ask if the whole pattern is fine, and the
+    /// user hasn't answered: it stays listed until they do, however few count.
+    var isAsking = false
 
     var counted: [Moment] { moments.filter { !$0.isRuledOut } }
     var count: Int { counted.count }
@@ -59,54 +62,111 @@ enum AnalyzerTriggers {
     /// The triggers, most time first. A lost-focus moment during a wait the
     /// user drifted in counts for the wait: the wait says more about why.
     static func make(days: [AnalyzerDay], waits: [WaitRecord], ruledOut: Set<String>,
-                     optedOut: Set<String> = [], calendar: Calendar = .current) -> [AnalyzerTrigger] {
+                     optedOut: Set<String> = [], lessons: AnalyzerLessons = AnalyzerLessons(),
+                     calendar: Calendar = .current) -> [AnalyzerTrigger] {
+        build(days: days, waits: waits, ruledOut: ruledOut, optedOut: optedOut, lessons: lessons, calendar: calendar).shown
+    }
+
+    /// The pattern a lost-focus moment belongs to: where the user was, then
+    /// the distraction. Nil when it has no distraction to name, or happened
+    /// during a wait they drifted in.
+    static func pattern(of loss: AnalyzerLoss, drifts: [WaitRecord], optedOut: Set<String> = []) -> (id: String, steps: [AnalyzerTrigger.Step])? {
+        guard let to = loss.places.first(where: { $0.isDistraction && !optedOut.contains($0.bundleId ?? "") }) else { return nil }
+        if wait(during: loss, drifts: drifts) != nil { return nil }
+        var steps: [AnalyzerTrigger.Step] = []
+        if let opening = loss.opening, opening.target != to.target, !optedOut.contains(opening.bundleId ?? "") {
+            steps.append(.init(label: opening.name, kind: opening.isSite ? .site : .app))
+        } else if let before = loss.before, !optedOut.contains(before.bundleId ?? "") {
+            steps.append(.init(label: before.name, kind: before.isSite ? .site : .app))
+        }
+        steps.append(.init(label: to.name, kind: to.isSite ? .site : .app))
+        return (steps.map(\.label).joined(separator: ">"), steps)
+    }
+
+    /// The drifted wait a lost-focus moment overlaps, if any.
+    static func wait(during loss: AnalyzerLoss, drifts: [WaitRecord]) -> WaitRecord? {
+        drifts.first { wait in
+            let end = wait.start.addingTimeInterval(wait.seconds)
+            return loss.start < end && wait.start < loss.end
+        }
+    }
+
+    static func drifts(_ waits: [WaitRecord]) -> [WaitRecord] { waits.filter { $0.drifted && $0.to != nil } }
+
+    /// The days without the lost-focus moments of patterns the user said are
+    /// fine: those aren't lost focus for them, here or in the causes.
+    static func without(fine: Set<String>, days: [AnalyzerDay], waits: [WaitRecord], optedOut: Set<String> = []) -> [AnalyzerDay] {
+        guard !fine.isEmpty else { return days }
+        let drifts = drifts(waits)
+        return days.map { day in
+            var day = day
+            day.losses = day.losses.filter { loss in
+                if let wait = wait(during: loss, drifts: drifts) {
+                    return !fine.contains(AnalyzerLessonRules.waitID(tool: wait.tool, site: wait.to ?? ""))
+                }
+                guard let pattern = pattern(of: loss, drifts: drifts, optedOut: optedOut) else { return true }
+                return !fine.contains(pattern.id)
+            }
+            return day
+        }
+    }
+
+    /// The triggers to show, most time first, and the ones left out because
+    /// the user said that pattern is fine (`taught`, every moment counted).
+    static func build(days: [AnalyzerDay], waits: [WaitRecord], ruledOut: Set<String>, optedOut: Set<String> = [],
+                      lessons: AnalyzerLessons = AnalyzerLessons(), calendar: Calendar = .current) -> (shown: [AnalyzerTrigger], taught: [AnalyzerTrigger]) {
+        let fine = lessons.fineSet
         let dayStarts = days.map { calendar.startOfDay(for: $0.day) }
         var found: [String: AnalyzerTrigger] = [:]
 
         func add(id: String, steps: [AnalyzerTrigger.Step], start: Date, seconds: TimeInterval, cause: AnalyzerCause?) {
             guard let dayIndex = dayStarts.firstIndex(of: calendar.startOfDay(for: start)) else { return }
             var trigger = found[id] ?? AnalyzerTrigger(id: id, steps: steps, moments: [], perDay: Array(repeating: 0, count: days.count), cause: cause)
-            let moment = AnalyzerTrigger.Moment(start: start, seconds: seconds, isRuledOut: ruledOut.contains(key(start)))
+            // In a pattern that's fine, every moment is: none is ruled out one by one.
+            let moment = AnalyzerTrigger.Moment(start: start, seconds: seconds, isRuledOut: !fine.contains(id) && ruledOut.contains(key(start)))
             trigger.moments.append(moment)
             if !moment.isRuledOut { trigger.perDay[dayIndex] += 1 }
             found[id] = trigger
         }
 
-        let drifts = waits.filter { $0.drifted && $0.to != nil }
+        let drifts = drifts(waits)
         for wait in drifts {
             let to = wait.to ?? ""
-            add(id: "wait:\(wait.tool)>\(to)",
+            add(id: AnalyzerLessonRules.waitID(tool: wait.tool, site: to),
                 steps: [.init(label: wait.tool, kind: .wait), .init(label: to, kind: .site)],
                 start: wait.start, seconds: wait.drift, cause: .habit)
         }
         for day in days {
             for loss in day.losses {
-                guard let to = loss.places.first(where: { $0.isDistraction && !optedOut.contains($0.bundleId ?? "") }) else { continue }
-                let during = drifts.contains { wait in
-                    let end = wait.start.addingTimeInterval(wait.seconds)
-                    return loss.start < end && wait.start < loss.end
-                }
-                if during { continue }
-                var steps: [AnalyzerTrigger.Step] = []
-                if let opening = loss.opening, opening.target != to.target, !optedOut.contains(opening.bundleId ?? "") {
-                    steps.append(.init(label: opening.name, kind: opening.isSite ? .site : .app))
-                } else if let before = loss.before, !optedOut.contains(before.bundleId ?? "") {
-                    steps.append(.init(label: before.name, kind: before.isSite ? .site : .app))
-                }
-                steps.append(.init(label: to.name, kind: to.isSite ? .site : .app))
-                add(id: steps.map(\.label).joined(separator: ">"), steps: steps, start: loss.start, seconds: loss.seconds, cause: loss.cause)
+                guard let pattern = pattern(of: loss, drifts: drifts, optedOut: optedOut) else { continue }
+                add(id: pattern.id, steps: pattern.steps, start: loss.start, seconds: loss.seconds, cause: loss.cause)
             }
         }
-        return found.values
-            .filter { $0.count >= fewestTimes }
-            .map { trigger in
+        func ordered(_ triggers: [AnalyzerTrigger]) -> [AnalyzerTrigger] {
+            triggers.map { trigger in
                 var trigger = trigger
                 trigger.moments.sort { $0.start > $1.start }
                 return trigger
             }
             .sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.id < $1.id }
-            .prefix(shown)
-            .map { $0 }
+        }
+        let open = found.values.filter { !fine.contains($0.id) }.map { trigger in
+            var trigger = trigger
+            trigger.isAsking = lessons.asks(about: trigger)
+            return trigger
+        }
+        let shown = ordered(open.filter { $0.count >= fewestTimes || $0.isAsking })
+        return (Array(shown.prefix(self.shown)), ordered(found.values.filter { fine.contains($0.id) }))
+    }
+
+    /// A pattern's steps, read back from its id: for one that's fine and
+    /// hasn't come up in the period.
+    static func steps(of id: String) -> [AnalyzerTrigger.Step] {
+        if id.hasPrefix(AnalyzerLessonRules.waitPrefix) {
+            let parts = id.dropFirst(AnalyzerLessonRules.waitPrefix.count).split(separator: ">", maxSplits: 1).map(String.init)
+            return [.init(label: parts.first ?? "", kind: .wait), .init(label: parts.count > 1 ? parts[1] : "", kind: .site)]
+        }
+        return id.split(separator: ">").map { .init(label: String($0), kind: $0.contains(".") ? .site : .app) }
     }
 
     /// The same triggers over the last `days` days only: their moments, a bar
@@ -121,7 +181,7 @@ enum AnalyzerTriggers {
                 guard let day = calendar.date(byAdding: .day, value: offset, to: from) else { return 0 }
                 return trigger.counted.filter { calendar.isDate($0.start, inSameDayAs: day) }.count
             }
-            return trigger.count >= fewestTimes ? trigger : nil
+            return trigger.count >= fewestTimes || trigger.isAsking ? trigger : nil
         }
         .sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.id < $1.id }
     }
@@ -164,6 +224,12 @@ enum AnalyzerRuledOut {
     static func toggle(_ moment: AnalyzerTrigger.Moment, _ defaults: UserDefaults = UITestMode.defaults) {
         var set = load(defaults)
         if set.contains(moment.id) { set.remove(moment.id) } else { set.insert(moment.id) }
+        defaults.set(Array(set).sorted(), forKey: AnalyzerTriggers.ruledOutKey)
+    }
+
+    /// Takes the marks off these moments: a pattern put back counts in full.
+    static func clear(_ moments: [AnalyzerTrigger.Moment], _ defaults: UserDefaults = UITestMode.defaults) {
+        let set = load(defaults).subtracting(moments.map(\.id))
         defaults.set(Array(set).sorted(), forKey: AnalyzerTriggers.ruledOutKey)
     }
 

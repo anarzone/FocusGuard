@@ -136,6 +136,29 @@
         }
       }
     },
+    "%@ after %@ is fine" : {
+      "comment" : "Analyzer, what you taught it: the distraction, then the app before it",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ after %2$@ is fine"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ nach %2$@ ist in Ordnung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ tətbiqindən sonra %1$@ normaldır"
+          }
+        }
+      }
+    },
     "%@ are back" : {
       "comment" : "Two or three apps were brought back to the front",
       "localizations" : {
@@ -244,6 +267,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ konnte eine Seite nicht wieder öffnen"
+          }
+        }
+      }
+    },
+    "%@ counts as work" : {
+      "comment" : "Analyzer, what you taught it: a site or app",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ zählt als Arbeit"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ iş sayılır"
           }
         }
       }
@@ -423,6 +463,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ wird nach %2$lld Minuten blockiert"
+          }
+        }
+      }
+    },
+    "%@ is fine" : {
+      "comment" : "Analyzer, what you taught it: a distraction",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ist in Ordnung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ normaldır"
           }
         }
       }
@@ -3112,6 +3169,29 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ were your strongest.| %2$@ ran at %3$@."
+          }
+        }
+      }
+    },
+    "%@ while %@ works is fine" : {
+      "comment" : "Analyzer, what you taught it: the site, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ while %2$@ works is fine"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, während %2$@ arbeitet, ist in Ordnung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ işləyərkən %1$@ normaldır"
           }
         }
       }
@@ -9928,6 +10008,40 @@
         }
       }
     },
+    "A focus session still catches it." : {
+      "comment" : "Analyzer, what you taught it: a pattern that's fine outside sessions",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Fokus-Sitzung fängt es weiterhin ab."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus sessiyası onu yenə də tutur."
+          }
+        }
+      }
+    },
+    "A focus session still catches it: answer “It’s for work” there." : {
+      "comment" : "Analyzer question: after the lead. “It’s for work” is the block screen's button",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Fokus-Sitzung fängt es weiterhin ab: Antworte dort „Ist für die Arbeit“."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus sessiyası onu yenə də tutur: orada “İş üçündür” cavabını verin."
+          }
+        }
+      }
+    },
     "A good moment for a break." : {
       "localizations" : {
         "az" : {
@@ -14311,6 +14425,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ ayarlarını dəyişmək alınmadı. Onun faylı düzgün JSON və ya TOML olmaya bilər."
+          }
+        }
+      }
+    },
+    "Count it as work" : {
+      "comment" : "Analyzer button: sort a site as work",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Arbeit zählen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İş say"
+          }
+        }
+      }
+    },
+    "Count it as work from now on? It stops being caught, in sessions and here." : {
+      "comment" : "Analyzer: offer to sort a site or app as work",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ab jetzt als Arbeit zählen? Dann wird es nicht mehr abgefangen, weder in Sitzungen noch hier."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundan sonra iş sayılsın? Onda nə sessiyalarda, nə də burada tutulmayacaq."
           }
         }
       }
@@ -23189,6 +23337,69 @@
         }
       }
     },
+    "Is %@ after %@ fine for you?" : {
+      "comment" : "Analyzer question: the distraction, then the app before it",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %1$@ after %2$@ fine for you?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist %1$@ nach %2$@ für dich in Ordnung?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ tətbiqindən sonra %1$@ sizin üçün normaldır?"
+          }
+        }
+      }
+    },
+    "Is %@ fine for you?" : {
+      "comment" : "Analyzer question: a distraction the user keeps ruling out",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist %@ für dich in Ordnung?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sizin üçün normaldır?"
+          }
+        }
+      }
+    },
+    "Is %@ while %@ works fine for you?" : {
+      "comment" : "Analyzer question: the site, then the tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Is %1$@ while %2$@ works fine for you?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist %1$@ für dich in Ordnung, während %2$@ arbeitet?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ işləyərkən %1$@ sizin üçün normaldır?"
+          }
+        }
+      }
+    },
     "Island cards answered" : {
       "localizations" : {
         "de" : {
@@ -23410,6 +23621,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sie bekommt ihren Namen vom Verlauf, etwa Stetiger Deep Dive."
+          }
+        }
+      }
+    },
+    "It hasn’t come up in the last 4 weeks." : {
+      "comment" : "Analyzer, what you taught it: a pattern not seen in the period",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In den letzten 4 Wochen kam es nicht vor."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son 4 həftədə rast gəlinməyib."
           }
         }
       }
@@ -24095,6 +24323,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alles behalten"
+          }
+        }
+      }
+    },
+    "Keep asking" : {
+      "comment" : "Analyzer button: leave a site as it is",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter fragen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soruşmağa davam et"
           }
         }
       }
@@ -25055,6 +25300,23 @@
         }
       }
     },
+    "Locked while a strict session runs." : {
+      "comment" : "Analyzer: why a site can't be sorted now",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesperrt, solange eine strikte Sitzung läuft."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sərt sessiya gedərkən kilidlidir."
+          }
+        }
+      }
+    },
     "Locked-in" : {
       "comment" : "How a session went, as a label\nHow a session went: focused throughout",
       "localizations" : {
@@ -25835,6 +26097,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Als teilweise erledigt markieren"
+          }
+        }
+      }
+    },
+    "Mark one more and it asks if the whole pattern is fine for you." : {
+      "comment" : "Analyzer: after one moment was ruled out",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markiere noch einen, dann fragt es, ob das ganze Muster für dich in Ordnung ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha birini işarələyin, onda bütün nümunənin sizin üçün normal olub-olmadığını soruşacaq."
           }
         }
       }
@@ -27977,6 +28256,23 @@
         }
       }
     },
+    "No drift card for it either." : {
+      "comment" : "Analyzer, what you taught it: a site that's fine while a tool works",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dafür kommt auch keine Karte mehr."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buna görə kart da göstərilmir."
+          }
+        }
+      }
+    },
     "No focused time this week." : {
       "localizations" : {
         "de" : {
@@ -28650,6 +28946,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "O gün %@ üzərində heç bir alət işləmədi."
+          }
+        }
+      }
+    },
+    "No, just those times" : {
+      "comment" : "Analyzer button: only the marked moments weren't distractions",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nein, nur diese Male"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yox, yalnız o dəfələr"
           }
         }
       }
@@ -30559,6 +30872,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nur die letzte App"
+          }
+        }
+      }
+    },
+    "Only the ones you marked don’t count. It won’t ask about this pattern again." : {
+      "comment" : "Analyzer: after “No, just those times”",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur die markierten zählen nicht. Zu diesem Muster fragt es nicht noch einmal."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yalnız işarələdikləriniz sayılmır. Bu nümunə barədə bir daha soruşmayacaq."
           }
         }
       }
@@ -39813,6 +40143,46 @@
         }
       }
     },
+    "Taken out: %lld times, %@." : {
+      "comment" : "Analyzer, what you taught it: times, then the time they took",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taken out: %1$lld times, %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herausgenommen: %1$lld-mal, %2$@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çıxarıldı: %1$lld dəfə, %2$@."
+          }
+        }
+      }
+    },
+    "Taken out: once, %@." : {
+      "comment" : "Analyzer, what you taught it: the time it took",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Herausgenommen: einmal, %@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çıxarıldı: bir dəfə, %@."
+          }
+        }
+      }
+    },
     "Talks and tutorials count as focus, the rest as distracting." : {
       "localizations" : {
         "az" : {
@@ -40586,6 +40956,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Der API-Schlüssel für deinen Endpunkt. Wird nur in deinem Schlüsselbund gespeichert."
+          }
+        }
+      }
+    },
+    "The card won’t call it a drift while %@ works either." : {
+      "comment" : "Analyzer question: after the lead: the tool",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auch die Karte nennt es nicht mehr Abschweifen, während %@ arbeitet."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ işləyərkən kart da bunu yayınma saymayacaq."
           }
         }
       }
@@ -44991,6 +45378,23 @@
         }
       }
     },
+    "What you taught it" : {
+      "comment" : "Analyzer card: what the user's corrections changed",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du ihm beigebracht hast"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ona öyrətdikləriniz"
+          }
+        }
+      }
+    },
     "What you worked on" : {
       "localizations" : {
         "az" : {
@@ -46223,6 +46627,57 @@
         }
       }
     },
+    "Yes, it’s fine" : {
+      "comment" : "Analyzer button: a pattern isn't a distraction",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ja, es ist in Ordnung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bəli, normaldır"
+          }
+        }
+      }
+    },
+    "Yes, it’s fine after %@" : {
+      "comment" : "Analyzer button: the app before the distraction",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ja, nach %@ ist es in Ordnung"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bəli, %@ tətbiqindən sonra normaldır"
+          }
+        }
+      }
+    },
+    "Yes, it’s fine while %@ works" : {
+      "comment" : "Analyzer button: the tool",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ja, in Ordnung, während %@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bəli, %@ işləyərkən normaldır"
+          }
+        }
+      }
+    },
     "Yes: %@." : {
       "comment" : "A change: +9 pts",
       "localizations" : {
@@ -46391,6 +46846,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du hast gefragt: %@"
+          }
+        }
+      }
+    },
+    "You called it work in sessions. Change it any time in Apps & Sites." : {
+      "comment" : "Analyzer, what you taught it: Apps & Sites is a page of the window",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast es in Sitzungen Arbeit genannt. Ändern kannst du es jederzeit unter Apps & Websites."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiyalarda onu iş adlandırdınız. İstənilən vaxt Tətbiqlər və saytlar bölməsində dəyişə bilərsiniz."
           }
         }
       }
@@ -46654,6 +47126,23 @@
         }
       }
     },
+    "You marked %lld of these as not a distraction. If that’s how you work, say so once and it stops counting here." : {
+      "comment" : "Analyzer question: how many moments the user ruled out",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast %lld davon als keine Ablenkung markiert. Wenn du so arbeitest, sag es einmal, dann zählt es hier nicht mehr."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bunlardan %lld-ni yayındırıcı deyil kimi işarələdiniz. Əgər belə işləyirsinizsə, bir dəfə deyin və burada daha sayılmayacaq."
+          }
+        }
+      }
+    },
     "You only focus around %@. Try a session at another time to compare." : {
       "localizations" : {
         "az" : {
@@ -46682,6 +47171,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nach den meisten Sessions greifst du direkt zu %@."
+          }
+        }
+      }
+    },
+    "You said %@ was for work on %@ and %@." : {
+      "comment" : "Analyzer: a site, then two weekdays",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You said %1$@ was for work on %2$@ and %3$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast am %2$@ und am %3$@ gesagt, %1$@ sei für die Arbeit."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ və %3$@ günləri %1$@ iş üçün olduğunu dediniz."
+          }
+        }
+      }
+    },
+    "You said %@ was for work on %lld days." : {
+      "comment" : "Analyzer: a site, then how many days",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You said %1$@ was for work on %2$lld days."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast an %2$lld Tagen gesagt, %1$@ sei für die Arbeit."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld gün %1$@ iş üçün olduğunu dediniz."
           }
         }
       }

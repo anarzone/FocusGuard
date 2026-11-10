@@ -63,7 +63,8 @@ private struct AnalyzerView: View {
                             AnalyzerRuledOut.toggle(moment)
                             DecisionLog.shared.record(.analyzer, moment.isRuledOut ? "restored" : "ruledOut")
                             Task { await reload() }
-                        })
+                        },
+                        lessons: lessonActions)
             .task(id: analyzer.muted) { await reload() }
             .task { await analyzer.refresh() }
             .onReceive(NotificationCenter.default.publisher(for: .activityTotalsChanged)) { _ in
@@ -80,15 +81,44 @@ private struct AnalyzerView: View {
             }
     }
 
+    /// What the corrections taught, and what answering does.
+    private var lessonActions: AnalyzerLessonActions {
+        let lessons = analyzer.lessons
+        func changed(_ outcome: String, _ change: (inout AnalyzerLessons) -> Void) {
+            analyzer.learn(change)
+            DecisionLog.shared.record(.analyzer, outcome)
+            Task { await reload() }
+        }
+        return AnalyzerLessonActions(
+            lessons: lessons,
+            suggestion: lessons.workSuggestion { appState.isStillCaught($0) },
+            counted: lessons.countedAsWork.filter { appState.isCountedAsWork($0) },
+            isLocked: appState.isStrictLocked,
+            teach: { trigger in changed("taught") { $0.teach(trigger.id) } },
+            decline: { trigger in changed("justThose") { $0.decline(trigger.id) } },
+            putBack: { trigger in
+                // Counts in full again: the marks that led to it go too.
+                AnalyzerRuledOut.clear(trigger.moments)
+                changed("putBack") { $0.forget(trigger.id) }
+            },
+            countAsWork: { answer in
+                guard appState.countAsWork(answer) else { return }
+                changed("countedAsWork") { $0.settleWork(answer.key, countedAsWork: true) }
+            },
+            keepAsking: { answer in changed("keepAsking") { $0.settleWork(answer.key) } })
+    }
+
     private func reload() async {
         let week = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: .now)) ?? .now
-        var summary = AnalyzerWaitsSummary.make(WaitLog.shared.records(from: week, to: .now))
+        // A site that's fine while a tool works was no drift, up here too.
+        let weekWaits = analyzer.lessons.settled(WaitLog.shared.records(from: week, to: .now))
+        var summary = AnalyzerWaitsSummary.make(weekWaits)
         for index in summary.projects.indices {
             summary.projects[index].next = appState.waits.nextTask(summary.projects[index].name)?.title
         }
         waits = summary
         var timed = AnalyzerRuns.make(runs: WaitLog.shared.runs(from: week, to: .now),
-                                      waits: WaitLog.shared.records(from: week, to: .now))
+                                      waits: weekWaits)
         for index in timed.projects.indices {
             timed.projects[index].next = appState.waits.nextTask(timed.projects[index].name)?.title
         }
@@ -133,6 +163,7 @@ struct AnalyzerContent: View {
     var openSheet: (AnalyzerSheet) -> Void = { _ in }
     var undoCorrection: (AnalyzerCause) -> Void = { _ in }
     var ruleOut: (AnalyzerTrigger.Moment) -> Void = { _ in }
+    var lessons = AnalyzerLessonActions()
 
     var body: some View {
         VStack(spacing: 12) {
@@ -155,8 +186,12 @@ struct AnalyzerContent: View {
                         // next: they say what to do differently.
                         if !report.triggers.isEmpty {
                             AnalyzerTriggersCard(triggers: report.triggers, workingDays: report.workingDays, ruleOut: ruleOut,
-                                                 canTest: analyzer.state.experiment == nil) { openSheet(.setup($0)) }
+                                                 canTest: analyzer.state.experiment == nil, test: { openSheet(.setup($0)) },
+                                                 lessons: lessons)
                                 .padding(.bottom, 10)
+                        }
+                        if AnalyzerLessonsCard.isWorthShowing(taught: report.taught, actions: lessons) {
+                            AnalyzerLessonsCard(taught: report.taught, actions: lessons).padding(.bottom, 10)
                         }
                         if !runs.isWorthShowing, waits.waits > 0 {
                             AnalyzerWaitsCard(summary: waits).padding(.bottom, 10)
