@@ -131,6 +131,14 @@ enum UITestMode {
                   !calendar.isDateInWeekend(day) else { continue }
             made += 1
             let at = { (hour: Double) in day.addingTimeInterval(hour * 3600) }
+            // Two days that got away: no focused stretch, hours on distractions.
+            if back == 6 || back == 13 {
+                add(at(9.5), 20, "Slack", .neutral)
+                add(at(9.9), 150, "Chrome", site: "x.com", .distraction)
+                add(at(12.5), 70, "Chrome", site: "youtube.com", .distraction)
+                add(at(14), 25, "Mail", .neutral)
+                continue
+            }
             add(at(9), 80, "Xcode", .focus)
             add(at(10 + 20 / 60), 3, "Terminal", title: "~/Projects/curiplay — claude", .focus)
             let drift = Double(6 + made % 6)
@@ -162,6 +170,10 @@ enum UITestMode {
             add(at(14 + broke / 60), 4, "Chrome", site: "youtube.com", session: session, .distraction)
             add(at(14 + (broke + 4) / 60), 60 - broke - 4, "Xcode", session: session, .focus)
             add(at(15), 60, "Xcode", .focus)
+            // Most days, the last stretch is followed by x.com.
+            if made % 3 != 1 {
+                add(at(16.1), Double(25 + made % 4 * 10), "Chrome", site: "x.com", .distraction)
+            }
         }
         try? context.save()
         seedRuns(today: today, calendar: calendar)

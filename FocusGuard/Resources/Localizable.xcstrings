@@ -2112,6 +2112,63 @@
         }
       }
     },
+    "%@ lost in four weeks" : {
+      "comment" : "Analyzer, what the numbers leave out: lost time, all of it",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ verloren in vier Wochen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dörd həftədə %@ itirildi"
+          }
+        }
+      }
+    },
+    "%@ lost in four weeks, not %@" : {
+      "comment" : "Analyzer, what the numbers leave out: all lost time, then what the causes explain",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ lost in four weeks, not %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ verloren in vier Wochen, nicht %2$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dörd həftədə %2$@ yox, %1$@ itirildi"
+          }
+        }
+      }
+    },
+    "%@ more on distractions after the last one." : {
+      "comment" : "Analyzer, what the numbers leave out: one day: time after the last focused stretch",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danach noch %@ bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonuncudan sonra daha %@ diqqət yayındıranlarda."
+          }
+        }
+      }
+    },
     "%@ more than %@" : {
       "comment" : "Drift compared with a period: 26 min more than last week, or than September",
       "localizations" : {
@@ -5374,6 +5431,29 @@
         }
       }
     },
+    "%@: %@ focused, %@ lost between stretches." : {
+      "comment" : "Analyzer, what the numbers leave out: one day: the date, focused time, then lost time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ focused, %3$@ lost between stretches."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ fokussiert, %3$@ zwischen den Phasen verloren."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ fokuslu, mərhələlər arasında %3$@ itirildi."
+          }
+        }
+      }
+    },
     "%@: %@ focused| on average, the lowest of each of the last %lld weeks." : {
       "comment" : "Mondays. The | ends the bold start",
       "localizations" : {
@@ -5714,6 +5794,29 @@
         }
       }
     },
+    "%@: no focused stretch, and %@ on distractions." : {
+      "comment" : "Analyzer, what the numbers leave out: one day: the date, then the time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: no focused stretch, and %2$@ on distractions."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: keine fokussierte Phase und %2$@ bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: heç bir fokuslu mərhələ yox, %2$@ diqqət yayındıranlarda."
+          }
+        }
+      }
+    },
     "%@: none %@." : {
       "comment" : "An app or site, then when: today",
       "localizations" : {
@@ -5733,6 +5836,23 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@: none %2$@."
+          }
+        }
+      }
+    },
+    "%@: not a working day." : {
+      "comment" : "Analyzer, what the numbers leave out: one day: a weekend or too little tracked",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: kein Arbeitstag."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: iş günü deyil."
           }
         }
       }
@@ -5944,6 +6064,29 @@
         }
       }
     },
+    "%lld days had no focused stretch at all, with %@ on distractions." : {
+      "comment" : "Analyzer, what the numbers leave out: days, then the time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld days had no focused stretch at all, with %2$@ on distractions."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Tage hatten gar keine fokussierte Phase, mit %2$@ bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld gündə heç bir fokuslu mərhələ olmadı, %2$@ diqqət yayındıranlarda keçdi."
+          }
+        }
+      }
+    },
     "%lld days left" : {
       "comment" : "Plural on the days: 1 day left / 2 days left",
       "localizations" : {
@@ -6054,6 +6197,29 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld days · %@" : {
+      "comment" : "Analyzer, what the numbers leave out: tile: days, then the time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld days · %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Tage · %2$@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld gün · %2$@"
           }
         }
       }
@@ -9428,6 +9594,23 @@
     "00:00" : {
       "shouldTranslate" : false
     },
+    "1 day · %@" : {
+      "comment" : "Analyzer, what the numbers leave out: tile: the time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Tag · %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 gün · %@"
+          }
+        }
+      }
+    },
     "1 run" : {
       "comment" : "Analyzer, While your tools worked: one run",
       "localizations" : {
@@ -10763,6 +10946,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "nach Fokusverlust, typischerweise"
+          }
+        }
+      }
+    },
+    "After the last stretch, or a day that got away" : {
+      "comment" : "Analyzer, what the numbers leave out: legend",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach der letzten Phase, oder ein verlorener Tag"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son mərhələdən sonra, və ya əldən çıxan gün"
+          }
+        }
+      }
+    },
+    "After your last stretch" : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach deiner letzten Phase"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son mərhələnizdən sonra"
           }
         }
       }
@@ -13335,6 +13552,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dazwischen"
+          }
+        }
+      }
+    },
+    "Between focused stretches" : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwischen fokussierten Phasen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokuslu mərhələlər arasında"
           }
         }
       }
@@ -16351,6 +16585,23 @@
         }
       }
     },
+    "Days that got away" : {
+      "comment" : "Analyzer, what the numbers leave out: tile: days with no focused stretch",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verlorene Tage"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Əldən çıxan günlər"
+          }
+        }
+      }
+    },
     "Days that started early focused more." : {
       "localizations" : {
         "az" : {
@@ -18745,6 +18996,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hər dəfə siz orada olanda bitdi və siz təxminən %@ də qaldınız."
+          }
+        }
+      }
+    },
+    "Every working day had at least one focused stretch." : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Arbeitstag hatte mindestens eine fokussierte Phase."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər iş günündə ən azı bir fokuslu mərhələ olub."
           }
         }
       }
@@ -25778,6 +26046,23 @@
         }
       }
     },
+    "Lost between stretches" : {
+      "comment" : "Analyzer, what the numbers leave out: legend",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwischen Phasen verloren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mərhələlər arasında itirilib"
+          }
+        }
+      }
+    },
     "Lower goal" : {
       "localizations" : {
         "az" : {
@@ -29242,6 +29527,23 @@
         }
       }
     },
+    "Not one focused stretch, and that much on distractions. The most expensive days you have." : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine einzige fokussierte Phase, und so viel bei Ablenkungen. Deine teuersten Tage."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir dənə də fokuslu mərhələ yox, bu qədər də diqqət yayındıranlarda. Ən baha başa gələn günləriniz."
+          }
+        }
+      }
+    },
     "Not one missed." : {
       "localizations" : {
         "az" : {
@@ -29587,6 +29889,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Siz diqqət yayındıranda olarkən %@ üzərində heç nə hazır gözləmədi"
+          }
+        }
+      }
+    },
+    "Nothing on distractions in the 2 hours after it." : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In den 2 Stunden danach nichts bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ondan sonrakı 2 saatda diqqət yayındıranlara vaxt getməyib."
           }
         }
       }
@@ -30361,6 +30680,52 @@
         }
       }
     },
+    "On %lld days, %@ more went to distractions in the 2 hours after your last stretch." : {
+      "comment" : "Analyzer, what the numbers leave out: days, then the time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On %1$lld days, %2$@ more went to distractions in the 2 hours after your last stretch."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An %1$lld Tagen gingen in den 2 Stunden nach deiner letzten Phase noch %2$@ an Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld gündə son mərhələnizdən sonrakı 2 saatda daha %2$@ diqqət yayındıranlara getdi."
+          }
+        }
+      }
+    },
+    "On %lld of %lld days, about %@ each. The day isn’t over when the focus is." : {
+      "comment" : "Analyzer, what the numbers leave out: tile: days, working days, then the usual time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On %1$lld of %2$lld days, about %3$@ each. The day isn’t over when the focus is."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An %1$lld von %2$lld Tagen, jeweils etwa %3$@. Der Tag ist nicht vorbei, wenn der Fokus es ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld gündən %1$lld-ində, hər dəfə təxminən %3$@. Fokus bitəndə gün bitmir."
+          }
+        }
+      }
+    },
     "on %lld of %lld working days" : {
       "localizations" : {
         "az" : {
@@ -30469,6 +30834,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktive und inaktive Tage werden gemischt, je zur Hälfte, damit eine volle Woche oder ein langsamer Freitag das Ergebnis nicht verfälscht."
+          }
+        }
+      }
+    },
+    "On one day, %@ more went to distractions in the 2 hours after your last stretch." : {
+      "comment" : "Analyzer, what the numbers leave out: the time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An einem Tag gingen in den 2 Stunden nach deiner letzten Phase noch %@ an Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir gün son mərhələnizdən sonrakı 2 saatda daha %@ diqqət yayındıranlara getdi."
           }
         }
       }
@@ -30696,6 +31078,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mit einem Klick handeln"
+          }
+        }
+      }
+    },
+    "One day had no focused stretch at all, with %@ on distractions." : {
+      "comment" : "Analyzer, what the numbers leave out: the time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Tag hatte gar keine fokussierte Phase, mit %@ bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir gündə heç bir fokuslu mərhələ olmadı, %@ diqqət yayındıranlarda keçdi."
           }
         }
       }
@@ -40591,6 +40990,23 @@
         }
       }
     },
+    "That day cost more than every cause in the list put together." : {
+      "comment" : "Analyzer, what the numbers leave out: one day with no focus",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Tag hat mehr gekostet als alle Ursachen in der Liste zusammen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O gün siyahıdakı bütün səbəblərin cəmindən baha başa gəldi."
+          }
+        }
+      }
+    },
     "That doesn't look like a site. Try something like example.com." : {
       "localizations" : {
         "az" : {
@@ -40973,6 +41389,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ işləyərkən kart da bunu yayınma saymayacaq."
+          }
+        }
+      }
+    },
+    "The causes only count the time between two focused stretches." : {
+      "comment" : "Analyzer, what the numbers leave out: what the causes read",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Ursachen zählen nur die Zeit zwischen zwei fokussierten Phasen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səbəblər yalnız iki fokuslu mərhələ arasındakı vaxtı sayır."
           }
         }
       }
@@ -42313,6 +42746,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diese Woche bisher"
+          }
+        }
+      }
+    },
+    "Those days cost more than every cause in the list put together." : {
+      "comment" : "Analyzer, what the numbers leave out: days with no focus",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Tage haben mehr gekostet als alle Ursachen in der Liste zusammen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O günlər siyahıdakı bütün səbəblərin cəmindən baha başa gəldi."
           }
         }
       }
@@ -45309,6 +45759,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das sieht dein Team"
+          }
+        }
+      }
+    },
+    "What the causes explain." : {
+      "comment" : "Analyzer, what the numbers leave out: tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was die Ursachen erklären."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Səbəblərin izah etdiyi."
+          }
+        }
+      }
+    },
+    "What the numbers leave out" : {
+      "comment" : "Analyzer card: lost time the causes don't explain",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was die Zahlen auslassen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rəqəmlərin buraxdığı"
           }
         }
       }

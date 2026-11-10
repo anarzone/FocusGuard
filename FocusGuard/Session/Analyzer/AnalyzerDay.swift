@@ -74,6 +74,14 @@ struct AnalyzerDay: Equatable, Sendable {
     var earlyLost: TimeInterval = 0
     var lateFocus: TimeInterval = 0
     var lateLost: TimeInterval = 0
+    /// Time on distractions all day, calls left out.
+    var distraction: TimeInterval = 0
+    /// There was at least one solid focused stretch, so the time between
+    /// stretches could be read.
+    var hasFocus = false
+    /// Time on distractions in the window after the last focused stretch:
+    /// lost too, though not between two stretches.
+    var afterLast: TimeInterval = 0
 
     var isCallHeavy: Bool { callShare >= AnalyzerRules.callHeavyShare }
 
@@ -142,8 +150,14 @@ enum AnalyzerDayBuilder {
         (result.hourFocus, result.hourTracked) = hours(segments, calendar: calendar)
         result.afterCalls = afterCalls(callSpans, segments: segments)
 
+        result.distraction = segments.filter { $0.kind == .distraction && !$0.isCall }.reduce(0) { $0 + $1.duration }
         let solid = stretches.filter { $0.focused >= AnalyzerRules.solidStretch }
         guard let first = solid.first, let last = solid.last else { return result }
+        result.hasFocus = true
+        let after = DateInterval(start: last.end, end: min(span.end, last.end.addingTimeInterval(AnalyzerRules.afterLastWindow)))
+        result.afterLast = segments.filter { $0.kind == .distraction && !$0.isCall }.reduce(0) { total, segment in
+            total + (DateInterval(start: segment.start, end: segment.end).intersection(with: after)?.duration ?? 0)
+        }
         let sitDown = sitDown(before: first.start, segments)
 
         // Time before the first focus, then between focused stretches. After
@@ -346,26 +360,43 @@ enum AnalyzerDayBuilder {
         return out
     }
 
-    /// Exactly one cause, by rule, tried in order. Nil: nothing here explains
-    /// it, which the period's late-day pattern may still.
-    private static func cause(_ slices: [Slice], start: Date, end: Date, segments: [Segment], callSpans: [DateInterval],
-                              churn: Set<Int>) -> AnalyzerCause? {
+    /// Exactly one cause, by rule. Calls on both sides make it meetings.
+    /// Otherwise it's named by where the time went: message apps, a
+    /// distraction, or hopping between apps, whichever took the most. A
+    /// message app opened just before only decides it when nothing in it
+    /// took longer: Slack, then 25 minutes of YouTube, is YouTube's. Nil:
+    /// nothing here explains it, which the period's late-day pattern may still.
+    static func cause(_ slices: [Slice], start: Date, end: Date, segments: [Segment], callSpans: [DateInterval],
+                      churn: Set<Int>) -> AnalyzerCause? {
         if let before = callSpans.last(where: { $0.end <= start }),
            let after = callSpans.first(where: { $0.start >= end }),
            after.start.timeIntervalSince(before.end) < AnalyzerRules.deepBlock {
             return .meetings
         }
         let lead = AnalyzerRules.messageLead
-        if segments.contains(where: {
+        let messageNear = segments.contains {
             $0.isMessaging && $0.end >= start.addingTimeInterval(-lead) && $0.start <= start.addingTimeInterval(lead)
-        }) {
-            return .chatAndMail
         }
-        if slices.contains(where: { $0.source.kind == .distraction }) { return .habit }
+        let time = timeWent(slices, churn: churn)
         let seconds = slices.reduce(0) { $0 + $1.duration }
-        let churning = slices.filter { churn.contains($0.index) }.reduce(0) { $0 + $1.duration }
-        if seconds > 0, churning / seconds >= AnalyzerRules.churnShare { return .unclearTask }
-        return nil
+        let hopping = seconds > 0 && time.hopping / seconds >= AnalyzerRules.churnShare
+        // Most time first; on a tie the message app, then the distraction.
+        if time.messages > 0, time.messages >= time.distraction, !hopping || time.messages >= time.hopping { return .chatAndMail }
+        if time.distraction > 0, !hopping || time.distraction >= time.hopping { return .habit }
+        if hopping { return .unclearTask }
+        return messageNear ? .chatAndMail : nil
+    }
+
+    /// Where a lost moment's time went: in message apps, on distractions,
+    /// and hopping between other apps. Each second counts once.
+    static func timeWent(_ slices: [Slice], churn: Set<Int>) -> (messages: TimeInterval, distraction: TimeInterval, hopping: TimeInterval) {
+        var messages = 0.0, distraction = 0.0, hopping = 0.0
+        for slice in slices {
+            if slice.source.isMessaging { messages += slice.duration }
+            else if slice.source.kind == .distraction { distraction += slice.duration }
+            else if churn.contains(slice.index) { hopping += slice.duration }
+        }
+        return (messages, distraction, hopping)
     }
 
     private static func switchCount(_ slices: [Slice]) -> Int {
