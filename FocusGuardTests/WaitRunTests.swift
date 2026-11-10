@@ -119,6 +119,71 @@ final class WaitRunTests: XCTestCase {
         XCTAssertNotNil(reach(in: look(&patient, x(at: 40 * 60 + 10), at: 40 * 60 + 10)))
     }
 
+    // MARK: - Which run a wait was on, and how long its answer sat
+
+    private func ended(in events: [WaitEvent]) -> WaitRecord? {
+        for case .ended(let record, _) in events { return record }
+        return nil
+    }
+
+    func testAWaitRemembersItsRunAndHowLongTheAnswerSat() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)
+        _ = look(&watcher, x(at: 30), at: 30)
+        _ = watcher.finished(tool: claudeCode, project: "curiplay", session: "a", needsInput: false, at: at(100))
+        guard let record = ended(in: look(&watcher, term, at: 400)) else { return XCTFail("Expected an end") }
+        XCTAssertEqual(record.ran, now, "The run it was on, by its start")
+        XCTAssertEqual(record.drift, 370, accuracy: 0.5)
+        XCTAssertEqual(record.late ?? -1, 300, accuracy: 0.5, "On x.com for five minutes after it had finished")
+    }
+
+    func testOnlyTimeOnADistractionAfterTheFinishIsLate() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)
+        _ = look(&watcher, x(at: 30), at: 30)
+        _ = watcher.finished(tool: claudeCode, project: "curiplay", session: "a", needsInput: false, at: at(100))
+        // Off x.com half a minute later, and reading the docs for a while.
+        _ = look(&watcher, snap(chrome, url: "https://docs.swift.org/", at: 130), at: 130)
+        guard let record = ended(in: look(&watcher, term, at: 400)) else { return XCTFail("Expected an end") }
+        XCTAssertEqual(record.drift, 100, accuracy: 0.5)
+        XCTAssertEqual(record.late ?? -1, 30, accuracy: 0.5, "The docs aren't a distraction: that time isn't the drift's")
+    }
+
+    func testBackBeforeItFinishesLeavesNothingLate() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)
+        _ = look(&watcher, x(at: 30), at: 30)
+        guard let record = ended(in: look(&watcher, term, at: 60)) else { return XCTFail("Expected an end") }
+        XCTAssertEqual(record.ran, now)
+        XCTAssertNil(record.late, "It hadn't finished: nothing sat")
+        XCTAssertTrue(record.drifted)
+    }
+
+    func testGoingIdleLeavesNoRunAndNothingLate() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)
+        _ = look(&watcher, x(at: 30), at: 30)
+        _ = watcher.finished(tool: claudeCode, project: "curiplay", session: "a", needsInput: false, quiet: true, at: at(100))
+        guard let record = ended(in: look(&watcher, term, at: 400)) else { return XCTFail("Expected an end") }
+        XCTAssertNil(record.ran, "When it stopped working isn't known")
+        XCTAssertNil(record.late)
+    }
+
+    func testTheDoneCardComesHoweverLateTheDriftBegan() {
+        var watcher = WaitWatcher()
+        watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)
+        // The docs first, and x.com only minutes later: too late to be reaching for it in the wait.
+        _ = look(&watcher, snap(chrome, url: "https://docs.swift.org/", at: 10), at: 10)
+        XCTAssertNil(reach(in: look(&watcher, x(at: 200), at: 200)))
+        let events = watcher.finished(tool: claudeCode, project: "curiplay", session: "a", needsInput: false, at: at(260))
+        var told: WaitReach?
+        for case .done(let reach, _, _) in events { told = reach }
+        XCTAssertEqual(told?.to, "x.com", "On a distraction when it finished: said, whenever the drift began")
+        XCTAssertEqual(told?.since, at(200), "Its minutes are the ones on x.com")
+        XCTAssertEqual(watcher.finished(tool: claudeCode, project: "curiplay", session: "a", needsInput: false, at: at(270)), [],
+                       "Said once")
+    }
+
     func testAStartIsForgottenAfterHalfADay() {
         var watcher = WaitWatcher()
         watcher.started(tool: claudeCode, project: "curiplay", session: "a", front: term, at: now)

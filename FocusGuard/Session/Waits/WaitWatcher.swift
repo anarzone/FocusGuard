@@ -80,6 +80,13 @@ struct WaitRecord: Codable, Equatable, Sendable {
     var exact = false
     /// How long the tool worked, when it said: from the prompt to its answer.
     var worked: TimeInterval?
+    /// When the run waited on started, by the tool's own word: which run
+    /// this wait was on (`RunRecord.start`).
+    var ran: Date?
+    /// Of the drift, what came after the tool had finished or asked: how
+    /// long its answer sat while they were on a distraction. Nil when it
+    /// hadn't finished before the wait was over.
+    var late: TimeInterval?
 
     var drifted: Bool { drift > 0 }
 }
@@ -137,6 +144,8 @@ struct WaitWatcher: Equatable {
         /// The tool said it finished.
         var finishedAt: Date?
         var workedSince: Date?
+        /// The drift so far when it finished: what comes after is on its answer.
+        var driftAtFinish: TimeInterval?
     }
 
     /// A tool that said it started and hasn't said it's done.
@@ -292,7 +301,9 @@ struct WaitWatcher: Equatable {
         var record = WaitRecord(start: current.left, tool: current.tool.name, project: current.project,
                                 seconds: seconds, drift: min(drift, seconds), to: current.to)
         record.exact = current.exact
+        if current.exact { record.ran = current.workedSince }
         if let finished = current.finishedAt, let since = current.workedSince { record.worked = finished.timeIntervalSince(since) }
+        if let before = current.driftAtFinish { record.late = max(0, record.drift - before) }
         return .ended(record, back: back)
     }
 
@@ -371,14 +382,23 @@ struct WaitWatcher: Equatable {
             // The run waited on, or a wait guessed from a title, which the tool's word settles.
             guard current.finishedAt == nil else { return events }
             current.finishedAt = now
-            // Gone idle or closed: when it stopped working isn't known.
-            if quiet { current.workedSince = nil }
+            if quiet {
+                // Gone idle or closed: when it stopped working isn't known.
+                current.workedSince = nil
+            } else {
+                current.driftAtFinish = current.drift + (current.driftSince.map { now.timeIntervalSince($0) } ?? 0)
+            }
         } else if !needsInput || !ended.contains(where: { $0.bundleId == current.tool.bundleId }) {
             // Another session's: the one waited on is still working. Unless it
             // asks for an answer in the same app, which is worth going back for.
             return events
         }
-        if !quiet, current.driftSince != nil, let reach = current.reach, !current.doneSent {
+        if !quiet, let onItSince = current.driftSince, !current.doneSent {
+            // On a distraction when it finished, however long after leaving
+            // the tool they got there: its own word is always worth saying.
+            var reach = current.reach ?? WaitReach(tool: current.tool, project: current.project, since: onItSince,
+                                                   to: current.to ?? current.tool.name)
+            if current.reach == nil { reach.runStarted = current.workedSince }
             current.doneSent = true
             events.append(.done(reach, project: project ?? ended.first?.project ?? current.project, needsInput: needsInput))
         }

@@ -44,6 +44,7 @@ private struct AnalyzerView: View {
     var analyzer: FocusAnalyzer = .shared
     @State private var report: AnalyzerReport?
     @State private var waits = AnalyzerWaitsSummary()
+    @State private var runs = AnalyzerRuns()
     @State private var sheet: AnalyzerSheet?
     @AppStorage(SettingsKeys.Goal.weekendsCount) private var weekendsCount = false
 
@@ -53,7 +54,7 @@ private struct AnalyzerView: View {
     }
 
     var body: some View {
-        AnalyzerContent(report: report, analyzer: analyzer, waits: waits, openSheet: { sheet = $0 },
+        AnalyzerContent(report: report, analyzer: analyzer, waits: waits, runs: runs, openSheet: { sheet = $0 },
                         undoCorrection: { cause in
                             analyzer.restore(cause)
                             Task { await reload() }
@@ -86,6 +87,12 @@ private struct AnalyzerView: View {
             summary.projects[index].next = appState.waits.nextTask(summary.projects[index].name)?.title
         }
         waits = summary
+        var timed = AnalyzerRuns.make(runs: WaitLog.shared.runs(from: week, to: .now),
+                                      waits: WaitLog.shared.records(from: week, to: .now))
+        for index in timed.projects.indices {
+            timed.projects[index].next = appState.waits.nextTask(timed.projects[index].name)?.title
+        }
+        runs = timed
         let fresh = await appState.analyzerReport(weekendsCount: weekendsCount)
         appState.windowPages.analyzer = fresh
         report = fresh
@@ -121,6 +128,7 @@ struct AnalyzerContent: View {
     let report: AnalyzerReport?
     let analyzer: FocusAnalyzer
     var waits = AnalyzerWaitsSummary()
+    var runs = AnalyzerRuns()
     var now: Date = .now
     var openSheet: (AnalyzerSheet) -> Void = { _ in }
     var undoCorrection: (AnalyzerCause) -> Void = { _ in }
@@ -134,14 +142,23 @@ struct AnalyzerContent: View {
             ScrollView {
                 Group {
                     if let report {
+                        // What the tools did while the user was away leads,
+                        // once they've said enough: it's the one finding with
+                        // real times behind it.
+                        if runs.isWorthShowing {
+                            AnalyzerRunsSection(runs: runs, canTest: analyzer.state.experiment == nil,
+                                                hold: { analyzer.state.hold(tool: $0, site: $1) },
+                                                test: { openSheet(.setup($0)) })
+                                .padding(.bottom, 10)
+                        }
                         // What set it off and what the waits turned into come
-                        // first: they say what to do differently.
+                        // next: they say what to do differently.
                         if !report.triggers.isEmpty {
                             AnalyzerTriggersCard(triggers: report.triggers, workingDays: report.workingDays, ruleOut: ruleOut,
                                                  canTest: analyzer.state.experiment == nil) { openSheet(.setup($0)) }
                                 .padding(.bottom, 10)
                         }
-                        if waits.waits > 0 {
+                        if !runs.isWorthShowing, waits.waits > 0 {
                             AnalyzerWaitsCard(summary: waits).padding(.bottom, 10)
                         }
                         AnalyzerPatternCards(patterns: report.patterns).padding(.bottom, 10)
@@ -202,13 +219,15 @@ struct AnalyzerContent: View {
 struct AnalyzerCard<Content: View>: View {
     var radius: CGFloat = 16
     var padding = EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
+    /// As tall as the row it's in, so cards side by side end together.
+    var fillsHeight = false
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         content()
             .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
             .background(shape.fill(Theme.windowCard))
             .overlay(shape.strokeBorder(Theme.moduleStroke, lineWidth: 0.5))
     }
@@ -343,6 +362,24 @@ enum AnalyzerFormat {
     /// "34 min", "1h 10m".
     static func duration(_ seconds: TimeInterval) -> String {
         seconds >= 3600 ? WindowFormat.hm(seconds) : WindowFormat.minutes(seconds)
+    }
+
+    /// A total, at a glance: "45s", "47m", "3h 12m".
+    static func compact(_ seconds: TimeInterval) -> String {
+        seconds > 0 && seconds < 60 ? String(localized: "\(Int(seconds))s", comment: "Compact duration") : WindowFormat.hm(seconds)
+    }
+
+    /// A time in a sentence: "45s", "6 min", "1h 10m".
+    static func short(_ seconds: TimeInterval) -> String {
+        seconds < 60 ? String(localized: "\(Int(max(0, seconds)))s", comment: "Compact duration") : duration(seconds)
+    }
+
+    /// One run's time, to the second while it's short: "45s", "4m 10s", "12 min".
+    static func exact(_ seconds: TimeInterval) -> String {
+        let whole = Int(max(0, seconds).rounded())
+        if whole < 60 || whole >= 600 { return short(TimeInterval(whole)) }
+        let m = whole / 60, s = whole % 60
+        return s == 0 ? WindowFormat.minutes(TimeInterval(whole)) : String(localized: "\(m)m \(s)s", comment: "Compact duration")
     }
 
     /// "Tue 10:12–10:48".

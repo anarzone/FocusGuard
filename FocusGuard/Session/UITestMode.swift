@@ -164,6 +164,49 @@ enum UITestMode {
             add(at(15), 60, "Xcode", .focus)
         }
         try? context.save()
+        seedRuns(today: today, calendar: calendar)
+    }
+
+    /// The last week's tool runs as the tools timed them, and the waits on
+    /// them, for the Analyzer's headline: Curiplay's answers sit while x.com
+    /// is open, FocusGuard's mostly don't, and the tool on dotfiles doesn't
+    /// say when it starts.
+    @MainActor
+    private static func seedRuns(today: Date, calendar: Calendar) {
+        /// The hour it started, the minutes it worked, the minutes its answer
+        /// sat while a distraction was open (nil: none was), and whether it
+        /// stopped to ask.
+        typealias Seeded = (hour: Double, worked: Double, sat: Double?, asked: Bool)
+        let curiplay: [Seeded] = [
+            (9.6, 4, nil, false), (10.3, 11, 6, false), (11.2, 7, 0, false), (13.4, 3, nil, true),
+            (14.1, 14, 9, false), (15.3, 6, 4, true), (16.2, 9, nil, false),
+        ]
+        let focusGuard: [Seeded] = [(9.9, 5, nil, false), (11.6, 8, 2, false), (15.8, 12, nil, false), (16.9, 4, nil, true)]
+        for back in 0...6 {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: today), !calendar.isDateInWeekend(day) else { continue }
+            let stretch = 1 + Double(back % 3) * 0.15
+            func run(_ item: Seeded, tool: String, project: String, site: String) {
+                let start = day.addingTimeInterval(item.hour * 3600)
+                let seconds = (item.worked * 60 * stretch).rounded()
+                WaitLog.shared.add(RunRecord(start: start, tool: tool, project: project, seconds: seconds, asked: item.asked))
+                guard let sat = item.sat else { return }
+                // They left a minute in, and came back that long after it had finished.
+                let late = (sat * 60 * stretch).rounded()
+                WaitLog.shared.add(WaitRecord(start: start.addingTimeInterval(60), tool: tool, project: project,
+                                              seconds: seconds - 60 + late, drift: seconds - 60 + late, to: site, exact: true,
+                                              worked: seconds, ran: start, late: late > 0 ? late : nil))
+            }
+            for (index, item) in curiplay.prefix(4 + back % 4).enumerated() {
+                run(item, tool: "Claude Code", project: "Curiplay", site: index % 3 == 2 ? "youtube.com" : "x.com")
+            }
+            for (index, item) in focusGuard.prefix(2 + back % 3).enumerated() {
+                run(item, tool: index == 2 ? "Codex" : "Claude Code", project: "FocusGuard", site: "x.com")
+            }
+            if back % 2 == 1 {
+                WaitLog.shared.add(WaitRecord(start: day.addingTimeInterval(17.5 * 3600), tool: "Aider", project: "dotfiles",
+                                              seconds: 240, drift: back % 4 == 1 ? 180 : 0, to: back % 4 == 1 ? "youtube.com" : nil))
+            }
+        }
     }
 
     /// Three years of long days under long names: what the pages have to

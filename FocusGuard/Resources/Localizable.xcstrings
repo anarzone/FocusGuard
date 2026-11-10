@@ -170,6 +170,29 @@
         }
       }
     },
+    "%@ back for %@, in a week like this one" : {
+      "comment" : "Analyzer, While your tools worked: what-if headline. Time won back, then the project",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ back for %2$@, in a week like this one"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ mehr für %2$@, in einer Woche wie dieser"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belə bir həftədə %2$@ üçün %1$@ geri"
+          }
+        }
+      }
+    },
     "%@ came right after %@, with no work in between. Seen on %lld of %lld days." : {
       "comment" : "Analyzer: the distraction, the app before it, then days seen and working days",
       "localizations" : {
@@ -221,6 +244,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ konnte eine Seite nicht wieder öffnen"
+          }
+        }
+      }
+    },
+    "%@ doesn’t tell FocusGuard when it starts or finishes, so its runs aren’t timed." : {
+      "comment" : "Analyzer, While your tools worked: a tool with no start/finish signal",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sagt FocusGuard nicht, wann es anfängt oder fertig ist, deshalb werden seine Läufe nicht gemessen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ FocusGuard-a nə vaxt başladığını və bitirdiyini demir, ona görə işləri ölçülmür."
           }
         }
       }
@@ -2143,6 +2183,52 @@
         }
       }
     },
+    "%@ of tool work on %@ this week, in %lld runs of about %@." : {
+      "comment" : "Analyzer, While your tools worked: summary. Total time, project, number of runs, usual run length",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of tool work on %2$@ this week, in %3$lld runs of about %4$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Tool-Arbeit an %2$@ diese Woche, in %3$lld Läufen von etwa %4$@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə %2$@ üzərində %1$@ alət işi, hər biri təxminən %4$@ olan %3$lld işdə."
+          }
+        }
+      }
+    },
+    "%@ of tool work on %@ this week, in one run." : {
+      "comment" : "Analyzer, While your tools worked: summary with one run. Total time, project",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ of tool work on %2$@ this week, in one run."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Tool-Arbeit an %2$@ diese Woche, in einem Lauf."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu həftə %2$@ üzərində %1$@ alət işi, bir işdə."
+          }
+        }
+      }
+    },
     "%@ on" : {
       "comment" : "Browsers the extension is connected in: Chrome and Arc on",
       "localizations" : {
@@ -2934,6 +3020,29 @@
         }
       }
     },
+    "%@ was done and waiting for you for %@" : {
+      "comment" : "Analyzer, While your tools worked: headline. The tool, then the time it sat finished",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ was done and waiting for you for %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ war fertig und hat %2$@ auf dich gewartet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hazır idi və %2$@ sizi gözlədi"
+          }
+        }
+      }
+    },
     "%@ was your best day." : {
       "localizations" : {
         "az" : {
@@ -3130,6 +3239,46 @@
         }
       }
     },
+    "%@ working · %@ waiting for you" : {
+      "comment" : "Analyzer, While your tools worked: project row. Tool time, then waiting time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ working · %2$@ waiting for you"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Arbeit · %2$@ Warten auf dich"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ iş · %2$@ sizi gözləmə"
+          }
+        }
+      }
+    },
+    "%@ working · no waiting" : {
+      "comment" : "Analyzer, While your tools worked: project row with no waiting time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Arbeit · kein Warten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ iş · gözləmə yoxdur"
+          }
+        }
+      }
+    },
     "%@ you open next to %@" : {
       "comment" : "What an app is (the model's English words), and the app it's used with",
       "localizations" : {
@@ -3239,6 +3388,29 @@
         }
       }
     },
+    "%@ · %@ stopped after %@ to ask you something." : {
+      "comment" : "Analyzer, While your tools worked: one run's story. Clock time, tool, how long it worked",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ stopped after %3$@ to ask you something."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ hat nach %3$@ angehalten, um dich etwas zu fragen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ %3$@ sonra sizə nəsə soruşmaq üçün dayandı."
+          }
+        }
+      }
+    },
     "%@ · %@ to %@" : {
       "comment" : "From the last 4 weeks · 09:00 to 12:00",
       "localizations" : {
@@ -3258,6 +3430,29 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$@ to %3$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ worked for %@." : {
+      "comment" : "Analyzer, While your tools worked: one run's story. Clock time, tool, how long it worked",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ worked for %3$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ hat %3$@ gearbeitet."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ %3$@ işlədi."
           }
         }
       }
@@ -7845,6 +8040,23 @@
         }
       }
     },
+    "%lld runs" : {
+      "comment" : "Analyzer, While your tools worked: number of runs (2 or more)",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Läufe"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld iş"
+          }
+        }
+      }
+    },
     "%lld s" : {
       "comment" : "Compact seconds",
       "localizations" : {
@@ -8516,6 +8728,52 @@
         }
       }
     },
+    "%lld times it finished while you were there, and you stayed about %@ more." : {
+      "comment" : "Analyzer, While your tools worked: count, then usual extra time on the distraction",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld times it finished while you were there, and you stayed about %2$@ more."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-mal war es fertig, während du dort warst, und du bist noch etwa %2$@ geblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dəfə siz orada olanda bitdi və siz təxminən %2$@ də qaldınız."
+          }
+        }
+      }
+    },
+    "%lld times you left for %@ while a run was going." : {
+      "comment" : "Analyzer, While your tools worked: count, then the sites",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld times you left for %2$@ while a run was going."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-mal bist du zu %2$@ gewechselt, während ein Lauf lief."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dəfə iş gedərkən %2$@ saytına keçdiniz."
+          }
+        }
+      }
+    },
     "%lld to %lld: %lld%% focused" : {
       "comment" : "Analyzer: the best two hours, then their focus rate: 9 to 11: 86% focused",
       "localizations" : {
@@ -8987,6 +9245,29 @@
         }
       }
     },
+    "%lld× you were on a distraction when it asked: %@ with nothing moving until you answered. FocusGuard tells you the moment it asks." : {
+      "comment" : "Analyzer, While your tools worked: tile. Count, then total time the question waited",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld× you were on a distraction when it asked: %2$@ with nothing moving until you answered. FocusGuard tells you the moment it asks."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld× warst du bei einer Ablenkung, als es gefragt hat: %2$@ ging nichts weiter, bis du geantwortet hast. FocusGuard sagt es dir, sobald es fragt."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld× soruşanda siz diqqət yayındıranda idiniz: cavab verənə qədər %2$@ heç nə irəliləmədi. FocusGuard soruşan kimi sizə deyir."
+          }
+        }
+      }
+    },
     "%lld–%lld %@" : {
       "comment" : "Dates within one month: 12–18 Oct",
       "localizations" : {
@@ -9066,6 +9347,23 @@
     },
     "00:00" : {
       "shouldTranslate" : false
+    },
+    "1 run" : {
+      "comment" : "Analyzer, While your tools worked: one run",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Lauf"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 iş"
+          }
+        }
+      }
     },
     "1 week" : {
       "comment" : "Analyzer range",
@@ -12743,6 +13041,23 @@
         }
       }
     },
+    "Back to what happened" : {
+      "comment" : "Analyzer, While your tools worked: button leaving the what-if view",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zu dem, was passiert ist"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baş verənlərə qayıt"
+          }
+        }
+      }
+    },
     "Back to work" : {
       "localizations" : {
         "az" : {
@@ -13673,6 +13988,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro kannst du bald kaufen. Bis dahin behält FocusGuard alles, was du hast."
+          }
+        }
+      }
+    },
+    "By project" : {
+      "comment" : "Analyzer, While your tools worked: card title",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach Projekt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layihəyə görə"
           }
         }
       }
@@ -15733,6 +16065,23 @@
         }
       }
     },
+    "Day by day" : {
+      "comment" : "Analyzer, While your tools worked: card title",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag für Tag"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gün-gün"
+          }
+        }
+      }
+    },
     "Day done: %@ of %@" : {
       "localizations" : {
         "az" : {
@@ -16728,6 +17077,23 @@
         }
       }
     },
+    "done, waiting for you" : {
+      "comment" : "Analyzer, While your tools worked: stat label",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "fertig, wartet auf dich"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hazır, sizi gözləyir"
+          }
+        }
+      }
+    },
     "Done: %@" : {
       "localizations" : {
         "az" : {
@@ -17175,6 +17541,40 @@
         }
       }
     },
+    "Each bar is one run. Click one to see what happened." : {
+      "comment" : "Analyzer, While your tools worked: chart hint with no waiting",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Balken ist ein Lauf. Klick einen an, um zu sehen, was passiert ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər sütun bir işdir. Nə baş verdiyini görmək üçün birinə klikləyin."
+          }
+        }
+      }
+    },
+    "Each bar is one run. The orange on top is how long it sat finished while you were on a distraction. Click a run to see what happened." : {
+      "comment" : "Analyzer, While your tools worked: chart hint",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Balken ist ein Lauf. Das Orange oben zeigt, wie lange er fertig dalag, während du bei einer Ablenkung warst. Klick einen Lauf an, um zu sehen, was passiert ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər sütun bir işdir. Üstdəki narıncı, siz diqqət yayındıranda olarkən onun nə qədər hazır gözlədiyidir. Nə baş verdiyini görmək üçün bir işə klikləyin."
+          }
+        }
+      }
+    },
     "Each look at the app in front" : {
       "localizations" : {
         "de" : {
@@ -17187,6 +17587,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öndəki tətbiqə hər baxış"
+          }
+        }
+      }
+    },
+    "Each time you were off it before the run finished." : {
+      "comment" : "Analyzer, While your tools worked: tile note",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal warst du schon wieder weg, bevor der Lauf fertig war."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər dəfə iş bitməmiş oradan çıxmışdınız."
+          }
+        }
+      }
+    },
+    "Each time you were off it by the time it finished." : {
+      "comment" : "Analyzer, While your tools worked: summary",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal warst du schon wieder weg, als es fertig war."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər dəfə bitəndə artıq oradan çıxmışdınız."
           }
         }
       }
@@ -18150,6 +18584,23 @@
         }
       }
     },
+    "Every time it finished while you were there, and you stayed about %@ more." : {
+      "comment" : "Analyzer, While your tools worked: summary. Usual extra time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal war es fertig, während du dort warst, und du bist noch etwa %@ geblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər dəfə siz orada olanda bitdi və siz təxminən %@ də qaldınız."
+          }
+        }
+      }
+    },
     "Everything in your library is pinned." : {
       "localizations" : {
         "az" : {
@@ -18829,6 +19280,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "FocusGuard sieht Apps, Websites und Zeiten, nicht was du gedacht hast. Das ist also seine beste Erklärung, keine Tatsache. Ein Test zeigt, ob es dir hilft."
+          }
+        }
+      }
+    },
+    "FocusGuard tells you the moment it finishes, so you don’t have to keep checking." : {
+      "comment" : "Analyzer, While your tools worked: what-if body",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard sagt dir Bescheid, sobald es fertig ist, du musst also nicht ständig nachsehen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "FocusGuard bitən kimi sizə deyir, ona görə daim yoxlamağa ehtiyac yoxdur."
           }
         }
       }
@@ -22059,6 +22527,29 @@
         }
       }
     },
+    "Holding %@ for %lld min while %@ works" : {
+      "comment" : "Analyzer, While your tools worked: button. Site, minutes, tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Holding %1$@ for %2$lld min while %3$@ works"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wird %2$lld Min. zurückgehalten, während %3$@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%3$@ işləyərkən %1$@ %2$lld dəq saxlanılır"
+          }
+        }
+      }
+    },
     "Hover one for its time; click it for its goal and debrief" : {
       "localizations" : {
         "de" : {
@@ -22890,6 +23381,23 @@
         }
       }
     },
+    "It finished while you were there, and you stayed %@ more." : {
+      "comment" : "Analyzer, While your tools worked: summary, one time. Extra time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es war fertig, während du dort warst, und du bist noch %@ geblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz orada olanda bitdi və siz daha %@ qaldınız."
+          }
+        }
+      }
+    },
     "It gets a name from how it goes, like Steady Deep Dive." : {
       "localizations" : {
         "az" : {
@@ -23018,6 +23526,23 @@
         }
       }
     },
+    "It stopped to ask you" : {
+      "comment" : "Analyzer tile and legend: a tool needed the user's answer",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es hat angehalten, um dich zu fragen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sizdən soruşmaq üçün dayandı"
+          }
+        }
+      }
+    },
     "It took %@ of the %@ you drifted %@. %@ comes next, at %@." : {
       "comment" : "When: between 12:00 and 17:00, or in the last 4 weeks",
       "localizations" : {
@@ -23093,6 +23618,23 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "It was all %1$@ of the drift %2$@."
+          }
+        }
+      }
+    },
+    "It was done, waiting for you" : {
+      "comment" : "Analyzer, While your tools worked: legend, orange",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es war fertig und hat auf dich gewartet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hazır idi, sizi gözləyirdi"
           }
         }
       }
@@ -27401,6 +27943,40 @@
         }
       }
     },
+    "No distraction during this one." : {
+      "comment" : "Analyzer, While your tools worked: one run's story",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ablenkung bei diesem Lauf."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu işdə diqqət yayındıran olmadı."
+          }
+        }
+      }
+    },
+    "No distraction got in the way." : {
+      "comment" : "Analyzer, While your tools worked: one run's story, the tool asked",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Ablenkung kam dazwischen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heç bir diqqət yayındıran mane olmadı."
+          }
+        }
+      }
+    },
     "No focused time this week." : {
       "localizations" : {
         "de" : {
@@ -27884,6 +28460,23 @@
         }
       }
     },
+    "No runs" : {
+      "comment" : "Analyzer, While your tools worked: a day with no runs",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Läufe"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İş yoxdur"
+          }
+        }
+      }
+    },
     "No sessions last week." : {
       "localizations" : {
         "az" : {
@@ -28040,6 +28633,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Noch keine Vorschläge"
+          }
+        }
+      }
+    },
+    "No tool worked on %@ that day." : {
+      "comment" : "Analyzer, While your tools worked: empty day. Project",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An diesem Tag hat kein Tool an %@ gearbeitet."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O gün %@ üzərində heç bir alət işləmədi."
           }
         }
       }
@@ -28302,6 +28912,23 @@
         }
       }
     },
+    "Not once were you on a distraction when it asked." : {
+      "comment" : "Analyzer, While your tools worked: tile note",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein einziges Mal warst du bei einer Ablenkung, als es gefragt hat."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soruşanda bir dəfə də diqqət yayındıranda olmadınız."
+          }
+        }
+      }
+    },
     "Not one missed." : {
       "localizations" : {
         "az" : {
@@ -28314,6 +28941,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kein einziger verpasst."
+          }
+        }
+      }
+    },
+    "Not one of %lld runs on %@ lost you to a distraction" : {
+      "comment" : "Analyzer, While your tools worked: calm headline. Count, project",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not one of %1$lld runs on %2$@ lost you to a distraction"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keiner der %1$lld Läufe an %2$@ hat dich an eine Ablenkung verloren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ üzərində %1$lld işdən heç biri sizi diqqət yayındırana itirmədi"
           }
         }
       }
@@ -28379,6 +29029,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diesmal nicht: %@."
+          }
+        }
+      }
+    },
+    "Not timed" : {
+      "comment" : "Analyzer, While your tools worked: badge for a tool without timing",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht gemessen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ölçülmür"
           }
         }
       }
@@ -28590,6 +29257,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nichts Neues zu sortieren"
+          }
+        }
+      }
+    },
+    "Nothing on %@ sat finished while you were on a distraction" : {
+      "comment" : "Analyzer, While your tools worked: calm headline. Project",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei %@ lag nichts fertig herum, während du bei einer Ablenkung warst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz diqqət yayındıranda olarkən %@ üzərində heç nə hazır gözləmədi"
           }
         }
       }
@@ -29601,6 +30285,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Einmal täglich; sendet die App-Version"
+          }
+        }
+      }
+    },
+    "Once it finished while you were there, and you stayed %@ more." : {
+      "comment" : "Analyzer, While your tools worked: summary. Extra time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal war es fertig, während du dort warst, und du bist noch %@ geblieben."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir dəfə siz orada olanda bitdi və siz daha %@ qaldınız."
+          }
+        }
+      }
+    },
+    "Once you left for %@ while a run was going." : {
+      "comment" : "Analyzer, While your tools worked: summary. The site",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal bist du zu %@ gewechselt, während ein Lauf lief."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir dəfə iş gedərkən %@ saytına keçdiniz."
           }
         }
       }
@@ -30762,6 +31480,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nəyə əsaslandığını görmək üçün sətir seçin."
+          }
+        }
+      }
+    },
+    "Pick one" : {
+      "comment" : "Analyzer, While your tools worked: hint on the project list",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähl eins"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Birini seçin"
           }
         }
       }
@@ -32890,6 +33625,23 @@
         }
       }
     },
+    "Read it while the next run goes. FocusGuard puts it on the card when you leave for a distraction." : {
+      "comment" : "Analyzer, While your tools worked: next task hint",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies es, während der nächste Lauf läuft. FocusGuard zeigt es auf der Karte, wenn du zu einer Ablenkung wechselst."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Növbəti iş gedərkən oxuyun. Diqqət yayındırana keçəndə FocusGuard onu kartda göstərir."
+          }
+        }
+      }
+    },
     "Read “%@” while you wait, so you’re ready when %@ is." : {
       "comment" : "The open task's title, then the tool",
       "localizations" : {
@@ -33873,6 +34625,23 @@
         }
       }
     },
+    "run, %@ long" : {
+      "comment" : "Analyzer, While your tools worked: stat label with one run. Its length",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lauf, %@ lang"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iş, %@ uzunluğunda"
+          }
+        }
+      }
+    },
     "Running. Its debrief is written when it ends." : {
       "localizations" : {
         "az" : {
@@ -33885,6 +34654,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Läuft. Der Rückblick wird am Ende geschrieben."
+          }
+        }
+      }
+    },
+    "runs, about %@ each" : {
+      "comment" : "Analyzer, While your tools worked: stat label. Usual run length",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Läufe, je etwa %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iş, hər biri təxminən %@"
           }
         }
       }
@@ -39364,6 +40150,29 @@
         }
       }
     },
+    "Testing a hold on %@ while %@ works" : {
+      "comment" : "Analyzer, While your tools worked: running test. Site, tool",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Testing a hold on %1$@ while %2$@ works"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Test läuft: %1$@ wird zurückgehalten, während %2$@ arbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sınaq: %2$@ işləyərkən %1$@ saxlanılır"
+          }
+        }
+      }
+    },
     "Thank you. Everything in Pro is on." : {
       "localizations" : {
         "az" : {
@@ -39671,6 +40480,80 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das war’s mit %@ für heute."
+          }
+        }
+      }
+    },
+    "That’s how often it had finished and you were still there, usually for %@ more. A run itself takes about %@." : {
+      "comment" : "Analyzer, While your tools worked: tile note. Extra time, then usual run length",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That’s how often it had finished and you were still there, usually for %1$@ more. A run itself takes about %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So oft war es fertig und du warst noch dort, meist noch %1$@. Ein Lauf selbst dauert etwa %2$@."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu qədər dəfə bitmişdi və siz hələ orada idiniz, adətən daha %1$@. Bir iş özü təxminən %2$@ çəkir."
+          }
+        }
+      }
+    },
+    "That’s what coming back when it finishes is worth." : {
+      "comment" : "Analyzer, While your tools worked: what-if body",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So viel bringt es, zurückzukommen, wenn es fertig ist."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitəndə qayıtmaq bu qədər dəyər."
+          }
+        }
+      }
+    },
+    "That’s what coming back when it finishes is worth: room for about %lld more runs like these." : {
+      "comment" : "Analyzer, While your tools worked: what-if body. Number of runs",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So viel bringt es, zurückzukommen, wenn es fertig ist: Platz für etwa %lld weitere solche Läufe."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitəndə qayıtmaq bu qədər dəyər: təxminən %lld belə iş üçün yer."
+          }
+        }
+      }
+    },
+    "That’s what coming back when it finishes is worth: room for one more run like these." : {
+      "comment" : "Analyzer, While your tools worked: what-if body",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "So viel bringt es, zurückzukommen, wenn es fertig ist: Platz für einen weiteren solchen Lauf."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitəndə qayıtmaq bu qədər dəyər: belə bir iş üçün də yer."
           }
         }
       }
@@ -40050,6 +40933,23 @@
         }
       }
     },
+    "The one run on %@ didn’t lose you to a distraction" : {
+      "comment" : "Analyzer, While your tools worked: calm headline. Project",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der eine Lauf an %@ hat dich nicht an eine Ablenkung verloren"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ üzərində yeganə iş sizi diqqət yayındırana itirmədi"
+          }
+        }
+      }
+    },
     "The other %lld days: %@| a day." : {
       "comment" : "Plural on days: 1 day / 2 days. The | ends the bold start",
       "localizations" : {
@@ -40257,6 +41157,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Das Token liegt in deinem Schlüsselbund"
+          }
+        }
+      }
+    },
+    "The tool was working" : {
+      "comment" : "Analyzer, While your tools worked: legend, blue",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Tool hat gearbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alət işləyirdi"
           }
         }
       }
@@ -41995,6 +42912,23 @@
         }
       }
     },
+    "tools worked for you" : {
+      "comment" : "Analyzer, While your tools worked: stat label",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tools haben für dich gearbeitet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "alətlər sizin üçün işlədi"
+          }
+        }
+      }
+    },
     "Top apps" : {
       "localizations" : {
         "az" : {
@@ -43329,6 +44263,29 @@
         }
       }
     },
+    "Waits: %lld · ended on a distraction: %lld" : {
+      "comment" : "Analyzer, While your tools worked: untimed tool. Waits, then how many ended on a distraction",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waits: %1$lld · ended on a distraction: %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartezeiten: %1$lld · bei einer Ablenkung geendet: %2$lld"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləmələr: %1$lld · diqqət yayındıranda bitdi: %2$lld"
+          }
+        }
+      }
+    },
     "Walk to another room and back." : {
       "localizations" : {
         "az" : {
@@ -43595,6 +44552,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Həftəlik hesabat"
+          }
+        }
+      }
+    },
+    "Week without the waiting" : {
+      "comment" : "Analyzer, While your tools worked: what-if button",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woche ohne das Warten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gözləməsiz həftə"
           }
         }
       }
@@ -44457,6 +45431,23 @@
         }
       }
     },
+    "When you leave for %@" : {
+      "comment" : "Analyzer, While your tools worked: tile title. Sites",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du zu %@ wechselst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ saytına keçəndə"
+          }
+        }
+      }
+    },
     "Where does this belong?" : {
       "localizations" : {
         "de" : {
@@ -44615,6 +45606,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alətləriniz işləyərkən"
+          }
+        }
+      }
+    },
+    "While your tools worked · %@" : {
+      "comment" : "Analyzer, While your tools worked: section label. Project",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Während deine Tools gearbeitet haben · %@"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alətləriniz işləyərkən · %@"
           }
         }
       }
@@ -45589,6 +46597,63 @@
         }
       }
     },
+    "You left for %@ and stayed %@ after it had finished." : {
+      "comment" : "Analyzer, While your tools worked: one run's story. Site, extra time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You left for %1$@ and stayed %2$@ after it had finished."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist zu %1$@ gewechselt und noch %2$@ geblieben, nachdem es fertig war."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ saytına keçdiniz və bitəndən sonra daha %2$@ qaldınız."
+          }
+        }
+      }
+    },
+    "You left for %@ and were off it before it needed you." : {
+      "comment" : "Analyzer, While your tools worked: one run's story. Site",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist zu %@ gewechselt und warst wieder weg, bevor es dich brauchte."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ saytına keçdiniz və sizə ehtiyac yaranmamış oradan çıxdınız."
+          }
+        }
+      }
+    },
+    "You left for a distraction" : {
+      "comment" : "Analyzer chart legend: the dot under a run",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist zu einer Ablenkung gewechselt"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diqqət yayındırana keçdiniz"
+          }
+        }
+      }
+    },
     "You only focus around %@. Try a session at another time to compare." : {
       "localizations" : {
         "az" : {
@@ -45833,6 +46898,40 @@
         }
       }
     },
+    "You were off it before the run finished." : {
+      "comment" : "Analyzer, While your tools worked: tile note",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du warst schon wieder weg, bevor der Lauf fertig war."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İş bitməmiş oradan çıxmışdınız."
+          }
+        }
+      }
+    },
+    "You were off it by the time it finished." : {
+      "comment" : "Analyzer, While your tools worked: summary",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du warst schon wieder weg, als es fertig war."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bitəndə artıq oradan çıxmışdınız."
+          }
+        }
+      }
+    },
     "You were on %@" : {
       "comment" : "A website: You were on tradingview.com",
       "localizations" : {
@@ -45846,6 +46945,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du warst auf %@"
+          }
+        }
+      }
+    },
+    "You were on %@, and its question waited %@. Nothing moved until you answered." : {
+      "comment" : "Analyzer, While your tools worked: one run's story. Site, waiting time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You were on %1$@, and its question waited %2$@. Nothing moved until you answered."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du warst auf %1$@, und seine Frage hat %2$@ gewartet. Nichts ging weiter, bis du geantwortet hast."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz %1$@ saytında idiniz və onun sualı %2$@ gözlədi. Cavab verənə qədər heç nə irəliləmədi."
           }
         }
       }
@@ -46685,6 +47807,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "İş vaxtı cədvəliniz"
+          }
+        }
+      }
+    },
+    "Your tools were done and waiting for you for %@" : {
+      "comment" : "Analyzer, While your tools worked: headline with several tools. Time",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Tools waren fertig und haben %@ auf dich gewartet"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alətləriniz hazır idi və %@ sizi gözlədi"
           }
         }
       }
