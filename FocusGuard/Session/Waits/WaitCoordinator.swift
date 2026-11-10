@@ -37,6 +37,8 @@ final class WaitCoordinator {
     var holdSeconds: (WaitReach) -> Int? = { _ in nil }
     /// Puts the site's tab on hold until the given time.
     var hold: (WaitReach, Date) -> Void = { _, _ in }
+    /// Sites the user said are fine while a tool works, as trigger ids.
+    var fine: () -> Set<String> = { [] }
     /// The clock, for the quiet times.
     var now: () -> Date = { .now }
     /// How long the Mac has been awake: it stands still while it sleeps, so
@@ -53,6 +55,7 @@ final class WaitCoordinator {
             stopTimer()
             return
         }
+        watcher.fine = fine()
         for event in watcher.observe(moment) {
             handle(event, now: moment.now)
         }

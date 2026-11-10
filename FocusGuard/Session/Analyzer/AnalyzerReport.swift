@@ -92,14 +92,22 @@ struct AnalyzerReport: Equatable, Sendable {
     var patterns = AnalyzerPatterns()
     /// What set the lost focus off, most time first (`AnalyzerTriggers`).
     var triggers: [AnalyzerTrigger] = []
+    /// The patterns the user said are fine, with what that took out of the
+    /// period. One they taught that didn't come up in it isn't here.
+    var taught: [AnalyzerTrigger] = []
 
     /// Everything from the rules: `days` and `before` are the period's and the
     /// one before's days with anything tracked, `muted` what the person ruled out.
     static func make(period: DateInterval, days: [AnalyzerDay], before: [AnalyzerDay], muted: Set<AnalyzerCause>,
                      weekendsCount: Bool, waits: [WaitRecord] = [], ruledOut: Set<String> = [],
-                     calendar: Calendar = .current) -> AnalyzerReport {
-        let working = days.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }.sorted { $0.day < $1.day }
-        let earlier = before.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }
+                     lessons: AnalyzerLessons = AnalyzerLessons(), calendar: Calendar = .current) -> AnalyzerReport {
+        let fine = lessons.fineSet
+        // Which days count as working ones is settled first: a pattern that's
+        // fine takes its lost focus out, never a day.
+        let all = days.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }.sorted { $0.day < $1.day }
+        let working = AnalyzerTriggers.without(fine: fine, days: all, waits: waits)
+        let earlier = AnalyzerTriggers.without(fine: fine, days: before.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) },
+                                               waits: waits)
         var report = AnalyzerReport(period: period, workingDays: working.count,
                                     measures: AnalyzerMeasures.make(working),
                                     finding: .learning(daysLeft: max(0, AnalyzerRules.namingDays - working.count)))
@@ -107,7 +115,8 @@ struct AnalyzerReport: Equatable, Sendable {
             report.previous = AnalyzerMeasures.make(earlier)
         }
         let labelled = label(working)
-        report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, calendar: calendar)
+        report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar)
+        report.taught = AnalyzerTriggers.build(days: all, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar).taught
         report.patterns = AnalyzerPatterns.make(working)
         guard working.count >= AnalyzerRules.namingDays else { return report }
         report.rows = rows(labelled, muted: muted)

@@ -165,6 +165,11 @@ enum UITestMode {
         }
         try? context.save()
         seedRuns(today: today, calendar: calendar)
+        // "It's for work", said about one site on two days: the offer to sort it.
+        for back in [5, 3] {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: today) else { continue }
+            FocusAnalyzer.shared.learn { $0.saidForWork(key: "reddit.com", name: "reddit.com", isSite: true, at: day, calendar: calendar) }
+        }
     }
 
     /// The last week's tool runs as the tools timed them, and the waits on

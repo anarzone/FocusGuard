@@ -62,6 +62,8 @@ final class EscalationEngine {
     /// Sites / apps the user said are "for work" during this session. Never
     /// escalated until the session ends. Keyed by URL host, else bundle id.
     private(set) var allowedThisSession: Set<String> = []
+    /// "It's for work" was answered about this site or app.
+    @ObservationIgnored var onAllowedForSession: ((ActivitySnapshot) -> Void)?
     private var lastNotifiedAt: Date?
     /// What the block screen was put up for, so "Let me through" knows what to let through.
     private var blocked: ActivitySnapshot?
@@ -180,6 +182,7 @@ final class EscalationEngine {
     /// session, and lift the block if it's already up.
     func allowForSession(_ snapshot: ActivitySnapshot) {
         allowedThisSession.insert(Self.allowKey(for: snapshot))
+        onAllowedForSession?(snapshot)
         currentStreakStartedAt = nil
         lastNotifiedAt = nil
         reblockKey = nil
