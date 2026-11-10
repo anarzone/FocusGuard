@@ -71,6 +71,7 @@ final class IslandController {
     private(set) var queue: IslandQueue
     private let surface: IslandSurface
     private let clock: () -> Date
+    private let calendar: Calendar
     private let defaults: UserDefaults
     private let runsTimer: Bool
     private var timer: Timer?
@@ -84,6 +85,8 @@ final class IslandController {
         self.runsTimer = runsTimer
         self.queue = IslandQueue(calendar: calendar)
         self.recents = IslandRecents(defaults: defaults, calendar: calendar)
+        self.learning = IslandLearning.load(defaults)
+        self.calendar = calendar
         surface.attach(self)
     }
 
@@ -99,6 +102,11 @@ final class IslandController {
 
     /// When a suggestion last showed, and which: another kind keeps away for a while.
     private var lastSuggestion: (kind: IslandKind, at: Date)?
+    /// Which cards get used, so a kind let go by again and again shows
+    /// less, then pauses (`IslandLearning`).
+    private(set) var learning: IslandLearning
+    /// On screen and not answered yet: going away like this is letting it pass.
+    private var unanswered: IslandMoment?
 
     func post(_ moment: IslandMoment) {
         let now = clock()
@@ -109,13 +117,22 @@ final class IslandController {
             DecisionLog.shared.record(.island, "skipped", detail: moment.kind.rawValue)
             return
         }
+        // A kind the user keeps letting go by waits: once a day, or a pause.
+        // An update to one already here isn't a new card.
+        if !moment.requested, !queue.has(key: moment.key), learning.holds(moment.kind, now: now, calendar: calendar) != nil {
+            DecisionLog.shared.record(.island, "held", detail: moment.kind.rawValue)
+            return
+        }
         if queue.post(moment, now: now), let entry = queue.current {
             surface.update(entry.moment, open: entry.isOpen, now: now)
         }
         tick()
     }
 
+    /// Taken away by what it was about: the offer stopped being true. That
+    /// says nothing about whether the card was wanted.
     func remove(key: String) {
+        if unanswered?.key == key { unanswered = nil }
         recents.noteAnswered(key: key)
         if queue.remove(key: key, now: clock()) { surface.hide() }
         tick()
@@ -132,6 +149,9 @@ final class IslandController {
         switch queue.step(conditions(), allowed: isAllowed) {
         case .showed(let moment):
             DecisionLog.shared.record(.island, "shown", detail: moment.kind.rawValue)
+            // One pushed off by a more urgent card wasn't let go by: it says nothing.
+            unanswered = moment.requested ? nil : moment
+            if !moment.requested { learn { $0.shown(moment.kind, now: clock()) } }
             if moment.kind.isSuggestion { lastSuggestion = (moment.kind, clock()) }
             surface.show(moment, open: queue.isOpen, now: clock())
             surface.announce(moment.announcement(at: clock()), urgent: moment.kind == .drift || moment.kind == .limit)
@@ -139,6 +159,8 @@ final class IslandController {
             recents.note(moment, at: clock(), expires: queue.current?.expires)
             didShow(moment)
         case .hid:
+            // Its time on screen ran out with no answer.
+            if let gone = unanswered { notePassed(gone) }
             surface.hide()
         case .none:
             refresh()
@@ -173,6 +195,7 @@ final class IslandController {
     func press(_ button: IslandButton) {
         let kind = queue.current?.moment.kind
         DecisionLog.shared.record(.island, button.command == nil ? "dismissed" : "pressed", detail: kind?.rawValue)
+        if let kind, unanswered?.kind == kind { noteAnswer(kind, used: button.command != nil) }
         if let kind { didAnswer(kind, button.command) }
         if button.command == nil, kind == .weekReady {
             queue.tuck(now: clock())
@@ -187,8 +210,52 @@ final class IslandController {
     func closeCurrent() {
         guard let moment = queue.current?.moment else { return }
         DecisionLog.shared.record(.island, "closed", detail: moment.kind.rawValue)
+        if unanswered?.key == moment.key { noteAnswer(moment.kind, used: false) }
         didAnswer(moment.kind, nil)
         remove(key: moment.key)
+    }
+
+    // MARK: - Learning
+
+    /// Used or let go by, said once per card.
+    func noteAnswer(_ kind: IslandKind, used: Bool) {
+        unanswered = nil
+        if used {
+            learn { $0.used(kind) }
+            return
+        }
+        var changed: IslandLearning.State?
+        learn { changed = $0.passed(kind, now: clock(), calendar: calendar) }
+        switch changed {
+        case .resting?: DecisionLog.shared.record(.island, "rested", detail: kind.rawValue)
+        case .paused?:  DecisionLog.shared.record(.island, "paused", detail: kind.rawValue)
+        default: break
+        }
+    }
+
+    private func notePassed(_ moment: IslandMoment) {
+        guard !moment.requested else { return }
+        noteAnswer(moment.kind, used: false)
+    }
+
+    /// "Erase all data".
+    func forgetLearning() {
+        learning = IslandLearning()
+        unanswered = nil
+    }
+
+    /// Settings' "Bring it back".
+    func bringBack(_ kind: IslandKind) {
+        learn { $0.bringBack(kind) }
+        DecisionLog.shared.record(.island, "broughtBack", detail: kind.rawValue)
+    }
+
+    private func learn(_ change: (inout IslandLearning) -> Void) {
+        var next = learning
+        change(&next)
+        guard next != learning else { return }
+        learning = next
+        next.save(defaults)
     }
 
     private func refresh() {
@@ -227,5 +294,9 @@ final class IslandPickUpPresenter: PickUpPresenting {
 
     func close() {
         island.remove(key: IslandMoment.pickUpKey)
+    }
+
+    func answered(used: Bool) {
+        island.noteAnswer(.pickUp, used: used)
     }
 }

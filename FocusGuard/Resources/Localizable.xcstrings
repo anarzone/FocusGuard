@@ -8096,6 +8096,23 @@
         }
       }
     },
+    "%lld more pause it for two weeks." : {
+      "comment" : "Settings, cards you let pass: how many more",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch %lld, dann pausiert sie zwei Wochen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha %lld dəfə və iki həftəlik dayandırılacaq."
+          }
+        }
+      }
+    },
     "%lld need you" : {
       "comment" : "Plural on needYou: 1 needs you / 2 need you. Apps and sites waiting for the person to sort them",
       "localizations" : {
@@ -13389,6 +13406,23 @@
         }
       }
     },
+    "Back to where you were" : {
+      "comment" : "Settings, cards you let pass: a kind of card",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück, wo du warst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qaldığınız yerə qayıt"
+          }
+        }
+      }
+    },
     "Back to work" : {
       "localizations" : {
         "az" : {
@@ -14061,6 +14095,23 @@
         }
       }
     },
+    "Bring it back" : {
+      "comment" : "Settings button: show a held-back card kind again",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückholen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geri qaytar"
+          }
+        }
+      }
+    },
     "Browser" : {
       "comment" : "Settings section with the browser extension",
       "localizations" : {
@@ -14369,6 +14420,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Anrufe ab 5 Minuten"
+          }
+        }
+      }
+    },
+    "Cards you let pass" : {
+      "comment" : "Settings section: card kinds held back",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karten, die du übergehst"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ötüb keçdiyiniz kartlar"
           }
         }
       }
@@ -18915,6 +18983,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Alle Browser und Apps. Nur ganze Websites."
+          }
+        }
+      }
+    },
+    "Every card is on. One you let go by 4 times in a row shows at most once a day; after 8, it pauses for two weeks and shows up here." : {
+      "comment" : "Settings, cards you let pass: when none are held",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Karten sind an. Eine, die du 4-mal hintereinander übergehst, kommt höchstens einmal am Tag; nach 8 pausiert sie zwei Wochen und steht dann hier."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bütün kartlar aktivdir. Ard-arda 4 dəfə ötüb keçdiyiniz kart gündə ən çox bir dəfə göstərilir; 8 dəfədən sonra iki həftəlik dayanır və burada görünür."
           }
         }
       }
@@ -30518,6 +30603,23 @@
         }
       }
     },
+    "Offers to start a session" : {
+      "comment" : "Settings, cards you let pass: a kind of card",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angebote, eine Sitzung zu starten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessiya başlatmaq təklifləri"
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "az" : {
@@ -30968,6 +31070,40 @@
         }
       }
     },
+    "Once a day for now. You let the last %lld go by." : {
+      "comment" : "Settings, cards you let pass: how many",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorerst einmal am Tag. Du hast die letzten %lld übergangen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələlik gündə bir dəfə. Son %lld-ni ötüb keçdiniz."
+          }
+        }
+      }
+    },
+    "Once a day for now: it came back from a pause and you let it go by again." : {
+      "comment" : "Settings, cards you let pass: back from a pause",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorerst einmal am Tag: Sie kam aus der Pause zurück und du hast sie wieder übergangen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hələlik gündə bir dəfə: fasilədən qayıtdı və yenə ötüb keçdiniz."
+          }
+        }
+      }
+    },
     "Once a day; sends the app version" : {
       "localizations" : {
         "az" : {
@@ -31111,6 +31247,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Eine Zeile reicht. Das ist dein Plan für den heutigen Test."
+          }
+        }
+      }
+    },
+    "One more pauses it for two weeks." : {
+      "comment" : "Settings, cards you let pass: one more",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch eine, dann pausiert sie zwei Wochen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha bir dəfə və iki həftəlik dayandırılacaq."
           }
         }
       }
@@ -32164,6 +32317,46 @@
         }
       }
     },
+    "Paused until %@. It came back once and went by unused again." : {
+      "comment" : "Settings, cards you let pass: a date",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiert bis %@. Sie kam einmal zurück und blieb wieder ungenutzt."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tarixinədək dayandırılıb. Bir dəfə qayıtdı və yenə istifadəsiz qaldı."
+          }
+        }
+      }
+    },
+    "Paused until %@. You let the last %lld go by." : {
+      "comment" : "Settings, cards you let pass: a date, then how many",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused until %1$@. You let the last %2$lld go by."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausiert bis %1$@. Du hast die letzten %2$lld übergangen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ tarixinədək dayandırılıb. Son %2$lld-ni ötüb keçdiniz."
+          }
+        }
+      }
+    },
     "Paused: Free keeps one daily limit." : {
       "comment" : "A daily limit that's off because the Free plan keeps only one",
       "localizations" : {
@@ -32292,6 +32485,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gününüzü planlayın"
+          }
+        }
+      }
+    },
+    "Planned sessions" : {
+      "comment" : "Settings, cards you let pass: a kind of card",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geplante Sitzungen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlaşdırılmış sessiyalar"
           }
         }
       }
@@ -44932,6 +45142,23 @@
         }
       }
     },
+    "Using a card once brings it back to normal. Cards you ask for, a drift you set to be caught, a limit, and a tool saying it’s done are never held back." : {
+      "comment" : "Settings, under cards you let pass",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal genutzt, ist eine Karte wieder normal. Karten, die du anforderst, ein Abschweifen, das abgefangen werden soll, ein Limit und ein Tool, das fertig meldet, werden nie zurückgehalten."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kartdan bir dəfə istifadə etmək onu normala qaytarır. İstədiyiniz kartlar, tutulmasını istədiyiniz yayınma, limit və alətin bitdiyini deməsi heç vaxt saxlanılmır."
+          }
+        }
+      }
+    },
     "Usual length" : {
       "localizations" : {
         "az" : {
@@ -45518,6 +45745,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Müştəri nə görür"
+          }
+        }
+      }
+    },
+    "What are you working on?" : {
+      "comment" : "Settings, cards you let pass: a kind of card",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woran arbeitest du?"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nə üzərində işləyirsiniz?"
           }
         }
       }
