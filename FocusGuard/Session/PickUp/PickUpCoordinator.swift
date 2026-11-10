@@ -5,6 +5,14 @@ import Foundation
 protocol PickUpPresenting: AnyObject {
     func show(_ card: PickUpCard, coordinator: PickUpCoordinator)
     func close()
+    /// A card offered on a return was used (true) or let go by (false): the
+    /// cards learn from it (`IslandLearning`). Not said when the user went
+    /// back by themselves, or a call or screen closed it.
+    func answered(used: Bool)
+}
+
+extension PickUpPresenting {
+    func answered(used: Bool) {}
 }
 
 /// "Pick up where you left off": watches for returns (`PickUpWatcher`), works
@@ -94,7 +102,8 @@ final class PickUpCoordinator {
         let returned = card.kind != .menu && card.kind != .failed && PickUpRules.isBack(moment, in: card.places)
         // What was asked for from the menu can stay through a call.
         let called = moment.inCall && card.kind != .menu
-        if expired || returned || called || moment.screenUp { close() }
+        if expired, !returned { report(used: false) }
+        if expired || returned || called || moment.screenUp { dismiss() }
     }
 
     /// While the user is in focused work, macOS may name the window's
@@ -125,7 +134,8 @@ final class PickUpCoordinator {
         expiry = Task { [weak self] in
             try? await Task.sleep(for: .seconds(PickUpRules.cardLifetime))
             guard !Task.isCancelled, let self, self.card?.id == next.id, !self.isBeingRead else { return }
-            self.close()
+            self.report(used: false)
+            self.dismiss()
         }
     }
 
@@ -138,8 +148,21 @@ final class PickUpCoordinator {
         scheduleExpiry(of: card)
     }
 
-    /// Not now, Skip, Close, or closing by itself.
+    /// Not now, Skip or Close.
     func close() {
+        report(used: false)
+        dismiss()
+    }
+
+    /// Only a card offered on a return learns: one asked for from the menu
+    /// or about pages that didn't open doesn't.
+    private func report(used: Bool) {
+        guard let card, card.kind != .menu, card.kind != .failed else { return }
+        presenter?.answered(used: used)
+    }
+
+    /// Closes it, whatever the reason.
+    private func dismiss() {
         expiry?.cancel()
         expiry = nil
         card = nil
@@ -181,7 +204,7 @@ final class PickUpCoordinator {
     func forgetPlaces(now: Date = .now) {
         PickUpSettings.forget(now: now, defaults)
         menuPlaces = []
-        if card?.kind == .menu { close() }
+        if card?.kind == .menu { dismiss() }
     }
 
     /// The menu card's button, which follows the row picked.
@@ -209,7 +232,8 @@ final class PickUpCoordinator {
         if card.kind == .failed { return openFailedPages() }
         let places = card.kind == .menu ? (pickedPlace.map { [$0] } ?? []) : card.places
         let resume = card.resumeOffer != nil && resumeTicked
-        close()
+        report(used: true)
+        dismiss()
         let result = await PickUpRestore.run(places, with: opener)
         if resume { resumeSession() }
         guard !result.failed.isEmpty else { return }

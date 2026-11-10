@@ -52,6 +52,8 @@ enum DataEraser {
         DecisionLog.shared.erase()
         WaitLog.shared.erase()
         AnalyzerRuledOut.erase()
+        UserDefaults.standard.removeObject(forKey: IslandLearning.key)
+        appState.island?.forgetLearning()
         WeekEditStore().erase()
         WeekColourStore().erase()
         WeekBlockerStore().erase()

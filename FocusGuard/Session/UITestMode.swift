@@ -32,6 +32,14 @@ enum UITestMode {
         case "big": return seedBig(context, now: now, calendar: calendar)
         case "week": return seedWeek(context, now: now, calendar: calendar)
         case "analyzer": return MainActor.assumeIsolated { seedAnalyzer(context, now: now, calendar: calendar) }
+        case "cards":
+            // One kind paused, one resting, for Settings' cards you let pass.
+            var learning = IslandLearning()
+            learning.entries[IslandKind.autoStart.rawValue] = .init(streak: 0, lastShown: now.addingTimeInterval(-86_400),
+                                                                     pausedUntil: calendar.date(byAdding: .day, value: 12, to: calendar.startOfDay(for: now)),
+                                                                     onProbation: true, pauses: 1)
+            learning.entries[IslandKind.driftPrompt.rawValue] = .init(streak: 5, lastShown: now.addingTimeInterval(-86_400))
+            learning.save(defaults)
         case "limits":
             for (index, site) in ["first.example", "second.example", "third.example"].enumerated() {
                 context.insert(DailyLimit(target: site, isSite: true, name: site, minutes: 30,

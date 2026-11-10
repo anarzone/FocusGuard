@@ -157,6 +157,8 @@ struct IslandQueue {
     }
 
     var isEmpty: Bool { current == nil && waiting.isEmpty }
+    /// It's on screen or waiting: a post with this key is an update.
+    func has(key: String) -> Bool { current?.moment.key == key || waiting.contains { $0.moment.key == key } }
     var isOpen: Bool { current?.isOpen ?? false }
 
     // MARK: - Arriving and leaving

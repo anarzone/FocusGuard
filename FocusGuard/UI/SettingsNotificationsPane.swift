@@ -52,6 +52,13 @@ struct SettingsNotificationsPane: View {
         } right: {
             SettingsIslandSection(permissions: appState.permissions) { appState.notificationPresenter.presentSampleCard() }
                 .disabled(!allowed)
+            SettingsHeldCardsSection(load: { appState.island?.learning ?? IslandLearning.load(UITestMode.defaults) },
+                                     bringBack: { kind in
+                                         if let island = appState.island { return island.bringBack(kind) }
+                                         var learning = IslandLearning.load(UITestMode.defaults)
+                                         learning.bringBack(kind)
+                                         learning.save(UITestMode.defaults)
+                                     })
         }
     }
 
