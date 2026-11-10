@@ -117,6 +117,10 @@ final class WaitLog {
         records.filter { $0.start >= start && $0.start < end }
     }
 
+    func runs(from start: Date, to end: Date) -> [RunRecord] {
+        runs.filter { $0.start >= start && $0.start < end }
+    }
+
     func erase() {
         records = []
         runs = []
