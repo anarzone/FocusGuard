@@ -196,6 +196,9 @@ struct AnalyzerContent: View {
                         if !runs.isWorthShowing, waits.waits > 0 {
                             AnalyzerWaitsCard(summary: waits).padding(.bottom, 10)
                         }
+                        if report.leftOut.isWorthShowing {
+                            AnalyzerLeftOutCard(leftOut: report.leftOut).padding(.bottom, 10)
+                        }
                         AnalyzerPatternCards(patterns: report.patterns).padding(.bottom, 10)
                         if case .learning(let left) = report.finding {
                             AnalyzerEarlyBody(report: report, daysLeft: left)

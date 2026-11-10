@@ -95,12 +95,15 @@ struct AnalyzerReport: Equatable, Sendable {
     /// The patterns the user said are fine, with what that took out of the
     /// period. One they taught that didn't come up in it isn't here.
     var taught: [AnalyzerTrigger] = []
+    /// What the causes don't explain: after the last stretch, and days that got away.
+    var leftOut = AnalyzerLeftOut()
 
     /// Everything from the rules: `days` and `before` are the period's and the
     /// one before's days with anything tracked, `muted` what the person ruled out.
     static func make(period: DateInterval, days: [AnalyzerDay], before: [AnalyzerDay], muted: Set<AnalyzerCause>,
                      weekendsCount: Bool, waits: [WaitRecord] = [], ruledOut: Set<String> = [],
-                     lessons: AnalyzerLessons = AnalyzerLessons(), calendar: Calendar = .current) -> AnalyzerReport {
+                     lessons: AnalyzerLessons = AnalyzerLessons(), quiet: [AnalyzerQuietDay] = [],
+                     calendar: Calendar = .current) -> AnalyzerReport {
         let fine = lessons.fineSet
         // Which days count as working ones is settled first: a pattern that's
         // fine takes its lost focus out, never a day.
@@ -118,6 +121,8 @@ struct AnalyzerReport: Equatable, Sendable {
         report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar)
         report.taught = AnalyzerTriggers.build(days: all, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar).taught
         report.patterns = AnalyzerPatterns.make(working)
+        report.leftOut = AnalyzerLeftOut.make(period: period, days: AnalyzerTriggers.without(fine: fine, days: days, waits: waits),
+                                              quiet: quiet, weekendsCount: weekendsCount, calendar: calendar)
         guard working.count >= AnalyzerRules.namingDays else { return report }
         report.rows = rows(labelled, muted: muted)
         report.finding = finding(report.rows, workingDays: labelled.count)

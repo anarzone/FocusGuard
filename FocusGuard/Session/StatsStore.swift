@@ -278,11 +278,15 @@ actor StatsStore {
             let from = calendar.startOfDay(-AnalyzerRules.periodDays, from: today)
             let earlier = calendar.startOfDay(-2 * AnalyzerRules.periodDays, from: today)
             let summaries = self.days(context, now: now, calendar: calendar)
+            // Days with time tracked and too little focus, for the days that got away.
+            let quiet = pastSummaries(context, days: summaries.days(from: from, to: today), calendar: calendar).filter {
+                $0.breakdown.total >= AnalyzerRules.workingDayTracked && $0.breakdown.focus < AnalyzerRules.workingDayFocus
+            }.map { AnalyzerQuietDay(day: $0.day, tracked: $0.breakdown.total, distraction: $0.breakdown.distraction) }
             return AnalyzerReport.make(period: DateInterval(start: from, end: today),
                                        days: analyzerDays(context, days: summaries.days(from: from, to: today), busy: busy, calendar: calendar),
                                        before: analyzerDays(context, days: summaries.days(from: earlier, to: from), busy: busy, calendar: calendar),
                                        muted: muted, weekendsCount: weekendsCount, waits: waits, ruledOut: ruledOut,
-                                       lessons: lessons, calendar: calendar)
+                                       lessons: lessons, quiet: quiet, calendar: calendar)
         }
     }
 

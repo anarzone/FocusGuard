@@ -239,13 +239,33 @@ final class AnalyzerTests: XCTestCase {
         XCTAssertEqual(day.losses.map(\.cause), [.habit])
     }
 
-    func test_chat_lossStartingInAMessageApp_evenIfItEndsOnASite() {
+    func test_chat_lossMostlyInAMessageApp_evenIfItEndsOnASite() {
+        let day = between([
+            event(0, 10, 0, 10, .neutral, Self.slack),
+            event(0, 10, 10, 3, .distraction, "x.com"),
+        ])
+        XCTAssertEqual(day.losses.map(\.cause), [.chatAndMail])
+        XCTAssertEqual(day.losses.first?.seconds, 13 * 60)
+    }
+
+    func test_habit_aMessageAppFirstDoesntDecideWhereTheTimeWent() {
+        // Slack for a moment, then ten minutes of x.com: x.com's. What
+        // pulls you away still says it began in Slack.
         let day = between([
             event(0, 10, 0, 3, .neutral, Self.slack),
             event(0, 10, 3, 10, .distraction, "x.com"),
         ])
+        XCTAssertEqual(day.losses.map(\.cause), [.habit])
+        XCTAssertEqual(day.losses.first?.opening?.name, Self.slack)
+    }
+
+    func test_chat_aMessageAppJustBeforeExplainsTimeNothingElseDoes() {
+        // Slack right before, then time in no message app, distraction or churn.
+        let day = between([
+            event(0, 10, 0, 1, .neutral, Self.slack),
+            event(0, 10, 1, 10, .neutral, "finder"),
+        ])
         XCTAssertEqual(day.losses.map(\.cause), [.chatAndMail])
-        XCTAssertEqual(day.losses.first?.seconds, 13 * 60)
     }
 
     func test_chat_rightAfterFocusedSlack_onTheWeb() {
@@ -268,6 +288,17 @@ final class AnalyzerTests: XCTestCase {
         XCTAssertEqual(day.losses.map(\.cause), [.unclearTask])
         XCTAssertEqual(day.losses.first?.switches, 11)
         XCTAssertEqual(day.losses.first?.seconds, 12 * 60)
+    }
+
+    func test_unclearTask_hoppingThatTookMostOfItWinsOverAQuickLook() {
+        // Twelve minutes hopping across three apps, then two on x.com: the
+        // hopping is where the time went.
+        let apps = ["xcode", "terminal", "notion"]
+        let hops = (0..<12).map { event(0, 10, $0, 1, .neutral, apps[$0 % 3]) }
+        let day = between(hops + [event(0, 10, 12, 2, .distraction, "x.com")])
+        XCTAssertEqual(day.losses.map(\.cause), [.unclearTask])
+        let longer = between(hops + [event(0, 10, 12, 14, .distraction, "x.com")])
+        XCTAssertEqual(longer.losses.map(\.cause), [.habit], "More on x.com than hopping: x.com's")
     }
 
     func test_unclearTask_twoAppsIsJustWork() {
@@ -325,7 +356,7 @@ final class AnalyzerTests: XCTestCase {
         events += [event(0, 9, 30, 10, .neutral, "arc")]                         // meetings 10
         events += [event(0, 9, 40, 30, .neutral, Self.zoom)]                     // call 30
         events += [event(0, 10, 10, 40, .focus, "xcode")]                        // focus 40
-        events += [event(0, 10, 50, 4, .neutral, Self.slack), event(0, 10, 54, 6, .distraction, "x.com")] // chat 10
+        events += [event(0, 10, 50, 6, .neutral, Self.slack), event(0, 10, 56, 4, .distraction, "x.com")] // chat 10
         events += [event(0, 11, 0, 30, .focus, "xcode")]                         // focus 30
         events += [event(0, 11, 30, 15, .distraction, "x.com")]                  // habit 15
         events += [event(0, 11, 45, 30, .focus, "xcode")]                        // focus 30

@@ -44,6 +44,18 @@ enum AnalyzerRules {
     static let enoughReturns = 5
     static let enoughStarts = 3
 
+    // MARK: What the causes leave out
+
+    /// Distractions this soon after the last focused stretch count as lost:
+    /// the day isn't over when the focus is. Later is the evening's own.
+    static let afterLastWindow: TimeInterval = 2 * 60 * 60
+    /// A day with no focused stretch got away when this much of it went to
+    /// distractions; less is a light day.
+    static let gotAwayMinimum: TimeInterval = 30 * 60
+    /// The card shows from this much left out, over at least this many days.
+    static let leftOutMinimum: TimeInterval = 30 * 60
+    static let leftOutDays = 2
+
     // MARK: Causes
 
     /// A message app this close to where focus was lost explains it.
