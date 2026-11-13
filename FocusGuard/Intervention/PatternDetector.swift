@@ -26,9 +26,12 @@ final class PatternDetector {
         self.presenter = presenter
     }
 
-    func observe(snapshot: ActivitySnapshot, isInSession: Bool) {
+    /// - Parameter whileToolWorks: the user left a tool that's still working.
+    ///   A look at a site then costs nothing (the log showed most end before
+    ///   the tool does), so it isn't a visit to count.
+    func observe(snapshot: ActivitySnapshot, isInSession: Bool, whileToolWorks: Bool = false) {
         // Only watch distractions, only when the user isn't already focused.
-        guard !isInSession,
+        guard !isInSession, !whileToolWorks,
               snapshot.classification == .distraction,
               let host = snapshot.url.flatMap({ URL(string: $0)?.host }).map({ $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 })
         else {

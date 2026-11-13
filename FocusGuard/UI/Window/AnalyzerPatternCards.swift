@@ -57,6 +57,10 @@ struct AnalyzerPatternCards: View {
             return String(localized: "Most often between minute \(slice * 5) and \(slice * 5 + 5)",
                           comment: "Analyzer: the 5-minute slice of a session where focus most often breaks")
         }
+        if patterns.hasBreaks {
+            return String(localized: "No one time: they break all through the first hour",
+                          comment: "Analyzer: no 5-minute slice stands out")
+        }
         return String(localized: "Too few sessions yet: \(patterns.sessionsWithBreak) of \(AnalyzerPatterns.enoughBreaks)",
                       comment: "Analyzer: sessions that broke so far, of those needed")
     }
@@ -103,6 +107,10 @@ struct AnalyzerPatternCards: View {
 
     private var hoursTitle: String {
         guard let best = patterns.bestHours else {
+            if let overall = patterns.overallRate {
+                return String(localized: "No clear best time: about \(Int((overall * 100).rounded()))% focused all day",
+                              comment: "Analyzer: no hours stand out, then the day's focus rate")
+            }
             return String(localized: "Not enough tracked yet", comment: "Analyzer: too little data for best hours")
         }
         return String(localized: "\(best.hour) to \(best.hour + 2): \(Int((best.rate * 100).rounded()))% focused",

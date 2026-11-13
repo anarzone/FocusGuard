@@ -5,7 +5,7 @@ enum HeldCardsCopy {
     static func name(_ kind: IslandKind) -> String {
         switch kind {
         case .autoStart:      return String(localized: "Offers to start a session", comment: "Settings, cards you let pass: a kind of card")
-        case .driftPrompt:    return String(localized: "What are you working on?", comment: "Settings, cards you let pass: a kind of card")
+        case .driftPrompt:    return String(localized: "Drifting to a site? Start a session", comment: "Settings, cards you let pass: the card after a few visits to a distracting site outside a session")
         case .pickUp:         return String(localized: "Back to where you were", comment: "Settings, cards you let pass: a kind of card")
         case .plannedSession: return String(localized: "Planned sessions", comment: "Settings, cards you let pass: a kind of card")
         case .morningPlan:    return String(localized: "Morning plan", comment: "Settings, cards you let pass: a kind of card")

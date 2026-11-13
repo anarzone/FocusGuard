@@ -188,7 +188,8 @@ final class AppState {
                 if tracker?.isFrontmostSelf == true, case .drift = blockOverlay?.current?.reason { behindDriftBlock = true }
                 if !onBreak {
                     if !behindDriftBlock { engine?.observe(snapshot: observed, isInSession: inActiveSession) }
-                    self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession)
+                    self?.patternDetector.observe(snapshot: observed, isInSession: inActiveSession,
+                                                  whileToolWorks: self?.waits.isWaiting ?? false)
                 }
             }
             self?.habits.tick()

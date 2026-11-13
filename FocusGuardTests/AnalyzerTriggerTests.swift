@@ -45,18 +45,34 @@ final class AnalyzerTriggerTests: XCTestCase {
     }
 
     func testAMessageAppItBeganInComesFirst() {
-        let days = (0..<2).map { day($0, via: "com.slack", to: "youtube.com") }
+        let days = (0..<3).map { day($0, via: "com.slack", to: "youtube.com") }
         let trigger = AnalyzerTriggers.make(days: days, waits: [], ruledOut: [], calendar: calendar).first
         XCTAssertEqual(trigger?.steps.map(\.label), ["com.slack", "youtube.com"])
     }
 
     func testOnceIsNotAPattern() {
         XCTAssertEqual(AnalyzerTriggers.make(days: [day(0)], waits: [], ruledOut: [], calendar: calendar), [])
+        XCTAssertEqual(AnalyzerTriggers.make(days: (0..<2).map { day($0) }, waits: [], ruledOut: [], calendar: calendar), [],
+                       "Nor is twice")
+    }
+
+    func testThreeTimesOnOneDayIsNotAPatternEither() {
+        let start = F.at(0, 0)
+        var events: [CoachEvent] = []
+        for index in 0..<3 {
+            let base = 9 + index * 2
+            events += [event(0, base, 0, 60, .focus, "com.xcode"), event(0, base + 1, 0, 3, .focus, "com.terminal"),
+                       event(0, base + 1, 3, 9, .distraction, "x.com")]
+        }
+        events.append(event(0, 16, 0, 60, .focus, "com.xcode"))
+        let day = AnalyzerDayBuilder.make(day: start, events: events, calendar: calendar)
+        XCTAssertEqual(day.losses.count, 3)
+        XCTAssertEqual(AnalyzerTriggers.make(days: [day], waits: [], ruledOut: [], calendar: calendar), [], "One bad day isn't a pattern")
     }
 
     func testADriftDuringAWaitCountsForTheWait() {
-        let days = (0..<2).map { day($0) }
-        let waits = (0..<2).map { index in
+        let days = (0..<3).map { day($0) }
+        let waits = (0..<3).map { index in
             WaitRecord(start: F.at(index, 10, 3), tool: "Codex", project: "curiplay", seconds: 540, drift: 540, to: "x.com")
         }
         let triggers = AnalyzerTriggers.make(days: days, waits: waits, ruledOut: [], calendar: calendar)
@@ -66,12 +82,12 @@ final class AnalyzerTriggerTests: XCTestCase {
     }
 
     func testARuledOutMomentStopsCounting() {
-        let days = (0..<3).map { day($0) }
+        let days = (0..<4).map { day($0) }
         let first = AnalyzerTriggers.make(days: days, waits: [], ruledOut: [], calendar: calendar).first
         let moment = try? XCTUnwrap(first?.moments.first)
         let after = AnalyzerTriggers.make(days: days, waits: [], ruledOut: [moment?.id ?? ""], calendar: calendar).first
-        XCTAssertEqual(after?.count, 2)
-        XCTAssertEqual(after?.moments.count, 3, "Still listed, to undo")
+        XCTAssertEqual(after?.count, 3)
+        XCTAssertEqual(after?.moments.count, 4, "Still listed, to undo")
         XCTAssertTrue(after?.moments.first?.isRuledOut ?? false)
     }
 

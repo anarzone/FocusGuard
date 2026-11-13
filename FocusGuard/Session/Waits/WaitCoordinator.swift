@@ -74,6 +74,9 @@ final class WaitCoordinator {
         watcher.isWaiting ? startTimer() : stopTimer()
     }
 
+    /// The user left a tool that's working and isn't back yet.
+    var isWaiting: Bool { watcher.isWaiting }
+
     /// A wait card was answered: going back (true) or closing it (false).
     func answered(wentBack: Bool) {
         if wentBack {
