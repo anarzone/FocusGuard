@@ -47981,6 +47981,23 @@
         }
       }
     },
+    "You said “It’s for work” on %lld days, so it isn’t caught any more." : {
+      "comment" : "Analyzer, what you taught it: how many days. “It’s for work” is the block screen's button",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast an %lld Tagen „Ist für die Arbeit“ gesagt, deshalb wird es nicht mehr abgefangen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld gün “İş üçündür” dediniz, ona görə artıq tutulmur."
+          }
+        }
+      }
+    },
     "You sorted it. Your choice also updated past reports." : {
       "localizations" : {
         "az" : {

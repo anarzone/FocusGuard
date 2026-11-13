@@ -249,6 +249,24 @@ final class AnalyzerLessonTests: XCTestCase {
         XCTAssertEqual(lessons.work.count, 2, "Nothing to name: nothing kept")
     }
 
+    func testSaidForWorkOnASecondDayItsDueToCountAsWork() {
+        var lessons = AnalyzerLessons()
+        lessons.saidForWork(key: "docs.rs", name: "docs.rs", isSite: true, at: F.at(1, 10), calendar: calendar)
+        XCTAssertNil(lessons.dueAsWork("docs.rs"), "Once is a one-off")
+        lessons.saidForWork(key: "docs.rs", name: "docs.rs", isSite: true, at: F.at(1, 16), calendar: calendar)
+        XCTAssertNil(lessons.dueAsWork("docs.rs"), "Twice in a day is still one day")
+        lessons.saidForWork(key: "docs.rs", name: "docs.rs", isSite: true, at: F.at(2, 9), calendar: calendar)
+        XCTAssertEqual(lessons.dueAsWork("docs.rs")?.days.count, 2)
+        XCTAssertNil(lessons.dueAsWork("x.com"))
+        lessons.settleWork("docs.rs", countedAsWork: true)
+        XCTAssertNil(lessons.dueAsWork("docs.rs"), "Done once")
+        XCTAssertEqual(lessons.countedAsWork.map(\.key), ["docs.rs"])
+        lessons.uncountWork("docs.rs")
+        XCTAssertEqual(lessons.countedAsWork, [])
+        lessons.saidForWork(key: "docs.rs", name: "docs.rs", isSite: true, at: F.at(3, 9), calendar: calendar)
+        XCTAssertNil(lessons.dueAsWork("docs.rs"), "Put back: never counted on its own again")
+    }
+
     func testLessonsSurviveBeingSavedAndAnOlderStateStillLoads() throws {
         var state = AnalyzerState()
         state.lessons = AnalyzerLessons(fine: ["a>b"], declined: ["c>d"])

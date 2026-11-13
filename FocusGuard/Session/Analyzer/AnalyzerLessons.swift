@@ -97,6 +97,19 @@ struct AnalyzerLessons: Codable, Equatable, Sendable {
         work[index].countedAsWork = countedAsWork
     }
 
+    /// Said for work on enough days, and not answered yet: count it as work
+    /// now. Two separate days of "It's for work" are the user's own word.
+    func dueAsWork(_ key: String) -> WorkAnswer? {
+        work.first { $0.key == key && !$0.settled && $0.days.count >= AnalyzerLessonRules.workDays }
+    }
+
+    /// "Put it back": caught again, and never counted as work on its own again.
+    mutating func uncountWork(_ key: String) {
+        guard let index = work.firstIndex(where: { $0.key == key }) else { return }
+        work[index].settled = true
+        work[index].countedAsWork = false
+    }
+
     /// What was sorted as work from here, latest first.
     var countedAsWork: [WorkAnswer] { work.filter(\.countedAsWork).reversed() }
 }
