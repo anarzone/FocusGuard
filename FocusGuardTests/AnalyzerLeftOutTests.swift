@@ -129,15 +129,13 @@ final class AnalyzerLeftOutTests: XCTestCase {
     }
 
     func testTheHeadlineSaysHowMuchMoreThereIs() {
-        XCTAssertEqual(AnalyzerLeftOutCopy.headline(sample), "4h 30m lost in four weeks, not 30m")
-        var none = sample
-        none.days = none.days.map { var day = $0; day.between = 0; return day }
-        XCTAssertEqual(AnalyzerLeftOutCopy.headline(none), "4h lost in four weeks")
+        XCTAssertEqual(AnalyzerLeftOutCopy.headline(sample), "4h on distractions outside your focused stretches",
+                       "Facts only: the evening isn't called lost")
     }
 
     func testTheBodyNamesEachKindAndWhenTheBlankDaysCostMore() {
         XCTAssertEqual(AnalyzerLeftOutCopy.body(sample),
-                       "The causes only count the time between two focused stretches. On 2 days, 1h more went to distractions in the 2 hours after your last stretch. One day had no focused stretch at all, with 3h on distractions. That day cost more than every cause in the list put together.")
+                       "The causes only count the time between two focused stretches. On 2 days, 1h more went to distractions in the 2 hours after your last stretch. One day had no focused stretch at all, with 3h on distractions.")
         let afterOnly = AnalyzerLeftOut.make(period: period, days: [day(0, after: 40)], quiet: [], weekendsCount: false, calendar: calendar)
         XCTAssertEqual(AnalyzerLeftOutCopy.body(afterOnly),
                        "The causes only count the time between two focused stretches. On one day, 40m more went to distractions in the 2 hours after your last stretch.")
@@ -155,7 +153,7 @@ final class AnalyzerLeftOutTests: XCTestCase {
     func testTheTilesSayWhatEachPartIs() {
         let tiles = AnalyzerLeftOutCopy.tiles(sample)
         XCTAssertEqual(tiles.map(\.value), ["30m", "1h", "1 day · 3h"])
-        XCTAssertEqual(tiles[1].note, "On 2 of 3 days, about 30m each. The day isn’t over when the focus is.")
+        XCTAssertEqual(tiles[1].note, "On 2 of 3 days, about 30m each, in the 2 hours after it.")
         XCTAssertEqual(tiles.map(\.isLeftOut), [false, true, true])
         let clean = AnalyzerLeftOutCopy.tiles(AnalyzerLeftOut.make(period: period, days: [day(0)], quiet: [], weekendsCount: false, calendar: calendar))
         XCTAssertEqual(clean.map(\.value), ["10m", "0m", "0"])

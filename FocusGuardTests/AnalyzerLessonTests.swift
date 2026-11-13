@@ -84,7 +84,7 @@ final class AnalyzerLessonTests: XCTestCase {
     // MARK: - A pattern that's fine
 
     func testAFinePatternLeavesTheListAndShowsWhatItTookOut() {
-        let days = (0..<3).map { day($0) } + (3..<5).map { day($0, to: "youtube.com") }
+        let days = (0..<3).map { day($0) } + (3..<6).map { day($0, to: "youtube.com") }
         let all = AnalyzerTriggers.build(days: days, waits: [], ruledOut: [], calendar: calendar)
         XCTAssertEqual(all.shown.map(\.id), ["com.terminal>x.com", "com.terminal>youtube.com"])
         XCTAssertEqual(all.taught, [])
@@ -119,15 +119,15 @@ final class AnalyzerLessonTests: XCTestCase {
     }
 
     func testAFineWaitTakesItsDriftsAndTheirLostFocusOut() {
-        let days = (0..<2).map { day($0) }
-        let waits = (0..<2).map { WaitRecord(start: F.at($0, 10, 3), tool: "Codex", project: "curiplay", seconds: 540, drift: 540, to: "x.com") }
+        let days = (0..<3).map { day($0) }
+        let waits = (0..<3).map { WaitRecord(start: F.at($0, 10, 3), tool: "Codex", project: "curiplay", seconds: 540, drift: 540, to: "x.com") }
         let id = AnalyzerLessonRules.waitID(tool: "Codex", site: "x.com")
         XCTAssertEqual(AnalyzerTriggers.make(days: days, waits: waits, ruledOut: [], calendar: calendar).map(\.id), [id])
         let built = AnalyzerTriggers.build(days: days, waits: waits, ruledOut: [], lessons: AnalyzerLessons(fine: [id]), calendar: calendar)
         XCTAssertEqual(built.shown, [])
         XCTAssertEqual(built.taught.map(\.id), [id])
-        XCTAssertEqual(AnalyzerTriggers.without(fine: [id], days: days, waits: waits).map(\.losses.count), [0, 0])
-        XCTAssertEqual(AnalyzerTriggers.without(fine: ["wait:Codex>youtube.com"], days: days, waits: waits).map(\.losses.count), [1, 1],
+        XCTAssertEqual(AnalyzerTriggers.without(fine: [id], days: days, waits: waits).map(\.losses.count), [0, 0, 0])
+        XCTAssertEqual(AnalyzerTriggers.without(fine: ["wait:Codex>youtube.com"], days: days, waits: waits).map(\.losses.count), [1, 1, 1],
                        "Another site while it works is still a drift")
     }
 

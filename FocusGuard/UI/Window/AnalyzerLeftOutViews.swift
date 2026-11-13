@@ -2,13 +2,11 @@ import SwiftUI
 
 /// The words for what the causes leave out.
 enum AnalyzerLeftOutCopy {
+    /// Facts only: time on distractions the causes don't read. Whether the
+    /// evening was work time isn't known, so none of it is called lost.
     static func headline(_ out: AnalyzerLeftOut) -> String {
-        let total = WindowFormat.hm(out.total)
-        guard out.between > 0 else {
-            return String(localized: "\(total) lost in four weeks", comment: "Analyzer: lost time, all of it")
-        }
-        return String(localized: "\(total) lost in four weeks, not \(WindowFormat.hm(out.between))",
-                      comment: "Analyzer: all lost time, then what the causes explain")
+        String(localized: "\(WindowFormat.hm(out.after + out.away)) on distractions outside your focused stretches",
+               comment: "Analyzer: time on distractions after the last stretch and on days with no focus")
     }
 
     static func body(_ out: AnalyzerLeftOut) -> String {
@@ -27,11 +25,6 @@ enum AnalyzerLeftOutCopy {
                          comment: "Analyzer: the time")
                 : String(localized: "\(out.awayDays) days had no focused stretch at all, with \(WindowFormat.hm(out.away)) on distractions.",
                          comment: "Analyzer: days, then the time"))
-            if out.away > out.between {
-                parts.append(out.awayDays == 1
-                    ? String(localized: "That day cost more than every cause in the list put together.", comment: "Analyzer")
-                    : String(localized: "Those days cost more than every cause in the list put together.", comment: "Analyzer"))
-            }
         }
         return parts.joined(separator: " ")
     }
@@ -66,7 +59,7 @@ enum AnalyzerLeftOutCopy {
             ? Tile(title: String(localized: "After your last stretch", comment: "Analyzer tile"), value: "0m",
                    note: String(localized: "Nothing on distractions in the 2 hours after it.", comment: "Analyzer tile"), isLeftOut: true)
             : Tile(title: String(localized: "After your last stretch", comment: "Analyzer tile"), value: WindowFormat.hm(out.after),
-                   note: String(localized: "On \(out.afterDays) of \(out.workingDays) days, about \(WindowFormat.hm(out.after / Double(out.afterDays))) each. The day isn’t over when the focus is.",
+                   note: String(localized: "On \(out.afterDays) of \(out.workingDays) days, about \(WindowFormat.hm(out.after / Double(out.afterDays))) each, in the 2 hours after it.",
                                 comment: "Analyzer tile: days, working days, then the usual time"),
                    isLeftOut: true)
         let away: Tile = out.awayDays == 0
@@ -76,7 +69,7 @@ enum AnalyzerLeftOutCopy {
                    value: out.awayDays == 1
                        ? String(localized: "1 day · \(WindowFormat.hm(out.away))", comment: "Analyzer tile: the time")
                        : String(localized: "\(out.awayDays) days · \(WindowFormat.hm(out.away))", comment: "Analyzer tile: days, then the time"),
-                   note: String(localized: "Not one focused stretch, and that much on distractions. The most expensive days you have.",
+                   note: String(localized: "Weekdays with time on this Mac, not one focused stretch, and that much on distractions.",
                                 comment: "Analyzer tile"),
                    isLeftOut: true)
         return [

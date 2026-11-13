@@ -49,22 +49,50 @@ final class AnalyzerPatternTests: XCTestCase {
     func testPatternsNameOnlyWhatTheyHaveEnoughFor() {
         var day = AnalyzerDay(day: F.at(0, 0))
         day.sessions = (0..<9).map { _ in AnalyzerSessionStat(hasGoal: false, longest: 0, brokeAt: 32 * 60) }
-        day.hourFocus = [9: 50 * 60, 10: 45 * 60, 14: 10 * 60]
-        day.hourTracked = [9: 60 * 60, 10: 60 * 60, 14: 60 * 60, 15: 10 * 60]
-        day.afterCalls = [600, 720]
+        day.hourFocus = [9: 150 * 60, 10: 135 * 60, 14: 30 * 60]
+        day.hourTracked = [9: 180 * 60, 10: 180 * 60, 14: 180 * 60, 15: 60 * 60]
+        day.afterCalls = [600, 720, 540, 690]
         day.returns = [300, 420, 360]
         var patterns = AnalyzerPatterns.make([day])
         XCTAssertNil(patterns.commonBreak, "Nine sessions isn't enough")
-        XCTAssertNil(patterns.afterCall, "Two calls isn't enough")
+        XCTAssertNil(patterns.afterCall, "Four calls isn't enough")
         XCTAssertEqual(patterns.afterDrift, 360)
         XCTAssertEqual(patterns.bestHours?.hour, 9)
-        XCTAssertNil(patterns.hourRates[15 - AnalyzerPatterns.firstHour], "Ten minutes in an hour says nothing")
+        XCTAssertNil(patterns.hourRates[15 - AnalyzerPatterns.firstHour], "An hour across four weeks says nothing")
 
         day.sessions.append(AnalyzerSessionStat(hasGoal: false, longest: 0, brokeAt: 33 * 60))
         day.afterCalls.append(660)
         patterns = AnalyzerPatterns.make([day])
         XCTAssertEqual(patterns.commonBreak, 6, "Minute 30 to 35")
         XCTAssertEqual(patterns.afterCall, 660)
+    }
+
+    func testABreakTimeIsNamedOnlyWhenOneStandsOut() {
+        var day = AnalyzerDay(day: F.at(0, 0))
+        // Spread across the hour: no slice holds a quarter, none leads by two.
+        day.sessions = [5, 12, 17, 23, 28, 33, 38, 44, 49, 54, 8, 40].map {
+            AnalyzerSessionStat(hasGoal: false, longest: 0, brokeAt: TimeInterval($0 * 60))
+        }
+        var patterns = AnalyzerPatterns.make([day])
+        XCTAssertTrue(patterns.hasBreaks)
+        XCTAssertNil(patterns.commonBreak, "No one time")
+        day.sessions += (0..<4).map { _ in AnalyzerSessionStat(hasGoal: false, longest: 0, brokeAt: 31 * 60) }
+        patterns = AnalyzerPatterns.make([day])
+        XCTAssertEqual(patterns.commonBreak, 6, "Minute 30 to 35 now holds 5 of 16")
+    }
+
+    func testBestHoursAreNamedOnlyWhenTheyBeatTheDay() {
+        var day = AnalyzerDay(day: F.at(0, 0))
+        let hours = Array(AnalyzerPatterns.firstHour..<AnalyzerPatterns.lastHour)
+        day.hourTracked = Dictionary(uniqueKeysWithValues: hours.map { ($0, 180.0 * 60) })
+        day.hourFocus = Dictionary(uniqueKeysWithValues: hours.map { ($0, ($0 == 9 || $0 == 10 ? 130.0 : 120.0) * 60) })
+        var patterns = AnalyzerPatterns.make([day])
+        XCTAssertNil(patterns.bestHours, "A few points better is no best time")
+        XCTAssertEqual(patterns.overallRate ?? 0, 0.67, accuracy: 0.01)
+        day.hourFocus[9] = 175 * 60
+        day.hourFocus[10] = 170 * 60
+        patterns = AnalyzerPatterns.make([day])
+        XCTAssertEqual(patterns.bestHours?.hour, 9)
     }
 
     func testAProjectsWeekCountsEachDaysWaits() {
@@ -88,12 +116,12 @@ final class AnalyzerPatternTests: XCTestCase {
     func testTriggersOverAShorterRangeKeepOnlyItsMoments() {
         let now = F.at(10, 12)
         let old = AnalyzerTrigger.Moment(start: F.at(1, 10), seconds: 600)
-        let recent = [F.at(8, 10), F.at(9, 10)].map { AnalyzerTrigger.Moment(start: $0, seconds: 300) }
+        let recent = [F.at(7, 10), F.at(8, 10), F.at(9, 10)].map { AnalyzerTrigger.Moment(start: $0, seconds: 300) }
         let trigger = AnalyzerTrigger(id: "a", steps: [.init(label: "x.com", kind: .site)], moments: recent + [old], perDay: [])
         let week = AnalyzerTriggers.recent([trigger], days: 7, now: now, calendar: calendar)
-        XCTAssertEqual(week.first?.count, 2)
+        XCTAssertEqual(week.first?.count, 3)
         XCTAssertEqual(week.first?.perDay.count, 7)
-        XCTAssertEqual(week.first?.perDay.reduce(0, +), 2)
+        XCTAssertEqual(week.first?.perDay.reduce(0, +), 3)
         XCTAssertEqual(AnalyzerTriggers.recent([trigger], days: 1, now: now, calendar: calendar), [], "Once isn't a pattern")
     }
 }

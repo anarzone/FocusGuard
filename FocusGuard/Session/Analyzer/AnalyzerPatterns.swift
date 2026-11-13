@@ -17,15 +17,33 @@ struct AnalyzerPatterns: Equatable, Sendable {
     static let lastHour = 19
     /// Sessions that broke, before naming when they break.
     static let enoughBreaks = 10
-    /// Tracked time in an hour across the period, before giving it a rate.
-    static let enoughInHour: TimeInterval = 30 * 60
-    static let enoughCalls = 3
+    /// Tracked time in an hour across the period, before giving it a rate:
+    /// a few minutes a working day, not one good morning.
+    static let enoughInHour: TimeInterval = 2 * 60 * 60
+    static let enoughCalls = 5
+    /// A slice is named only when it holds this share of the breaks and is
+    /// this many ahead of the next: otherwise there's no one time.
+    static let breakShare = 0.25
+    static let breakLead = 2
+    /// The best hours are named only this far above the day's own rate.
+    static let hoursLead = 0.10
 
     var hasBreaks: Bool { sessionsWithBreak >= Self.enoughBreaks }
-    /// The 5-minute slice sessions most often break in.
-    var commonBreak: Int? { hasBreaks ? breaks.indices.max { breaks[$0] < breaks[$1] } : nil }
+    /// The 5-minute slice sessions most often break in, when one stands out.
+    var commonBreak: Int? {
+        guard hasBreaks, let top = breaks.indices.max(by: { breaks[$0] < breaks[$1] }) else { return nil }
+        let next = breaks.indices.filter { $0 != top }.map { breaks[$0] }.max() ?? 0
+        let share = Double(breaks[top]) / Double(max(1, sessionsWithBreak))
+        return share >= Self.breakShare && breaks[top] - next >= Self.breakLead ? top : nil
+    }
 
-    /// The best two hours in a row: their first hour and their rate.
+    /// Focus rate across every hour with enough tracked.
+    var overallRate: Double? {
+        let rates = hourRates.compactMap { $0 }
+        return rates.isEmpty ? nil : rates.reduce(0, +) / Double(rates.count)
+    }
+
+    /// The best two hours in a row, when they stand out from the rest of the day.
     var bestHours: (hour: Int, rate: Double)? {
         var best: (Int, Double)?
         for index in hourRates.indices.dropLast() {
@@ -33,6 +51,7 @@ struct AnalyzerPatterns: Equatable, Sendable {
             let rate = (a + b) / 2
             if best == nil || rate > best!.1 { best = (Self.firstHour + index, rate) }
         }
+        guard let best, let overall = overallRate, best.1 - overall >= Self.hoursLead else { return nil }
         return best
     }
 

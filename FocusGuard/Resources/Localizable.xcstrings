@@ -2580,6 +2580,23 @@
         }
       }
     },
+    "%@ on distractions outside your focused stretches" : {
+      "comment" : "Analyzer: time on distractions after the last stretch and on days with no focus",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bei Ablenkungen außerhalb deiner fokussierten Phasen"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokuslu mərhələlərinizdən kənarda diqqət yayındıranlarda %@"
+          }
+        }
+      }
+    },
     "%@ over your %@ goal." : {
       "localizations" : {
         "az" : {
@@ -17912,6 +17929,23 @@
         }
       }
     },
+    "Drifting to a site? Start a session" : {
+      "comment" : "Settings, cards you let pass: the card after a few visits to a distracting site outside a session",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschweifen auf eine Seite? Sitzung starten"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sayta yayınırsınız? Sessiya başladın"
+          }
+        }
+      }
+    },
     "Drifting?" : {
       "localizations" : {
         "az" : {
@@ -28567,6 +28601,23 @@
         }
       }
     },
+    "No clear best time: about %lld%% focused all day" : {
+      "comment" : "Analyzer: no hours stand out, then the day's focus rate",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine klar beste Zeit: den ganzen Tag etwa %lld%% fokussiert"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aydın ən yaxşı vaxt yoxdur: bütün gün təxminən %lld%% fokuslu"
+          }
+        }
+      }
+    },
     "No clear difference" : {
       "localizations" : {
         "az" : {
@@ -29032,6 +29083,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kein einzelnes Muster stach heraus, aber deine Fokusrate lag nur bei %@."
+          }
+        }
+      }
+    },
+    "No one time: they break all through the first hour" : {
+      "comment" : "Analyzer: no 5-minute slice stands out",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein fester Zeitpunkt: Sie brechen über die ganze erste Stunde verteilt ab"
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tək bir vaxt yoxdur: bütün ilk saat ərzində pozulurlar"
           }
         }
       }
@@ -30824,6 +30892,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$lld gündə son mərhələnizdən sonrakı 2 saatda daha %2$@ diqqət yayındıranlara getdi."
+          }
+        }
+      }
+    },
+    "On %lld of %lld days, about %@ each, in the 2 hours after it." : {
+      "comment" : "Analyzer tile: days, working days, then the usual time",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On %1$lld of %2$lld days, about %3$@ each, in the 2 hours after it."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An %1$lld von %2$lld Tagen, jeweils etwa %3$@, in den 2 Stunden danach."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld gündən %1$lld-ində, hər dəfə təxminən %3$@, ondan sonrakı 2 saatda."
           }
         }
       }
@@ -45656,6 +45747,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gözləməsiz həftə"
+          }
+        }
+      }
+    },
+    "Weekdays with time on this Mac, not one focused stretch, and that much on distractions." : {
+      "comment" : "Analyzer tile",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wochentage mit Zeit an diesem Mac, keiner einzigen fokussierten Phase und so viel bei Ablenkungen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu Mac-də vaxt keçirilən, bir dənə də fokuslu mərhələ olmayan və diqqət yayındıranlara bu qədər gedən iş günləri."
           }
         }
       }

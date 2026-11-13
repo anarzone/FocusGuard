@@ -48,8 +48,9 @@ struct AnalyzerTrigger: Equatable, Identifiable, Sendable {
 }
 
 enum AnalyzerTriggers {
-    /// Fewer than this and it's not a pattern yet.
-    static let fewestTimes = 2
+    /// Fewer than this, or all on one day, and it's not a pattern yet.
+    static let fewestTimes = 3
+    static let fewestDays = 2
     static let shown = 4
     /// How long a tested hold keeps the site waiting: most waits on a tool
     /// are over by then.
@@ -199,7 +200,7 @@ enum AnalyzerTriggers {
             trigger.isAsking = lessons.asks(about: trigger)
             return trigger
         }
-        let shown = ordered(open.filter { $0.count >= fewestTimes || $0.isAsking })
+        let shown = ordered(open.filter { ($0.count >= fewestTimes && $0.daysSeen >= fewestDays) || $0.isAsking })
         return (Array(shown.prefix(self.shown)), ordered(found.values.filter { fine.contains($0.id) }))
     }
 
@@ -225,7 +226,7 @@ enum AnalyzerTriggers {
                 guard let day = calendar.date(byAdding: .day, value: offset, to: from) else { return 0 }
                 return trigger.counted.filter { calendar.isDate($0.start, inSameDayAs: day) }.count
             }
-            return trigger.count >= fewestTimes || trigger.isAsking ? trigger : nil
+            return (trigger.count >= fewestTimes && trigger.daysSeen >= fewestDays) || trigger.isAsking ? trigger : nil
         }
         .sorted { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.id < $1.id }
     }
