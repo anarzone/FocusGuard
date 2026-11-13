@@ -51,6 +51,8 @@ final class DecisionLog {
     private(set) var entries: [Entry] = []
     private(set) var timings: [String: Timing] = [:]
     private let url: URL?
+    /// Kept in a file: the real app's log, not a test's.
+    var isKept: Bool { url != nil }
     private var dirty = false
     private var lastSaved = Date.distantPast
     private let now: () -> Date

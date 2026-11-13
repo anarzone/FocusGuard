@@ -116,6 +116,33 @@ struct IslandLearning: Codable, Equatable, Sendable {
         }
     }
 
+    // MARK: What came before
+
+    /// Learning began with build 211, but the log goes back further. Once,
+    /// it learns from that too: the cards shown since each kind was last
+    /// used count as let go by, so a kind never used doesn't get eight more
+    /// chances first.
+    mutating func catchUp(from log: [DecisionLog.Entry], now: Date, calendar: Calendar = .current) {
+        for kind in IslandKind.allCases where Self.learns(kind) {
+            let mine = log.filter { $0.kind == .island && $0.detail == kind.rawValue }.sorted { $0.at < $1.at }
+            let lastUsed = mine.last { $0.outcome == "pressed" }?.at ?? .distantPast
+            let shown = mine.filter { $0.outcome == "shown" && $0.at > lastUsed }
+            var entry = entries[kind.rawValue] ?? Entry()
+            guard shown.count > entry.streak else { continue }
+            entry.streak = shown.count
+            entry.lastShown = max(entry.lastShown ?? .distantPast, shown.last?.at ?? .distantPast)
+            if entry.streak >= Self.pauseAfter, entry.pausedUntil == nil {
+                entry.pausedUntil = calendar.date(byAdding: .day, value: Self.pauseDays, to: calendar.startOfDay(for: now))
+                entry.pauses += 1
+                entry.streak = 0
+                entry.onProbation = true
+            }
+            entries[kind.rawValue] = entry
+        }
+    }
+
+    static let caughtUpKey = "island.learning.caughtUp"
+
     // MARK: Kept on this Mac
 
     static let key = "island.learning"

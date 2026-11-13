@@ -117,6 +117,40 @@ final class IslandLearningTests: XCTestCase {
         XCTAssertNil(defaults.data(forKey: IslandLearning.key), "Nothing to keep: nothing kept")
     }
 
+    // MARK: - What came before
+
+    private func entry(_ outcome: String, _ kind: IslandKind, day offset: Int) -> DecisionLog.Entry {
+        DecisionLog.Entry(at: day(offset), kind: .island, outcome: outcome, detail: kind.rawValue)
+    }
+
+    func testItCatchesUpOnTheLogFromBeforeItLearned() {
+        var log: [DecisionLog.Entry] = []
+        for index in 0..<10 { log.append(entry("shown", .pickUp, day: index)) }
+        for index in 0..<6 { log.append(entry("shown", .autoStart, day: index)) }
+        log.append(entry("pressed", .autoStart, day: 6))
+        for index in 7..<9 { log.append(entry("shown", .autoStart, day: index)) }
+        for index in 0..<5 { log.append(entry("shown", .driftPrompt, day: index)) }
+        for index in 0..<20 { log.append(entry("shown", .wait, day: index % 5)) }
+        var learning = IslandLearning()
+        learning.catchUp(from: log, now: day(10), calendar: calendar)
+        XCTAssertEqual(learning.state(.pickUp, now: day(10)),
+                       .paused(until: calendar.startOfDay(for: day(10 + IslandLearning.pauseDays))), "Never used in 10")
+        XCTAssertEqual(learning.state(.autoStart, now: day(10)), .on, "Used on day 6: two since")
+        XCTAssertEqual(learning.entries["autoStart"]?.streak, 2)
+        XCTAssertEqual(learning.state(.driftPrompt, now: day(10)), .resting(streak: 5))
+        XCTAssertNil(learning.entries["wait"], "The tool's own word doesn't learn")
+    }
+
+    func testCatchingUpNeverLowersWhatsAlreadyLearned() {
+        var learning = IslandLearning()
+        for index in 0..<6 {
+            learning.shown(.autoStart, now: day(index))
+            learning.passed(.autoStart, now: day(index), calendar: calendar)
+        }
+        learning.catchUp(from: [entry("shown", .autoStart, day: 1)], now: day(7), calendar: calendar)
+        XCTAssertEqual(learning.entries["autoStart"]?.streak, 6)
+    }
+
     // MARK: - The words
 
     func testSettingsSaysWhyAndForHowLong() {
