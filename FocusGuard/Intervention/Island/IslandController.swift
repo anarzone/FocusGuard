@@ -85,7 +85,13 @@ final class IslandController {
         self.runsTimer = runsTimer
         self.queue = IslandQueue(calendar: calendar)
         self.recents = IslandRecents(defaults: defaults, calendar: calendar)
-        self.learning = IslandLearning.load(defaults)
+        var learning = IslandLearning.load(defaults)
+        if DecisionLog.shared.isKept, !defaults.bool(forKey: IslandLearning.caughtUpKey) {
+            learning.catchUp(from: DecisionLog.shared.entries, now: clock(), calendar: calendar)
+            learning.save(defaults)
+            defaults.set(true, forKey: IslandLearning.caughtUpKey)
+        }
+        self.learning = learning
         self.calendar = calendar
         surface.attach(self)
     }
@@ -297,6 +303,8 @@ final class IslandPickUpPresenter: PickUpPresenting {
     }
 
     func answered(used: Bool) {
+        // Its buttons are its own, not the island's: said here for the log.
+        DecisionLog.shared.record(.island, used ? "pressed" : "dismissed", detail: IslandKind.pickUp.rawValue)
         island.noteAnswer(.pickUp, used: used)
     }
 }

@@ -17,10 +17,17 @@ enum WaitRules {
     static let enoughWaits = 3
     /// One wait card, then none for this long.
     static let gapBetweenCards: TimeInterval = 10 * 60
+    /// The card only comes when the tool's answer is really sitting: this
+    /// long after it finished, or asked a question, and still on a distraction.
+    /// The log showed most looks away are back before the tool is done.
+    static let doneGrace: TimeInterval = 60
+    static let questionGrace: TimeInterval = 30
+    /// At most this many wait cards a day.
+    static let cardsPerDay = 3
     /// Wait cards closed this many times in a row, without going back…
     static let ignoredInARow = 2
     /// …and there are none for this long.
-    static let quietAfterIgnored: TimeInterval = 60 * 60
+    static let quietAfterIgnored: TimeInterval = 4 * 60 * 60
     /// A project seen this long ago is no longer the one being worked on.
     static let projectGoesStale: TimeInterval = 20 * 60
     /// A tool that said it started is taken to be working for this long with

@@ -9,14 +9,16 @@ enum WaitSettings {
     }
 }
 
-/// Turns what the watcher notices into the island's card: when the user
-/// reaches for a distraction while a tool works, what it cost last time,
-/// how much longer the tool usually needs from here and a way back; when the
-/// tool says it's done or needs them, that. Every wait that ends goes in the
-/// log, and so does every run a tool times itself.
+/// Turns what the watcher notices into the island's card. Reaching for a
+/// distraction while a tool works says nothing: most looks away are over
+/// before the tool is (the log showed 89 of 107 back in time). The card comes
+/// only when the tool's answer is really sitting: a minute after it finished,
+/// or half that after it asked a question, with the user still on a
+/// distraction. A site under a hold test is still held. Every wait that ends
+/// goes in the log, and so does every run a tool times itself.
 ///
-/// It stays quiet when it isn't wanted: one card in ten minutes, and after
-/// two closed in a row without going back, none for an hour.
+/// It stays quiet when it isn't wanted: at most 3 cards a day, one in ten
+/// minutes, and after two closed in a row without going back, none for four hours.
 @MainActor
 final class WaitCoordinator {
     private var watcher = WaitWatcher()
@@ -26,6 +28,13 @@ final class WaitCoordinator {
     private var lastCardAt: Date?
     private var ignoredInARow = 0
     private var quietUntil: Date?
+    /// The tool's word that it's done, waiting out the grace before a card.
+    private var pendingDone: (reach: WaitReach, project: String?, needsInput: Bool, due: Date)?
+    /// Cards shown today, for the daily cap.
+    private var cardsToday: (day: Date, count: Int)?
+    /// Where cards go. Tests read them here.
+    var showCard: ((IslandMoment) -> Void)?
+    var calendar = Calendar.current
 
     /// What's going on now, for the looks between the tracker's.
     var currentMoment: () -> WaitMoment = { WaitMoment(now: .now) }
@@ -59,6 +68,7 @@ final class WaitCoordinator {
         for event in watcher.observe(moment) {
             handle(event, now: moment.now)
         }
+        showDoneIfDue(moment)
         // The tracker may look rarely when nothing's timed: keep an eye on
         // the wait while one is going.
         watcher.isWaiting ? startTimer() : stopTimer()
@@ -78,11 +88,31 @@ final class WaitCoordinator {
         }
     }
 
-    /// Whether a card on reaching for a distraction may show now.
-    func mayShowReachCard(at now: Date) -> Bool {
+    /// Whether a wait card may show now.
+    func mayShowCard(at now: Date) -> Bool {
         if let quietUntil, now < quietUntil { return false }
         if let lastCardAt, now.timeIntervalSince(lastCardAt) < WaitRules.gapBetweenCards { return false }
+        if let cardsToday, calendar.isDate(cardsToday.day, inSameDayAs: now), cardsToday.count >= WaitRules.cardsPerDay { return false }
         return true
+    }
+
+    private func post(_ card: IslandMoment, at now: Date) {
+        lastCardAt = now
+        let count = cardsToday.map { calendar.isDate($0.day, inSameDayAs: now) ? $0.count : 0 } ?? 0
+        cardsToday = (now, count + 1)
+        if let showCard { showCard(card) } else { island?.post(card) }
+    }
+
+    /// The grace is over and they're still on a distraction: now it's worth saying.
+    private func showDoneIfDue(_ moment: WaitMoment) {
+        guard let pending = pendingDone, moment.now >= pending.due else { return }
+        pendingDone = nil
+        let onDistraction = moment.front.map { $0.classification == .distraction && !$0.isPrivateWindow } ?? false
+        guard watcher.isWaiting, onDistraction, !moment.isAway, mayShowCard(at: moment.now) else {
+            DecisionLog.shared.record(.wait, "notSaid", detail: pending.reach.tool.kind.rawValue)
+            return
+        }
+        post(.waitDone(pending.reach, project: pending.project, needsInput: pending.needsInput, now: moment.now), at: moment.now)
     }
 
     private func handle(_ event: WaitEvent, now: Date) {
@@ -97,15 +127,19 @@ final class WaitCoordinator {
                 DecisionLog.shared.record(.wait, "held", detail: reach.tool.kind.rawValue)
                 hold(reach, held)
             }
-            guard held != nil || mayShowReachCard(at: now) else { return }
-            lastCardAt = now
-            island?.post(.waitReach(reach, estimate: estimate(for: reach, now: now), next: nextTask(reach.project),
-                                    lastDrift: log.lastDrift(for: reach.tool.name), heldUntil: held, now: now))
+            // Only a site under a hold test gets a card: it says why the page waits.
+            guard let held else { return }
+            post(.waitReach(reach, estimate: estimate(for: reach, now: now), next: nextTask(reach.project),
+                            lastDrift: log.lastDrift(for: reach.tool.name), heldUntil: held, now: now), at: now)
         case .done(let reach, let project, let needsInput):
-            // The tool's own word, while they're away: always worth a card.
+            // The tool's own word, while they're away. Said only if they're
+            // still away once the grace is over: most come back by then.
             DecisionLog.shared.record(.wait, needsInput ? "needsInput" : "done", detail: reach.tool.kind.rawValue)
-            island?.post(.waitDone(reach, project: project, needsInput: needsInput, now: now))
+            let grace = needsInput ? WaitRules.questionGrace : WaitRules.doneGrace
+            pendingDone = (reach, project, needsInput, now.addingTimeInterval(grace))
+            startTimer()
         case .ended(let record, let back):
+            pendingDone = nil
             log.add(record)
             DecisionLog.shared.record(.wait, record.drifted ? "drifted" : "stayed", detail: back ? "back" : "gone")
             if back { island?.remove(key: IslandMoment.waitKey) }

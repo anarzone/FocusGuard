@@ -374,17 +374,82 @@ final class WaitConnectorTests: XCTestCase {
         XCTAssertEqual(said.project, "expadu-app")
     }
 
-    func testClosedWaitCardsQuietThemForAnHour() {
+    func testClosedWaitCardsQuietThemForFourHours() {
         var clock = now
         let coordinator = WaitCoordinator(log: WaitLog(url: nil), island: nil)
         coordinator.now = { clock }
-        XCTAssertTrue(coordinator.mayShowReachCard(at: clock))
+        XCTAssertTrue(coordinator.mayShowCard(at: clock))
         coordinator.answered(wentBack: false)
-        XCTAssertTrue(coordinator.mayShowReachCard(at: clock), "One closed card isn't a pattern")
+        XCTAssertTrue(coordinator.mayShowCard(at: clock), "One closed card isn't a pattern")
         coordinator.answered(wentBack: false)
-        XCTAssertFalse(coordinator.mayShowReachCard(at: clock.addingTimeInterval(30 * 60)))
-        clock = clock.addingTimeInterval(61 * 60)
-        XCTAssertTrue(coordinator.mayShowReachCard(at: clock))
+        XCTAssertFalse(coordinator.mayShowCard(at: clock.addingTimeInterval(3 * 60 * 60)))
+        clock = clock.addingTimeInterval(4 * 60 * 60 + 60)
+        XCTAssertTrue(coordinator.mayShowCard(at: clock))
+    }
+
+    // MARK: - When a wait card is worth it
+
+    private var claudeTerminal: ActivitySnapshot { front("~/Projects/curiplay — claude") }
+
+    /// A coordinator that shows cards into `cards`.
+    private func coordinator(_ cards: @escaping (IslandMoment) -> Void) -> WaitCoordinator {
+        let coordinator = WaitCoordinator(log: WaitLog(url: nil), island: nil)
+        coordinator.isOn = { true }
+        coordinator.showCard = cards
+        coordinator.uptime = { 0 }
+        coordinator.currentMoment = { WaitMoment(now: self.now, front: self.claudeTerminal) }
+        return coordinator
+    }
+
+    /// Claude Code starts at `base`, the user is in its terminal, then on x.com.
+    private func leaveForX(_ coordinator: WaitCoordinator, session: String, base: TimeInterval = 0) {
+        coordinator.started(tool: "Claude Code", project: "curiplay", session: session, now: now.addingTimeInterval(base))
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(base + 10), front: claudeTerminal))
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(base + 20), front: x(at: base + 20)))
+    }
+
+    func testReachingForADistractionWhileItWorksSaysNothing() {
+        var cards: [IslandMoment] = []
+        let coordinator = coordinator { cards.append($0) }
+        leaveForX(coordinator, session: "a")
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(60), front: x(at: 60)))
+        XCTAssertEqual(cards.count, 0, "Most looks away are over before the tool is")
+    }
+
+    func testTheDoneCardComesOnlyIfTheyreStillAwayAMinuteLater() {
+        var cards: [IslandMoment] = []
+        let coordinator = coordinator { cards.append($0) }
+        leaveForX(coordinator, session: "a")
+        coordinator.finished(tool: "Claude Code", project: "curiplay", session: "a", now: now.addingTimeInterval(100))
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(130), front: x(at: 130)))
+        XCTAssertEqual(cards.count, 0, "Within the grace")
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(161), front: x(at: 161)))
+        XCTAssertEqual(cards.map(\.kind), [.wait], "A minute after it finished, still on x.com")
+    }
+
+    func testBackWithinTheGraceNoCard() {
+        var cards: [IslandMoment] = []
+        let coordinator = coordinator { cards.append($0) }
+        leaveForX(coordinator, session: "a")
+        coordinator.finished(tool: "Claude Code", project: "curiplay", session: "a", now: now.addingTimeInterval(100))
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(130), front: claudeTerminal))
+        coordinator.observe(WaitMoment(now: now.addingTimeInterval(200), front: x(at: 200)))
+        XCTAssertEqual(cards.count, 0, "They came back on their own")
+    }
+
+    func testAQuestionWaitsHalfAsLongAndThreeCardsADayAtMost() {
+        var cards: [IslandMoment] = []
+        let coordinator = coordinator { cards.append($0) }
+        for round in 0..<5 {
+            let base = Double(round) * 3600
+            leaveForX(coordinator, session: "s\(round)", base: base)
+            coordinator.finished(tool: "Claude Code", project: "curiplay", session: "s\(round)", needsInput: true,
+                                 now: now.addingTimeInterval(base + 100))
+            coordinator.observe(WaitMoment(now: now.addingTimeInterval(base + 131), front: x(at: base + 131)))
+            if round == 0 { XCTAssertEqual(cards.count, 1, "Thirty seconds for a question") }
+            coordinator.observe(WaitMoment(now: now.addingTimeInterval(base + 300), front: claudeTerminal))
+        }
+        XCTAssertEqual(cards.count, WaitRules.cardsPerDay)
     }
 
     // MARK: - Claude Code
