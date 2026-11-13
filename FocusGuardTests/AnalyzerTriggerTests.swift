@@ -112,3 +112,72 @@ final class AnalyzerTriggerTests: XCTestCase {
         XCTAssertEqual(AnalyzerWaitsSummary.make([]).waits, 0)
     }
 }
+
+/// Looking away while a tool still works costs nothing: only the time its
+/// answer sat after it finished is lost. The log showed most looks end first.
+@MainActor
+final class AnalyzerWaitCostTests: XCTestCase {
+    typealias F = CoachFixture
+    let calendar = CoachFixture.calendar
+
+    private func event(_ day: Int, _ h: Int, _ m: Int, _ minutes: Double, _ kind: Classification, _ target: String) -> CoachEvent {
+        let start = F.at(day, h, m)
+        return CoachEvent(start: start, end: start.addingTimeInterval(minutes * 60), kind: kind, target: target, name: target,
+                          isSite: target.contains(".") && !target.hasPrefix("com."), session: nil, bundleId: nil)
+    }
+
+    /// Work, 9 minutes on x.com from 10:03, then work again.
+    private func day(_ day: Int) -> AnalyzerDay {
+        AnalyzerDayBuilder.make(day: F.at(day, 0), events: [
+            event(day, 9, 0, 60, .focus, "com.xcode"), event(day, 10, 0, 3, .focus, "com.terminal"),
+            event(day, 10, 3, 9, .distraction, "x.com"), event(day, 10, 12, 60, .focus, "com.xcode"),
+        ], calendar: calendar)
+    }
+
+    /// A timed wait from 10:03, 9 minutes away, `late` of it after the tool finished.
+    private func wait(_ day: Int, late: TimeInterval?, exact: Bool = true) -> WaitRecord {
+        var record = WaitRecord(start: F.at(day, 10, 3), tool: "Claude Code", project: "curiplay", seconds: 540, drift: 540, to: "x.com")
+        record.exact = exact
+        record.late = late
+        return record
+    }
+
+    func testWhatADriftCostIsWhatCameAfterTheToolFinished() {
+        XCTAssertEqual(AnalyzerTriggers.cost(of: wait(0, late: nil)), 0, "Back before it was done")
+        XCTAssertEqual(AnalyzerTriggers.cost(of: wait(0, late: 120)), 120)
+        XCTAssertEqual(AnalyzerTriggers.cost(of: wait(0, late: nil, exact: false)), 540, "A tool that doesn't say: all of it")
+    }
+
+    func testLooksThatEndedBeforeTheToolWasDoneArentATrigger() {
+        let days = (0..<3).map(day)
+        let early = AnalyzerTriggers.make(days: days, waits: (0..<3).map { wait($0, late: nil) }, ruledOut: [], calendar: calendar)
+        XCTAssertFalse(early.contains { $0.isWait }, "None of them cost anything")
+        let late = AnalyzerTriggers.make(days: days, waits: (0..<3).map { wait($0, late: 180) }, ruledOut: [], calendar: calendar)
+        let trigger = late.first { $0.isWait }
+        XCTAssertEqual(trigger?.count, 3)
+        XCTAssertEqual(trigger?.seconds, 3 * 180, "Only the time the answer sat")
+    }
+
+    func testLostFocusWhileItWorkedComesOutOfTheDay() {
+        let days = [day(0)]
+        XCTAssertEqual(days[0].losses.map(\.seconds), [9 * 60])
+        XCTAssertEqual(AnalyzerTriggers.whileWorking(removedFrom: days, waits: [wait(0, late: nil)])[0].losses, [],
+                       "All of it fell while the tool worked")
+        let trimmed = AnalyzerTriggers.whileWorking(removedFrom: days, waits: [wait(0, late: 180)])[0].losses
+        XCTAssertEqual(trimmed.count, 1)
+        XCTAssertEqual(trimmed.first?.seconds ?? 0, 180, accuracy: 0.001, "The three minutes after it finished stay")
+        XCTAssertEqual(AnalyzerTriggers.whileWorking(removedFrom: days, waits: [wait(0, late: nil, exact: false)]), days,
+                       "An untimed tool: nothing is known, nothing is taken out")
+    }
+
+    func testTheReportCountsOnlyTheCost() {
+        let period = DateInterval(start: F.at(0, 0), end: F.at(8, 0))
+        let days = (0..<8).map(day)
+        let plain = AnalyzerReport.make(period: period, days: days, before: [], muted: [], weekendsCount: true, calendar: calendar)
+        let timed = AnalyzerReport.make(period: period, days: days, before: [], muted: [], weekendsCount: true,
+                                        waits: (0..<8).map { wait($0, late: nil) }, calendar: calendar)
+        XCTAssertGreaterThan(plain.rows.reduce(0) { $0 + $1.perDay }, 0)
+        XCTAssertEqual(timed.rows.reduce(0) { $0 + $1.perDay }, 0, "Every look ended before the tool was done")
+        XCTAssertEqual(timed.workingDays, plain.workingDays)
+    }
+}

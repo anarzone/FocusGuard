@@ -108,9 +108,13 @@ struct AnalyzerReport: Equatable, Sendable {
         // Which days count as working ones is settled first: a pattern that's
         // fine takes its lost focus out, never a day.
         let all = days.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) }.sorted { $0.day < $1.day }
-        let working = AnalyzerTriggers.without(fine: fine, days: all, waits: waits)
-        let earlier = AnalyzerTriggers.without(fine: fine, days: before.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) },
-                                               waits: waits)
+        // Looking away while a tool still worked lost nothing: only what came
+        // after it finished is lost focus.
+        let working = AnalyzerTriggers.whileWorking(removedFrom: AnalyzerTriggers.without(fine: fine, days: all, waits: waits), waits: waits)
+        let earlier = AnalyzerTriggers.whileWorking(
+            removedFrom: AnalyzerTriggers.without(fine: fine, days: before.filter { $0.isWorking(weekendsCount: weekendsCount, calendar: calendar) },
+                                                  waits: waits),
+            waits: waits)
         var report = AnalyzerReport(period: period, workingDays: working.count,
                                     measures: AnalyzerMeasures.make(working),
                                     finding: .learning(daysLeft: max(0, AnalyzerRules.namingDays - working.count)))
@@ -121,7 +125,8 @@ struct AnalyzerReport: Equatable, Sendable {
         report.triggers = AnalyzerTriggers.make(days: labelled, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar)
         report.taught = AnalyzerTriggers.build(days: all, waits: waits, ruledOut: ruledOut, lessons: lessons, calendar: calendar).taught
         report.patterns = AnalyzerPatterns.make(working)
-        report.leftOut = AnalyzerLeftOut.make(period: period, days: AnalyzerTriggers.without(fine: fine, days: days, waits: waits),
+        report.leftOut = AnalyzerLeftOut.make(period: period,
+                                              days: AnalyzerTriggers.whileWorking(removedFrom: AnalyzerTriggers.without(fine: fine, days: days, waits: waits), waits: waits),
                                               quiet: quiet, weekendsCount: weekendsCount, calendar: calendar)
         guard working.count >= AnalyzerRules.namingDays else { return report }
         report.rows = rows(labelled, muted: muted)

@@ -18092,6 +18092,29 @@
         }
       }
     },
+    "Each time, %@ finished while you were on %@, and its answer sat until you came back. Looks that ended before it was done aren't counted. Seen on %lld of %lld days." : {
+      "comment" : "Analyzer: the tool, the site, then days seen and working days",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each time, %1$@ finished while you were on %2$@, and its answer sat until you came back. Looks that ended before it was done aren't counted. Seen on %3$lld of %4$lld days."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal war %1$@ fertig, während du auf %2$@ warst, und die Antwort wartete, bis du zurückkamst. Blicke, die endeten, bevor es fertig war, zählen nicht. Gesehen an %3$lld von %4$lld Tagen."
+          }
+        },
+        "az" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hər dəfə siz %2$@ saytında olarkən %1$@ bitdi və cavabı siz qayıdana qədər gözlədi. O bitməmiş sona çatan baxışlar sayılmır. %4$lld gündən %3$lld-ində görülüb."
+          }
+        }
+      }
+    },
     "Each time, %@ was working: you had just left it, and %@ came within a minute and a half. Seen on %lld of %lld days." : {
       "comment" : "Analyzer: the tool, the site, then days seen and working days",
       "localizations" : {

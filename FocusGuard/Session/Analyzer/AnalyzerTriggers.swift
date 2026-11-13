@@ -93,6 +93,49 @@ enum AnalyzerTriggers {
 
     static func drifts(_ waits: [WaitRecord]) -> [WaitRecord] { waits.filter { $0.drifted && $0.to != nil } }
 
+    /// What a drift during a wait cost. A tool that says when it's done:
+    /// only the time its answer sat after it finished; looking away while it
+    /// still worked lost nothing. One that doesn't say: all of it.
+    static func cost(of wait: WaitRecord) -> TimeInterval {
+        wait.exact ? (wait.late ?? 0) : wait.drift
+    }
+
+    /// While a tool that says when it's done was still working, during a
+    /// wait the user drifted in. The log showed most looks away end in here.
+    static func working(_ wait: WaitRecord) -> DateInterval? {
+        guard wait.exact, wait.drifted else { return nil }
+        let back = wait.start.addingTimeInterval(wait.seconds)
+        let finished = back.addingTimeInterval(-(wait.late ?? 0))
+        guard finished > wait.start else { return nil }
+        return DateInterval(start: wait.start, end: finished)
+    }
+
+    /// The days without lost focus that fell while a tool was still working:
+    /// a glance at x.com then cost nothing. What came after it finished stays.
+    static func whileWorking(removedFrom days: [AnalyzerDay], waits: [WaitRecord]) -> [AnalyzerDay] {
+        let windows = waits.compactMap(working)
+        guard !windows.isEmpty else { return days }
+        return days.map { day in
+            var day = day
+            day.losses = day.losses.compactMap { loss in
+                let span = loss.end.timeIntervalSince(loss.start)
+                guard span > 0 else { return loss }
+                let overlap = windows.reduce(0.0) { total, window in
+                    total + (window.intersection(with: DateInterval(start: loss.start, end: loss.end))?.duration ?? 0)
+                }
+                guard overlap > 0 else { return loss }
+                let left = loss.seconds * max(0, 1 - overlap / span)
+                guard left >= AnalyzerRules.shortestLoss else { return nil }
+                var trimmed = AnalyzerLoss(start: loss.start, end: loss.end, seconds: left, cause: loss.cause,
+                                           switches: loss.switches, places: loss.places, isLate: loss.isLate)
+                trimmed.before = loss.before
+                trimmed.opening = loss.opening
+                return trimmed
+            }
+            return day
+        }
+    }
+
     /// The days without the lost-focus moments of patterns the user said are
     /// fine: those aren't lost focus for them, here or in the causes.
     static func without(fine: Set<String>, days: [AnalyzerDay], waits: [WaitRecord], optedOut: Set<String> = []) -> [AnalyzerDay] {
@@ -130,11 +173,12 @@ enum AnalyzerTriggers {
         }
 
         let drifts = drifts(waits)
-        for wait in drifts {
+        // Only drifts that cost something: back before the tool was done isn't one.
+        for wait in drifts where cost(of: wait) > 0 {
             let to = wait.to ?? ""
             add(id: AnalyzerLessonRules.waitID(tool: wait.tool, site: to),
                 steps: [.init(label: wait.tool, kind: .wait), .init(label: to, kind: .site)],
-                start: wait.start, seconds: wait.drift, cause: .habit)
+                start: wait.start, seconds: cost(of: wait), cause: .habit)
         }
         for day in days {
             for loss in day.losses {
@@ -191,7 +235,7 @@ enum AnalyzerTriggers {
         let days = trigger.daysSeen
         let last = trigger.steps.last?.label ?? ""
         if trigger.isWait, let tool = trigger.steps.first?.label {
-            return String(localized: "Each time, \(tool) was working: you had just left it, and \(last) came within a minute and a half. Seen on \(days) of \(workingDays) days.",
+            return String(localized: "Each time, \(tool) finished while you were on \(last), and its answer sat until you came back. Looks that ended before it was done aren't counted. Seen on \(days) of \(workingDays) days.",
                           comment: "Analyzer: the tool, the site, then days seen and working days")
         }
         if trigger.steps.count > 1, let first = trigger.steps.first?.label {
