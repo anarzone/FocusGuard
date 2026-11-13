@@ -105,7 +105,11 @@ private struct AnalyzerView: View {
                 guard appState.countAsWork(answer) else { return }
                 changed("countedAsWork") { $0.settleWork(answer.key, countedAsWork: true) }
             },
-            keepAsking: { answer in changed("keepAsking") { $0.settleWork(answer.key) } })
+            keepAsking: { answer in changed("keepAsking") { $0.settleWork(answer.key) } },
+            uncount: { answer in
+                guard appState.uncountAsWork(answer) else { return }
+                changed("uncountedWork") { $0.uncountWork(answer.key) }
+            })
     }
 
     private func reload() async {

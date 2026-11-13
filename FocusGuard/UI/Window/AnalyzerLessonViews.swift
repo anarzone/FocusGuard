@@ -15,6 +15,7 @@ struct AnalyzerLessonActions {
     var putBack: (AnalyzerTrigger) -> Void = { _ in }
     var countAsWork: (AnalyzerLessons.WorkAnswer) -> Void = { _ in }
     var keepAsking: (AnalyzerLessons.WorkAnswer) -> Void = { _ in }
+    var uncount: (AnalyzerLessons.WorkAnswer) -> Void = { _ in }
 }
 
 /// The words for what was taught. A pattern is a site while a tool works,
@@ -171,14 +172,21 @@ struct AnalyzerLessonsCard: View {
                     .accessibilityElement(children: .contain)
                 }
                 ForEach(actions.counted) { answer in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(String(localized: "\(answer.name) counts as work", comment: "Analyzer, what you taught it: a site or app"))
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(String(localized: "You called it work in sessions. Change it any time in Apps & Sites.",
-                                    comment: "Analyzer, what you taught it. Apps & Sites is a page of the window"))
-                            .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(localized: "\(answer.name) counts as work", comment: "Analyzer, what you taught it: a site or app"))
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(String(localized: "You said “It’s for work” on \(answer.days.count) days, so it isn’t caught any more.",
+                                        comment: "Analyzer, what you taught it: how many days. “It’s for work” is the block screen's button"))
+                                .font(.system(size: 12)).foregroundStyle(Theme.secondaryText)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Button(String(localized: "Put it back")) { actions.uncount(answer) }
+                            .buttonStyle(.textLink)
+                            .font(.system(size: 12))
+                            .disabled(actions.isLocked)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
                 }
                 if let answer = actions.suggestion {
                     if !rows.isEmpty || !actions.counted.isEmpty { Divider() }
